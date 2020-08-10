@@ -190,18 +190,17 @@ Canonical ev_evType e := Eval hnf in EvType _ _ (ev_Mixin e).
 Notation "a '<=[' e ] b" := (e.(causen) a b) (at level 0).
 Notation "a '#[' e ] b" := (e.(conflictn) a b) (at level 0).
 
-Lemma downward_closed_downward_closure (es : evstruct) (l : 'I_es.(n).+1) :
-  downward_closed (downward_closure l cause) cause.
+Lemma dw_cl_dw_clo (es : evstruct) (l : 'I_es.(n).+1) : downward_closed (downward_closure l cause) cause.
 Proof.  move=> ??? /trans_cause. by apply. Qed.
 
-Definition confl_free es (p : pred 'I_es.(n).+1) := forall e1 e2, e1 \in p -> e2 \in p -> ~~ (e1 # e2).
+Definition confl_free es (p : pred 'I_es.(n).+1) := forall e1 e2, e1 \in p -> e2 \in p -> ~~ (e1 #[es] e2).
 Definition config es (p : pred 'I_es.(n).+1) :=
   (confl_free es p * downward_closed p cause)%type.
 
-Lemma config_downward_closure es e: config es (downward_closure e cause).
+Lemma config_left_clo es e: config es (downward_closure e cause).
 Proof.
-split=> [e1 e2 *|]; last by apply: downward_closed_downward_closure.
-case confl: (e1 # e2)=> //=. rewrite -(confl_irrefl e).
+split=> [e1 e2 *|]; last by apply: dw_cl_dw_clo.
+case confl: (e1 #[es] e2)=> //=. rewrite -(confl_irrefl e).
 by rewrite (consist_confl e2)// symm_confl (consist_confl e1)// symm_confl. 
 Qed.
 
@@ -213,7 +212,7 @@ Definition evstruct_rel es es' lab (place : nat) :=
   (forall n, es.(En) n = es'.(En) $n)                                  /\
   (forall k m, ((es.(rfn) k) == some m) = ((es'.(rfn) $k) == some $m)) /\
   (if lab is w x i then es'.(En) $(es'.(n)) = W x i
-   else is_read (es'.(En) $(es'.(n))))                                 /\
+   else is_read (es'.(En) $(es'.(n))))                                  /\
   (if place == 0 then forall n, ~~ n <=[es] $place
    else (place < es'.(n)) && $place <=[es] $(es'.(n))).
 
