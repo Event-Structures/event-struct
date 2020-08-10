@@ -219,14 +219,4 @@ Definition evstruct_rel es es' lab (place : nat) :=
 
 Notation "es '-[' n , l ']-->' es' " := (evstruct_rel es es' l n) (at level 0).
 
-(* with caconical structure *)
-Lemma foo (es es' : evstruct) (l : 'I_es.(n).+1) (m : 'I_es'.(n).+1):
-  l # l -> m # m.
-Proof. by rewrite !confl_irrefl. Qed.
-
-(* without caconical structure *)
-Lemma foo' (es es' : evstruct) (l : 'I_es.(n).+1) (m : 'I_es'.(n).+1):
-  l #[es] l -> m #[es'] m.
-Proof. by rewrite es.(confl_irrefln) es'.(confl_irrefln). Qed.
-
 End nat_event_structure.
