@@ -74,26 +74,25 @@ Definition rel_of {T : finType} (f : T -> option T) :=
   connect [rel x y | if f y is some z then (z == x) else false].
 Definition restr {n} (f : nat -> option nat) : 'I_n -> option 'I_n := 
   fun n => if f n is some m then some [m to n] else None.
-Definition prefix {T} (s s' : seq T) : seq T. Admitted.
-Definition tail {T} (s : seq T) := if s is h :: t then t else [::].
+Definition prefix {T} (s s' : seq T) : bool. Admitted.
 
 
 
 Structure evstruct := Pack {
   N            : nat;
   E            : nat -> option ev_label;
-  E_dom        : forall k, reflect (E k = None) (k < n);
+  E_dom        : forall k, reflect (E k = None) (k < N);
   po           : nat -> option nat;
-  po_tid       : forall n, po n = some m <-> (tid (E m)) =;
+  po_tid       : forall n m, po n = some m -> prefix (tid (E m)) (tid (E n));
   po_dom       : forall m, m >= N -> po m = None;
   acycl_po     : forall n, (po n) < n;
   rf           : nat -> option nat;
   rf_dom       : forall m, reflect (rf m) (is_read (E m));
-  rf_codom     : forall n k l, is_read (E n) -> rf n = some k -> write_read (E k) (E n);
-  rf_po_acycl  : forall k l: 'I_N, rf k = some l -> ~~ (prefix (tid (E k)) (tid (E l)));
-  rf_non_confl : forall k, let m := ord_of_ex k in let l := rf k in
-   ~~[exists x, [exists y, ((rel_of (restr po)) x m)                &&      (* |   *)
-                           ((rel_of (restr po)) y l)                &&      (* |   *)
+  rf_codom     : forall n k, is_read (E n) -> rf n = some k -> write_read (E k) (E n);
+  rf_po_acycl  : forall k l : 'I_N, (restr rf) k = some l -> ~~ (rel_of (restr po)) k l;
+  rf_non_confl : forall k l : 'I_N, (restr rf) k = some l -> 
+   ~~[exists x, [exists y, ((rel_of (restr po)) x k)        &&      (* |   *)
+                           ((rel_of (restr po)) y l)        &&      (* |   *)
                            (po x == po y) && (po x)         &&      (* | -> rf can't match two conflict events *)
                            (x != y) && (tid (E x) == tid (E y))]];  (* |   *)
 }.
@@ -105,9 +104,45 @@ Arguments E  {_}.
 (* derive cause conflict and properties ... *)
 Section Cause_Conflict.
 Variables (e : evstruct).
-Implicit Types (n m : 'I_(n e)) (x : val) (i : var).
-Notation N := (n e).
+Implicit Types (n m : 'I_(N e)) (x : val) (i : var).
+Notation N := (N e).
 
+(*Section adding_event.
+Variables (add_t : option nat) (l : ev_label).
+
+Definition add_po : nat -> option nat := 
+  fun l => if l == N then add_t else po l.
+
+Lemma add_po_dom k : k >= N.+1 -> add_po k = None.
+Proof. Admitted.
+
+Lemma acycl_add_po k: add_po k < k.
+Proof. Admitted.
+
+Definition radd_po := connect (rel_of (restr add_po)).
+
+(* seq of all writes of (value l) to (variable x) *)
+Definition possible_writes : seq 'I_N.+1. Admitted.
+Definition add_E : nat -> ev_label := fun t => if t == N then @E e t else l.
+
+Definition seq_of_writes' := 
+  if add_t is some t then
+     [seq z <- possible_writes | ~~ (radd_po t z) &
+     ~~[exists x, [exists y, (radd_po x t) && (radd_po y z) &&
+                             (add_po x == add_po y) && (add_po x) &&
+                             (x != y) && (tid (add_E x) == tid (add_E y))]]]
+  else [::].
+
+Definition add_rf' n : {k : 'I_N.+1 | is_read (add_E k)} -> 'I_N.+1.
+case=> x.
+
+Lemma : .
+Proof.
+  
+Qed.
+
+
+End adding_event.
 Definition oord_of_o (on : option 'I_N) :=
   if on is some (Ordinal k klN) then some (Ordinal (ltn_trans klN (ltnSn N))) else None.
 
@@ -140,44 +175,7 @@ Lemma irrefl_conflict: irreflexive conflict.
 Proof. Admitted.
 
 Lemma consist_conflict n1 n2 n3: cause n1 n2 -> n1 # n3 -> n2 # n3.
-Proof. Admitted.
-
-Section adding_event.
-Variables (add_t : option 'I_N.+1) (l : ev_label).
-
-Definition add_po : nat -> option 'I_N.+1 := 
-  fun l => if l == N then add_t else oord_of_o (po l).
-
-Lemma add_po_dom k : k >= N.+1 -> add_po k = None.
-Proof. Admitted.
-
-Lemma acycl_add_po k: add_po k < k.
-Proof. Admitted.
-
-Definition radd_po := connect (rel_of (restr add_po)).
-
-(* seq of all writes of (value l) to (variable x) *)
-Definition possible_writes : seq 'I_N.+1. Admitted.
-Definition add_E : nat -> ev_label := fun t => if t == N then @E e t else l.
-
-Definition seq_of_writes' := 
-  if add_t is some t then
-     [seq z <- possible_writes | ~~ (radd_po t z) &
-     ~~[exists x, [exists y, (radd_po x t) && (radd_po y z) &&
-                             (add_po x == add_po y) && (add_po x) &&
-                             (x != y) && (tid (add_E x) == tid (add_E y))]]]
-  else [::].
-
-Definition add_rf' n : {k : 'I_N.+1 | is_read (add_E k)} -> 'I_N.+1.
-case=> x.
-
-Lemma : .
-Proof.
-  
-Qed.
-
-
-End adding_event.
+Proof. Admitted.*)
 
 End Cause_Conflict.
 
