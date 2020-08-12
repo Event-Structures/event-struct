@@ -2,21 +2,18 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order e
 From RelationAlgebra Require Import rel fhrel.
 
 Definition var := nat.
-Definition tread_id := nat.
+Definition tread_id := seq bool.
 
 
-(*Definition ord_max {n} (i : 'I_n) : 'I_n.
-case: i. case: (posnP n)=> [->//|]. by rewrite -ltn_predL=> /Ordinal. Defined.*)
 
-
-(*Definition ord_of_ex {n} (i : 'I_n) (m : nat) : 'I_n.
-case: i. by case: (posnP n)=> [->//|/(ltn_pmod m)/Ordinal]. Defined.*)
+Definition ord_of {n} (i : 'I_n) (m : nat) : 'I_n.
+case: i. by case: (posnP n)=> [->|/(ltn_pmod m)/Ordinal]. Defined.
 
 (*Lemma ltn_modS a b: (a %% (b.+1) < b.+1)%N.
 Proof. by rewrite ltn_pmod. Qed.
-Definition l_mod_m {n} (l : nat) := Ordinal (ltn_modS l n).
+Definition l_mod_m n (l : nat) := Ordinal (ltn_modS l n).*)
 
-Notation "$ n" := (l_mod_m n) (at level 0).*)
+Notation "'[' l 'to' n ']'" := (ord_of n l) (at level 0).
 
 Section downward_closure.
 Context {n : nat}.
@@ -38,8 +35,14 @@ Inductive ev_label := (* + tread id *)
 | R : tread_id -> var -> val -> ev_label
 | W : tread_id -> var -> val -> ev_label.
 
-Definition is_read  l := if l is R _ _ _ then true else false. 
-Definition is_write l := if l is W _ _ _ then true else false.
+Definition is_read  l := if l is some (R _ _ _) then true else false. 
+Definition is_write l := if l is some (W _ _ _) then true else false.
+Definition write_read l m := 
+  match l, m with
+  | some (W _ x i), some (R _ y j) => (y == x) && (i == j)
+  | _, _                           => false
+  end.
+
 Definition location l := 
   match l with
   | R _ x _ | W _ x _ => x
@@ -50,7 +53,7 @@ Definition value l :=
   end.
 Definition tid l := 
   match l with
-  | R t _ _ | W t _ _ => t
+  | some (R t _ _) | some (W t _ _) => t | _ => [::]
   end.
 Definition is_write_to x i l := if l is W _ y j then (x == y) && (i == j) else false.
 
@@ -63,26 +66,31 @@ Inductive tr_label :=
 Definition ord_of_ex {n} {Q : 'I_n -> Prop} (k : {m : 'I_n | Q m}) :=
    match k with exist m _ => m end.
 
+
 Definition sig_of_ord {T} (p : pred T) (x : T) : option {x : T | p x}.
 case H : (p x); last by exact: None. by exact: some (exist _ x H). Defined.
 Print simpl_rel.
 Definition rel_of {T : finType} (f : T -> option T) :=
   connect [rel x y | if f y is some z then (z == x) else false].
-Definition restr {n} (f : nat -> option 'I_n) : 'I_n -> option 'I_n := 
-  fun n => f n.
+Definition restr {n} (f : nat -> option nat) : 'I_n -> option 'I_n := 
+  fun n => if f n is some m then some [m to n] else None.
+Definition prefix {T} (s s' : seq T) : seq T. Admitted.
+Definition tail {T} (s : seq T) := if s is h :: t then t else [::].
 
 
 
 Structure evstruct := Pack {
-  n            : nat;
-  E            : 'I_n -> ev_label;
-  po           : nat -> option 'I_n;
-  po_dom       : forall m, m > n -> po m = None;
-  acycl_po     : forall n, po n < n;
-  rf           : {k : 'I_n | is_read (E k)} -> 'I_n;
-  rf_codom     : forall (k : {k : 'I_n | is_read (E k)}),
-                 let l := E (ord_of_ex k) in let x := location l in let i := value l in is_write_to x i l;
-  rf_po_acycl  : forall k,  ~~ (rel_of (restr po)) (ord_of_ex k) (rf k);
+  N            : nat;
+  E            : nat -> option ev_label;
+  E_dom        : forall k, reflect (E k = None) (k < n);
+  po           : nat -> option nat;
+  po_tid       : forall n, po n = some m <-> (tid (E m)) =;
+  po_dom       : forall m, m >= N -> po m = None;
+  acycl_po     : forall n, (po n) < n;
+  rf           : nat -> option nat;
+  rf_dom       : forall m, reflect (rf m) (is_read (E m));
+  rf_codom     : forall n k l, is_read (E n) -> rf n = some k -> write_read (E k) (E n);
+  rf_po_acycl  : forall k l: 'I_N, rf k = some l -> ~~ (prefix (tid (E k)) (tid (E l)));
   rf_non_confl : forall k, let m := ord_of_ex k in let l := rf k in
    ~~[exists x, [exists y, ((rel_of (restr po)) x m)                &&      (* |   *)
                            ((rel_of (restr po)) y l)                &&      (* |   *)
@@ -97,18 +105,18 @@ Arguments E  {_}.
 (* derive cause conflict and properties ... *)
 Section Cause_Conflict.
 Variables (e : evstruct).
-Implicit Type n m : 'I_(n e).
+Implicit Types (n m : 'I_(n e)) (x : val) (i : var).
 Notation N := (n e).
 
-Definition add_po (k : option 'I_N.+1) : nat -> option 'I_N.+1 := 
-  fun l => if l == @ord_max N then k else po l.
+Definition oord_of_o (on : option 'I_N) :=
+  if on is some (Ordinal k klN) then some (Ordinal (ltn_trans klN (ltnSn N))) else None.
 
 
-Definition is_readn n := is_read (E n).
+Definition is_readn n := is_read (@E e n).
 
 
 Definition rrf := [rel n m | if sig_of_ord is_readn n is some x then m == rf x else false].
-Definition cause := connect [rel m n | rrf n m || (rel_of po) n m].
+Definition cause := connect [rel m n | rrf n m || (rel_of (restr po)) n m].
 
 Lemma irrefl_cause: irreflexive cause.
 Proof. Admitted.
@@ -120,7 +128,7 @@ Lemma anti_cause: antisymmetric cause.
 Proof. Admitted.
 
 
-Definition pre_conflict n m := (n != m) && (tid (E n) == tid (E m)) && (po n == po m) && (po n).
+Definition pre_conflict n m := (n != m) && (tid (@E e n) == tid (@E e m)) && (@po e n == po m) && (@po e n).
 Definition conflict n m := [exists x, [exists y, (cause x m) && (cause y n) && (pre_conflict x y)]].
 Notation "a # b" := (conflict a b) (at level 0).
 
@@ -131,24 +139,45 @@ Proof. Admitted.
 Lemma irrefl_conflict: irreflexive conflict.
 Proof. Admitted.
 
-
 Lemma consist_conflict n1 n2 n3: cause n1 n2 -> n1 # n3 -> n2 # n3.
 Proof. Admitted.
 
-Definition ordSn_of n := match n with Ordinal k klN => Ordinal (ltn_trans klN (ltnSn N)) end.
-Print ord_max.
+Section adding_event.
+Variables (add_t : option 'I_N.+1) (l : ev_label).
 
-Definition add_po (k : option 'I_N.+1) : nat -> option 'I_N.+1 := 
-  fun l => if l == @ord_max N then
-              if k is some t then t else None.
-           else po l.
+Definition add_po : nat -> option 'I_N.+1 := 
+  fun l => if l == N then add_t else oord_of_o (po l).
 
-Lemma po_dom_add_po: .
+Lemma add_po_dom k : k >= N.+1 -> add_po k = None.
+Proof. Admitted.
+
+Lemma acycl_add_po k: add_po k < k.
+Proof. Admitted.
+
+Definition radd_po := connect (rel_of (restr add_po)).
+
+(* seq of all writes of (value l) to (variable x) *)
+Definition possible_writes : seq 'I_N.+1. Admitted.
+Definition add_E : nat -> ev_label := fun t => if t == N then @E e t else l.
+
+Definition seq_of_writes' := 
+  if add_t is some t then
+     [seq z <- possible_writes | ~~ (radd_po t z) &
+     ~~[exists x, [exists y, (radd_po x t) && (radd_po y z) &&
+                             (add_po x == add_po y) && (add_po x) &&
+                             (x != y) && (tid (add_E x) == tid (add_E y))]]]
+  else [::].
+
+Definition add_rf' n : {k : 'I_N.+1 | is_read (add_E k)} -> 'I_N.+1.
+case=> x.
+
+Lemma : .
 Proof.
   
 Qed.
 
 
+End adding_event.
 
 End Cause_Conflict.
 
