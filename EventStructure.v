@@ -9,7 +9,7 @@ Definition tread_id := nat.
 case: i. case: (posnP n)=> [->//|]. by rewrite -ltn_predL=> /Ordinal. Defined.*)
 
 
-(*Definition ord_of {n} (i : 'I_n) (m : nat) : 'I_n.
+(*Definition ord_of_ex {n} (i : 'I_n) (m : nat) : 'I_n.
 case: i. by case: (posnP n)=> [->//|/(ltn_pmod m)/Ordinal]. Defined.*)
 
 (*Lemma ltn_modS a b: (a %% (b.+1) < b.+1)%N.
@@ -60,7 +60,7 @@ Inductive tr_label :=
 | r : var -> val -> tr_label
 | w : var -> val -> tr_label.
 
-Definition ord_of {n} {Q : 'I_n -> Prop} (k : {m : 'I_n | Q m}) :=
+Definition ord_of_ex {n} {Q : 'I_n -> Prop} (k : {m : 'I_n | Q m}) :=
    match k with exist m _ => m end.
 
 Definition sig_of_ord {T} (p : pred T) (x : T) : option {x : T | p x}.
@@ -68,20 +68,24 @@ case H : (p x); last by exact: None. by exact: some (exist _ x H). Defined.
 Print simpl_rel.
 Definition rel_of {T : finType} (f : T -> option T) :=
   connect [rel x y | if f y is some z then (z == x) else false].
+Definition restr {n} (f : nat -> option 'I_n) : 'I_n -> option 'I_n := 
+  fun n => f n.
+
 
 
 Structure evstruct := Pack {
   n            : nat;
   E            : 'I_n -> ev_label;
-  po           : 'I_n -> option 'I_n;
+  po           : nat -> option 'I_n;
+  po_dom       : forall m, m > n -> po m = None;
   acycl_po     : forall n, po n < n;
   rf           : {k : 'I_n | is_read (E k)} -> 'I_n;
   rf_codom     : forall (k : {k : 'I_n | is_read (E k)}),
-                 let l := E (ord_of k) in let x := location l in let i := value l in is_write_to x i l;
-  rf_po_acycl  : forall k,  ~~ (rel_of po) (ord_of k) (rf k);
-  rf_non_confl : forall k, let m := ord_of k in let l := rf k in
-   ~~[exists x, [exists y, ((rel_of po) x m)                &&      (* |   *)
-                           ((rel_of po) y l)                &&      (* |   *)
+                 let l := E (ord_of_ex k) in let x := location l in let i := value l in is_write_to x i l;
+  rf_po_acycl  : forall k,  ~~ (rel_of (restr po)) (ord_of_ex k) (rf k);
+  rf_non_confl : forall k, let m := ord_of_ex k in let l := rf k in
+   ~~[exists x, [exists y, ((rel_of (restr po)) x m)                &&      (* |   *)
+                           ((rel_of (restr po)) y l)                &&      (* |   *)
                            (po x == po y) && (po x)         &&      (* | -> rf can't match two conflict events *)
                            (x != y) && (tid (E x) == tid (E y))]];  (* |   *)
 }.
@@ -94,6 +98,11 @@ Arguments E  {_}.
 Section Cause_Conflict.
 Variables (e : evstruct).
 Implicit Type n m : 'I_(n e).
+Notation N := (n e).
+
+Definition add_po (k : option 'I_N.+1) : nat -> option 'I_N.+1 := 
+  fun l => if l == @ord_max N then k else po l.
+
 
 Definition is_readn n := is_read (E n).
 
@@ -125,6 +134,21 @@ Proof. Admitted.
 
 Lemma consist_conflict n1 n2 n3: cause n1 n2 -> n1 # n3 -> n2 # n3.
 Proof. Admitted.
+
+Definition ordSn_of n := match n with Ordinal k klN => Ordinal (ltn_trans klN (ltnSn N)) end.
+Print ord_max.
+
+Definition add_po (k : option 'I_N.+1) : nat -> option 'I_N.+1 := 
+  fun l => if l == @ord_max N then
+              if k is some t then t else None.
+           else po l.
+
+Lemma po_dom_add_po: .
+Proof.
+  
+Qed.
+
+
 
 End Cause_Conflict.
 
