@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order eqtype div fingraph. 
-From RelationAlgebra Require Import rel fhrel.
-
+From Equations Require Import Equations.
+From event_struct Require Import ssrlia.
 Definition var := nat.
 Definition tread_id := nat.
 
@@ -12,11 +12,6 @@ case: i. case: (posnP n)=> [->//|]. by rewrite -ltn_predL=> /Ordinal. Defined.*)
 (*Definition ord_of {n} (i : 'I_n) (m : nat) : 'I_n.
 case: i. by case: (posnP n)=> [->//|/(ltn_pmod m)/Ordinal]. Defined.*)
 
-(*Lemma ltn_modS a b: (a %% (b.+1) < b.+1)%N.
-Proof. by rewrite ltn_pmod. Qed.
-Definition l_mod_m {n} (l : nat) := Ordinal (ltn_modS l n).
-
-Notation "$ n" := (l_mod_m n) (at level 0).*)
 
 Section prime_event_structure.
 Context {val : eqType}.
@@ -73,18 +68,65 @@ Arguments po {_}.
 Arguments rf {_}.
 Arguments E  {_}.
 
+Equations equal (n m : nat) : { n = m } + { n <> m } :=
+equal O O := left erefl ;
+equal (S n) (S m) with equal n m := {
+  equal (S n) (S ?(n)) (left erefl) := left erefl ;
+  equal (S n) (S m) (right p) := right _ } ;
+equal x y := right _.
+
+Lemma ltS_neq_lt {n N}: n < N.+1 -> N <> n -> n < N.
+Proof. ssrnatlia. Qed. 
+
+
+Equations decr_ord (N : nat) (n : 'I_N.+1) : 'I_N + {n : nat | n = N} := 
+decr_ord 0 n := inr (@exist _ _ 0 erefl);
+decr_ord (N'.+1) (@Ordinal n L) with equal (N'.+1) n := {
+  decr_ord (N'.+1) (@Ordinal ?(N'.+1) L) (left erefl) := inr (@exist _ _ N'.+1 erefl);
+  decr_ord (N'.+1) (Ordinal L) (right p) := inl (Ordinal (ltS_neq_lt L p))
+}.
+
+Section adding_event.
+Variable (lab : ev_label).
+
+Equations add_E (N : nat) (f : 'I_N -> ev_label) (n : 'I_N.+1) : ev_label :=
+add_E 0 f _ := lab;
+add_E (N.+1) f (@Ordinal n L) with equal (N.+1) n := {
+  add_E (N.+1) f (@Ordinal ?(N.+1) L) (left erefl) := lab;
+  add_E (N.+1) f (@Ordinal n L) (right p) := f (Ordinal (ltS_neq_lt L p))
+}.
+
+Equations incr_oord (N : nat) (n : option 'I_N) : option 'I_N.+1 :=
+incr_oord N (some (Ordinal L)) := some (Ordinal (ltn_trans L (ltnSn N)));
+incr_oord N None := None.
+
+Lemma nltn0 n: ~ (n < 0).
+Proof. ssrnatlia. Qed.
+
+Equations nat_osig_to_ord (N : nat) (m : 'I_N) (k : {? k : 'I_N | k < m}) : {? k : 'I_N.+1 | k < m} :=
+nat_osig_to_ord N _ (some (@exist _ _ (Ordinal k_le_N) k_le_m)) := 
+  some (@exist _ _ (Ordinal (ltn_trans k_le_N (ltnSn N))) k_le_m);
+nat_osig_to_ord N _ None := None.
+
+Equations add_po (N : nat) (f : forall (m : 'I_N), {? k : 'I_N | k < m})
+                 (pre_n : option 'I_N) (n : 'I_N.+1) : {? k : 'I_N.+1 | k < n} :=
+add_po 0 _ None _ := None;
+add_po 0 _ (some (Ordinal F)) _ with (nltn0 _ F) := {};
+add_po (N.+1) f on (@Ordinal n L) with equal (N.+1) n := {
+  add_po (N.+1) f None (@Ordinal ?(N.+1) L) (left erefl) := None;
+  add_po (N.+1) f (some (@Ordinal k L')) (@Ordinal ?(N.+1) L) (left erefl) :=
+    some (@exist _ _ (Ordinal (ltn_trans L' (ltnSn N.+1))) L');
+  add_po (N.+1) f _ (@Ordinal n L) (right p) := nat_osig_to_ord _ _ (f (Ordinal (ltS_neq_lt L p)))
+}.
+
+End adding_event.
+
 (* derive cause conflict and properties ... *)
-Section Cause_Conflict.
+(*Section Cause_Conflict.
 Variables (e : evstruct) (lab : ev_label).
-Notation N := (n e).
-Variables (write_place : 'I_N).
-Import Order.NatOrder.
-Print sumbool.
-(*Definition foo : 'I_N.+1 -> 'I_N + {n : nat | n == N}.
 
 
-Definition add_E : 'I_N.+1 -> ev_label := 
-  fun n => if n == N then lab else E n.
+Equations add_E {l : 'I_N.+1 | is_read (E l)}
 
 Definition add_rf {l : 'I_N.+1 | is_read (E l)},
                   {l : 'I_N.+1 | (l < proj1_sig k) && (write_read (E l) (E (proj1_sig k)))} :=
@@ -123,8 +165,8 @@ Proof. Admitted.
 
 
 Lemma consist_conflict n1 n2 n3: cause n1 n2 -> n1 # n3 -> n2 # n3.
-Proof. Admitted.*)
+Proof. Admitted.
 
-End Cause_Conflict.
+End Cause_Conflict.*)
 
 End prime_event_structure.
