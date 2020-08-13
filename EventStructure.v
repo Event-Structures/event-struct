@@ -18,18 +18,6 @@ Definition l_mod_m {n} (l : nat) := Ordinal (ltn_modS l n).
 
 Notation "$ n" := (l_mod_m n) (at level 0).*)
 
-Section downward_closure.
-Context {n : nat}.
-Definition downward_closure (l : 'I_n) (r : rel 'I_n) := r^~ l.
-Definition downward_closed (p : pred 'I_n) (r : rel 'I_n) := 
-  forall x y, x \in p -> r y x -> y \in p.
-
-
-Definition finite (a : pred 'I_n) :=  exists (s : seq 'I_n), forall x, x \in a -> x \in s.
-Definition finite_downward_closure (r : rel 'I_n) := forall l, finite (downward_closure l r).
-
-End downward_closure.
-
 Section prime_event_structure.
 Context {val : eqType}.
 
@@ -38,8 +26,14 @@ Inductive ev_label := (* + tread id *)
 | R : tread_id -> var -> val -> ev_label
 | W : tread_id -> var -> val -> ev_label.
 
-Definition is_read  l := if l is R _ _ _ then true else false. 
-Definition is_write l := if l is W _ _ _ then true else false.
+Definition is_read  l := if l is (R _ _ _) then true else false. 
+Definition is_write l := if l is (W _ _ _) then true else false.
+Definition write_read l m := 
+  match l, m with
+  | (W _ x i), (R _ y j) => (y == x) && (i == j)
+  | _, _                           => false
+  end.
+
 Definition location l := 
   match l with
   | R _ x _ | W _ x _ => x
@@ -50,33 +44,29 @@ Definition value l :=
   end.
 Definition tid l := 
   match l with
-  | R t _ _ | W t _ _ => t
+  |  (R t _ _) | (W t _ _) => t
   end.
 Definition is_write_to x i l := if l is W _ y j then (x == y) && (i == j) else false.
+(*Definition foo_eq {n} {P} {Q} (x : option {l : 'I_n | P l}) (y : option {k : 'I_n | Q k}) :=
+  match x, y with
+  | (exist a _), (exist b _) => (a == b)
+  | _, _ => false
+  end.*)
 
 
 (* labels for transitions in transition system of event structures *)
-Inductive tr_label :=
-| r : var -> val -> tr_label
-| w : var -> val -> tr_label.
-
-Definition ord_of {n} {Q : 'I_n -> Prop} (k : {m : 'I_n | Q m}) :=
-   match k with exist m _ => m end.
 
 Structure evstruct := Pack {
   n  : nat;
   E  : 'I_n -> ev_label;
-  po : forall (m : 'I_n), {k : 'I_n | k < m}; (* Structure {tval : 'I_n, _ : tval < m} *)
-  rf : forall k, 
-  let l := E k in let x := location l in let i := value l in
-  let rpo := connect [rel x y | x == ord_of (po y)] in
-   is_read l -> {m : 'I_n | 
-   (is_write_to x i (E m)) && (* we read frim Write *)
-    ~~ (rpo k m)           && (* acyclic po with rf *)
-    ~~[exists x, [exists y, (rpo x m)                        &&      (* |   *)
-                            (rpo y k)                        &&      (* |   *)
-                            (ord_of (po x) == ord_of (po y)) &&      (* | -> rf can't match two conflict events *)
-                            (x != y) && (tid (E x) == tid (E y))]]}; (* |   *)
+  po : forall (m : 'I_n), option {k : 'I_n | k < m}; (* Structure {tval : 'I_n, _ : tval < m} *)
+  rf : forall k : {l : 'I_n | is_read (E l)},
+                  {l : 'I_n | (l < proj1_sig k) && (write_read (E l) (E (proj1_sig k)))};
+  (*rf_consit    : forall k,
+                let rpo := connect [rel x y | if (po y) is some z then proj1_sig z == y else false] in
+                 ~~[exists x, [exists y, 
+                 (rpo x (proj1_sig k)) && (rpo y (proj1_sig (rf k))) &&
+                 (foo_eq (po x) (po y)) &&  (x != y) && (tid (E x) == tid (E y))]];*)
 }.
 
 Arguments po {_}.
@@ -85,8 +75,24 @@ Arguments E  {_}.
 
 (* derive cause conflict and properties ... *)
 Section Cause_Conflict.
-Variables (e : evstruct).
-Implicit Type n m : 'I_(n e).
+Variables (e : evstruct) (lab : ev_label).
+Notation N := (n e).
+Variables (write_place : 'I_N).
+Import Order.NatOrder.
+Print sumbool.
+(*Definition foo : 'I_N.+1 -> 'I_N + {n : nat | n == N}.
+
+
+Definition add_E : 'I_N.+1 -> ev_label := 
+  fun n => if n == N then lab else E n.
+
+Definition add_rf {l : 'I_N.+1 | is_read (E l)},
+                  {l : 'I_N.+1 | (l < proj1_sig k) && (write_read (E l) (E (proj1_sig k)))} :=
+  fun l => if proj_sig1 l == N then (exist write_place (H : write_place < proj_sig1 l) )
+
+
+Definition add_po () := .
+
 
 Definition pre_rpo m n := n == ord_of (po m).
 Definition rpo := connect pre_rpo.
@@ -117,7 +123,7 @@ Proof. Admitted.
 
 
 Lemma consist_conflict n1 n2 n3: cause n1 n2 -> n1 # n3 -> n2 # n3.
-Proof. Admitted.
+Proof. Admitted.*)
 
 End Cause_Conflict.
 
