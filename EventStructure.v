@@ -86,13 +86,13 @@ Fixpoint prefix {T : eqType} (s s' : seq T) : bool :=
 Structure evstruct := Pack {
   N            : nat;
   E            : nat -> option ev_label;
-  E_dom        : forall k, reflect (E k = None) (k < N);
+  E_dom        : forall k, reflect (E k = None) (N <= k);
   po           : nat -> option nat;
   po_tid       : forall n m, po n = some m -> prefix (tid (E m)) (tid (E n));
   po_dom       : forall m, m >= N -> po m = None;
-  acycl_po     : forall n, (po n) < n;
+  acycl_po     : forall n k, (po n) = some k -> k < n;
   rf           : nat -> option nat;
-  acycl_rf     : forall n, (rf n) < n;
+  acycl_rf     : forall n k, (rf n) = some k -> k < n;
   rf_dom       : forall m, reflect (rf m) (is_read (E m));
   rf_codom     : forall n k, is_read (E n) -> rf n = some k -> write_read (E k) (E n);
   rf_non_confl : forall k l : 'I_N, (restr rf) k = some l -> 
@@ -114,6 +114,7 @@ Notation rf := (rf e).
 
 
 Section adding_event.
+
 Variables (add_t : option 'I_N) (l : ev_label).
 Hypothesis H : if add_t is some t then
                  prefix (tid (E t)) (tid (some l))
@@ -176,24 +177,24 @@ Proof. Admitted.
 
 End add_rf_properties.
 End adding_event.
+Notation po_res := (@restr N po).
+Notation rf_res := (@restr N rf).
 
-(*Definition is_readn n := is_read (E n).
+Definition rrf := [rel n m | if rf_res n == some m then m == n else false].
+Definition cause := connect [rel m n | rrf n m || (rel_of po_res) n m].
 
-
-Definition rrf := [rel n m | if sig_of_ord is_readn n is some x then m == rf x else false].
-Definition cause := connect [rel m n | rrf n m || (rel_of (restr po)) n m].
-
-Lemma irrefl_cause: irreflexive cause.
-Proof. Admitted.
+Lemma refl_cause: reflexive cause.
+Proof. by apply: connect0. Qed.
 
 Lemma trans_cause: transitive cause.
-Proof. Admitted.
+Proof. by apply: connect_trans. Qed.
 
 Lemma anti_cause: antisymmetric cause.
-Proof. Admitted.
+Proof.
+move=> x y /andP[xy yx]. Admitted.
 
 
-Definition pre_conflict n m := (n != m) && (tid (@E e n) == tid (@E e m)) && (@po e n == po m) && (@po e n).
+(*Definition pre_conflict n m := (n != m) && (tid (@E e n) == tid (@E e m)) && (@po e n == po m) && (@po e n).
 Definition conflict n m := [exists x, [exists y, (cause x m) && (cause y n) && (pre_conflict x y)]].
 Notation "a # b" := (conflict a b) (at level 0).
 
