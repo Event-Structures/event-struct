@@ -1,60 +1,37 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order eqtype div fingraph. 
 From Equations Require Import Equations.
 From event_struct Require Import ssrlia.
-Require Import ZArith.
 Definition var := nat.
 Definition tread_id := nat.
 
-
-(*Definition ord_max {n} (i : 'I_n) : 'I_n.
-case: i. case: (posnP n)=> [->//|]. by rewrite -ltn_predL=> /Ordinal. Defined.*)
-
-
-(*Definition ord_of {n} (i : 'I_n) (m : nat) : 'I_n.
-case: i. by case: (posnP n)=> [->//|/(ltn_pmod m)/Ordinal]. Defined.*)
 
 
 Section prime_event_structure.
 Context {val : eqType}.
 
 (* labels for events in event structure *)
-Inductive ev_label := (* + tread id *)
-| R : tread_id -> var -> val -> ev_label
-| W : tread_id -> var -> val -> ev_label.
+Inductive label := (* + tread id *)
+| R : tread_id -> var -> val -> label
+| W : tread_id -> var -> val -> label.
 
-Definition is_read  l := if l is (R _ _ _) then true else false. 
+Definition is_read  l := if l is (R _ _ _) then true else false.
+
 Definition is_write l := if l is (W _ _ _) then true else false.
+
 Definition read_from l m := 
   match l, m with
   | (W _ x i), (R _ y j) => (y == x) && (i == j)
-  | _, _                           => false
+  | _, _                 => false
   end.
 
-Definition location l := 
-  match l with
-  | R _ x _ | W _ x _ => x
-  end.
-Definition value l := 
-  match l with
-  | R _ _ i | W _ _ i => i
-  end.
 Definition tid l := 
   match l with
   |  (R t _ _) | (W t _ _) => t
   end.
-Definition is_write_to x i l := if l is W _ y j then (x == y) && (i == j) else false.
-(*Definition foo_eq {n} {P} {Q} (x : option {l : 'I_n | P l}) (y : option {k : 'I_n | Q k}) :=
-  match x, y with
-  | (exist a _), (exist b _) => (a == b)
-  | _, _ => false
-  end.*)
-
-
-(* labels for transitions in transition system of event structures *)
 
 Structure execgraph := Pack {
   n  : nat;
-  E  : 'I_n -> ev_label;
+  E  : 'I_n -> label;
   po : forall (m : 'I_n), {? k : 'I_n | k < m}; (* Structure {tval : 'I_n, _ : tval < m} *)
   rf : forall k : {l : 'I_n | is_read (E l)},
                   {l : 'I_n | (l < sval k) && (read_from (E l) (E (sval k)))};
@@ -76,14 +53,14 @@ Lemma ltS_neq_lt {n N}: n < N.+1 -> N <> n -> n < N.
 Proof. ssrnatlia. Qed. 
 
 Section adding_event.
-Variable (lab : ev_label) (e : execgraph) (pre_po : option 'I_(n e)).
+Variable (lab : label) (e : execgraph) (pre_po : option 'I_(n e)).
 Notation N := (n e).
 Notation E := (E e).
 Notation po := (po e).
 Notation rf := (rf e).
 
 
-Equations add_E (n : 'I_N.+1) : ev_label :=
+Equations add_E (n : 'I_N.+1) : label :=
 add_E (@Ordinal n L) with equal N n := {
   add_E _ (left erefl) := lab;
   add_E (Ordinal L) (right p) := E (Ordinal (ltS_neq_lt L p))
@@ -178,35 +155,43 @@ Proof.
 case: k=> [[*]]. simp decr_rf_dom=>/=. simp incr_ord. by apply/ord_inj.
 Qed.
 
-Equations add_rf
+Equations add_rf_some
   (m : 'I_N) (RF : read_from (E m) (add_E ord_max))
   (k : {l : 'I_N.+1 | is_read (add_E l)}) :
        {l : 'I_N.+1 | (l < sval k) && (read_from (add_E l) (add_E (sval k)))} :=
-add_rf _ _ k with equal N (sval k) := {
-  add_rf (Ordinal m_le_N) RF (@exist (Ordinal L) _) (left erefl) :=
+add_rf_some _ _ k with equal N (sval k) := {
+  add_rf_some (Ordinal m_le_N) RF (@exist (Ordinal L) _) (left erefl) :=
     (@exist _ _ (incr_ord (Ordinal m_le_N)) (and_i m_le_N (incr_is_read L RF)));
-  add_rf _ _ k (right p) :=  incr_rf_codom k _ (sval_decr_ord _ _) (rf (decr_rf_dom k p))
+  add_rf_some _ _ k (right p) :=  incr_rf_codom k _ (sval_decr_ord _ _) (rf (decr_rf_dom k p))
+}.
+
+Lemma ord_P {L} : (~ is_read (add_E ord_max)) -> (~ is_read (add_E (@Ordinal N.+1 N L))).
+Proof. have->//: ord_max = (@Ordinal N.+1 N L). by apply/ord_inj. Qed.
+
+
+Equations add_rf_None
+  (NR : ~ is_read (add_E ord_max))
+  (k : {l : 'I_N.+1 | is_read (add_E l)}) :
+       {l : 'I_N.+1 | (l < sval k) && (read_from (add_E l) (add_E (sval k)))} :=
+add_rf_None _ k with equal N (sval k) := {
+  add_rf_None NR (@exist (Ordinal L) IR) (left erefl) with (ord_P NR) IR := {};
+  add_rf_None _ k (right p) :=  incr_rf_codom k _ (sval_decr_ord _ _) (rf (decr_rf_dom k p))
 }.
 
 End adding_event.
-
 (* derive cause conflict and properties ... *)
-(*Section Cause_Conflict.
-Variables (e : evstruct) (lab : ev_label).
+Section Cause_Conflict.
+Variables (e : execgraph) (lab : label).
 
+Notation N := (n e).
+Notation E := (E e).
+Notation po := (po e).
+Notation rf := (rf e).
 
-Equations add_E {l : 'I_N.+1 | is_read (E l)}
+Definition rpo := connect [rel x y | if (po x) is some z then sval z == y else false].
 
-Definition add_rf {l : 'I_N.+1 | is_read (E l)},
-                  {l : 'I_N.+1 | (l < sval k) && (read_from (E l) (E (sval k)))} :=
-  fun l => if proj_sig1 l == N then (exist write_place (H : write_place < proj_sig1 l) )
+Equations  := .
 
-
-Definition add_po () := .
-
-
-Definition pre_rpo m n := n == ord_of (po m).
-Definition rpo := connect pre_rpo.
 
 Definition rrf n m := n == ord_of (po m).
 Definition cause := connect [rel n m | rrf n m || rpo n m].
@@ -236,6 +221,6 @@ Proof. Admitted.
 Lemma consist_conflict n1 n2 n3: cause n1 n2 -> n1 # n3 -> n2 # n3.
 Proof. Admitted.
 
-End Cause_Conflict.*)
+End Cause_Conflict.
 
 End prime_event_structure.
