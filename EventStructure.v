@@ -190,21 +190,27 @@ Notation rf := (rf e).
 
 Definition rpo := connect [rel x y | if (po x) is some z then sval z == y else false].
 
+Definition case_bool b : {b = true} + {b = false} := if b then left erefl else right erefl.
 
-(*Definition rrf n m := n == ord_of (po m).
+Definition rrf (n m : 'I_N) : bool := 
+  if case_bool (is_read (E n)) is (left IT) 
+    then sval (rf (@exist _ _ n IT)) == m
+  else false.
+
 Definition cause := connect [rel n m | rrf n m || rpo n m].
 
-Lemma irrefl_cause: irreflexive cause.
-Proof. Admitted.
+Lemma refl_cause: reflexive cause.
+Proof. exact: connect0. Qed.
 
 Lemma trans_cause: transitive cause.
-Proof. Admitted.
+Proof. exact: connect_trans. Qed.
 
 Lemma anti_cause: antisymmetric cause.
-Proof. Admitted.
+Proof.
+move=> x y /andP[xy yx]. Admitted.
 
 
-Definition pre_conflict n m := (n != m) && (tid (E n) == tid (E m)) && (ord_of (po n) == ord_of (po m)).
+(*Definition pre_conflict n m := (n != m) && (tid (E n) == tid (E m)) && (ord_of (po n) == ord_of (po m)).
 Definition conflict n m := [exists x, [exists y, (cause x m) && (cause y n) && (pre_conflict x y)]].
 Notation "a # b" := (conflict a b) (at level 0).
 
