@@ -168,13 +168,25 @@ add_rf_some _ _ k with equal N (sval k) := {
 Lemma ord_P {L} : (~ is_read (add_E ord_max)) -> (~ is_read (add_E (@Ordinal N.+1 N L))).
 Proof. have->//: ord_max = (@Ordinal N.+1 N L). by apply/ord_inj. Qed.
 
+Print ordinal.
+
+Lemma foo (L : N < N.+1) : ord_max = Ordinal L.
+Admitted.
 
 Equations add_rf_None
   (NR : ~ is_read (add_E ord_max))
   (k : {l : 'I_N.+1 | is_read (add_E l)}) :
        {l : 'I_N.+1 | (l < sval k) && (read_from (add_E l) (add_E (sval k)))} :=
 add_rf_None _ k with equal N (sval k) := {
-  add_rf_None NR (@exist (Ordinal L) IR) (left erefl) with (ord_P NR) IR := {};
+  add_rf_None NR (@exist (Ordinal L) IR) (left erefl) with (foo L) := {
+   add_rf_None _ _ _ H := _ }
+  add_rf_None _ k (right p) :=  incr_rf_codom k _ (sval_decr_ord _ _) (rf (decr_rf_dom k p))
+  }.
+  
+  
+  
+  
+  (ord_P NR) IR := {};
   add_rf_None _ k (right p) :=  incr_rf_codom k _ (sval_decr_ord _ _) (rf (decr_rf_dom k p))
 }.
 
@@ -190,10 +202,8 @@ Notation rf := (rf e).
 
 Definition rpo := connect [rel x y | if (po x) is some z then sval z == y else false].
 
-Equations  := .
 
-
-Definition rrf n m := n == ord_of (po m).
+(*Definition rrf n m := n == ord_of (po m).
 Definition cause := connect [rel n m | rrf n m || rpo n m].
 
 Lemma irrefl_cause: irreflexive cause.
@@ -219,7 +229,7 @@ Proof. Admitted.
 
 
 Lemma consist_conflict n1 n2 n3: cause n1 n2 -> n1 # n3 -> n2 # n3.
-Proof. Admitted.
+Proof. Admitted.*)
 
 End Cause_Conflict.
 
