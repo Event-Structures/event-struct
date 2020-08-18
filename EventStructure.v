@@ -229,6 +229,9 @@ case: {2}(is_read (E n)) {-1}(@erefl _ (is_read (E n))) erefl=> {2 3}->// ?[].
 by case: (rf _)=>/= x /andP[?? <-].
 Qed.
 
+Lemma po_le n m: osval (po n) = some m -> m < n.
+Proof. by case: (po n)=> //= [[/=??[<-]]]. Qed.
+
 Definition rrf (n m : 'I_N) : bool := (orf n == some m).
 
 Definition cause := connect [rel m n | rrf n m || rpo n m].
@@ -249,12 +252,20 @@ Lemma cause_decr n m: (n != m) -> cause n m ->
   exists k, (((rpo m k) || (orf m == some k)) && cause n k).
 Proof. Admitted.
 
+Lemma cause_sub_leq n m : cause n m -> n <= m.
+Proof.
+move: m. elim/ltn_ind => m IHm cmn.
+case H: (n == m); move: H.
+- by move=> /eqP ->.
+move/negbT/cause_decr/(_ cmn)=> [] k /andP[/orP[/eqP /po_le|/eqP /orf_le]] km cnk;
+apply/ltnW/(@leq_ltn_trans k n m)=> //; exact: (IHm k km cnk).
+Qed.
+
 Lemma anti_cause: antisymmetric cause.
 Proof.
-move=> x y /andP[xy yx]. Admitted.
-
-Lemma po_le n m: osval (po n) = some m -> m < n.
-Proof. by case: (po n)=> //= [[/=??[<-]]]. Qed.
+move=> x y /andP[/cause_sub_leq xy /cause_sub_leq yx].
+by apply/ord_inj/anti_leq/andP.
+Qed.
 
 Definition pre_conflict n m := [&& (n != m), osval (po n) == osval (po m) & (tid (E n) == tid (E m))].
 
