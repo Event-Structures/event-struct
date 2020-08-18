@@ -4,7 +4,33 @@ From event_struct Require Import ssrlia.
 Definition var := nat.
 Definition tread_id := nat.
 
+Lemma snd_true3 a b : [|| a, true | b].
+Proof. by case: a. Qed.
 
+Lemma trd_true3 a b : [|| b, a | true].
+Proof. by case: a; case b. Qed.
+
+Lemma snd_true2 a : a || true.
+Proof. by case: a. Qed.
+
+Lemma frth_true4 a b c: [|| a, b, c | true].
+Proof. by case: a; case: b; case: c. Qed.
+
+Lemma fifth_true5 a b c d: [|| a, b, c, d | true].
+Proof. apply/orP; right. exact: frth_true4. Qed.
+
+Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
+
+Definition osval {T} {P : T -> bool} (ok : {? k : T | P k }) : option T := 
+  if ok is some k then some (sval k) else None.
+
+Lemma ltn_ind N (P : 'I_N -> Type) :
+  (forall (n : 'I_N), (forall (m : 'I_N), m < n -> P m) -> P n) ->
+  forall n, P n.
+Proof.
+move=> IH n. have [k le_size] := ubnP (nat_of_ord n). 
+elim: k n le_size=>// n IHn k le_size. apply/IH=> *. apply/IHn. ssrnatlia.
+Qed.
 
 Section prime_event_structure.
 Context {val : eqType}.
@@ -187,17 +213,31 @@ Notation N := (n e).
 Notation E := (E e).
 Notation po := (po e).
 Notation rf := (rf e).
+Notation ltn_ind := (ltn_ind N).
 
-Definition rpo := connect [rel x y | if (po x) is some z then sval z == y else false].
+Definition rpo x y := osval (po x) == some y.
 
-Definition case_bool b : {b = true} + {b = false} := if b then left erefl else right erefl.
+Definition orf (n : 'I_N) : option 'I_N :=
+  (if is_read (E n) as r return (is_read (E n) = r -> _)
+    then fun pf => some (sval (rf (@exist _ _ n pf)))
+  else fun=> None) erefl.
 
-Definition rrf (n m : 'I_N) : bool := 
-  if case_bool (is_read (E n)) is (left IT) 
-    then sval (rf (@exist _ _ n IT)) == m
-  else false.
+Lemma orf_le n m: orf n = some m -> m < n.
+Proof.
+rewrite/orf.
+case: {2}(is_read (E n)) {-1}(@erefl _ (is_read (E n))) erefl=> {2 3}->// ?[].
+by case: (rf _)=>/= x /andP[?? <-].
+Qed.
 
-Definition cause := connect [rel n m | rrf n m || rpo n m].
+Definition rrf (n m : 'I_N) : bool := (orf n == some m).
+
+Definition cause := connect [rel m n | rrf n m || rpo n m].
+
+Lemma rpo_cause n m: rpo n m -> cause m n.
+Proof. move=> H. apply/connect1. by rewrite/= H. Qed.
+
+Lemma rrf_cause n m: rrf n m -> cause m n.
+Proof. move=> H. apply/connect1. by rewrite/= H. Qed.
 
 Lemma refl_cause: reflexive cause.
 Proof. exact: connect0. Qed.
@@ -205,25 +245,126 @@ Proof. exact: connect0. Qed.
 Lemma trans_cause: transitive cause.
 Proof. exact: connect_trans. Qed.
 
+Lemma cause_decr n m: (n != m) -> cause n m ->
+  exists k, (((rpo m k) || (orf m == some k)) && cause n k).
+Proof. Admitted.
+
 Lemma anti_cause: antisymmetric cause.
 Proof.
 move=> x y /andP[xy yx]. Admitted.
 
+Lemma po_le n m: osval (po n) = some m -> m < n.
+Proof. by case: (po n)=> //= [[/=??[<-]]]. Qed.
 
-(*Definition pre_conflict n m := (n != m) && (tid (E n) == tid (E m)) && (ord_of (po n) == ord_of (po m)).
-Definition conflict n m := [exists x, [exists y, (cause x m) && (cause y n) && (pre_conflict x y)]].
-Notation "a # b" := (conflict a b) (at level 0).
+Definition pre_conflict n m := [&& (n != m), osval (po n) == osval (po m) & (tid (E n) == tid (E m))].
 
+Equations conflict (n m : 'I_N) : bool by wf (n + m) lt :=
+conflict n m := [|| pre_conflict n m,
+(match osval (po n) as ox return (osval (po n) = ox -> _) with
+| some x => fun=> conflict x m
+| _      => fun=> false
+end erefl),
+(match osval (po m) as ox return (osval (po m) = ox -> _) with
+| some x => fun=> conflict n x
+| _      => fun=> false
+end erefl),
+(match orf n as ox return (orf n = ox -> _) with
+| some x => fun=> conflict x m
+| _      => fun=> false
+end erefl) |
+(match orf m as ox return (orf m = ox -> _) with
+| some x => fun=> conflict n x
+| _      => fun=> false
+end erefl)].
+
+Next Obligation. move: e0=> /po_le. ssrnatlia. Qed.
+Next Obligation. move: e0=> /po_le. ssrnatlia. Qed.
+Next Obligation. move: e0=> /orf_le. ssrnatlia. Qed.
+Next Obligation. move: e0=> /orf_le. ssrnatlia. Qed.
+
+Notation "a # b" := (conflict a b) (at level 10).
 
 Lemma symm_conflict: symmetric conflict.
-Proof. Admitted.
+Proof.
+(*move=> n m. apply/Bool.eq_true_iff_eq. suff H: forall a b, a # b -> b # a;
+first by split=> /H. move=> a b /conflictP [x [y/and3P[??/and3P[*]]]]. apply/conflictP.
+exists y, x. apply/and3P; split=> //. apply/and3P; split; by rewrite eq_sym.*)
+move=> n m. apply/Bool.eq_true_iff_eq. suff H: forall a b, a # b -> b # a;
+first by split=> /H. move=> {m n}. elim/ltn_ind=> n IHn. elim/ltn_ind=> m.
+move: IHn. apply_funelim (n # m)=> a b. apply_funelim (b # a)=> {n m} n m IHm IHn.
+move=> /or4P[|||/orP[|]]. rewrite /pre_conflict.
+- by rewrite (eq_sym n m) (eq_sym (osval (po n)) _) (eq_sym (tid (E n)) _)=>->.
+- case EQ: (osval (po m))=>//. by move: EQ=> /po_le/IHm/(_ n) I /I->.
+- case EQ: (osval (po n))=>//. by move: EQ=> /po_le/IHn I /I->.
+- case EQ: (orf m)=>//. by move: EQ=> /orf_le/IHm/(_ n) I /I->.
+case EQ: (orf n)=>//. by move: EQ=> /orf_le/IHn I /I->.
+Qed.
 
-Lemma irrefl_conflict: irreflexive conflict.
-Proof. Admitted.
+Lemma consist_conflict {n1 n2 n3}: cause n1 n2 -> n1 # n3 -> n2 # n3.
+Proof.
+(*move=> C /conflictP [x [y/and3P[*]]]. apply/conflictP. exists x, y. apply/and3P;
+split=>//. by apply/(trans_cause n1).*)
+elim/ltn_ind: n2=> n2 IHn2. case EQ: (n1 == n2); move: EQ;
+first by move=>/eqP->. move=> /negbT/cause_decr I /I [k /andP[O L C]].
+have/IHn2/(_ L C): k < n2; first by move: O=> /orP[/eqP/po_le|/eqP/orf_le].
+move: O. by apply_funelim (n2 # n3)=> n m /orP[]/eqP->->.
+Qed.
 
+Lemma conflictP n m : 
+  reflect (exists x y, [&& cause x n, cause y m & pre_conflict x y]) (n # m).
+Proof.
+elim/ltn_ind: n m=> n IHn. elim/ltn_ind=> m IHm. apply: (iffP idP).
+- move: IHm IHn. apply_funelim (n # m)=> {n m} n m IHm IHn /or4P[?|||/orP[|]].
+- exists n, m. by rewrite !refl_cause.
+- case H : (osval (po n))=>//. move: (H)=> /po_le/IHn R{}/R[x [y /and3P[]]].
+  move: H=> /eqP/rpo_cause C /trans_cause/(_ C) *. exists x, y. 
+  by apply/and3P; split.
+- case H : (osval (po m))=>//. move: (H)=> /po_le/IHm R{}/R[x [y /and3P[?]]].
+  move: H=> /eqP/rpo_cause C /trans_cause/(_ C) *. exists x, y.
+  by apply/and3P; split.
+- case H : (orf n)=>//. move: (H)=> /orf_le/IHn R{}/R[x [y /and3P[]]].
+  move: H=> /eqP/rrf_cause C /trans_cause/(_ C) *. exists x, y. 
+  by apply/and3P; split.
+- case H : (orf m)=>//. move: (H)=> /orf_le/IHm R{}/R[x [y /and3P[?]]].
+  move: H=> /eqP/rrf_cause C /trans_cause/(_ C) *. exists x, y.
+  by apply/and3P; split.
+case=> [x [y/and3P[?? P]]]. apply/(@consist_conflict x)=>//.
+rewrite symm_conflict. apply/(@consist_conflict y)=>//.
+rewrite symm_conflict. move: P. by apply_funelim (x # y)=> ??->.
+Qed.
 
-Lemma consist_conflict n1 n2 n3: cause n1 n2 -> n1 # n3 -> n2 # n3.
-Proof. Admitted.*)
+Definition rf_consist := forall n m, (orf m = some n) -> ~~ m # n.
+
+Hypothesis (rc : rf_consist).
+
+Lemma no_confl_cause n m: cause n m -> ~~ (n # m).
+Proof.
+move: m n. elim/ltn_ind=> b IHn. elim/ltn_ind=> a IHm C. apply/negP=> CN.
+pose c := a. pose d := b. have aEc: a = c; first by rewrite/c. 
+have bEd: b = d; first by rewrite/d. have CN': c # d; first by rewrite/c/d.
+move: d c aEc bEd CN' IHn IHm C CN.
+apply_funelim (a # b)=> n m c d E1 E2 CN IHm IHn C.
+rewrite -E1 -E2 in CN=> {E1 E2 c d a b}. move=> /or4P[|||/orP[]].
+- move=> /and3P[/cause_decr/(_ C) [x /andP[/orP[/eqP EQ nCx/eqP|/eqP/rc/negP F]]]].
+- rewrite EQ. move=> /po_le xLn. move: EQ=> /eqP/rpo_cause/(IHn _ xLn)/negP.
+  by move: (consist_conflict nCx CN).
+- move/consist_conflict/(_ CN). by rewrite symm_conflict.
+- case EQ: (osval (po n))=>//. move: (EQ)=> /eqP/rpo_cause/trans_cause/(_ C). 
+  by move: EQ=> /po_le/IHn C'/C'/negP.
+- case EQ: (osval (po m))=>// nCNa. move: (EQ) (nCNa)=> /eqP/rpo_cause aCm. 
+  move: (C)=> /consist_conflict H{}/H mCNa. move: C. case NM: (n == m)=> C.
+- move: NM EQ=> /eqP<-/po_le/IHn/(_ aCm)/negP. by rewrite symm_conflict=> /(_ mCNa).
+- move: NM=> /negbT/cause_decr/(_ C) [x /andP[/orP[/eqP|/eqP/rc/negP F]]].
+- rewrite EQ=> [[<-]]. by move: EQ=> /po_le/IHm H/H/negP.
+- move=> /consist_conflict/(_ CN). by rewrite symm_conflict.
+- case EQ: (orf n)=>//. move: (EQ)=> /eqP/rrf_cause/trans_cause/(_ C).
+  by move: EQ=> /orf_le/IHn C'/C'/negP.
+- case EQ: (orf m)=>//. move: C=> /consist_conflict H{}/H. by apply/negP/rc.
+Qed.
+
+Lemma irrefl_conflict : irreflexive conflict.
+Proof. move=> n. apply/negbTE. by rewrite no_confl_cause// refl_cause. Qed.
+
 
 End Cause_Conflict.
 
