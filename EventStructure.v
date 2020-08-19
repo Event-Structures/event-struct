@@ -2,7 +2,7 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order e
 From Equations Require Import Equations.
 From event_struct Require Import ssrlia.
 Definition var := nat.
-Definition tread_id := nat.
+Definition thread_id := nat.
 
 Notation sw := 
    (ltac:(let f := fresh "_top_" in let s := fresh "_s_" in move=> f s; move: s f)).
@@ -22,6 +22,12 @@ Proof. by case: a; case: b; case: c. Qed.
 Lemma fifth_true5 a b c d: [|| a, b, c, d | true].
 Proof. apply/orP; right. exact: frth_true4. Qed.
 
+Lemma ltnnn {n}: ~ (n < n).
+Proof. ssrnatlia. Qed.
+
+Lemma ltS_neq_lt {n N}: n < N.+1 -> N <> n -> n < N.
+Proof. ssrnatlia. Qed. 
+
 Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
 
 Definition osval {T} {P : T -> bool} (ok : {? k : T | P k }) : option T := 
@@ -39,9 +45,9 @@ Section prime_event_structure.
 Context {val : eqType}.
 
 (* labels for events in event structure *)
-Inductive label := (* + tread id *)
-| R : tread_id -> var -> val -> label
-| W : tread_id -> var -> val -> label.
+Inductive label :=
+| R : thread_id -> var -> val -> label
+| W : thread_id -> var -> val -> label.
 
 Definition is_read  l := if l is (R _ _ _) then true else false.
 
@@ -61,7 +67,7 @@ Definition tid l :=
 Structure execgraph := Pack {
   n  : nat;
   E  : 'I_n -> label;
-  po : forall (m : 'I_n), {? k : 'I_n | k < m}; (* Structure {tval : 'I_n, _ : tval < m} *)
+  po : forall (m : 'I_n), {? k : 'I_n | k < m};
   rf : forall k : {l : 'I_n | is_read (E l)},
                   {l : 'I_n | (l < sval k) && (read_from (E l) (E (sval k)))};
   (*rf_consit    : forall k,
@@ -78,11 +84,12 @@ equal (S n) (S m) with equal n m := {
   equal (S n) (S m) (right p) := right _ } ;
 equal x y := right _.
 
-Lemma ltS_neq_lt {n N}: n < N.+1 -> N <> n -> n < N.
-Proof. ssrnatlia. Qed. 
-
+(* Section with definitions for execution graph with added event *)
 Section adding_event.
-Variable (lab : label) (e : execgraph) (pre_po : option 'I_(n e)).
+Variable 
+  (lab : label)               (* label of an event which we want to add      *)
+  (e : execgraph)             (* execution graph in which we want to add lab *)
+  (pre_po : option 'I_(n e)). (* po-child of new event (if it exists)        *)
 Notation N := (n e).
 Notation E := (E e).
 Notation po := (po e).
@@ -100,22 +107,22 @@ Definition add_E : 'I_N.+1 -> label := fun '(@Ordinal _ n L) =>
 (*Equations incr_ord (m : 'I_N) : 'I_N.+1 :=
 incr_ord (@Ordinal n L) := @Ordinal _ n (ltn_trans L (ltnSn _)).*)
 
+(* incrementing of ordinal number *)
 Definition incr_ord : 'I_N -> 'I_N.+1 := 
   fun '(@Ordinal _ n L) => @Ordinal _ n (ltn_trans L (ltnSn _)).
 
-Lemma ltnnn {n}: ~ (n < n).
-Proof. ssrnatlia. Qed.
-
+(* add_E correctness *)
 Lemma add_E_incr_ord m : E m = add_E (incr_ord m).
 Proof.
 case: m=> /= m L. case: (equal N m)=> [EQ|?]; last by apply/congr1/ord_inj.
 move: EQ L. case: m / => L. exfalso. ssrnatlia.
+(* proof for Equations version *)
 (*funelim (incr_ord m). funelim (add_E (Ordinal (ltn_trans i (ltnSn N)))). 
 - exfalso. case: eqargs=> E. move: E i0=>->. ssrnatlia.
 case: eqargs=> EQ. by apply/congr1/ord_inj.*)
 Qed.
 
-
+(* auxiliary lemma  *)
 Lemma incr_is_read {m} {L} L' : read_from (E m)                (add_E (@Ordinal _ N L)) ->
                                 read_from (add_E (incr_ord m)) (add_E (@Ordinal _ N L')).
 Proof.
@@ -127,18 +134,21 @@ Qed.
 incr_oord (some (Ordinal L)) := some (Ordinal (ltn_trans L (ltnSn N)));
 incr_oord None := None.*)
 
+(* 'option' version for 'inc_ord' *)
 Definition incr_oord (n : option 'I_N) : option 'I_N.+1 := 
   if n is some n then some (incr_ord n) else None.
 
 Lemma nltn0 n: ~ (n < 0).
 Proof. ssrnatlia. Qed.
 
-(*Equations nat_osig_to_ord {m : 'I_N} (k : {? k : 'I_N | k < m}) : {? k : 'I_N.+1 | k < m} :=
-nat_osig_to_ord (some (@exist _ _ (Ordinal L) L')) :=
+(*Equations incr_po_codom {m : 'I_N} (k : {? k : 'I_N | k < m}) : {? k : 'I_N.+1 | k < m} :=
+incr_po_codom (some (@exist _ _ (Ordinal L) L')) :=
   some (@exist _ _ (Ordinal (ltn_trans L (ltnSn _))) L');
-nat_osig_to_ord None := None.*)
+incr_po_codom None := None.*)
 
-Definition nat_osig_to_ord {m : 'I_N} (k : {? k : 'I_N | k < m}) : {? k : 'I_N.+1 | k < m} := 
+(* here we define function that incrementing ordinal in po-codomain type to *)
+(* use it in add_po function in (1)                                         *)
+Definition incr_po_codom {m : 'I_N} (k : {? k : 'I_N | k < m}) : {? k : 'I_N.+1 | k < m} := 
   if k is some (@exist _ _ (Ordinal _ L) L') 
     then some (@exist _ _ (Ordinal (ltn_trans L (ltnSn _))) L')
   else None.
@@ -148,19 +158,19 @@ add_po on (@Ordinal _ n L) with equal N n := {
   add_po None _ (left erefl) := None;
   add_po (some (Ordinal L')) (Ordinal L) (left erefl) :=
     some (@exist _ _ (Ordinal (ltn_trans L' (ltnSn _))) L');
-  add_po _ (Ordinal L) (right p) := nat_osig_to_ord (po (Ordinal (ltS_neq_lt L p)))
+  add_po _ (Ordinal L) (right p) := incr_po_codom (po (Ordinal (ltS_neq_lt L p)))
 }.*)
-
-Definition add_po  (pre_n : option 'I_N) (l : 'I_N.+1) : {? k : 'I_N.+1 | k < l} :=
+(* may we should to use definition with Equalites here *)
+Definition add_po (l : 'I_N.+1) : {? k : 'I_N.+1 | k < l} :=
   match l with (Ordinal n L) => 
     match equal N n with
     | left eq =>  
       match eq with erefl => 
-        if pre_n is some  (Ordinal _ L') 
+        if pre_po is some  (Ordinal _ L') 
           then some (@exist _ _ (Ordinal (ltn_trans L' (ltnSn _))) L')
         else None 
       end
-    | right p  => nat_osig_to_ord (po (Ordinal (ltS_neq_lt L p)))
+    | right p  => incr_po_codom (po (Ordinal (ltS_neq_lt L p)))     (* (1) *)
     end
   end.
 
@@ -170,9 +180,11 @@ Proof. by move=>->. Qed.
 (*Equations decr_ord (l : 'I_N.+1) (neq : N <> l) : 'I_N :=
 decr_ord (Ordinal L) neq := Ordinal (ltS_neq_lt L neq).*)
 
+(* if l \in 'I_N.+1 and l <> N then we can convert it's type to 'I_N *)
 Definition decr_ord : forall (l : 'I_N.+1) (neq : N <> l), 'I_N :=
   fun '(Ordinal n L) neq => Ordinal (ltS_neq_lt L neq).
 
+(* auxiliary lemma *)
 Lemma is_read_add_E_E l neq: is_read (add_E l) -> is_read (E (decr_ord l neq)).
 Proof.
 have->//: add_E l = E (decr_ord l neq). case: l neq=> /= m ? neq.
@@ -187,6 +199,8 @@ Qed.
 decr_rf_dom (@exist (Ordinal L) IR) neq :=
   @exist _ _ (Ordinal (ltS_neq_lt L neq)) (is_read_add_E_E _ neq IR).*)
 
+(* to use rf in add_rf_some definition in (2) we have to make it suitable    *)
+(* with rf (convert type of add_rf-domain to rf's-domain)                    *)
 Definition decr_rf_dom : forall (k : {l : 'I_N.+1 | is_read (add_E l)})
                                 (neq : N <> (sval k)),
                                 {l : 'I_N | is_read (E l)} := 
@@ -206,6 +220,7 @@ Proof. (*by funelim (incr_ord l)*) by case: l. Qed.
 Lemma incr_ord_le {l r : 'I_N}: l < r -> incr_ord l < incr_ord r.
 Proof. by rewrite !nat_of_incr_od. Qed.
 
+(* auxiliary lemma *)
 Lemma read_from_incr_ord {l r : 'I_N}: read_from (E l) (E r) ->
   read_from (add_E (incr_ord l)) (add_E (incr_ord r)).
 Proof. by rewrite !add_E_incr_ord. Qed.
@@ -218,22 +233,24 @@ Proof. by rewrite !add_E_incr_ord. Qed.
 incr_rf_codom (@exist _ _) _ erefl (@exist l COND) :=
   @exist _ _ (incr_ord l) (and_i (incr_ord_le (and_e1 COND)) (read_from_incr_ord (and_e2 COND))).*)
 
+(* when we have result of rf in (3) we have to convert it's type to add_rf's *)
+(* codomain type, so we convert do this with 'm'                             *)
 Definition incr_rf_codom : forall
-  (k : {l : 'I_N.+1 | is_read (add_E l)})
-  (r : {l : 'I_N | is_read (E l)}) (eq : incr_ord (sval r) = sval k)
+  (k : {l : 'I_N.+1 | is_read (add_E l)})  
+  (r : {l : 'I_N    | is_read (E l)}) (eq : incr_ord (sval r) = sval k) (* <- (4) *)
   (m : {l : 'I_N    | (l < (sval r)) && (read_from (E l)     (E     (sval r)))}),
        {l : 'I_N.+1 | (l <  sval k) &&  (read_from (add_E l) (add_E (sval k)))} := 
   fun _ _ 'erefl '(@exist _ _ l COND) =>
   @exist _ _ (incr_ord l) (and_i (incr_ord_le (and_e1 COND)) (read_from_incr_ord (and_e2 COND))).
 
-
-
+(* we are going to use it for proof of eq in (4) *)
 Lemma sval_decr_ord (k : {l : 'I_N.+1 | is_read (add_E l)}) :
   forall p, incr_ord (sval (decr_rf_dom k p)) = sval k.
 Proof.
 case: k=> [[*]]/=. by apply/ord_inj.
 Qed.
 
+(* adding read-event to rf *)
 Equations add_rf_some
   (m : 'I_N) (RF : read_from (E m) (add_E ord_max))
   (k : {l : 'I_N.+1 | is_read (add_E l)}) :
@@ -242,8 +259,9 @@ add_rf_some _ _ k with equal N (sval k) := {
   add_rf_some (Ordinal m_le_N) RF (@exist (Ordinal L) _) (left erefl) :=
     (@exist _ _ (incr_ord (Ordinal m_le_N)) (and_i m_le_N (incr_is_read L RF)));
   add_rf_some _ _ k (right p) :=  incr_rf_codom k _ (sval_decr_ord _ _) (rf (decr_rf_dom k p))
+                                           (* (3) *)                        (* (2) *)
 }.
-
+(* this definitions fail's... *)
 (*??? Definition add_rf_some : forall
   (m : 'I_N) (RF : read_from (E m) (add_E ord_max))
   (k : {l : 'I_N.+1 | is_read (add_E l)}),
@@ -262,7 +280,7 @@ add_rf_some _ _ k with equal N (sval k) := {
 Lemma ord_P {L} : (~ is_read (add_E ord_max)) -> (~ is_read (add_E (@Ordinal N.+1 N L))).
 Proof. have->//: ord_max = (@Ordinal N.+1 N L). by apply/ord_inj. Qed.
 
-
+(* adding write event to rf *)
 Equations add_rf_None
   (NR : ~ is_read (add_E ord_max))
   (k : {l : 'I_N.+1 | is_read (add_E l)}) :
@@ -301,9 +319,6 @@ Lemma po_le n m: osval (po n) = some m -> m < n.
 Proof. by case: (po n)=> //= [[/=??[<-]]]. Qed.
 
 Definition rrf (n m : 'I_N) : bool := (orf n == some m).
-
-Lemma rpoVrrf_leq n m: (rrf n m) || (rpo n m) -> m < n.
-Proof. by move=> /orP[/eqP/orf_le|/eqP/po_le]. Qed.
 
 Definition cause := connect [rel m n | rrf n m || rpo n m].
 
@@ -345,6 +360,7 @@ move=> x y /andP[/cause_sub_leq xy /cause_sub_leq yx].
 by apply/ord_inj/anti_leq/andP.
 Qed.
 
+(* base of conflict relation *)
 Definition pre_conflict n m := [&& (n != m), osval (po n) == osval (po m) & (tid (E n) == tid (E m))].
 
 Equations conflict (n m : 'I_N) : bool by wf (n + m) lt :=
@@ -373,10 +389,13 @@ Next Obligation. move: e0=> /orf_le. ssrnatlia. Qed.
 
 Notation "a # b" := (conflict a b) (at level 10).
 
+(* may be should merge this two lemmas *)
 Lemma consist_conflictl {n1 n2 n3}: cause n1 n2 -> n1 # n3 -> n2 # n3.
 Proof.
+(* proof using second defition of conflict *)
 (*move=> C /conflictP [x [y/and3P[*]]]. apply/conflictP. exists x, y. apply/and3P;
 split=>//. by apply/(trans_cause n1).*)
+(* proof using first one *)
 elim/ltn_ind: n2=> n2 IHn2. case EQ: (n1 == n2); move: EQ;
 first by move=>/eqP->. move=> /negbT/cause_decr I /I [k /andP[O L C]].
 have/IHn2/(_ L C): k < n2; first by move: O=> /orP[/eqP/po_le|/eqP/orf_le].
@@ -385,14 +404,17 @@ Qed.
 
 Lemma consist_conflictr {n1 n2 n3}: cause n1 n2 -> n3 # n1 -> n3 # n2.
 Proof.
+(* proof using second defition of conflict *)
 (*move=> C /conflictP [x [y/and3P[*]]]. apply/conflictP. exists x, y. apply/and3P;
 split=>//. by apply/(trans_cause n1).*)
+(* proof using first one *)
 elim/ltn_ind: n2=> n2 IHn2. case EQ: (n1 == n2); move: EQ;
 first by move=>/eqP->. move=> /negbT/cause_decr I /I [k /andP[O L C]].
 have/IHn2/(_ L C): k < n2; first by move: O=> /orP[/eqP/po_le|/eqP/orf_le].
 move: O. by apply_funelim (n3 # n2)=> n m /orP[]/eqP->->.
 Qed.
-
+(* we cant use second definition here because we need this lemmas in         *)
+(* conflictP below                                                           *)
 
 Lemma conflictP n m : 
   reflect (exists x y, [&& cause x n, cause y m & pre_conflict x y]) (n # m).
@@ -414,9 +436,11 @@ Qed.
 
 Lemma symm_conflict: symmetric conflict.
 Proof.
+(* proof using second conflict definition *)
 move=> n m. apply/Bool.eq_true_iff_eq. suff H: forall a b, a # b -> b # a;
 first by split=> /H. move=> a b /conflictP [x [y/and3P[??/and3P[*]]]]. apply/conflictP.
 exists y, x. apply/and3P; split=> //. apply/and3P; split; by rewrite eq_sym.
+(* proof using first one *)
 (*move=> n m. apply/Bool.eq_true_iff_eq. suff H: forall a b, a # b -> b # a;
 first by split=> /H. move=> {m n}. elim/ltn_ind=> n IHn. elim/ltn_ind=> m.
 move: IHn. apply_funelim (n # m)=> a b. apply_funelim (b # a)=> {n m} n m IHm IHn.
@@ -432,6 +456,8 @@ Definition rf_consist := forall n m, (orf m = some n) -> ~~ m # n.
 
 Hypothesis (rc : rf_consist).
 
+(* the proof is so big because we need to analyze of cases in conflict         *)
+(* definition                                                                  *)
 Lemma no_confl_cause n m: cause n m -> ~~ (n # m).
 Proof.
 move: m n. elim/ltn_ind=> b IHn. elim/ltn_ind=> a IHm C. apply/negP=> CN.
