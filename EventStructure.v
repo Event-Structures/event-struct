@@ -85,25 +85,32 @@ Notation E := (E e).
 Notation po := (po e).
 Notation rf := (rf e).
 
-
-Equations add_E (n : 'I_N.+1) : label :=
+(*Equations add_E (n : 'I_N.+1) : label :=
 add_E (@Ordinal n L) with equal N n := {
   add_E _ (left erefl) := lab;
   add_E (Ordinal L) (right p) := E (Ordinal (ltS_neq_lt L p))
-}.
+}.*)
 
-Equations incr_ord (m : 'I_N) : 'I_N.+1 :=
-incr_ord (@Ordinal n L) := @Ordinal _ n (ltn_trans L (ltnSn _)).
+Definition add_E : 'I_N.+1 -> label := fun '(@Ordinal _ n L) =>
+  if equal N n is right p then E (Ordinal (ltS_neq_lt L p)) else lab.
 
-Lemma add_E_incr_ord m : E m = add_E (incr_ord m).
-Proof.
-funelim (incr_ord m). funelim (add_E (Ordinal (ltn_trans i (ltnSn N)))). 
-- exfalso. case: eqargs=> E. move: E i0=>->. ssrnatlia.
-case: eqargs=> EQ. by apply/congr1/ord_inj.
-Qed.
+(*Equations incr_ord (m : 'I_N) : 'I_N.+1 :=
+incr_ord (@Ordinal n L) := @Ordinal _ n (ltn_trans L (ltnSn _)).*)
+
+Definition incr_ord : 'I_N -> 'I_N.+1 := 
+  fun '(@Ordinal _ n L) => @Ordinal _ n (ltn_trans L (ltnSn _)).
 
 Lemma ltnnn {n}: ~ (n < n).
 Proof. ssrnatlia. Qed.
+
+Lemma add_E_incr_ord m : E m = add_E (incr_ord m).
+Proof.
+case: m=> /= m L. case: (equal N m)=> [EQ|?]; last by apply/congr1/ord_inj.
+move: EQ L. case: m / => L. exfalso. ssrnatlia.
+(*funelim (incr_ord m). funelim (add_E (Ordinal (ltn_trans i (ltnSn N)))). 
+- exfalso. case: eqargs=> E. move: E i0=>->. ssrnatlia.
+case: eqargs=> EQ. by apply/congr1/ord_inj.*)
+Qed.
 
 
 Lemma incr_is_read {m} {L} L' : read_from (E m)                (add_E (@Ordinal _ N L)) ->
@@ -113,9 +120,12 @@ rewrite add_E_incr_ord. have->//: (add_E (Ordinal L)) = (add_E (Ordinal L')).
 by apply/congr1/ord_inj.
 Qed.
 
-Equations incr_oord (n : option 'I_N) : option 'I_N.+1 :=
+(*Equations incr_oord (n : option 'I_N) : option 'I_N.+1 :=
 incr_oord (some (Ordinal L)) := some (Ordinal (ltn_trans L (ltnSn N)));
-incr_oord None := None.
+incr_oord None := None.*)
+
+Definition incr_oord (n : option 'I_N) : option 'I_N.+1 := 
+  if n is some n then some (incr_ord n) else None.
 
 Lemma nltn0 n: ~ (n < 0).
 Proof. ssrnatlia. Qed.
