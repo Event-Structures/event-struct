@@ -1,8 +1,11 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order eqtype div fingraph. 
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order eqtype div fingraph path. 
 From Equations Require Import Equations.
 From event_struct Require Import ssrlia.
 Definition var := nat.
 Definition tread_id := nat.
+
+Notation sw := 
+   (ltac:(let f := fresh "_top_" in let s := fresh "_s_" in move=> f s; move: s f)).
 
 Lemma snd_true3 a b : [|| a, true | b].
 Proof. by case: a. Qed.
@@ -318,7 +321,14 @@ Proof. exact: connect_trans. Qed.
 
 Lemma cause_decr n m: (n != m) -> cause n m ->
   exists k, (((rpo m k) || (orf m == some k)) && cause n k).
-Proof. Admitted.
+Proof.
+move=> nm /connectP[].
+elim/last_ind=> /=.
+- move=> _ eq. move: eq nm=>-> /eqP nn. by exfalso.
+move=> x a IHx. rewrite last_rcons rcons_path=> /sw-> /andP[*].
+exists (last n x). apply/andP. split=> //=; first by rewrite orbC.
+apply/connectP. by exists x.
+Qed.
 
 Lemma cause_sub_leq n m : cause n m -> n <= m.
 Proof.
