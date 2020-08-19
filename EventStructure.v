@@ -130,35 +130,66 @@ Definition incr_oord (n : option 'I_N) : option 'I_N.+1 :=
 Lemma nltn0 n: ~ (n < 0).
 Proof. ssrnatlia. Qed.
 
-Equations nat_osig_to_ord {m : 'I_N} (k : {? k : 'I_N | k < m}) : {? k : 'I_N.+1 | k < m} :=
-nat_osig_to_ord (some (@exist _ _ (Ordinal L) L')) :=  some (@exist _ _ (Ordinal (ltn_trans L (ltnSn _))) L');
-nat_osig_to_ord None := None.
+(*Equations nat_osig_to_ord {m : 'I_N} (k : {? k : 'I_N | k < m}) : {? k : 'I_N.+1 | k < m} :=
+nat_osig_to_ord (some (@exist _ _ (Ordinal L) L')) :=
+  some (@exist _ _ (Ordinal (ltn_trans L (ltnSn _))) L');
+nat_osig_to_ord None := None.*)
 
+Definition nat_osig_to_ord {m : 'I_N} (k : {? k : 'I_N | k < m}) : {? k : 'I_N.+1 | k < m} := 
+  if k is some (@exist _ _ (Ordinal _ L) L') 
+    then some (@exist _ _ (Ordinal (ltn_trans L (ltnSn _))) L')
+  else None.
 
-Equations add_po (pre_n : option 'I_N) (n : 'I_N.+1) : {? k : 'I_N.+1 | k < n} :=
+(*Equations add_po (pre_n : option 'I_N) (n : 'I_N.+1) : {? k : 'I_N.+1 | k < n} :=
 add_po on (@Ordinal _ n L) with equal N n := {
   add_po None _ (left erefl) := None;
   add_po (some (Ordinal L')) (Ordinal L) (left erefl) :=
     some (@exist _ _ (Ordinal (ltn_trans L' (ltnSn _))) L');
   add_po _ (Ordinal L) (right p) := nat_osig_to_ord (po (Ordinal (ltS_neq_lt L p)))
-}.
+}.*)
+
+Definition add_po  (pre_n : option 'I_N) (l : 'I_N.+1) : {? k : 'I_N.+1 | k < l} :=
+  match l with (Ordinal n L) => 
+    match equal N n with
+    | left eq =>  
+      match eq with erefl => 
+        if pre_n is some  (Ordinal _ L') 
+          then some (@exist _ _ (Ordinal (ltn_trans L' (ltnSn _))) L')
+        else None 
+      end
+    | right p  => nat_osig_to_ord (po (Ordinal (ltS_neq_lt L p)))
+    end
+  end.
 
 Lemma and_i {a b : bool} : a -> b -> a && b.
 Proof. by move=>->. Qed.
 
-Equations decr_ord (l : 'I_N.+1) (neq : N <> l) : 'I_N :=
-decr_ord (Ordinal L) neq := Ordinal (ltS_neq_lt L neq).
+(*Equations decr_ord (l : 'I_N.+1) (neq : N <> l) : 'I_N :=
+decr_ord (Ordinal L) neq := Ordinal (ltS_neq_lt L neq).*)
+
+Definition decr_ord : forall (l : 'I_N.+1) (neq : N <> l), 'I_N :=
+  fun '(Ordinal n L) neq => Ordinal (ltS_neq_lt L neq).
 
 Lemma is_read_add_E_E l neq: is_read (add_E l) -> is_read (E (decr_ord l neq)).
 Proof.
-have->//: add_E l = E (decr_ord l neq). funelim (add_E l); first by case: neq.
-simp decr_ord. by apply/congr1/ord_inj.
+have->//: add_E l = E (decr_ord l neq). case: l neq=> /= m ? neq.
+case: (equal N m)=> [/neq|?]//. by apply/congr1/ord_inj.
+(*have->//: add_E l = E (decr_ord l neq). funelim (add_E l); first by case: neq.
+simp decr_ord. by apply/congr1/ord_inj.*)
 Qed.
 
-Equations decr_rf_dom (k : {l : 'I_N.+1 | is_read (add_E l)}) (neq : N <> (sval k)) : 
-                           {l : 'I_N | is_read (E l)} :=
+(*Equations decr_rf_dom (k : {l : 'I_N.+1 | is_read (add_E l)}) 
+                        (neq : N <> (sval k)) : 
+                        {l : 'I_N | is_read (E l)} :=
 decr_rf_dom (@exist (Ordinal L) IR) neq :=
-  @exist _ _ (Ordinal (ltS_neq_lt L neq)) (is_read_add_E_E _ neq IR).
+  @exist _ _ (Ordinal (ltS_neq_lt L neq)) (is_read_add_E_E _ neq IR).*)
+
+Definition decr_rf_dom : forall (k : {l : 'I_N.+1 | is_read (add_E l)})
+                                (neq : N <> (sval k)),
+                                {l : 'I_N | is_read (E l)} := 
+  fun '(@exist _ _ (Ordinal n L) IR) neq => 
+    @exist _ _ (Ordinal (ltS_neq_lt L neq)) (is_read_add_E_E _ neq IR).
+
 
 Lemma and_e1 {a b}: a && b -> a.
 Proof. by case: a. Qed.
@@ -167,7 +198,7 @@ Lemma and_e2 {a b}: a && b -> b.
 Proof. by case: a. Qed.
 
 Lemma nat_of_incr_od (l : 'I_N) : (incr_ord l) = l :> nat.
-Proof. by funelim (incr_ord l). Qed.
+Proof. (*by funelim (incr_ord l)*) by case: l. Qed.
 
 Lemma incr_ord_le {l r : 'I_N}: l < r -> incr_ord l < incr_ord r.
 Proof. by rewrite !nat_of_incr_od. Qed.
@@ -176,19 +207,28 @@ Lemma read_from_incr_ord {l r : 'I_N}: read_from (E l) (E r) ->
   read_from (add_E (incr_ord l)) (add_E (incr_ord r)).
 Proof. by rewrite !add_E_incr_ord. Qed.
 
-Equations incr_rf_codom 
- (k : {l : 'I_N.+1 | is_read (add_E l)})
- (r : {l : 'I_N | is_read (E l)}) (eq : incr_ord (sval r) = sval k)
- (m : {l : 'I_N    | (l < (sval r)) && (read_from (E l)     (E     (sval r)))}) :
-      {l : 'I_N.+1 | (l < sval k) && (read_from (add_E l) (add_E (sval k)))} :=
+(*Equations incr_rf_codom 
+  (k : {l : 'I_N.+1 | is_read (add_E l)})
+  (r : {l : 'I_N | is_read (E l)}) (eq : incr_ord (sval r) = sval k)
+  (m : {l : 'I_N    | (l < (sval r)) && (read_from (E l)     (E     (sval r)))}) :
+       {l : 'I_N.+1 | (l <  sval k) &&  (read_from (add_E l) (add_E (sval k)))} :=
 incr_rf_codom (@exist _ _) _ erefl (@exist l COND) :=
+  @exist _ _ (incr_ord l) (and_i (incr_ord_le (and_e1 COND)) (read_from_incr_ord (and_e2 COND))).*)
+
+Definition incr_rf_codom : forall
+  (k : {l : 'I_N.+1 | is_read (add_E l)})
+  (r : {l : 'I_N | is_read (E l)}) (eq : incr_ord (sval r) = sval k)
+  (m : {l : 'I_N    | (l < (sval r)) && (read_from (E l)     (E     (sval r)))}),
+       {l : 'I_N.+1 | (l <  sval k) &&  (read_from (add_E l) (add_E (sval k)))} := 
+  fun _ _ 'erefl '(@exist _ _ l COND) =>
   @exist _ _ (incr_ord l) (and_i (incr_ord_le (and_e1 COND)) (read_from_incr_ord (and_e2 COND))).
+
 
 
 Lemma sval_decr_ord (k : {l : 'I_N.+1 | is_read (add_E l)}) :
   forall p, incr_ord (sval (decr_rf_dom k p)) = sval k.
 Proof.
-case: k=> [[*]]. simp decr_rf_dom=>/=. simp incr_ord. by apply/ord_inj.
+case: k=> [[*]]/=. by apply/ord_inj.
 Qed.
 
 Equations add_rf_some
@@ -200,6 +240,21 @@ add_rf_some _ _ k with equal N (sval k) := {
     (@exist _ _ (incr_ord (Ordinal m_le_N)) (and_i m_le_N (incr_is_read L RF)));
   add_rf_some _ _ k (right p) :=  incr_rf_codom k _ (sval_decr_ord _ _) (rf (decr_rf_dom k p))
 }.
+
+(*??? Definition add_rf_some : forall
+  (m : 'I_N) (RF : read_from (E m) (add_E ord_max))
+  (k : {l : 'I_N.+1 | is_read (add_E l)}),
+       {l : 'I_N.+1 | (l < sval k) && (read_from (add_E l) (add_E (sval k)))} := 
+  fun '(Ordinal _ m_le_N) RF k => 
+  match k with (@exist _ _ (Ordinal l L) _) =>
+    match equal N l with
+    | left eq => match eq, L with erefl, L' => 
+                  (@exist _ _ (incr_ord (Ordinal m_le_N)) (and_i m_le_N (incr_is_read L' RF)))
+                 end
+    | right p => incr_rf_codom k _ (sval_decr_ord _ _) (rf (decr_rf_dom k p)) 
+    end
+  end.*)
+
 
 Lemma ord_P {L} : (~ is_read (add_E ord_max)) -> (~ is_read (add_E (@Ordinal N.+1 N L))).
 Proof. have->//: ord_max = (@Ordinal N.+1 N L). by apply/ord_inj. Qed.
