@@ -3,3 +3,9 @@
 -arg -w -arg +default
 -arg -w -arg -notation-overridden
 -arg -w -arg -non-reversible-notation
+-arg -w -arg -duplicate-clear
+-arg -w -arg -redundant-canonical-projection
+
+utilities.v
+EventStructure.v
+TransitionSystem.v
