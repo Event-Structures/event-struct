@@ -203,7 +203,7 @@ Definition add_event (l : add_label) :=
   end.
 
 Lemma n_add_event l: n (add_event l) = (n e).+1.
-Proof. Admitted.
+Proof. by case: l. Qed.
 
 Definition ord_f_to_onat {N M} (f : 'I_N -> option 'I_M) (n : nat) : option nat :=
   (match n < N as L return (n < N = L -> _) with
@@ -231,26 +231,6 @@ Definition lab_of_add_lab al :=
   | add_W t x a     => W t x a
   | add_R _ t x a _ => R t x a
   end.
-
-
-Lemma olabn_add_event al k: 
-  labn (add_event al) k = 
-  match k =P (n e).+1 with
-  | ReflectF p => labn e k
-  | ReflectT _ => lab_of_add_lab al
-  end.
-Proof. Admitted.
-
-
-Lemma opredn_add_event l k: 
-  opredn (add_event l) k =
-  match (n (add_event l)).-1 =P k with
-  | ReflectT _ => (opt (@nat_of_ord (n e))) pre_pred
-  | ReflectF _ => (opredn e) k
-  end.
-Proof. Admitted.
-
-
 End add_event_def.
 
 
@@ -277,22 +257,6 @@ Definition is_iso (e e' : exec_event_struct) (f : nat -> nat) :=
 Definition equviv (a b : exec_event_struct) := exists f, is_iso a b f.
 
 Notation "e ~~ e'" := (equviv e e') (at level 20).
-
-Lemma is_iso_id e : is_iso e e id.
-Proof. Admitted.
-
-Lemma equiv_refl e: e ~~ e.
-Proof. exists id. exact: is_iso_id. Qed.
-
-Lemma opt_comp {T1 T2 T3} (f : T1 -> T2) (g : T2 -> T3) y : 
- opt (fun z => g (f z)) y = (opt g) ((opt f) y).
-Proof. move: y. by case. Qed.
-
-Lemma equiv_trans {e1} e2 {e3}: e1 ~~ e2 -> e2 ~~ e3 -> e1 ~~ e3 .
-Proof. Admitted.
-
-Lemma equiv_sym e1 e2: e1 ~~ e2 -> e2 ~~ e1.
-Proof. Admitted.
 
 Implicit Type (e : cexec_event_struct).
 
