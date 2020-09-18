@@ -1,5 +1,6 @@
 From Coq Require Import Lia.
 From mathcomp Require Import ssreflect ssrbool eqtype ssrnat ssrfun fintype.
+From mathcomp Require Import fingraph seq path.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -93,4 +94,28 @@ Lemma ltn_ind N (P : 'I_N -> Type) :
 Proof.
 move=> IH n. have [k le_size] := ubnP (nat_of_ord n). 
 elim: k n le_size=>// n IHn k le_size. apply/IH=> *. apply/IHn. ssrnatlia.
+Qed.
+
+Ltac opt_case := let H := fresh in
+  try match goal with  |- context [if ?a is some _ then _ else _] =>
+    case H: a; move: H=>//=
+  end.
+
+Inductive Prop_rel {n : nat} (r : rel 'I_n) : 'I_n -> 'I_n -> Prop :=
+| Base e1 : Prop_rel r e1 e1
+| Step {e1} e2 e3 : Prop_rel r e1 e2 -> r e2 e3 -> Prop_rel r e1 e3.
+
+Hint Resolve Base : core.
+
+Lemma Prop_relP {n : nat} {r : rel 'I_n} e1 e2:
+  reflect (Prop_rel r e1 e2) (connect r e1 e2).
+Proof.
+  apply/(iffP idP).
+  { move=>/connectP[]. move: e2=>/swap.
+    elim/last_ind=>[/=??->//|/= s x IHs].
+    rewrite rcons_path last_rcons=> e2 /andP[/IHs/(_ erefl) ?? ->].
+    by apply/(@Step _ _ _ (last e1 s)). }
+  elim=> [?|?? e3 ?/connectP[s ? E ?]]; first by rewrite connect0.
+  apply/connectP. exists (rcons s e3); last by rewrite last_rcons.
+  rewrite rcons_path -E. by apply/andP.
 Qed.

@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path.
-From Equations Require Import Equations.
+(*From Equations Require Import Equations.*)
 From event_struct Require Import utilities.
 
 Definition var := nat.
@@ -185,97 +185,49 @@ Definition pre_cf e1 e2 :=
   [&& (e1 != e2), opred e1 == opred e2 & (thread_id (lab e1) == thread_id (lab e2))].
 
 Definition cf e1 e2 :=
-   [exists e1' : 'I_n, [exists e2' : 'I_n, [&& e1' <= e1, e2' <= e2 & pre_cf e1' e2']]].
+  [exists e1' : 'I_n, [exists e2' : 'I_n, [&& e1' <= e1, e2' <= e2 & pre_cf e1' e2']]].
 
 Notation "a # b" := (cf a b) (at level 10).
 
 Lemma cfP e1 e2 :
-   reflect (exists e1' e2', [&& e1' <= e1, e2' <= e2 & pre_cf e1' e2'])
-            (e1 # e2).
+  reflect (exists e1' e2', [&& e1' <= e1, e2' <= e2 & pre_cf e1' e2']) (e1 # e2).
 Proof.
-apply (iffP existsP)=> [[x /existsP[y ?]]|[x [y ?]]]; exists x; 
+apply (iffP existsP)=> [[x /existsP[y ?]]|[x [y ?]]]; exists x;
 last (apply/existsP); by exists y.
 Qed.
 
-Inductive caProp : 'I_n -> 'I_n -> Prop :=
-| Base e1 : caProp e1 e1
-| Step {e1} e2 e3 : caProp e1 e2 -> pre_ca e2 e3 -> caProp e1 e3.
-
-Hint Resolve Base : core.
-
-Lemma caP e1 e2: reflect (caProp e1 e2) (e1 <= e2).
-Proof.
-  apply/(iffP idP).
-  { rewrite/Order.le/==>/connectP[]. move: e2=>/swap.
-    elim/last_ind=>[/=??->//|/= s x IHs].
-    rewrite rcons_path last_rcons=> e2 /andP[/IHs/(_ erefl) ?? ->].
-    by apply/(Step (last e1 s)). }
-  elim=> [?|?? e3 ?/connectP[s ? E ?]]; first by rewrite le_refl.
-  apply/connectP. exists (rcons s e3); last by rewrite last_rcons.
-  rewrite rcons_path -E. by apply/andP.
-Qed.
-
-Notation cf' e1 e2 := 
-[|| pre_cf e1 e2,
+Notation cf' e1 e2 := [|| pre_cf e1 e2,
   (if opred e1 is some x then x # e2 else false),
   (if opred e2 is some y then e1 # y else false),
   (if orff  e1 is some x then x # e2 else false) |
   (if orff  e2 is some y then e1 # y else false)].
 
-Lemma consist_cfl {e1 e2 e3}: e1 <= e2 -> e1 # e3 -> e2 # e3.
+Lemma cf_symm: symmetric cf.
 Proof.
-  move=> C /cfP[e1' [e2' /and3P[*]]]. apply/existsP; exists e1'.
-  apply/existsP; exists e2'. apply/and3P; split=>//. by apply/(ca_trans e1).
+  move=> ??. apply/(sameP idP)/(iffP idP)=> /cfP[x [y/and3P[?? /and3P[*]]]].
+  all: apply/cfP; exists y, x; apply/and3P; split=>//; apply/and3P; split.
+  all: by rewrite eq_sym.
 Qed.
 
-Lemma consist_cfr {e1 e2 e3}: e1 <= e2 -> e3 # e1 -> e3 # e2.
+Lemma consist_cf {e1 e2 e3 e4}: e1 # e2 -> e1 <= e3 -> e2 <= e4 -> e3 # e4.
 Proof.
-  move=> C /cfP[e1' [e2'/and3P[*]]]. apply/existsP; exists e1'.
-  apply/existsP; exists e2'. apply/and3P; split=>//. by apply/(ca_trans e1).
+  move=>/cfP[x [y/and3P[C C' ???]]]. apply/cfP. exists x, y.
+  apply/and3P; split=>//; by rewrite ((le_trans C), (le_trans C')).
+Qed.
+
+Lemma cf'_cf e1 e2: cf' e1 e2 -> e1 # e2.
+Proof.
+  move/or4P=>[?|||/orP[]]; first by apply/cfP; exists e1, e2; rewrite !le_refl.
+  all: opt_case=>/eqP H C; 
+       by rewrite (consist_cf C)// /Order.le/=/ca connect1///pre_ca/rsucc/rf H.
 Qed.
 
 Lemma cfE e1 e2: e1 # e2 = cf' e1 e2.
 Proof.
-  apply/(sameP idP)/(iffP idP).
-  { move/or4P=>[?|||/orP[]];
-    [| case H: (opred e1)=> [e3|]
-    | case H: (opred e2)=> [e3|]
-    | case H: (orff  e1)=> [e3|]
-    | case H: (orff  e2)=> [e3|]]=>//.
-    { apply/cfP. exists e1, e2. by rewrite !le_refl. }
-    all: move/cfP=>[x [y /and3P[L1 L2?]]]; apply/cfP; exists x, y.
-    all: apply/and3P; split=>//; rewrite (le_trans L1, le_trans L2)///Order.le/=.
-    all: apply/connect1/orP. 
-    1,2: left; by rewrite/rsucc H.
-    all: right; by rewrite/rf H. }
-  move/cfP=> [x [y /and3P[/caP]]]. elim=> [z/caP|].
-  { elim=> [?->//|? e2' e3' /caP?/swap pc H/H/or4P[|||/orP[]]].
-    { move=> pcf. suff: z # e2' by move/orP: (pc)=>[] /eqP->->//.
-      apply/cfP. exists z, e2'. by rewrite !le_refl. }
-    1,3: case E: (_ z)=> [b|]// C; have->//: b # e3';
-          by apply/(consist_cfr (connect1 pc)).
-    all: case E: (_ e2')=> [b|]// C; suff: z # e2' by move/orP: pc=>[]/eqP->->.
-    all: apply/(@consist_cfr b)=>//; apply/connect1;
-          by rewrite/pre_ca/rsucc/rf ?E eq_refl. }
-  move=> a b c /caP L IH pc {}/IH IH/IH /or4P[|||/orP[]].
-  { move=> pcf. suff: b # e2 by move/orP: (pc)=>[] /eqP->->//.
-    apply/cfP. exists b, e2. by rewrite !le_refl. }
-  1,3: case E: (_ b)=> [d|]// C; suff: b # e2 by move/orP: pc=>[]/eqP->->.
-  1,2: apply/(@consist_cfl d)=>//; apply/connect1;
-          by rewrite/pre_ca/rsucc/rf ?E eq_refl.
-  all: case E: (_ e2)=> [d|]// C; have->//: c # d;
-        by apply/(consist_cfl (connect1 pc)).
-Qed.
-
-
-Lemma cf_symm: symmetric cf.
-Proof.
-  move=> n m. apply/Bool.eq_true_iff_eq. 
-  suff H: forall a b, a # b -> b # a.
-  { by split=> /H. } 
-  move=> a b /cfP [x [y/and3P[??/and3P[*]]]]. 
-  apply/cfP. exists y, x. 
-  apply/and3P; split=> //. apply/and3P; split; by rewrite eq_sym.
+  apply/(sameP idP)/(iffP idP)=>[/cf'_cf|/cfP]//.
+  case=> ?[?/and3P[/Prop_relP]]. elim=> [?/Prop_relP|].
+  { by elim=> [?->//|??? /Prop_relP? H /orP[]/eqP->/H]/cf'_cf->. }
+  by move=> ??? /Prop_relP ? IH /orP[]/eqP-> L /(IH L)/cf'_cf->.
 Qed.
 
 Definition consistency := [forall n, [forall m, (orff m == some n) ==> ~~ m # n]].
@@ -296,21 +248,21 @@ move: m n. elim/ltn_ind=> m IHn. elim/ltn_ind=> n IHm C. apply/negP=> CN.
 move: (CN). rewrite cfE=> /or4P[|||/orP[]].
 { move=> /and3P[/ca_decr/(_ C) [x /andP[/swap/orP[]/eqP]]].
   { move=> EQ nCx /eqP. rewrite EQ=> /pred_le xLn. 
-    move: EQ=> /eqP/rsucc_ca/(IHm _ xLn)/negP. 
-    by move: (consist_cfl nCx CN). }
-  move/rc/negP/swap/consist_cfl/(_ CN). by rewrite cf_symm. }
+    move: EQ=> /eqP/rsucc_ca/(IHm _ xLn)/negP.
+    by move: (consist_cf CN nCx (le_refl m)). }
+  move/rc/negP/swap/(consist_cf CN)/(_ (le_refl m)). by rewrite cf_symm. }
 { case EQ: (opred n)=>//. move: (EQ)=> /eqP/rsucc_ca/ca_trans/(_ C).
   by move: EQ=> /pred_le/IHm C'/C'/negP. }
-{ case EQ: (opred m)=>// nCNa. move: (EQ) (nCNa)=> /eqP/rsucc_ca aCm.
-  move: (C)=> /consist_cfl H{}/H mCNa. move: C. case NM: (n == m)=> C.
+{ case EQ: (opred m)=>// nCNa. move: (EQ) (nCNa)=> /eqP/rsucc_ca aCm ?.
+  move: (consist_cf nCNa C (le_refl _))=> mCNa. move: C. case NM: (n == m)=> C.
   { move: NM EQ=> /eqP<-/pred_le/IHm/(_ aCm)/negP. 
     by rewrite cf_symm=> /(_ mCNa). }
   move: NM=> /negbT/ca_decr/(_ C) [x /andP[/swap/orP[]/eqP]].
   { rewrite EQ=> [[<-]]. by move: EQ=> /pred_le/IHn H/H/negP. }
-  move/rc/negP/swap/consist_cfl/(_ CN). by rewrite cf_symm. }
+  move/rc/negP/swap/(consist_cf CN)/(_ (le_refl m)). by rewrite cf_symm. }
 { case EQ: (orff n)=>//. move: (EQ)=> /eqP/rff_ca/ca_trans/(_ C).
   by move: EQ=> /orff_le/IHm C'/C'/negP. }
-{ case EQ: (orff m)=>//. move: C=> /consist_cfl H{}/H. by apply/negP/rc. }
+{ case EQ: (orff m)=>// /consist_cf/(_ C (le_refl _)). by apply/negP/rc. }
 Qed.
 
 Lemma cf_irrelf : irreflexive cf.
