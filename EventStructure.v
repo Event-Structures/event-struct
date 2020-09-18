@@ -1,6 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path.
-(*From Equations Require Import Equations.*)
 From event_struct Require Import utilities.
 
 Definition var := nat.
@@ -138,21 +137,18 @@ Proof. exact: connect_trans. Qed.
 Lemma ca_decr e1 e2 : (e1 != e2) -> ca e1 e2 ->
   exists e3, ca e1 e3 && pre_ca e3 e2. 
 Proof.
-  move=> neq /connectP[].
-  elim/last_ind=> /=.
-  { move=> _ eq. move: eq neq=>-> /eqP nn. by exfalso. }
-  move=> s a IHx. rewrite last_rcons rcons_path=> /swap-> /andP[*].
-  exists (last e1 s). apply/andP. split=> //=. 
-  apply/connectP. by exists s.
+  move=> neq /connectP[]. elim/last_ind=> /=.
+  { move=> ? eq. by move: eq neq=>-> /eqP. }
+  move=> s ??. rewrite last_rcons rcons_path=> /swap-> /andP[*].
+  exists (last e1 s). apply/andP. split=> //=. apply/connectP. by exists s.
 Qed.
 
 Lemma ca_sub_leq e1 e2 : ca e1 e2 -> e1 <= e2.
 Proof.
   move: e2. elim/ltn_ind=> e2 IHe2 ce12.
-  case H: (e1 == e2); move: H.
-  { by move=> /eqP ->. }
-  move /negbT/ca_decr/(_ ce12)=> [] e3. 
-  move /andP=> [ce13 /pre_ca_lt lt_e32].
+  case H: (e1 == e2); first by rewrite (eqP H).
+  move/negbT/ca_decr/(_ ce12) : H=> [] e3. 
+  move/andP=> [ce13 /pre_ca_lt lt_e32].
   apply /ltnW /(leq_ltn_trans _ lt_e32).  
   by apply: (IHe2 e3). 
 Qed.
@@ -202,11 +198,14 @@ Notation cf' e1 e2 := [|| pre_cf e1 e2,
   (if orff  e1 is some x then x # e2 else false) |
   (if orff  e2 is some y then e1 # y else false)].
 
+Lemma pre_cf_symm e1 e2: pre_cf e1 e2 -> pre_cf e2 e1.
+Proof. move/and3P=>[*]. apply/and3P; split; by rewrite eq_sym. Qed.
+
+
 Lemma cf_symm: symmetric cf.
 Proof.
-  move=> ??. apply/(sameP idP)/(iffP idP)=> /cfP[x [y/and3P[?? /and3P[*]]]].
-  all: apply/cfP; exists y, x; apply/and3P; split=>//; apply/and3P; split.
-  all: by rewrite eq_sym.
+  move=> ??. apply/(sameP idP)/(iffP idP)=> /cfP[x [y/and3P[*]]].
+  all: by apply/cfP; exists y, x; apply/and3P; split=>//; apply/pre_cf_symm.
 Qed.
 
 Lemma consist_cf {e1 e2 e3 e4}: e1 # e2 -> e1 <= e3 -> e2 <= e4 -> e3 # e4.
@@ -234,44 +233,31 @@ Definition consistency := [forall n, [forall m, (orff m == some n) ==> ~~ m # n]
 
 Hypothesis (consist : consistency).
 
-Lemma rff_consist e1 e2 : (orff e2 = some e1) -> ~~ e2 # e1.
+Lemma rff_consist {e1 e2} : (orff e2 = some e1) -> ~ e2 # e1.
 Proof. 
-move/forallP: consist=> /(_ e1)/forallP/(_ e2)/implyP I ?; by apply/I/eqP.
-Qed.
-
-(* the proof is so big beca we need to analyze of cases in cf         *)
-(* definition                                                                  *)
-Lemma no_confl_ca n m: n <= m -> ~~ (n # m).
-Proof.
-set rc := rff_consist.
-move: m n. elim/ltn_ind=> m IHn. elim/ltn_ind=> n IHm C. apply/negP=> CN.
-move: (CN). rewrite cfE=> /or4P[|||/orP[]].
-{ move=> /and3P[/ca_decr/(_ C) [x /andP[/swap/orP[]/eqP]]].
-  { move=> EQ nCx /eqP. rewrite EQ=> /pred_le xLn. 
-    move: EQ=> /eqP/rsucc_ca/(IHm _ xLn)/negP.
-    by move: (consist_cf CN nCx (le_refl m)). }
-  move/rc/negP/swap/(consist_cf CN)/(_ (le_refl m)). by rewrite cf_symm. }
-{ case EQ: (opred n)=>//. move: (EQ)=> /eqP/rsucc_ca/ca_trans/(_ C).
-  by move: EQ=> /pred_le/IHm C'/C'/negP. }
-{ case EQ: (opred m)=>// nCNa. move: (EQ) (nCNa)=> /eqP/rsucc_ca aCm ?.
-  move: (consist_cf nCNa C (le_refl _))=> mCNa. move: C. case NM: (n == m)=> C.
-  { move: NM EQ=> /eqP<-/pred_le/IHm/(_ aCm)/negP. 
-    by rewrite cf_symm=> /(_ mCNa). }
-  move: NM=> /negbT/ca_decr/(_ C) [x /andP[/swap/orP[]/eqP]].
-  { rewrite EQ=> [[<-]]. by move: EQ=> /pred_le/IHn H/H/negP. }
-  move/rc/negP/swap/(consist_cf CN)/(_ (le_refl m)). by rewrite cf_symm. }
-{ case EQ: (orff n)=>//. move: (EQ)=> /eqP/rff_ca/ca_trans/(_ C).
-  by move: EQ=> /orff_le/IHm C'/C'/negP. }
-{ case EQ: (orff m)=>// /consist_cf/(_ C (le_refl _)). by apply/negP/rc. }
+move/forallP: consist=> /(_ e1)/forallP/(_ e2)/implyP I ?. by apply/negP/I/eqP.
 Qed.
 
 Lemma cf_irrelf : irreflexive cf.
-Proof. move=> n. apply/negbTE. by rewrite no_confl_ca// le_refl. Qed.
+Proof.
+  move=> m. apply/negbTE/negP. elim/ltn_ind: m=> m IHn.
+  suff C: forall n, opred m = some n -> ~ m # n.
+  { rewrite cfE=> /or4P[|||/orP[]]; opt_case; first by rewrite/pre_cf eq_refl.
+    1,2: move/C; by rewrite // cf_symm.
+    1,2: move/rff_consist; by rewrite // cf_symm. }
+  move=> k /swap /cfP[x [y /and3P[]]]. case E: (x == m).
+  { move/eqP :E=>->? /ca_sub_leq ?/and3P[?/eqP->?/eqP/rsucc_le]. slia. }
+  move: E=> /negbT/ca_decr H/H[z /andP[? /orP[]/eqP E1 L ? E2]].
+  { apply/(IHn z); first by apply/rsucc_le/eqP. apply/cfP. exists x, y.
+    apply/and3P; split=>//. by move: E1 E2=>->[->]. }
+  apply/(rff_consist E1)/cfP. exists y, x. apply/and3P; split=>//.
+  { by apply/(le_trans L)/rsucc_ca/eqP. }
+  by rewrite pre_cf_symm.
+Qed.
 
 End Cause_Conflict.
 
-Inductive cexec_event_struct := 
-  Consist e of (consistency e).
+Inductive cexec_event_struct := Consist e of (consistency e).
 
 Arguments Consist {_}.
 

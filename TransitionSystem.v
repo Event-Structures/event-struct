@@ -59,7 +59,7 @@ Lemma add_lab_eq_nat (m : 'I_N) (n : 'I_N.+1):
   n = m :> nat -> add_lab n = lab m.
 Proof.
 case: n. case: m => ? L ??/=. case: eqP=> *; last by apply/congr1/ord_inj.
-exfalso. move: L. ssrnatlia.
+exfalso. move: L. slia.
 Qed.
 
 (* add_lab correctness second lemma *)
