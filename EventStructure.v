@@ -12,12 +12,6 @@ Context {val : eqType}.
 Definition sproof {A : Type} {P : A -> Prop} (e : {x : A | P x}) : P (sval e) := 
   @proj2_sig A P e.
 
-Definition is_none {A : Type} : pred (option A) := 
-  fun o => if o is None then true else false.
-
-Definition is_some {A : Type} : pred (option A) := 
-  fun o => if o is Some _ then true else false.
-
 (* labels for events in event structure *)
 Inductive label :=
 | R : tid -> var -> val -> label
@@ -80,7 +74,6 @@ Proof. rewrite /opred. case: (pred e1)=> [y' [<-]|] //=. Qed.
 Lemma rsucc_le e1 e2 : rsucc e1 e2 -> e1 < e2.
 Proof. rewrite /rsucc. by move /eqP/pred_le. Qed.
 
-
 Definition oread (e : 'I_n) : option { e : 'I_n | is_read (lab e) } := 
   insub e.
 
@@ -99,18 +92,16 @@ Definition orff (e : 'I_n) : option 'I_n :=
 Lemma orff_le r w : orff r = some w -> (w < r)%N.
 Proof.
   rewrite /orff /oread.
-  case b: (is_read (lab r)); last first.
-  { rewrite insubF //=. }
-  rewrite insubT //=. case=> H.
-  rewrite -H advanceE. 
-  apply: ltn_ord. 
+  case b: (is_read (lab r)); first last.
+  { by rewrite insubF. }
+  rewrite insubT//= => [[<-]]/=. exact: ltn_ord. 
 Qed.
 
 Definition rf : rel 'I_n := 
   fun w r => orff r == some w.
 
 Lemma rf_le w r : rf w r -> w < r.
-Proof. rewrite /rf. by move /eqP/orff_le. Qed.
+Proof. rewrite /rf. by move/eqP/orff_le. Qed.
 
 Arguments advance : simpl never.
 
@@ -137,26 +128,16 @@ Proof. exact: connect_trans. Qed.
 Lemma ca_decr e1 e2 : (e1 != e2) -> ca e1 e2 ->
   exists e3, ca e1 e3 && pre_ca e3 e2. 
 Proof.
-  move=> neq /connectP[]. elim/last_ind=> /=.
-  { move=> ? eq. by move: eq neq=>-> /eqP. }
-  move=> s ??. rewrite last_rcons rcons_path=> /swap-> /andP[*].
-  exists (last e1 s). apply/andP. split=> //=. apply/connectP. by exists s.
+  move/swap/Prop_relP=>[?/eqP//|? e ?/Prop_relP E E'*]. exists e.
+  by rewrite/ca E E'.
 Qed.
 
 Lemma ca_sub_leq e1 e2 : ca e1 e2 -> e1 <= e2.
-Proof.
-  move: e2. elim/ltn_ind=> e2 IHe2 ce12.
-  case H: (e1 == e2); first by rewrite (eqP H).
-  move/negbT/ca_decr/(_ ce12) : H=> [] e3. 
-  move/andP=> [ce13 /pre_ca_lt lt_e32].
-  apply /ltnW /(leq_ltn_trans _ lt_e32).  
-  by apply: (IHe2 e3). 
-Qed.
+Proof. move/Prop_relP. elim=> []//????/swap/pre_ca_lt. slia. Qed.
 
 Lemma ca_anti: antisymmetric ca.
 Proof.
-  move=> x y /andP[/ca_sub_leq xy /ca_sub_leq yx].
-  by apply/ord_inj/anti_leq/andP.
+  move=> ?? /andP[/ca_sub_leq ? /ca_sub_leq ?]. apply/ord_inj. slia.
 Qed.
 
 Definition lt_of_ca e1 e2 := (e2 != e1) && (ca e1 e2).
