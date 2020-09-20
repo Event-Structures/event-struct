@@ -44,7 +44,7 @@ Section adding_event.
 Variable 
   (l : label)               (* label of an event which we want to add      *)
   (e : exec_event_struct)     (* execution graph in which we want to add l *)
-  (pre_pred : option 'I_(n e)). (* pred-child of new event (if it exists)        *)
+  (ipred : option 'I_(n e)). (* pred-child of new event (if it exists)        *)
 Notation N := (n e).
 Notation lab := (lab e).
 Notation pred := (pred e).
@@ -70,7 +70,7 @@ Proof. move=> /=. by case: eqP. Qed.
 Definition add_pred (m : 'I_N.+1) : option 'I_m := 
   let '(Ordinal m' L) := m in 
   match N =P m' with
-  | ReflectT eq => let 'erefl := eq in pre_pred
+  | ReflectT eq => let 'erefl := eq in ipred
   | ReflectF p => (pred (Ordinal (ltS_neq_lt L p))) 
   end.
 
@@ -183,7 +183,7 @@ End adding_event.
 
 
 Section add_event_def.
-Variables (e : exec_event_struct) (pre_pred : option 'I_(n e)).
+Variables (e : exec_event_struct) (ipred : option 'I_(n e)).
 
 Inductive add_label := 
 | add_W : tid -> var -> val -> add_label
@@ -194,12 +194,12 @@ Definition add_event (l : add_label) :=
   | add_W t x a      => Pack 
                          (n e).+1 
                          (add_lab (W t x a) e)
-                         (add_pred e pre_pred) 
+                         (add_pred e ipred) 
                          (add_rf_None (W t x a) e not_false_is_true)
   | add_R k t x a RF => Pack
                          (n e).+1 
                          (add_lab (R t x a) e)
-                         (add_pred e pre_pred)
+                         (add_pred e ipred)
                          (add_rf_some (R t x a) e k RF)
   end.
 

@@ -106,19 +106,19 @@ Proof. rewrite /rf. by move/eqP/orff_le. Qed.
 
 Arguments advance : simpl never.
 
-Definition pre_ca : rel 'I_n := 
+Definition ica : rel 'I_n := 
   fun e1 e2 => rsucc e1 e2 || rf e1 e2.
 
-Definition ca := connect pre_ca.
+Definition ca := connect ica.
 
-Lemma pre_ca_lt e1 e2 : pre_ca e1 e2 -> e1 < e2.
-Proof. rewrite /pre_ca. by move /orP=> [/rsucc_le | /rf_le]. Qed.
+Lemma ica_lt e1 e2 : ica e1 e2 -> e1 < e2.
+Proof. rewrite /ica. by move /orP=> [/rsucc_le | /rf_le]. Qed.
 
 Lemma rsucc_ca x y : rsucc x y -> ca x y.
-Proof. move=> H. apply/connect1. by rewrite /pre_ca /= H. Qed.
+Proof. move=> H. apply/connect1. by rewrite /ica /= H. Qed.
 
 Lemma rff_ca e1 e2 : rf e1 e2 -> ca e1 e2.
-Proof. move=> H. apply/connect1. by rewrite /pre_ca /= H. Qed.
+Proof. move=> H. apply/connect1. by rewrite /ica /= H. Qed.
 
 Lemma ca_refl: reflexive ca.
 Proof. exact: connect0. Qed.
@@ -127,14 +127,14 @@ Lemma ca_trans: transitive ca.
 Proof. exact: connect_trans. Qed.
 
 Lemma ca_decr e1 e2 : (e1 != e2) -> ca e1 e2 ->
-  exists e3, ca e1 e3 && pre_ca e3 e2. 
+  exists e3, ca e1 e3 && ica e3 e2. 
 Proof.
   move/swap/PconnectP=> [? /eqP // | ? e ? /PconnectP E E' *]. 
   exists e. by rewrite/ca E E'.
 Qed.
 
 Lemma ca_sub_leq e1 e2 : ca e1 e2 -> e1 <= e2.
-Proof. move/PconnectP. elim=> []//????/swap/pre_ca_lt. slia. Qed.
+Proof. move/PconnectP. elim=> []//????/swap/ica_lt. slia. Qed.
 
 Lemma ca_anti: antisymmetric ca.
 Proof.
@@ -160,29 +160,29 @@ Open Scope order_scope.
 Import Order.NatOrder.
 
 (* base of cf relation *)
-Definition pre_cf e1 e2 :=
+Definition icf e1 e2 :=
   [&& (e1 != e2), opred e1 == opred e2 & (thread_id (lab e1) == thread_id (lab e2))].
 
 Definition cf e1 e2 :=
-  [exists e1' : 'I_n, [exists e2' : 'I_n, [&& e1' <= e1, e2' <= e2 & pre_cf e1' e2']]].
+  [exists e1' : 'I_n, [exists e2' : 'I_n, [&& e1' <= e1, e2' <= e2 & icf e1' e2']]].
 
 Notation "a # b" := (cf a b) (at level 10).
 
 Lemma cfP e1 e2 :
-  reflect (exists e1' e2', [&& e1' <= e1, e2' <= e2 & pre_cf e1' e2']) (e1 # e2).
+  reflect (exists e1' e2', [&& e1' <= e1, e2' <= e2 & icf e1' e2']) (e1 # e2).
 Proof.
   apply/(iffP existsP)=> [[x /existsP[y ?]]|[x [y ?]]]; exists x.
   2: apply/existsP.
   all: by exists y.
 Qed.
 
-Notation cf' e1 e2 := [|| pre_cf e1 e2,
+Notation cf' e1 e2 := [|| icf e1 e2,
   (if opred e1 is some x then x # e2 else false),
   (if opred e2 is some y then e1 # y else false),
   (if orff  e1 is some x then x # e2 else false) |
   (if orff  e2 is some y then e1 # y else false)].
 
-Lemma pre_cf_symm e1 e2: pre_cf e1 e2 -> pre_cf e2 e1.
+Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
 Proof. move/and3P=>[*]. apply/and3P; split; by rewrite eq_sym. Qed.
 
 
@@ -190,7 +190,7 @@ Lemma cf_symm: symmetric cf.
 Proof.
   move=> *. apply /(sameP idP) /(iffP idP) => /cfP[x [y /and3P[*]]].
   all: apply/cfP; exists y, x.
-  all: by apply/and3P; split=> //; apply/pre_cf_symm.
+  all: by apply/and3P; split=> //; apply/icf_symm.
 Qed.
 
 Lemma consist_cf {e1 e2 e3 e4}: e1 # e2 -> e1 <= e3 -> e2 <= e4 -> e3 # e4.
@@ -206,7 +206,7 @@ Proof.
   { apply/cfP; exists e1, e2. by rewrite !le_refl. }
   all: ocase=> /eqP H C.
   all: rewrite (consist_cf C) // /Order.le /= /ca connect1 //.
-  all: by rewrite /pre_ca /rsucc /rf H.
+  all: by rewrite /ica /rsucc /rf H.
 Qed.
 
 Lemma cfE e1 e2: e1 # e2 = cf' e1 e2.
@@ -235,7 +235,7 @@ Proof.
   elim/ltn_ind: m=> m IHn.
   suff C: forall n, opred m = some n -> ~ m # n.
   { rewrite cfE=> /or4P[|||/orP[]]; ocase.
-    { by rewrite/pre_cf eq_refl. }
+    { by rewrite/icf eq_refl. }
     1,2: move/C; by rewrite // cf_symm.
     1,2: move/rff_consist; by rewrite // cf_symm. }
   move=> k /swap /cfP[x [y /and3P[]]]. case E: (x == m).
@@ -251,7 +251,7 @@ Proof.
   apply/(rff_consist E1)/cfP.
   exists y, x; apply/and3P; split=>//.
   { by apply/(le_trans L)/rsucc_ca/eqP. }
-  by rewrite pre_cf_symm.
+  by rewrite icf_symm.
 Qed.
 
 End Cause_Conflict.
