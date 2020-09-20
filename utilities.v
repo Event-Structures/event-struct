@@ -105,6 +105,11 @@ Definition tid:= nat.
 Notation swap := 
    (ltac:(let f := fresh "_top_" in let s := fresh "_s_" in move=> f s; move: s f)).
 
+Notation apply := (
+   ltac: (let f := fresh "_top_" in move=> f {}/f)
+).
+
+
 Lemma snd_true3 a b : [|| a, true | b].
 Proof. by case: a. Qed.
 
@@ -134,24 +139,24 @@ move=> IH n. have [k le_size] := ubnP (nat_of_ord n).
 elim: k n le_size=>// n IHn k le_size. apply/IH=> *. apply/IHn. slia.
 Qed.
 
-Ltac opt_case := let H := fresh in
+Ltac ocase := let H := fresh in
   try match goal with  |- context [if ?a is some _ then _ else _] =>
-    case H: a; move: H=>//=
+    case H: a; move: H => //=
   end.
 
-Inductive Prop_rel {n : nat} (r : rel 'I_n) : 'I_n -> 'I_n -> Prop :=
-| Base e1 : Prop_rel r e1 e1
-| Step {e1} e2 e3 : Prop_rel r e1 e2 -> r e2 e3 -> Prop_rel r e1 e3.
+Inductive Pconnect {n : nat} (r : rel 'I_n) : 'I_n -> 'I_n -> Prop :=
+| Base e1 : Pconnect r e1 e1
+| Step {e1} e2 e3 : Pconnect r e1 e2 -> r e2 e3 -> Pconnect r e1 e3.
 
 Hint Resolve Base : core.
 
-Lemma Prop_relP {n : nat} {r : rel 'I_n} e1 e2:
-  reflect (Prop_rel r e1 e2) (connect r e1 e2).
+Lemma PconnectP {n : nat} {r : rel 'I_n} e1 e2:
+  reflect (Pconnect r e1 e2) (connect r e1 e2).
 Proof.
   apply/(iffP idP).
   { move=>/connectP[]. move: e2=>/swap.
     elim/last_ind=>[/=??->//|/= s x IHs].
-    rewrite rcons_path last_rcons=> e2 /andP[/IHs/(_ erefl) ?? ->].
+    rewrite rcons_path last_rcons => e2 /andP[/IHs/(_ erefl) ?? ->].
     by apply/(@Step _ _ _ (last e1 s)). }
   elim=> [?|?? e3 ?/connectP[s ? E ?]]; first by rewrite connect0.
   apply/connectP. exists (rcons s e3); last by rewrite last_rcons.
