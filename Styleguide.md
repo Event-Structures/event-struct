@@ -43,10 +43,10 @@ End Foo.
     to highlight that and use names: `lr`, `lw`, `lf` etc.
 
   * Use the last letters of latin alphabet for names 
-    of variables (memory locations): `x`, `y`, `z`.
+    of **memory locations (variables)**: `x`, `y`, `z`.
 
   * Use the first letters of latin alphabet for names 
-    of values: `a`, `b`, `c`, etc.
+    of **values**: `a`, `b`, `c`, etc.
 
 * Prefer short names for binary relations, in the style of weak memory papers
   (ideally, two to four letters lenght). 
@@ -119,8 +119,7 @@ apply Hx.
 all: congruence.
 ```
 
-* When using `destruct`, `induction` or `inversion` separate conjuncts by single space. 
-  Also surround disjuncts separator  `|` by spaces.
+* Separate conjuncts by single space. Also surround disjuncts separator  `|` by spaces.
   But do not put spaces after opening bracket `[` or before closing bracket `]`.
 
 ```Coq
