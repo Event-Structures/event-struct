@@ -152,8 +152,6 @@ Ltac ocase := let H := fresh in
     case H: a; move: H => //=
   end.
 
-Hint Resolve Base : core.
-
 (* need that because of inconsistency in Coq stdlib (duplicate name) *)
 Notation rtn1_trans := Coq.Relations.Relation_Operators.rtn1_trans.
 
