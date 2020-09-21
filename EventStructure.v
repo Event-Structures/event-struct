@@ -144,12 +144,13 @@ Proof. exact: connect_trans. Qed.
 Lemma ca_decr e1 e2 : e1 != e2 -> ca e1 e2 ->
   exists e3, ca e1 e3 && ica e3 e2. 
 Proof.
-  move/swap/PconnectP=> [? /eqP // | ? e ? /PconnectP E E' *]. 
-  exists e. by rewrite/ca E E'.
+  move /swap/crtn1_connectP=> [/eqP // | e3 e4 ?].
+  move=> /crtn1_connectP E *.
+  exists e3. by rewrite /ca E. 
 Qed.
 
 Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
-Proof. move/PconnectP. elim=> []//????/swap/ica_lt. slia. Qed.
+Proof. move /crtn1_connectP. elim=> [] //. move=> ??/ica_lt. slia. Qed.
 
 Lemma ca_anti: antisymmetric ca.
 Proof.
@@ -229,12 +230,12 @@ Qed.
 
 Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
 Proof.
-  apply/(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //.
-  case=> ? [? /and3P[/PconnectP]].
-  elim=> [? /PconnectP |].
-  { elim=> [?-> |] //.
-    by move=> ??? /PconnectP ? H /orP[] /eqP-> /H /cf_step_cf->. }
-  by move=> ??? /PconnectP ? IH /orP[] /eqP-> L /(IH L) /cf_step_cf->.
+  apply /(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //.
+  case=> ? [? /and3P[/crtn1_connectP]].
+  elim=> [/crtn1_connectP |].
+  { elim=> [-> |] //.
+    by move=> ?? /orP[] /eqP-> /crtn1_connectP ? H /H /cf_step_cf->. }
+  by move=> ?? /orP[] /eqP-> /crtn1_connectP ? IH L /(IH L) /cf_step_cf->.
 Qed.
 
 (* ******************************************************************************** *)

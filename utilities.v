@@ -1,4 +1,4 @@
-From Coq Require Import Lia.
+From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 
@@ -152,21 +152,23 @@ Ltac ocase := let H := fresh in
     case H: a; move: H => //=
   end.
 
-Inductive Pconnect {n : nat} (r : rel 'I_n) : 'I_n -> 'I_n -> Prop :=
-| Base e1 : Pconnect r e1 e1
-| Step {e1} e2 e3 : Pconnect r e1 e2 -> r e2 e3 -> Pconnect r e1 e3.
-
 Hint Resolve Base : core.
 
-Lemma PconnectP {n : nat} {r : rel 'I_n} e1 e2:
-  reflect (Pconnect r e1 e2) (connect r e1 e2).
+(* need that because of inconsistency in Coq stdlib (duplicate name) *)
+Notation rtn1_trans := Coq.Relations.Relation_Operators.rtn1_trans.
+
+Lemma crtn1_connectP {n : nat} {r : rel 'I_n} e1 e2:
+  reflect (clos_refl_trans_n1 'I_n r e1 e2) (connect r e1 e2).
 Proof.
-  apply/(iffP idP).
-  { move=>/connectP[]. move: e2=>/swap.
-    elim/last_ind=>[/=??->//|/= s x IHs].
+  apply /(iffP idP).
+  { move=> /connectP[]. move: e2=> /swap.
+    elim /last_ind=> [/=??->//|/= s x IHs]. 
+    { apply: rtn1_refl. }
     rewrite rcons_path last_rcons => e2 /andP[/IHs/(_ erefl) ?? ->].
-    by apply/(@Step _ _ _ (last e1 s)). }
-  elim=> [?|?? e3 ?/connectP[s ? E ?]]; first by rewrite connect0.
-  apply/connectP. exists (rcons s e3); last by rewrite last_rcons.
+    by apply (@rtn1_trans _ _ _ (last e1 s) x). }
+  elim=> [|e3 e4]; first by rewrite connect0.
+  move=> HR Hcrtn1 /connectP[s p E].
+  apply /connectP. exists (rcons s e4); last first.
+  { by rewrite last_rcons. }
   rewrite rcons_path -E. by apply/andP.
 Qed.
