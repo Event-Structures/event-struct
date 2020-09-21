@@ -37,43 +37,26 @@ Definition thread_id l :=
 (* ******************************************************************************** *)
 
 Structure exec_event_struct := Pack {
-  n    : nat;
-  lab  : 'I_n -> label;
-  pred : forall (m : 'I_n), option 'I_m;
-  rff  : forall m : 'I_n, is_read (lab m) ->
-           {l : 'I_m | (compatible (lab (advance m l)) (lab m))};
+  n     : nat;
+  lab   : 'I_n -> label;
+  fpred : forall (m : 'I_n), option 'I_m;
+  frf   : forall m : 'I_n, is_read (lab m) ->
+            {l : 'I_m | (compatible (lab (advance m l)) (lab m))};
 }.
 
 Section ExecEventStructure.
 
 Variables (es : exec_event_struct) (l : label).
 
-Notation n := (n es).
-Notation lab := (lab es).
-Notation pred := (pred es).
-Notation rff := (rff es).
+Notation n       := (n es).
+Notation lab     := (lab es).
+Notation fpred   := (fpred es).
+Notation frf     := (frf es).
 Notation ltn_ind := (@ltn_ind n).
 
 (* ******************************************************************************** *)
-(*     Predecessor and Successor                                                    *)
+(*     Event Types                                                                  *)
 (* ******************************************************************************** *)
-
-(* TODO: rename *)
-Definition opred e : option 'I_n :=
-  if (pred e) is some e' then 
-    some (advance e e') 
-  else 
-    None.
-
-Definition rpred e1 e2 := opred e1 == some e2.
-
-Definition rsucc e1 e2 := opred e2 == some e1.
-
-Lemma pred_le e1 e2 : opred e1 = some e2 -> (e2 < e1)%N.
-Proof. rewrite /opred. case: (pred e1)=> [y' [<-]|] //=. Qed.
-
-Lemma rsucc_le e1 e2 : rsucc e1 e2 -> e1 < e2.
-Proof. rewrite /rsucc. by move /eqP/pred_le. Qed.
 
 Definition oread (e : 'I_n) : option { e : 'I_n | is_read (lab e) } := 
   insub e.
@@ -81,22 +64,43 @@ Definition oread (e : 'I_n) : option { e : 'I_n | is_read (lab e) } :=
 Definition owrite (e : 'I_n) : option { e : 'I_n | is_write (lab e) } := 
   insub e.
 
+
+(* ******************************************************************************** *)
+(*     Predecessor and Successor                                                    *)
+(* ******************************************************************************** *)
+
+Definition ofpred e : option 'I_n :=
+  omap (advance e) (fpred e).
+
+Definition pred e1 e2 := ofpred e1 == some e2.
+
+Definition succ e1 e2 := ofpred e2 == some e1.
+
+Lemma ofpred_lt e1 e2 : ofpred e1 = some e2 -> e2 < e1.
+Proof. rewrite /ofpred. case: (fpred e1)=> [? [<-]|] //=. Qed.
+
+Lemma pred_lt e1 e2 : pred e1 e2 -> e2 < e1.
+Proof. rewrite /pred. by move /eqP /ofpred_lt. Qed.
+
+Lemma succ_lt e1 e2 : succ e1 e2 -> e1 < e2.
+Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
+
 (* ******************************************************************************** *)
 (*     Reads-From                                                                   *)
 (* ******************************************************************************** *)
 
-Definition orff (e : 'I_n) : option 'I_n :=
+Definition ofrf (e : 'I_n) : option 'I_n :=
   omap 
     (fun r => 
        let rv  := sval   r in 
        let rpf := sproof r in 
-       advance rv (sval (rff rv rpf))
+       advance rv (sval (frf rv rpf))
     ) 
     (oread e).
 
-Lemma orff_le r w : orff r = some w -> (w < r)%N.
+Lemma ofrf_le r w : ofrf r = some w -> w < r.
 Proof.
-  rewrite /orff /oread.
+  rewrite /ofrf /oread.
   case b: (is_read (lab r)); first last.
   { by rewrite insubF. }
   rewrite insubT//= => [[<-]]/=.
@@ -105,10 +109,10 @@ Qed.
 
 (* Reads-From relation *)
 Definition rf : rel 'I_n := 
-  fun w r => orff r == some w.
+  fun w r => ofrf r == some w.
 
-Lemma rf_le w r : rf w r -> w < r.
-Proof. rewrite /rf. by move/eqP/orff_le. Qed.
+Lemma rf_lt w r : rf w r -> w < r.
+Proof. rewrite /rf. by move /eqP /ofrf_le. Qed.
 
 (* ******************************************************************************** *)
 (*     Causality                                                                    *)
@@ -116,19 +120,19 @@ Proof. rewrite /rf. by move/eqP/orff_le. Qed.
 
 (* Immediate causality relation *)
 Definition ica : rel 'I_n := 
-  fun e1 e2 => rsucc e1 e2 || rf e1 e2.
+  fun e1 e2 => succ e1 e2 || rf e1 e2.
 
 Lemma ica_lt e1 e2 : ica e1 e2 -> e1 < e2.
-Proof. rewrite /ica. by move /orP=> [/rsucc_le | /rf_le]. Qed.
+Proof. rewrite /ica. by move /orP=> [/succ_lt | /rf_lt]. Qed.
 
 
 (* Causality relation *)
 Definition ca := connect ica.
 
-Lemma rsucc_ca x y : rsucc x y -> ca x y.
+Lemma succ_ca x y : succ x y -> ca x y.
 Proof. move=> H. apply/connect1. by rewrite /ica /= H. Qed.
 
-Lemma rff_ca e1 e2 : rf e1 e2 -> ca e1 e2.
+Lemma rf_ca e1 e2 : rf e1 e2 -> ca e1 e2.
 Proof. move=> H. apply/connect1. by rewrite /ica /= H. Qed.
 
 Lemma ca_refl: reflexive ca.
@@ -137,29 +141,30 @@ Proof. exact: connect0. Qed.
 Lemma ca_trans: transitive ca.
 Proof. exact: connect_trans. Qed.
 
-Lemma ca_decr e1 e2 : (e1 != e2) -> ca e1 e2 ->
+Lemma ca_decr e1 e2 : e1 != e2 -> ca e1 e2 ->
   exists e3, ca e1 e3 && ica e3 e2. 
 Proof.
   move/swap/PconnectP=> [? /eqP // | ? e ? /PconnectP E E' *]. 
   exists e. by rewrite/ca E E'.
 Qed.
 
-Lemma ca_sub_leq e1 e2 : ca e1 e2 -> e1 <= e2.
+Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
 Proof. move/PconnectP. elim=> []//????/swap/ica_lt. slia. Qed.
 
 Lemma ca_anti: antisymmetric ca.
 Proof.
-  move=> ?? /andP[/ca_sub_leq ? /ca_sub_leq ?]. 
+  move=> ?? /andP[/ca_le ? /ca_le ?]. 
   apply/ord_inj; slia.
 Qed.
 
-Definition lt_of_ca e1 e2 := (e2 != e1) && (ca e1 e2).
+(* Strict (irreflexive) causality *)
+Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
 
-Lemma lt_neq_le : forall e1 e2, lt_of_ca e1 e2 = (e2 != e1) && (ca e1 e2).
+Lemma sca_def : forall e1 e2, sca e1 e2 = (e2 != e1) && (ca e1 e2).
 Proof. done. Qed.
 
 Definition orderMixin :=
-  LePOrderMixin lt_neq_le ca_refl ca_anti ca_trans.
+  LePOrderMixin sca_def ca_refl ca_anti ca_trans.
 
 Definition ev_display : unit.
 Proof. exact: tt. Qed.
@@ -176,7 +181,7 @@ Import Order.NatOrder.
 
 (* Immediate conflict relation *)
 Definition icf e1 e2 :=
-  [&& (e1 != e2), opred e1 == opred e2 & (thread_id (lab e1) == thread_id (lab e2))].
+  [&& (e1 != e2), ofpred e1 == ofpred e2 & (thread_id (lab e1) == thread_id (lab e2))].
 
 Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
 Proof. move/and3P=>[*]. apply/and3P; split; by rewrite eq_sym. Qed.
@@ -206,12 +211,12 @@ Proof.
   apply/and3P; split=>//; by rewrite ((le_trans C), (le_trans C')).
 Qed.
 
-Notation cf_step e1 e2 := [|| icf e1 e2,
-  (if opred e1 is some x then x # e2 else false),
-  (if opred e2 is some y then e1 # y else false),
-  (if orff  e1 is some x then x # e2 else false) |
-  (if orff  e2 is some y then e1 # y else false)].
 
+Notation cf_step e1 e2 := [|| icf e1 e2,
+  (if ofpred e1 is some x then x # e2 else false),
+  (if ofpred e2 is some y then e1 # y else false),
+  (if ofrf  e1 is some x then x # e2 else false) |
+  (if ofrf  e2 is some y then e1 # y else false)].
 
 Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
 Proof.
@@ -219,7 +224,7 @@ Proof.
   { apply/cfP; exists e1, e2. by rewrite !le_refl. }
   all: ocase=> /eqP H C.
   all: rewrite (consist_cf C) // /Order.le /= /ca connect1 //.
-  all: by rewrite /ica /rsucc /rf H.
+  all: by rewrite /ica /succ /rf H.
 Qed.
 
 Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
@@ -236,11 +241,11 @@ Qed.
 (*     Reads-From Consistency                                                       *)
 (* ******************************************************************************** *)
 
-Definition consistency := [forall n, [forall m, (orff m == some n) ==> ~~ m # n]].
+Definition consistency := [forall n, [forall m, (ofrf m == some n) ==> ~~ m # n]].
 
 Hypothesis (consist : consistency).
 
-Lemma rff_consist {e1 e2} : (orff e2 = some e1) -> ~ e2 # e1.
+Lemma rff_consist {e1 e2} : (ofrf e2 = some e1) -> ~ e2 # e1.
 Proof. 
   move/forallP: consist=> /(_ e1)/forallP/(_ e2)/implyP I ?.
   by apply/negP/I/eqP.
@@ -250,24 +255,24 @@ Lemma cf_irrelf : irreflexive cf.
 Proof.
   move=> m. apply/negbTE/negP.
   elim/ltn_ind: m=> m IHn.
-  suff C: forall n, opred m = some n -> ~ m # n.
+  suff C: forall n, ofpred m = some n -> ~ m # n.
   { rewrite cfE=> /or4P[|||/orP[]]; ocase.
     { by rewrite/icf eq_refl. }
     1,2: move/C; by rewrite // cf_symm.
     1,2: move/rff_consist; by rewrite // cf_symm. }
   move=> k /swap /cfP[x [y /and3P[]]]. case E: (x == m).
-  { move/eqP :E =>-> ? /ca_sub_leq ? /and3P[? /eqP-> ? /eqP /rsucc_le].
+  { move/eqP :E =>-> ? /ca_le ? /and3P[? /eqP-> ? /eqP /succ_lt].
     slia. }
   move/negbT/ca_decr: E => /apply.
   case=> z /andP[? /orP[] /eqP E1 L ? E2].
   { apply/(IHn z).
-    { by apply/rsucc_le/eqP. }
+    { by apply /succ_lt /eqP. }
     apply/cfP; exists x, y.
     apply/and3P; split=>//.
     by move: E1 E2=>->[->]. }
   apply/(rff_consist E1)/cfP.
   exists y, x; apply/and3P; split=>//.
-  { by apply/(le_trans L)/rsucc_ca/eqP. }
+  { by apply /(le_trans L) /succ_ca /eqP. }
   by rewrite icf_symm.
 Qed.
 
