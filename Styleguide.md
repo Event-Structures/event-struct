@@ -59,13 +59,16 @@ End Foo.
 
 * Use the following common prefixes and suffixes.
 
-  * `o` prefix for option-valued functions, 
+  * `o` prefix for **option-valued** functions, 
     e.g. `omap`, `obind` from `ssrfun.v`.
 
-  * `f` suffix for functional (computational) version of a relation,
-    e.g. `predf`, `rff`, etc.
+  * `f` prefix for **functional** (computational) version of a relation,
+    e.g. `fpred`, `frf`, etc.
 
-  * `i` prefix for *immediate*, non-transitive version of a relation,
+  * `s` prefix for **strict** (irreflexive) version of some partial order, 
+    e.g. `sca` for strict causality.
+
+  * `i` prefix for **immediate**, non-transitive version of a relation,
     e.g. `ica`, `icf`, etc.
 
 * To name a lemma stating a property of some function or relation
