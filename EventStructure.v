@@ -5,14 +5,14 @@ From event_struct Require Import utilities.
 Definition var := nat.
 Definition tid := nat.
 
-Section prime_event_structure.
+Section PrimeEventStructure.
+
 Context {val : eqType}.
 
-(* TODO: move to utilities *)
-Definition sproof {A : Type} {P : A -> Prop} (e : {x : A | P x}) : P (sval e) := 
-  @proj2_sig A P e.
+(* ******************************************************************************** *)
+(*     Label                                                                        *)
+(* ******************************************************************************** *)
 
-(* labels for events in event structure *)
 Inductive label :=
 | R : tid -> var -> val -> label
 | W : tid -> var -> val -> label.
@@ -32,12 +32,9 @@ Definition thread_id l :=
   |  (R t _ _) | (W t _ _) => t
   end.
 
-Definition advance {n} (m : 'I_n) (k : 'I_m) : 'I_n :=
-  widen_ord (ltnW (ltn_ord m)) k.
-
-Lemma advanceE {n} (m : 'I_n) (k : 'I_m) : 
- advance m k = k :> nat.
-Proof. by case: m k => ??[]. Qed.
+(* ******************************************************************************** *)
+(*     Exec Event Structure                                                         *)
+(* ******************************************************************************** *)
 
 Structure exec_event_struct := Pack {
   n    : nat;
@@ -47,7 +44,7 @@ Structure exec_event_struct := Pack {
            {l : 'I_m | (compatible (lab (advance m l)) (lab m))};
 }.
 
-Section Cause_Conflict.
+Section ExecEventStructure.
 
 Variables (es : exec_event_struct) (l : label).
 
@@ -56,6 +53,10 @@ Notation lab := (lab es).
 Notation pred := (pred es).
 Notation rff := (rff es).
 Notation ltn_ind := (@ltn_ind n).
+
+(* ******************************************************************************** *)
+(*     Predecessor and Successor                                                    *)
+(* ******************************************************************************** *)
 
 (* TODO: rename *)
 Definition opred e : option 'I_n :=
@@ -80,6 +81,10 @@ Definition oread (e : 'I_n) : option { e : 'I_n | is_read (lab e) } :=
 Definition owrite (e : 'I_n) : option { e : 'I_n | is_write (lab e) } := 
   insub e.
 
+(* ******************************************************************************** *)
+(*     Reads-From                                                                   *)
+(* ******************************************************************************** *)
+
 Definition orff (e : 'I_n) : option 'I_n :=
   omap 
     (fun r => 
@@ -98,21 +103,27 @@ Proof.
   exact: ltn_ord. 
 Qed.
 
+(* Reads-From relation *)
 Definition rf : rel 'I_n := 
   fun w r => orff r == some w.
 
 Lemma rf_le w r : rf w r -> w < r.
 Proof. rewrite /rf. by move/eqP/orff_le. Qed.
 
-Arguments advance : simpl never.
+(* ******************************************************************************** *)
+(*     Causality                                                                    *)
+(* ******************************************************************************** *)
 
+(* Immediate causality relation *)
 Definition ica : rel 'I_n := 
   fun e1 e2 => rsucc e1 e2 || rf e1 e2.
 
-Definition ca := connect ica.
-
 Lemma ica_lt e1 e2 : ica e1 e2 -> e1 < e2.
 Proof. rewrite /ica. by move /orP=> [/rsucc_le | /rf_le]. Qed.
+
+
+(* Causality relation *)
+Definition ca := connect ica.
 
 Lemma rsucc_ca x y : rsucc x y -> ca x y.
 Proof. move=> H. apply/connect1. by rewrite /ica /= H. Qed.
@@ -159,10 +170,19 @@ Import Order.LTheory.
 Open Scope order_scope.
 Import Order.NatOrder.
 
-(* base of cf relation *)
+(* ******************************************************************************** *)
+(*     Conflict                                                                     *)
+(* ******************************************************************************** *)
+
+(* Immediate conflict relation *)
 Definition icf e1 e2 :=
   [&& (e1 != e2), opred e1 == opred e2 & (thread_id (lab e1) == thread_id (lab e2))].
 
+Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
+Proof. move/and3P=>[*]. apply/and3P; split; by rewrite eq_sym. Qed.
+
+
+(* Conflict relation *)
 Definition cf e1 e2 :=
   [exists e1' : 'I_n, [exists e2' : 'I_n, [&& e1' <= e1, e2' <= e2 & icf e1' e2']]].
 
@@ -170,21 +190,7 @@ Notation "a # b" := (cf a b) (at level 10).
 
 Lemma cfP e1 e2 :
   reflect (exists e1' e2', [&& e1' <= e1, e2' <= e2 & icf e1' e2']) (e1 # e2).
-Proof.
-  apply/(iffP existsP)=> [[x /existsP[y ?]]|[x [y ?]]]; exists x.
-  2: apply/existsP.
-  all: by exists y.
-Qed.
-
-Notation cf' e1 e2 := [|| icf e1 e2,
-  (if opred e1 is some x then x # e2 else false),
-  (if opred e2 is some y then e1 # y else false),
-  (if orff  e1 is some x then x # e2 else false) |
-  (if orff  e2 is some y then e1 # y else false)].
-
-Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
-Proof. move/and3P=>[*]. apply/and3P; split; by rewrite eq_sym. Qed.
-
+Proof. apply: existsPP => n. apply: existsPP => m. apply: idP. Qed.
 
 Lemma cf_symm: symmetric cf.
 Proof.
@@ -200,7 +206,14 @@ Proof.
   apply/and3P; split=>//; by rewrite ((le_trans C), (le_trans C')).
 Qed.
 
-Lemma cf'_cf e1 e2: cf' e1 e2 -> e1 # e2.
+Notation cf_step e1 e2 := [|| icf e1 e2,
+  (if opred e1 is some x then x # e2 else false),
+  (if opred e2 is some y then e1 # y else false),
+  (if orff  e1 is some x then x # e2 else false) |
+  (if orff  e2 is some y then e1 # y else false)].
+
+
+Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
 Proof.
   move/or4P => [? |||/orP[]].
   { apply/cfP; exists e1, e2. by rewrite !le_refl. }
@@ -209,15 +222,19 @@ Proof.
   all: by rewrite /ica /rsucc /rf H.
 Qed.
 
-Lemma cfE e1 e2: e1 # e2 = cf' e1 e2.
+Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
 Proof.
-  apply/(sameP idP)/(iffP idP)=> [/cf'_cf | /cfP] //.
+  apply/(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //.
   case=> ? [? /and3P[/PconnectP]].
   elim=> [? /PconnectP |].
   { elim=> [?-> |] //.
-    by move=> ??? /PconnectP ? H /orP[] /eqP-> /H /cf'_cf->. }
-  by move=> ??? /PconnectP ? IH /orP[] /eqP-> L /(IH L) /cf'_cf->.
+    by move=> ??? /PconnectP ? H /orP[] /eqP-> /H /cf_step_cf->. }
+  by move=> ??? /PconnectP ? IH /orP[] /eqP-> L /(IH L) /cf_step_cf->.
 Qed.
+
+(* ******************************************************************************** *)
+(*     Reads-From Consistency                                                       *)
+(* ******************************************************************************** *)
 
 Definition consistency := [forall n, [forall m, (orff m == some n) ==> ~~ m # n]].
 
@@ -254,7 +271,7 @@ Proof.
   by rewrite icf_symm.
 Qed.
 
-End Cause_Conflict.
+End ExecEventStructure.
 
 Inductive cexec_event_struct := Consist e of (consistency e).
 
@@ -267,6 +284,7 @@ Canonical consist_subType := [subType for ev_struct_of].
 Lemma consist_inj : injective (ev_struct_of).
 Proof. exact: val_inj. Qed.
 
-End prime_event_structure.
+End PrimeEventStructure.
+
 Notation "x <=c y" := (@Order.le ev_display _ x y) (at level 10).
 Notation "a # b" := (cf _ a b) (at level 10).

@@ -1,12 +1,26 @@
 From Coq Require Import Lia.
-From mathcomp Require Import ssreflect ssrbool eqtype ssrnat ssrfun fintype.
-From mathcomp Require Import fingraph seq path.
+From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
+From mathcomp Require Import seq path fingraph fintype.
+
+
+Definition sproof {A : Type} {P : A -> Prop} (e : {x : A | P x}) : P (sval e) := 
+  @proj2_sig A P e.
+
+Definition advance {n} (m : 'I_n) (k : 'I_m) : 'I_n :=
+  widen_ord (ltnW (ltn_ord m)) k.
+
+Arguments advance : simpl never.
+
+Lemma advanceE {n} (m : 'I_n) (k : 'I_m) : 
+ advance m k = k :> nat.
+Proof. by case: m k => ??[]. Qed.
+
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(*                     ssrnatlia                                             *)
+(***** ssrnatlia ******)
 
 (*Transformation of a constraint (x # y) where (x y : nat) and # is a comparison
 relation into the corresponding constraint (x #' y) where #' is
@@ -95,12 +109,6 @@ Ltac ssrnatify :=
 (* Preprocessing + lia *)
 Ltac slia := move=> *; ssrnatify; lia.
 
-
-Definition opt {T T'} (f : T -> T') (x : option T) := 
-  if x is some y then some (f y) else None.
-
-Definition var := nat.
-Definition tid:= nat.
 
 Notation swap := 
    (ltac:(let f := fresh "_top_" in let s := fresh "_s_" in move=> f s; move: s f)).
