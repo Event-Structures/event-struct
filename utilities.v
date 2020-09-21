@@ -1,9 +1,26 @@
-From Coq Require Import Lia.
-From mathcomp Require Import ssreflect ssrbool eqtype ssrnat ssrfun fintype.
+From Coq Require Import Lia Relations.
+From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
+From mathcomp Require Import seq path fingraph fintype.
+
+
+Definition sproof {A : Type} {P : A -> Prop} (e : {x : A | P x}) : P (sval e) := 
+  @proj2_sig A P e.
+
+Definition advance {n} (m : 'I_n) (k : 'I_m) : 'I_n :=
+  widen_ord (ltnW (ltn_ord m)) k.
+
+Arguments advance : simpl never.
+
+Lemma advanceE {n} (m : 'I_n) (k : 'I_m) : 
+ advance m k = k :> nat.
+Proof. by case: m k => ??[]. Qed.
+
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
+(***** ssrnatlia ******)
 
 (*Transformation of a constraint (x # y) where (x y : nat) and # is a comparison
 relation into the corresponding constraint (x #' y) where #' is
@@ -30,7 +47,43 @@ Ltac ssrnatify_rel :=
      rewrite <-  (rwP (@eqP _ _ _)) in H
   | |- context [ is_true (negb (@eq_op _ ?x ?y))] =>
      rewrite <- (rwP (@eqP _ x y))
+
+  | H : (leq _ _) = true |- _ => move/leP: H => H
+  | H : context [ (leq ?a ?b) = true] |- _ =>
+     rewrite <- (rwP (@leP a b)) in H
+  | |- (leq _ _) = true => apply/leP
+  | |- context [(leq ?a ?b) = true] => rewrite <- (rwP (@leP a b))
+  (* Boolean equality *)
+  | H : (@eq_op _ _ _) = true |- _ => move/eqP: H => H
+  | |- (@eq_op _ _ _) = true => apply/eqP
+  | H : context [(@eq_op _ _ _) = true] |- _ =>
+     rewrite <-  (rwP (@eqP _ _ _)) in H
+  | |- context [(@eq_op _ ?x ?y) = true] => rewrite <- (rwP (@eqP _ x y))
+
+  (* Negated lt *)
+  | H : is_true (negb (leq (S _) _)) |- _ => move: H; rewrite -leqNgt=> H
+  | H : context [ is_true (negb (leq (S _) _))] |- _ =>
+     rewrite -leqNgt in H
+  | |- is_true (negb (leq (S _) _)) => rewrite -leqNgt
+  | |- context [ is_true (negb (leq (S _) _))] => rewrite -leqNgt
+
+  (* Negated leq *)
+  | H : is_true (negb (leq _ _)) |- _ => move: H; rewrite -ltnNge=> H
+  | H : context [ is_true (negb (leq _ _))] |- _ =>
+     rewrite -ltnNge in H
+  | |- is_true (negb (leq _ _)) => rewrite -ltnNge
+  | |- context [ is_true (negb (leq _ _))] => rewrite -ltnNge
+
+   (* = flase *)
+  | H : (_ = false) |- _ => move/negbT: H => H
+  | |- (_ = false) => apply/negP
+  | H : context [ (?a = false)] |- _ =>
+     rewrite <-  (rwP (@negP a)) in H
+  | |- context [ ?a = false] =>
+     rewrite <- (rwP (@negP a))
+
  end.
+
 
 (* Converting ssrnat operation to their std lib analogues *)
 Ltac ssrnatify_op :=
@@ -54,17 +107,16 @@ Ltac ssrnatify :=
   repeat progress ssrnatify_op.
 
 (* Preprocessing + lia *)
-Ltac ssrnatlia := ssrnatify; lia.
+Ltac slia := move=> *; ssrnatify; lia.
 
-
-Definition opt {T T'} (f : T -> T') (x : option T) := 
-  if x is some y then some (f y) else None.
-
-Definition var := nat.
-Definition tid:= nat.
 
 Notation swap := 
    (ltac:(let f := fresh "_top_" in let s := fresh "_s_" in move=> f s; move: s f)).
+
+Notation apply := (
+   ltac: (let f := fresh "_top_" in move=> f {}/f)
+).
+
 
 Lemma snd_true3 a b : [|| a, true | b].
 Proof. by case: a. Qed.
@@ -82,7 +134,7 @@ Lemma fifth_true5 a b c d: [|| a, b, c, d | true].
 Proof. apply/orP; right. exact: frth_true4. Qed.
 
 Lemma ltS_neq_lt {n N : nat}: (n < N.+1 -> N <> n -> n < N)%N.
-Proof. ssrnatlia. Qed. 
+Proof. slia. Qed. 
 
 
 Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
@@ -92,5 +144,29 @@ Lemma ltn_ind N (P : 'I_N -> Type) :
   forall n, P n.
 Proof.
 move=> IH n. have [k le_size] := ubnP (nat_of_ord n). 
-elim: k n le_size=>// n IHn k le_size. apply/IH=> *. apply/IHn. ssrnatlia.
+elim: k n le_size=>// n IHn k le_size. apply/IH=> *. apply/IHn. slia.
+Qed.
+
+Ltac ocase := let H := fresh in
+  try match goal with  |- context [if ?a is some _ then _ else _] =>
+    case H: a; move: H => //=
+  end.
+
+(* need that because of inconsistency in Coq stdlib (duplicate name) *)
+Notation rtn1_trans := Coq.Relations.Relation_Operators.rtn1_trans.
+
+Lemma crtn1_connectP {n : nat} {r : rel 'I_n} e1 e2:
+  reflect (clos_refl_trans_n1 'I_n r e1 e2) (connect r e1 e2).
+Proof.
+  apply /(iffP idP).
+  { move=> /connectP[]. move: e2=> /swap.
+    elim /last_ind=> [/=??->//|/= s x IHs]. 
+    { apply: rtn1_refl. }
+    rewrite rcons_path last_rcons => e2 /andP[/IHs/(_ erefl) ?? ->].
+    by apply (@rtn1_trans _ _ _ (last e1 s) x). }
+  elim=> [|e3 e4]; first by rewrite connect0.
+  move=> HR Hcrtn1 /connectP[s p E].
+  apply /connectP. exists (rcons s e4); last first.
+  { by rewrite last_rcons. }
+  rewrite rcons_path -E. by apply/andP.
 Qed.
