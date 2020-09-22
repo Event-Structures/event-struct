@@ -170,3 +170,10 @@ Proof.
   { by rewrite last_rcons. }
   rewrite rcons_path -E. by apply/andP.
 Qed.
+
+
+Definition ext {n T} (f : 'I_n -> T) (m : nat) : option T := 
+  (match m < n as L return (m < n = L -> _) with
+   | true  => fun pf => some (f (Ordinal pf))
+   | false => fun=> None
+  end) erefl.

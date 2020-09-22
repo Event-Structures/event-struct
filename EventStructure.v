@@ -21,9 +21,15 @@ Definition is_read  l := if l is (R _ _ _) then true else false.
 
 Definition is_write l := if l is (W _ _ _) then true else false.
 
-Definition compatible w r := 
+(*Definition compatible w r := 
   match w, r with
   | (W _ x a), (R _ y b) => (x == y) && (a == b)
+  | _, _                 => false
+  end.*)
+
+Definition ocompatible (w r : option label) := 
+  match w, r with
+  | some (W _ x a), some (R _ y b) => (x == y) && (a == b)
   | _, _                 => false
   end.
 
@@ -41,7 +47,7 @@ Structure exec_event_struct := Pack {
   lab   : 'I_n -> label;
   fpred : forall (m : 'I_n), option 'I_m;
   frf   : forall m : 'I_n, is_read (lab m) ->
-            {l : 'I_m | (compatible (lab (advance m l)) (lab m))};
+            {l : 'I_m | (ocompatible (ext lab l) (ext lab m))};
 }.
 
 Section ExecEventStructure.
