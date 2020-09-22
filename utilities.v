@@ -152,6 +152,11 @@ Ltac ocase := let H := fresh in
     case H: a; move: H => //=
   end.
 
+Ltac dep_case := 
+  match goal with  |- context [if ?a as _ return (_) then _ else _] =>
+    case: {2}a {-1}(@erefl _ a) erefl=> {2 3}->
+  end.
+
 (* need that because of inconsistency in Coq stdlib (duplicate name) *)
 Notation rtn1_trans := Coq.Relations.Relation_Operators.rtn1_trans.
 
@@ -170,3 +175,135 @@ Proof.
   { by rewrite last_rcons. }
   rewrite rcons_path -E. by apply/andP.
 Qed.
+
+Section opt_fun.
+
+Definition ord_dom_to_nat {N T T'} 
+  (f : 'I_N -> T) (h : T -> option T') (n : nat) : option T' := 
+  (match n < N as L return (n < N = L -> _) with
+   | true  => fun pf => h (f (Ordinal pf))
+   | false => fun=> None
+   end erefl).
+
+Definition ord_f_to_nat {N M} (k : nat) (f : 'I_N -> 'I_M) (n : nat) : nat :=   
+  (match n < N as L return (n < N = L -> _) with
+   | true  => fun pf => nat_of_ord (f (Ordinal pf))
+   | false => fun=> k + n
+end erefl).
+
+Lemma opt_comp {T1 T2 T3} (f : T1 -> T2) (g : T2 -> T3) y : 
+  omap (fun z => g (f z)) y = (omap g) ((omap f) y).
+Proof. move: y. by case. Qed.
+
+Context {T T' T1 T2 T3 : Type} {N M K : nat}.
+
+Lemma inj_ord_dom_to_nat (k : 'I_N)
+  {f1 f2: 'I_N -> T} (h : T -> option T') :
+  injective h -> 
+  ord_dom_to_nat f1 h k = ord_dom_to_nat f2 h k -> f1 k = f2 k.
+Proof.
+move=> Ih. rewrite {1}/ord_dom_to_nat.
+case: {2}(k < N) {-1}(@erefl _ (k < N)) erefl=> {2 3}->;
+rewrite/ord_dom_to_nat=> L;
+case: {2}(k < N) {-1}(@erefl _ (k < N)) erefl=> {2 3}-> L'//.
+- move/Ih. have->: Ordinal L = k by apply/ord_inj.
+by have->: Ordinal L' = k by apply/ord_inj.
+1,2: by exfalso; rewrite L in L'.
+case: k L {L'}=>/= m L. by rewrite L.
+Qed.
+
+Lemma opt_can {f : T -> T'} {g : T' -> T}: 
+  cancel f g -> cancel (omap f) (omap g).
+Proof. move=> c []//=?. by rewrite c. Qed.
+
+Lemma opt_inj {A B} (f : A -> B): injective f -> injective (omap f).
+Proof. by move=> I [?[]//=?[/I->]|[]//]. Qed.
+
+Lemma eq_opt {f g : T -> T'}: f =1 g -> omap f =1 omap g.
+Proof. move=> E []//=?. by apply/congr1/E. Qed.
+
+Definition onat_eq_ord {N M} (n : option 'I_N) (m : option 'I_M) :=
+  (omap (@nat_of_ord N)) n == (omap (@nat_of_ord M)) m.
+
+Lemma ord_f_to_natE k (f : 'I_N -> 'I_M) (i : 'I_N) :
+  f i = (ord_f_to_nat k f) i :> nat.
+Proof.
+rewrite/ord_f_to_nat.
+case: {2}(i < N) {-1}(@erefl _ (i < N)) erefl=> {2 3}->.
+- move=> ?. by apply/congr1/congr1/ord_inj.
+case: i=> ?/= E. by rewrite E.
+Qed.
+
+Lemma ord_f_to_nat_Nlt k (f : 'I_N -> 'I_M) n: 
+  (n < N = false) -> ord_f_to_nat k f n = k + n.
+Proof.
+move=> LnN. rewrite/ord_f_to_nat.
+by case: {2}(n < N) {-1}(@erefl _ (n < N)) erefl=> {2 3}-> E; first 
+by rewrite E in LnN.
+Qed.
+
+Lemma ord_dom_to_nat_le (f : 'I_N -> option 'I_M) n k: 
+  some k = (ord_dom_to_nat f (omap (@nat_of_ord M))) n -> k < M.
+Proof.
+rewrite/ord_dom_to_nat.
+case: {2}(n < N) {-1}(@erefl _ (n < N)) erefl=> {2 3}-> // nN.
+rewrite/omap. by case: (f (Ordinal nN))=> // a [->].
+Qed.
+
+Lemma ord_dom_to_nat_comp 
+  (f : 'I_M -> T) (g : 'I_N -> 'I_M) (h : T -> option T'):
+  (ord_dom_to_nat f h) \o (ord_f_to_nat (M - N) g) =1 ord_dom_to_nat (f \o g) h.
+Proof.
+move=> k/=. rewrite /ord_dom_to_nat. do ?dep_case=>//=.
+- move=> L ?. apply/congr1/congr1/ord_inj=>/=. rewrite/ord_f_to_nat. dep_case.
+- move=> ?. by apply/congr1/congr1/ord_inj. by rewrite L.
+- rewrite/ord_f_to_nat=>LkN H. exfalso. move: H.
+  case: {2}(k < N) {-1}(erefl (k < N)) erefl=> {2 3}-> //=; first by
+  move=> LnNt; rewrite LnNt in LkN.
+- slia.
+rewrite/ord_f_to_nat=>LkN H. exfalso. move: H.
+case: {2}(k < N) {-1}(erefl (k < N)) erefl=> {2 3}-> //=; last by
+move=> LnNt; rewrite LnNt in LkN. move=> e. by case: (g (Ordinal _))=>/=?->.
+Qed.
+
+Lemma ord_dom_to_nat_eq
+  {f1 f2 : 'I_M -> T} {h : T -> option T'} :
+  f1 =1 f2 -> ord_dom_to_nat f1 h =1 ord_dom_to_nat f2 h.
+Proof.
+move=> Ef k. rewrite {1}/ord_dom_to_nat.
+case: {2}(k < M) {-1}(erefl (k < M)) (erefl (k < M))=> {2 3}->; 
+rewrite /ord_dom_to_nat=> e; 
+case: {2}(k < M) {-1}(erefl (k < M)) (erefl (k < M))=> {2 3}->=>//.
+- move=> ?. apply/congr1. rewrite Ef. by apply/congr1/ord_inj.
+- by rewrite e.
+move=> E. by rewrite E in e.
+Qed.
+
+Lemma ord_dom_to_nat_opt_comp t
+  (f : 'I_N -> 'I_M) (g : 'I_N -> option 'I_N):
+  ord_dom_to_nat (omap f \o g) (omap (@nat_of_ord M)) =1
+  (omap (ord_f_to_nat t f) \o
+  ord_dom_to_nat g (omap (@nat_of_ord N))).
+Proof.
+move=> k. rewrite {1}/ord_dom_to_nat/=.
+case: {2}(k < N) {-1}(erefl (k < N)) erefl=> {2 3}->;
+rewrite/ord_dom_to_nat=> L;
+case: {2}(k < N) {-1}(erefl (k < N)) erefl=> {2 3}-> L'//; rewrite -?opt_comp.
+- have->: (Ordinal L) = (Ordinal L') by apply/ord_inj.
+  case: (g (Ordinal L'))=> //= ?. apply/congr1. exact: ord_f_to_natE.
+all: exfalso; by rewrite L in L'.
+Qed.
+
+Lemma onat_eq_ord_widen_ord
+  (n : option 'I_N) (L : N <= M) (k : option 'I_K) :
+  onat_eq_ord ((omap (id \o widen_ord L)) n) k = 
+  onat_eq_ord n k.
+Proof. by case: n. Qed.
+
+Hint Resolve eqxx : core.
+
+End opt_fun.
+
+Theorem inj_le_card {T T' : finType} (f : T -> T'): 
+  injective f -> #|T| <= #|T'|.
+Proof. move=> /card_codom<-. by rewrite max_card. Qed.

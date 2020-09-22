@@ -7,27 +7,19 @@ From Equations Require Import Equations.
 Context {N : nat}.
 Implicit Type (x y : 'I_N).
 Definition lt_ord (x y : 'I_N) := (x < y)%N.
-
 Lemma ltn_def (x y : 'I_N) : (x < y)%N = (y != x) && (x <= y)%N.
 Proof. by rewrite ltn_neqAle eq_sym. Qed.
-
 Lemma leqnn' x : (x <= x)%N.
 Proof. Admitted.
-
 Lemma anti_leq' : @antisymmetric 'I_N [eta leq].
 Proof. Admitted.
-
 Lemma leq_trans': @transitive 'I_N [eta leq].
 Proof. Admitted.
-
 Print anti_leq.
-
 Definition orderMixin' :=
 LePOrderMixin ltn_def leqnn' anti_leq' leq_trans'.
-
 Definition ev_display' : unit.
 Proof. exact: tt. Qed.
-
 Canonical porderType := POrderType ev_display' 'I_N orderMixin'.
 End foo.*)
 Section transition_system.
@@ -182,7 +174,6 @@ Definition add_rf_None := fun i j k => add_rf_None_aux j i k.
 
 End adding_event.
 
-
 Section add_event_def.
 Variables (e : exec_event_struct) (ipred : option 'I_(n e)).
 
@@ -204,75 +195,148 @@ Definition add_event (l : add_label) :=
                          (add_rf_some (R t x a) e k RF)
   end.
 
-Lemma n_add_event l: n (add_event l) = (n e).+1.
-Proof. by case: l. Qed.
+Definition opredn (e' : exec_event_struct) := 
+  ord_dom_to_nat (ofpred e') (omap (@nat_of_ord _)).
 
-Definition ord_f_to_onat {N M} (f : 'I_N -> option 'I_M) (n : nat) : option nat :=
-  (match n < N as L return (n < N = L -> _) with
-   | true  => fun pf => (omap (@nat_of_ord M)) (f (Ordinal pf))
-   | false => fun=> None
-   end erefl).
+Definition ofrfn (e' : exec_event_struct)  := 
+  ord_dom_to_nat (ofrf e') (omap (@nat_of_ord _)).
 
-Definition T_f_to_nat {T N} i (f : 'I_N -> T) (n : nat) : T := 
-  (match n < N as L return (n < N = L -> _) with
-   | true  => fun pf => (f (Ordinal pf))
-   | false => fun=> i
-   end erefl).
-
-
-Definition opredn (e' : exec_event_struct) := ord_f_to_onat (ofpred e').
-
-Definition orffn (e' : exec_event_struct)  := ord_f_to_onat (ofrf e').
-
-Definition labn (e' : exec_event_struct)  := T_f_to_nat (R 0 0 dv) (lab e').
-
-Definition ord_restr N (f : nat -> nat) (n : 'I_N) : nat := f n.
+Definition olabn (e' : exec_event_struct)  := 
+  ord_dom_to_nat (lab e') some.
 
 Definition lab_of_add_lab al := 
   match al with
   | add_W t x a     => W t x a
   | add_R _ t x a _ => R t x a
   end.
+
+Definition write_of_add_lab al := 
+  match al with
+  | add_W _ _ _     => None
+  | add_R n _ _ _ _ => some n
+  end.
+
+Lemma olabn_add_event al k: 
+  olabn (add_event al) k = 
+  match n e =P k with (* TODO Replace with 'n e' *)
+  | ReflectF p => olabn e k
+  | ReflectT _ => some (lab_of_add_lab al)
+  end.
+Proof.
+rewrite/olabn/ord_dom_to_nat.
+set tn := n e.
+case: {2}(k < n (add_event al)) {-1}(@erefl _ (k < n (add_event al))) erefl=> {2 3}->;
+case: {2}(k < n e) {-1}(@erefl _ (k < n e)) erefl=> {2 3}->;
+case: al; case: eqP=> //=.
+- move=> eq t v s kne kne1. by case: eqP.
+- move=> neq t v s kne kne1. case: eqP=> //= nek.
+  have: kne = ltS_neq_lt kne1 nek. exact: eq_irrelevance. by move=>->.
+- move=> eq n t v s comp kne kne1. by case: eqP.
+- move=> neq n t v s comp kne kne1. case: eqP=> //= nek.
+  have: kne = ltS_neq_lt kne1 nek. exact: eq_irrelevance. by move=>->.
+- move=> eq t v s knef kne1. by case: eqP.
+- move=> neq t v s knef kne1. case: eqP=> //= *.
+  have: n e = k=> //. apply/eqP. by rewrite eqn_leq leqNgt knef -ltnS kne1.
+- move=> eq n t v s comp knef kne1. by case: eqP.
+- move=> neq n t v s comp knef kne1. case: eqP=> //.
+  have: tn = k=> //. apply/eqP. by rewrite eqn_leq leqNgt knef -ltnS kne1.
+- move=> eq t v s ktn kne1f.
+  have: k < k. apply: (ltn_trans ktn). by rewrite ltnNge -ltnS kne1f.
+  by rewrite ltnn.
+- move=> neq _ _ _ ktn kne1f. have: k < k. 
+  apply: (ltn_trans ktn). by rewrite ltnNge -ltnS kne1f.
+  by rewrite ltnn.
+- move=> eq n t v s comp ktn ktn1f. have: k < k.
+  apply: (ltn_trans ktn). by rewrite ltnNge -ltnS ktn1f.
+  by rewrite ltnn.
+- move=> neq n t v s comp ktn kne1f. have: k < k.
+  apply: (ltn_trans ktn). by rewrite ltnNge -ltnS kne1f.
+  by rewrite ltnn.
+- move=> eq t v s ktnf. by rewrite -eq leqNgt ltnn.
+move=> eq n t v s comp ktnf. by rewrite -eq leqNgt ltnn.
+Qed.
+
+Lemma opredn_add_event l k: 
+  opredn (add_event l) k = 
+  match n e =P k with 
+  | ReflectT _ => (omap (@nat_of_ord (n e))) ipred
+  | ReflectF _ => (opredn e) k
+  end.
+Proof. Admitted.
+
+Lemma opredn_le k l: 
+  opredn e k = some l -> l < n e.
+Proof.
+rewrite/opredn/ord_dom_to_nat. dep_case=>// ?. 
+by case E: (ofpred e _)=> [[]/=|//][<-].
+Qed.
+
+Lemma ofrfn_le k l: 
+  ofrfn e k = some l -> l < n e.
+Proof.
+rewrite/ofrfn/ord_dom_to_nat. dep_case=>// L. 
+by case E: (ofrf e (Ordinal L)) => [[]/=|//][<-].
+Qed.
+
+Lemma n_add_event l: n (add_event l) = (n e).+1.
+Proof. by case: l. Qed.
+
+Lemma n_add_event_le_n al: n e <= n (add_event al).
+Proof. by rewrite n_add_event. Qed.
+
+Lemma orff_add_event al y :
+  ofrf (add_event al) y = 
+  (match y < n e as Lxn return (y < n e = Lxn -> _) with
+  | true  => fun pf => if (ofrf e (Ordinal pf)) is Some a
+                           then some (widen_ord (@n_add_event_le_n _) a)
+                       else None
+  | false => fun=> if (write_of_add_lab al) is Some a
+                     then some (widen_ord (@n_add_event_le_n _) a)
+                   else None
+  end) erefl.
+Proof. Admitted.
+
+Lemma ofrfn_add_event l k: 
+  ofrfn (add_event l) k =
+  match n e =P k with
+  | ReflectT _ => (omap (@nat_of_ord (n e))) (write_of_add_lab l)
+  | ReflectF _ => (ofrfn e) k
+  end.
+Proof.
+case: eqP; rewrite/ofrfn/ord_dom_to_nat.
+- dep_case=> [L?|]; last (rewrite n_add_event; slia).
+  rewrite orff_add_event/=. dep_case; first (by move=>*; exfalso; slia).
+  by case: l L.
+do ?dep_case=>//.
+- move=> L *. rewrite orff_add_event/=. dep_case; last by rewrite L.
+  move=> L'. have->: (Ordinal L') = (Ordinal L) by apply/ord_inj.
+  by case: (ofrf e (Ordinal (n:=n e) (m:=k) L)).
+all: move=> ? L ?; exfalso; rewrite n_add_event in L; slia.
+Qed.
+
 End add_event_def.
 
-
-
-Definition eq_al {e1 e2 : exec_event_struct}
-    (al1 : add_label e1) (al2 : add_label e2) : bool :=
-match al1, al2 with
-| add_W t x a, add_W l y b         => (t == l) && (x == y) && (a == b)
-| add_R n t x a _, add_R k l y b _ => 
-  (n == k :> nat) && (t == l) && (x == y) && (a == b)
-| _, _                             => false
-end.
-
-Section confluence.
-
-Definition is_iso (e e' : exec_event_struct) (f : nat -> nat) :=
-  ((((n e = n e') *  
-   (injective (ord_restr (n e) f))) *
-   ((forall k, (ord_restr (n e) f) k < n e') * (*???*)
-   ((opredn e') \o f =1 (omap f) \o (opredn e)))) *
-   (((orffn e') \o f =1 (omap f) \o (orffn e)) *
-   ((labn e')  \o f =1 labn e)))%type.
-
-Definition equviv (a b : exec_event_struct) := exists f, is_iso a b f.
-
-Notation "e ~~ e'" := (equviv e e') (at level 20).
-
-Implicit Type (e : cexec_event_struct).
-
+Implicit Type (e : exec_event_struct).
 
 Definition ev_rel e e' := exists k al, add_event e k al = e'.
 
 Notation "e '-->' e'" := (ev_rel e e') (at level 20).
 
-Inductive ev_rel_str : cexec_event_struct -> cexec_event_struct -> Prop :=
+Inductive ev_rel_str : exec_event_struct -> exec_event_struct -> Prop :=
   | Base e : ev_rel_str e e
   | Step {e1} e2 e3 (ers : ev_rel_str e1 e2) (er : e2 --> e3) : ev_rel_str e1 e3.
 
 Notation "e '-*->' e'" := (ev_rel_str e e') (at level 20).
 
-End confluence.
+Definition add_place e e' k := exists al, add_event e k al = e'.
+
+Lemma ev_rel_ord_le {e1 e }: e1 -*-> e -> n e1 <= n e.
+Proof. elim=> // ?????[?[l <-]]. rewrite/add_event. case: l=>/= *; slia. Qed.
+
+Arguments add_lab : simpl never.
 
 End transition_system.
+
+Notation "e '-->' e'" := (ev_rel e e') (at level 20).
+
+Notation "e '-*->' e'" := (ev_rel_str e e') (at level 20).

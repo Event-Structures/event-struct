@@ -294,3 +294,10 @@ End PrimeEventStructure.
 
 Notation "x <=c y" := (@Order.le ev_display _ x y) (at level 10).
 Notation "a # b" := (cf _ a b) (at level 10).
+
+Arguments rf {_ _}.
+Arguments pred {_ _}.
+Arguments ca {_ _}.
+Arguments cf {_ _}.
+Arguments succ {_ _}.
+Arguments ica {_ _}.
