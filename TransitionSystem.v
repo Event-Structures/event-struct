@@ -2,7 +2,6 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
 From event_struct Require Import utilities EventStructure.
 From Coq Require Import Arith.
-From Equations Require Import Equations.
 
 Section transition_system.
 Context {val : eqType} {dv : val}.
