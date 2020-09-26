@@ -19,7 +19,15 @@ Inductive label :=
 
 Definition is_read  l := if l is (R _ _ _) then true else false.
 
+Definition ois_read l := if l is some l then is_read l else false.
+
 Definition is_write l := if l is (W _ _ _) then true else false.
+
+Definition ocompatible (w r : option label) := 
+  match w, r with
+  | some (W _ x a), some (R _ y b) => (x == y) && (a == b)
+  | _, _                 => false
+  end.
 
 Definition compatible w r := 
   match w, r with

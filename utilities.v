@@ -107,7 +107,7 @@ Ltac ssrnatify :=
   repeat progress ssrnatify_op.
 
 (* Preprocessing + lia *)
-Ltac slia := move=> *; ssrnatify; lia.
+Ltac slia := move=> * //; ssrnatify; lia.
 
 
 Notation swap := 
