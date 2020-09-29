@@ -21,17 +21,12 @@ Definition is_read  l := if l is (R _ _ _) then true else false.
 
 Definition is_write l := if l is (W _ _ _) then true else false.
 
-(*Definition compatible w r := 
-  match w, r with
-  | (W _ x a), (R _ y b) => (x == y) && (a == b)
-  | _, _                 => false
-  end.*)
-
-Definition ocompatible (w r : option label) := 
-  match w, r with
-  | some (W _ x a), some (R _ y b) => (x == y) && (a == b)
-  | _, _                 => false
-  end.
+Definition compatible : rel label := 
+  fun w r =>
+    match w, r with
+    | W _ x a, R _ y b => (x == y) && (a == b)
+    | _, _             => false
+    end.
 
 Definition thread_id l := 
   match l with
@@ -45,9 +40,10 @@ Definition thread_id l :=
 Structure exec_event_struct := Pack {
   n     : nat;
   lab   : 'I_n -> label;
-  fpred : forall (m : 'I_n), option 'I_m;
-  frf   : forall m : 'I_n, is_read (lab m) ->
-            {l : 'I_m | (ocompatible (ext lab l) (ext lab m))};
+  fpred : forall m : 'I_n, option 'I_m;
+  frf   : forall r : 'I_n, 
+            ((opred is_read \o ext lab) r) ->
+              { w : 'I_r | (orel compatible \o2 ext lab) w r };
 }.
 
 Section ExecEventStructure.
@@ -64,12 +60,11 @@ Notation ltn_ind := (@ltn_ind n).
 (*     Event Types                                                                  *)
 (* ******************************************************************************** *)
 
-Definition oread (e : 'I_n) : option { e : 'I_n | is_read (lab e) } := 
+Definition oread (e : 'I_n) : option { e : 'I_n | (is_read \o lab) e } := 
   insub e.
 
-Definition owrite (e : 'I_n) : option { e : 'I_n | is_write (lab e) } := 
+Definition owrite (e : 'I_n) : option { e : 'I_n | (is_write \o lab) e } := 
   insub e.
-
 
 (* ******************************************************************************** *)
 (*     Predecessor and Successor                                                    *)
@@ -96,13 +91,16 @@ Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
 (* ******************************************************************************** *)
 
 Definition ofrf (e : 'I_n) : option 'I_n :=
-  omap 
-    (fun r => 
-       let rv  := sval   r in 
-       let rpf := sproof r in 
+  omap
+    (fun r =>
+       let rv : 'I_n := sval   r in
+       let rpf := opred_ext is_read lab rv (sproof r) in
        advance rv (sval (frf rv rpf))
-    ) 
+    )
     (oread e).
+
+(* Definition ofrf (e : 'I_n) : option 'I_n :=  *)
+(*   omap (advance e) (sval (frf e)). *)
 
 Lemma ofrf_le r w : ofrf r = some w -> w < r.
 Proof.
