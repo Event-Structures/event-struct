@@ -57,10 +57,9 @@ Lemma add_lab_is_read {r : 'I_n} :
   (is_read \o lab) r <-> (is_read \o add_lab) (inc_ord r).
 Proof. Admitted.
 
-Lemma add_lab_ext_is_read {r : nat} : 
-  (opred is_read \o ext lab) r <-> (opred is_read \o ext add_lab) r.
+Lemma add_lab_ext_is_read {r : 'I_n} : 
+  (opred is_read \o ext add_lab) r -> (opred is_read \o ext lab) r.
 Proof. Admitted.
-
 
 Lemma add_lab_compatible {w r : nat} :
   (orel compatible \o2 ext lab    ) w r ->
@@ -75,105 +74,35 @@ Definition sproof_map {A : Type} {P Q : A -> Prop}
   exist Q (sval e) (f (sval e) (sproof e)).
 
 Definition frf_foo : 
-      forall r : 'I_n,
-        { w :? 'I_r | 
-             (opred is_read \o ext add_lab) r
-          |- (orel compatible \o2 ext add_lab) w r
-        } := 
-  fun r =>
+      forall (r : 'I_n) (is_r : (opred is_read \o ext add_lab) r),
+        { w : 'I_r | (orel compatible \o2 ext add_lab) w r } := 
+  fun r is_r =>
     sproof_map
-      (oguard_mapP_iffB (fun w : 'I_r => @add_lab_compatible w r) 
-                        (@add_lab_ext_is_read r)
-      ) 
-      (frf r).
+      (fun w : 'I_r => @add_lab_compatible w r) 
+      (frf r (add_lab_ext_is_read is_r)).
 
-Definition frf_n (m : 'I_n)
-                 (is_r : (opred is_read \o ext add_lab) n)
-                 (rf : (orel compatible \o2 ext add_lab) m n) :
-  (* { w :? 'I_n |  *)
-    oguard ((opred is_read \o ext add_lab) n) 
-           (fun w : 'I_n => (orel compatible \o2 ext add_lab) w n)
-           (some m).
-  (* }. *)
-Proof. exact (oguard_some is_r m rf). Qed.
-
-Definition add_rf_some (m : 'I_n)
-                       (is_r : (opred is_read \o ext add_lab) n)
-                       (rf : (orel compatible \o2 ext add_lab) m n) :
-           forall r : 'I_n.+1,
-             { w :? 'I_r | 
-                  (opred is_read \o ext add_lab) r
-               |- (orel compatible \o2 ext add_lab) w r
-             }.
+Definition add_rf (m : 'I_n)
+                       (H : (opred is_read \o ext add_lab) n -> 
+                            (orel compatible \o2 ext add_lab) m n
+                       ) :
+           forall (r : 'I_n.+1) (is_r : (opred is_read \o ext add_lab) r),
+             { w : 'I_r | (orel compatible \o2 ext add_lab) w r }.
 Proof. 
-  exact (@upd 
-           (fun r => { w :? 'I_r | 
-                          (opred is_read \o ext add_lab) r
-                       |- (orel compatible \o2 ext add_lab) w r
-                     })
-           n frf_foo 
-           (exist (fun ow : option 'I_n => 
-                     oguard ((opred is_read \o ext add_lab) n) 
-                            (fun m : 'I_n => (orel compatible \o2 ext add_lab) m n) 
-                            ow)
-                  (some m) (oguard_some is_r m rf)
-           )
-        ).
+  refine (
+      @upd 
+        (fun r : nat => 
+          forall (_ : (opred is_read \o ext add_lab) r), 
+            { w : 'I_r | (orel compatible \o2 ext add_lab) w r }
+        ) n frf_foo 
+        (fun is_r => 
+           exist (fun w : 'I_n => (orel compatible \o2 ext add_lab) w n)
+                 m (H is_r)
+        )
+  ).
 Qed.
-
-(* Definition incr_rf_codom *)
-(*   {k : 'I_n.+1} {r : 'I_n} (eq : r = k :> nat) *)
-(*   (m : {l : 'I_r | (ocompatible (ext lab l)     (ext lab r))}) : *)
-(*        {l : 'I_k | (ocompatible (ext add_lab l) (ext add_lab k))} := *)
-(*   let '(Ordinal r L) := r in  *)
-(*   let '(Ordinal k L') := k in  *)
-(*   let 'erefl := eq in *)
-(*   let '(@exist _ _ o H) := m in  *)
-(*   match o, H with *)
-(*   | Ordinal m i, H' =>  *)
-(*       @exist _ _ (Ordinal i) (compatible_lab_decr_ord H') *)
-(*   end.  *)
 
 Lemma add_lab_N : ext add_lab n = some l.
 Proof. Admitted.
-
-(* Definition add_rf_some *)
-(*   (m : 'I_N) *)
-(*   (RF : ocompatible (ext lab m) (some l)) *)
-(*   (k : 'I_N.+1) *)
-(*   (IR : is_read (add_lab k)) : *)
-(*   {l : 'I_k | (ocompatible (ext add_lab l) (ext add_lab k))} :=  *)
-(*     match N =P k with *)
-(*     | ReflectF p => *)
-(*       incr_rf_codom  *)
-(*         (decr_ord_ord k p) *)
-(*         (frf (decr_ord k p) (is_read_add_lab k p IR)) *)
-(*     | ReflectT eq =>  *)
-(*       match eq, m with *)
-(*         erefl, m' =>  *)
-(*         @exist _ _  *)
-(*         m'  *)
-(*         (advance_is_read  *)
-(*           (@eq_ind_r _ _ (fun i => ocompatible _ i) RF _ add_lab_N)) *)
-(*       end *)
-(*     end. *)
-
-Lemma ord_P (k : 'I_n.+1) : n = k ->
-  (~ is_read l) -> (~ is_read (add_lab k)).
-Proof. Admitted.
-
-Definition add_rf_None
-  (NR : ~ is_read l)
-  (k : 'I_n.+1)
-  (IR : is_read (add_lab k)) :
-  {l : 'I_k | (ocompatible (ext add_lab l) (ext add_lab k))} :=
-  match N =P k with
-  | ReflectF p =>
-    incr_rf_codom 
-      (decr_ord_ord k p)
-      (frf (decr_ord k p) (is_read_add_lab k p IR))
-  | ReflectT eq => match ord_P _ eq NR IR with end
-  end.
 
 End adding_event.
 
