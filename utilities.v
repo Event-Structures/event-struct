@@ -182,11 +182,14 @@ Qed.
 Definition ext {T n} (f : 'I_n -> T) : nat -> option T := 
   fun m => omap f (insub m).
 
-Definition decr_ord {n} (m : 'I_n.+1) (neq : n <> m) : 'I_n :=
-  Ordinal (ltS_neq_lt (ltn_ord m) neq).
+Definition inc_ord {n} (m : 'I_n) : 'I_n.+1 := 
+  ord (ltnSn n).
 
-Lemma decr_ordE {n} (m : 'I_n.+1) (neq : n <> m) : 
-  decr_ord m neq = m :> nat.
+Definition dec_ord {n} (m : 'I_n.+1) (neq : n <> m) : 'I_n :=
+  ord (ltS_neq_lt (ltn_ord m) neq).
+
+Lemma dec_ordE {n} (m : 'I_n.+1) (neq : n <> m) : 
+  dec_ord m neq = m :> nat.
 Proof. by case: m neq. Qed.
 
 Definition upd {T : nat -> Type} {n}
@@ -195,7 +198,7 @@ Definition upd {T : nat -> Type} {n}
   fun m => 
     match n =P m :> nat with
     | ReflectT eq  => let 'erefl := eq in x
-    | ReflectF neq => f (decr_ord m neq)
+    | ReflectF neq => f (dec_ord m neq)
     end.
 
 Lemma upd_ord_max {T : nat -> Type} {n} 
@@ -213,7 +216,7 @@ Lemma upd_lt {T : nat -> Type} {n}
 Proof. 
   rewrite /upd. elim: eqP=> [eq | neq]. 
   { exfalso. slia. }
-  rewrite /decr_ord.
+  rewrite /dec_ord.
   suff: ltS_neq_lt (ltn_ord m) neq = ltm.
   { by move ->. }
   apply /eq_irrelevance.
@@ -236,11 +239,19 @@ Definition is_none {A : Type} : pred (option A) :=
 Definition oguard {A : Type} (b : bool) (p : pred A) : pred (option A) :=
   fun ox => if b then odflt false (omap p ox) else is_none ox.
 
-(* TODO: fancy notation for `oguard`-ed dependent sum.
- * `{ x : T | b |- e(x) } === { ox : option T | oguard b (fun x => e(x)) ox}`.
- * Instead of `|-` we can use `=>` or `->`.
- * The intuition here is that `oguard` is a kind of implication.
+(* Fancy notation for `oguard`-ed dependent sum.
+ *
+ * `{ x : T | b |- p(x) } === { ox : option T | oguard b (fun x => p(x)) ox}`.
+ * 
+ * The intuition behind `|-` here is that `oguard` acts a kind of implication.
  *)
+Notation "{ x :? T | b |- P }" := 
+  (sig (fun ox => oguard b (fun x : T => P) ox))  
+    (at level 0, x at level 99) : type_scope.
+
+(* check that notation is working and we didn't break the standard notation *)
+Check { x : nat | (x == 1) }.
+Check forall x, { y :? nat | x == 1 |- y == 1 }.
 
 Lemma oguard_some {A : Type} {b : bool} {p : pred A} (pf : b) (x : A) (Px : p x) : 
   oguard b p (some x).
@@ -251,6 +262,21 @@ Lemma oguard_mapP {A : Type} {b : bool} {p q : pred A}
       forall oa, oguard b p oa -> oguard b q oa. 
 Proof. rewrite /oguard. case: b=> [[|]|] //=. Qed.
 
+(* TODO: how do we call this pattern in category theory? *)
+Lemma oguard_iffB {A : Type} {b b' : bool} {p : pred A} 
+                             (i : b <-> b') :
+      oguard b p =1 oguard b' p. 
+Proof. by rewrite (Bool.eq_true_iff_eq b b' i). Qed. 
+
+Lemma eqfun_impl {A : Type} {p q : pred A} :
+  p =1 q -> forall a, p a -> q a.
+Proof. by move=> eqf a; rewrite -(eqf a). Qed.
+
+Lemma oguard_mapP_iffB {A : Type} {b b' : bool} {p q : pred A} 
+                                  (f : forall a, p a -> q a) 
+                                  (i : b <-> b') :
+      forall oa, oguard b p oa -> oguard b' q oa. 
+Proof. by move=> oa /(oguard_mapP f oa) /(eqfun_impl (oguard_iffB i) oa). Qed.
 
 (* Definition oguardT {A : Type} (p : pred A) (b : bool)  *)
 (*                               (ox : { ox: option A | oguard b p ox }) *)

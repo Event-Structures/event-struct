@@ -42,8 +42,10 @@ Structure exec_event_struct := Pack {
   lab   : 'I_n -> label;
   fpred : forall m : 'I_n, option 'I_m;
   frf   : forall r : 'I_n, 
-            ((opred is_read \o ext lab) r) ->
-              { w : 'I_r | (orel compatible \o2 ext lab) w r };
+            { w :? 'I_r | 
+                 (opred is_read \o ext lab) r 
+              |- (orel compatible \o2 ext lab) w r 
+            } 
 }.
 
 Section ExecEventStructure.
@@ -90,25 +92,26 @@ Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
 (*     Reads-From                                                                   *)
 (* ******************************************************************************** *)
 
-Definition ofrf (e : 'I_n) : option 'I_n :=
-  omap
-    (fun r =>
-       let rv : 'I_n := sval   r in
-       let rpf := opred_ext is_read lab rv (sproof r) in
-       advance rv (sval (frf rv rpf))
-    )
-    (oread e).
+(* Definition ofrf (e : 'I_n) : option 'I_n := *)
+(*   omap *)
+(*     (fun r => *)
+(*        let rv : 'I_n := sval   r in *)
+(*        let rpf := opred_ext is_read lab rv (sproof r) in *)
+(*        advance rv (sval (frf rv rpf)) *)
+(*     ) *)
+(*     (oread e). *)
 
-(* Definition ofrf (e : 'I_n) : option 'I_n :=  *)
-(*   omap (advance e) (sval (frf e)). *)
+Definition ofrf (e : 'I_n) : option 'I_n :=
+  omap (advance e) (sval (frf e)).
 
 Lemma ofrf_le r w : ofrf r = some w -> w < r.
 Proof.
   rewrite /ofrf /oread.
-  case b: (is_read (lab r)); first last.
-  { by rewrite insubF. }
-  rewrite insubT//= => [[<-]]/=.
-  exact: ltn_ord. 
+  case: (sval (frf r)) => [x [<-]|] //=.
+  (* case b: (is_read (lab r)); first last. *)
+  (* { by rewrite insubF. } *)
+  (* rewrite insubT//= => [[<-]]/=. *)
+  (* exact: ltn_ord.  *)
 Qed.
 
 (* Reads-From relation *)
