@@ -73,31 +73,25 @@ Definition sproof_map {A : Type} {P Q : A -> Prop}
            {x | Q x} := 
   exist Q (sval e) (f (sval e) (sproof e)).
 
-Definition frf_foo : 
-      forall (r : 'I_n) (is_r : (opred is_read \o ext add_lab) r),
-        { w : 'I_r | (orel compatible \o2 ext add_lab) w r } := 
-  fun r is_r =>
-    sproof_map
-      (fun w : 'I_r => @add_lab_compatible w r) 
-      (frf r (add_lab_ext_is_read is_r)).
-
-Definition add_rf (m : 'I_n)
-                       (H : (opred is_read \o ext add_lab) n -> 
-                            (orel compatible \o2 ext add_lab) m n
-                       ) :
+Definition add_frf (ow : { m :? 'I_n | 
+                              (opred is_read \o ext add_lab) n
+                           |- (orel compatible \o2 ext add_lab) m n    
+                         }
+                   ) :
            forall (r : 'I_n.+1) (is_r : (opred is_read \o ext add_lab) r),
              { w : 'I_r | (orel compatible \o2 ext add_lab) w r }.
 Proof. 
   refine (
-      @upd 
-        (fun r : nat => 
-          forall (_ : (opred is_read \o ext add_lab) r), 
+      let T (r : nat) := 
+          forall (is_r : (opred is_read \o ext add_lab) r), 
             { w : 'I_r | (orel compatible \o2 ext add_lab) w r }
-        ) n frf_foo 
-        (fun is_r => 
-           exist (fun w : 'I_n => (orel compatible \o2 ext add_lab) w n)
-                 m (H is_r)
-        )
+      in
+      let frf' (r : 'I_n) : T r := 
+          fun is_r =>
+            let fP (w : 'I_r) := @add_lab_compatible w r in
+            sproof_map fP (frf r (add_lab_ext_is_read is_r))
+      in
+      @upd T n frf' (oguardT ow)
   ).
 Qed.
 

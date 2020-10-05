@@ -244,14 +244,27 @@ Proof.
 Qed.
 
 Lemma upd_pred {T : Type} {n} 
-               (f : 'I_n -> T) (x : T) (p :  pred T) : 
+               (f : 'I_n -> T) (x : T) (p : pred T) : 
   (p \o f) =1 (p \o upd f x \o inc_ord).
 Proof. Admitted.
 
-(* TODO: use ssreflect `{ in _ | ... }` notation? *)
+(* TODO: check that using '_' in `Notation` won't break something *)
+(* TODO: generalize notation to partial/total orders? *)
+Notation "'_' < n" := ((fun m => m < n) : pred nat) (at level 90).
+
 Lemma upd_ext_pred {T : Type} {n}
-               (f : 'I_n -> T) (x : T) (p :  pred T) :
-  { in ((fun m => m < n) : pred nat), (opred p \o ext f) =1 (opred p \o ext (upd f x)) }.
+               (f : 'I_n -> T) (x : T) (p : pred T) :
+  { in _ < n, (opred p \o ext f) =1 (opred p \o ext (upd f x)) }.
+Proof. Admitted.
+
+Lemma upd_rel {T : Type} {n} 
+              (f : 'I_n -> T) (x : T) (r : rel T) : 
+  (r \o2 f) =1 (r \o2 (upd f x \o inc_ord)).
+Proof. Admitted.
+
+Lemma upd_ext_rel {T : Type} {n}
+                  (f : 'I_n -> T) (x : T) (r : rel T) :
+  { in _ < n, (orel r \o2 ext f) =2 (orel r \o2 ext (upd f x)) }.
 Proof. Admitted.
 
 Definition is_some {A : Type} : pred (option A) := 
@@ -295,7 +308,7 @@ Proof. case: b pf=> //=. Qed.
 
 Lemma oguard_mapP {A : Type} {b : bool} {p q : pred A} 
                              (f : forall a, p a -> q a) : 
-      forall oa, oguard b p oa -> oguard b q oa. 
+  iforall oa, oguard b p oa -> oguard b q oa. 
 Proof. case: b=> [[|]|] //=. Qed.
 
 Lemma oguard_comapB {A : Type} {b b' : bool} {p : pred A} 
@@ -312,29 +325,28 @@ Proof.
   apply: (h notF x Px).
 Qed.
 
+Definition oguardT {A : Type} {p : pred A} {b : bool}
+                              (ox : { x :? A | b |- p x })
+                              (pf : b) :
+           { x: A | p x }.
+Proof.
+  move: ox pf. case: b=> [[[x|]]|] //=.
+  move=> Px _. exact (exist p x Px). 
+Qed.
+
+Lemma eqfun_implL {A : Type} {p q : pred A} :
+  p =1 q -> forall a, p a -> q a.
+Proof. by move=> eqf a; rewrite -(eqf a). Qed.
+
+
 (* TODO: how do we call this pattern in category theory? *)
 (* Lemma oguard_iffB {A : Type} {b b' : bool} {p : pred A}  *)
 (*                              (i : b <-> b') : *)
 (*       oguard b p =1 oguard b' p.  *)
 (* Proof. by rewrite (Bool.eq_true_iff_eq b b' i). Qed.  *)
 
-(* Lemma eqfun_impl {A : Type} {p q : pred A} : *)
-(*   p =1 q -> forall a, p a -> q a. *)
-(* Proof. by move=> eqf a; rewrite -(eqf a). Qed. *)
-
 (* Lemma oguard_mapP_iffB {A : Type} {b b' : bool} {p q : pred A}  *)
 (*                                   (f : forall a, p a -> q a)  *)
 (*                                   (i : b <-> b') : *)
 (*       forall oa, oguard b p oa -> oguard b' q oa.  *)
 (* Proof. by move=> oa /(oguard_mapP f oa) /(eqfun_impl (oguard_iffB i) oa). Qed. *)
-
-(* Definition oguardT {A : Type} (p : pred A) (b : bool)  *)
-(*                               (ox : { ox: option A | oguard b p ox }) *)
-(*                               (pf : b) :  *)
-(*            { x: A | p x }. *)
-(* Proof.  *)
-(*   move: ox. rewrite /oguard. case H: b.  *)
-(*   { move=> [ox Pox]. move: Pox. case: ox=> [x|] //=.  *)
-(*     move=> Px. exact (exist p x Px). } *)
-(*   exfalso. move: pf. by rewrite H.  *)
-(* Qed. *)
