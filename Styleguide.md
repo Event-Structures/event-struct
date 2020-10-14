@@ -1,5 +1,9 @@
 # Code Style Guide 
 
+### General Rules
+
+* Maximal line length should not exceed 80 characters.
+
 ### Naming conventions
 
 * Prefer `snake_case` for the names of function arguments, inductive datatypes, definitions, and lemmas. 
@@ -97,6 +101,21 @@ Proof.
   tac2.
   tac3.
 Qed.
+```
+
+* When the lemma statement does not fit into single line, 
+  put some arguments (assumptions) on the new line 
+  and indent them to the first argument on the previous line.
+  In this case also put the conclusion on the new line, 
+  and indent it with two spaces. 
+  In such a way that it would be easier to visually 
+  separate the conclusion from the assumptions. 
+  An example is given below.   
+
+```Coq
+Lemma upd_ord_max {T : nat -> Type} {n} 
+                  (f : forall m : 'I_n, T m) (x : T n) :
+  upd f x ord_max = x.
 ```
 
 * View intro patterns should be separated by spaces, e.g. `move /eqP /andP`.
