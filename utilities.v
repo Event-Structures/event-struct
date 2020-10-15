@@ -139,18 +139,33 @@ Proof. slia. Qed.
 
 Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
 
-Lemma ltn_ind N (P : 'I_N -> Type) :
-  (forall (n : 'I_N), (forall (m : 'I_N), (m < n)%N -> P m) -> P n) ->
+Lemma ltn_ind (P : nat -> Type) :
+  (forall n, (forall m, m < n -> P m) -> P n) ->
   forall n, P n.
 Proof.
-move=> IH n. have [k le_size] := ubnP (nat_of_ord n). 
-elim: k n le_size=>// n IHn k le_size. apply/IH=> *. apply/IHn. slia.
+  move=> accP M. have [n leMn] := ubnP M. elim: n => // n IHn in M leMn *.
+  by apply: accP=> m /leq_trans/(_ leMn)/IHn.
 Qed.
 
 Ltac ocase := let H := fresh in
   try match goal with  |- context [if ?a is some _ then _ else _] =>
     case H: a; move: H => //=
   end.
+
+Ltac dcase := 
+  match goal with  |- context [if ?a as _ return (_) then _ else _] =>
+    case: {2}a {-1}(@erefl _ a) erefl=> {2 3}->
+  end.
+
+Definition orel {A : Type} (r : rel A) : rel (option A) :=
+  fun ox oy => 
+    match ox, oy with
+    | some x, some y => r x y
+    | _     , _      => false
+    end.
+
+Definition ext {T : Type} {n : nat} (f : 'I_n -> T) : nat -> option T := 
+  fun m => omap f (insub m).
 
 (* need that because of inconsistency in Coq stdlib (duplicate name) *)
 Notation rtn1_trans := Coq.Relations.Relation_Operators.rtn1_trans.

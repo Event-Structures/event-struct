@@ -30,7 +30,7 @@ Proof. exact: tt. Qed.
 
 Canonical porderType := POrderType ev_display' 'I_N orderMixin'.
 End foo.*)
-Section transition_system.
+(*Section transition_system.
 Context {val : eqType} {dv : val}.
 Notation exec_event_struct := (@exec_event_struct val).
 Notation cexec_event_struct := (@cexec_event_struct val).
@@ -275,4 +275,4 @@ Notation "e '-*->' e'" := (ev_rel_str e e') (at level 20).
 
 End confluence.
 
-End transition_system.
+End transition_system.*)
