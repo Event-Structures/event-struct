@@ -207,21 +207,20 @@ Proof. move/and3P=>[??/andP[*]]. apply/and4P; split; by rewrite 1?eq_sym. Qed.
 
 (* Conflict relation *)
 Definition cf e1 e2 :=
-  [exists e1' : 'I_n, [exists e2' : 'I_n,
+  [exists e1' : 'I_e1.+1, [exists e2' : 'I_e2.+1,
   [&& ca e1' e1, ca e2' e2 & icf e1' e2']]].
 
 Notation "a # b" := (cf a b) (at level 10).
-
-Lemma ca_in_ord e1 e2: ca e1 e2 -> (e1 <= n) && (e2 <= n).
-Proof. Admitted.
-
 
 Lemma cfP e1 e2 :
   reflect (exists e1' e2', [&& ca e1' e1, ca e2' e2 & icf e1' e2']) (e1 # e2).
 Proof.
   apply (iffP existsP).
   { case=> [[m ? /existsP[[/= n ?]]]]. by exists m, n. }
-  case=> x [y H]. Admitted.
+  case=> x [y /and4P[Lc1 Lc2 *]]. move /ca_le: (Lc1) (Lc2) => L1 /ca_le L2.
+  exists (@Ordinal e1.+1 _ L1). apply /existsP. exists (@Ordinal e2.+1 _ L2).
+  by apply /and4P.
+Qed.
 
 Lemma cf_symm: symmetric cf.
 Proof.
@@ -266,13 +265,19 @@ Qed.
 (*     Reads-From Consistency                                                       *)
 (* ******************************************************************************** *)
 
-Definition consistency := [forall n : 'I_n, [forall m : 'I_n,
-   (ofrf m == some (nat_of_ord n)) ==> ~~ m # n]].
+Definition consistency := [forall k : 'I_n, [forall m : 'I_n,
+   (ofrf m == some (nat_of_ord k)) ==> ~~ m # k]].
 
 Hypothesis (consist : consistency).
 
-Lemma rff_consist {e1 e2} : (ofrf e2 = some e1) -> ~ e2 # e1.
-Proof. Admitted.
+Lemma rff_consist {e1 e2} (rf : ofrf e2 = some e1) : ~ e2 # e1.
+Proof.
+  suff L: (e2 < n)%N.
+  { move /ofrf_le: (rf)=> L1. have L3: (e1 < n)%N by slia.
+    move /forallP /(_ (Ordinal L3)) /forallP /(_ (Ordinal L)): consist.
+    by move /eqP : rf=> /swap /implyP /apply /negP. }
+  move: rf. rewrite /ofrf. by dcase.
+Qed.
 
 Lemma cf_irrelf : irreflexive cf.
 Proof.
