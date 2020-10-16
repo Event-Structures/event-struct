@@ -20,16 +20,19 @@ Inductive label :=
 
 Definition is_read  l := if l is (R _ _) then true else false.
 
-Definition is_write l := if l is (W _ _) then true else false.
-
-Definition isnt_ts ol := if ol is Some TS then false else true.
-
+Definition isnt_ts ol := if ol is TS then false else true.
 
 Definition compatible w r := 
   match w, r with
   | (W x a), (R y b) => (x == y) && (a == b)
   | _, _                 => false
   end.
+
+Notation te_ext := (dv_ext TE).
+
+Notation is_read_ext f r := (is_read (te_ext f r)).
+
+Notation compatible_ext f := (compatible \o2 (te_ext f)).
 
 (* ******************************************************************************** *)
 (*     Exec Event Structure                                                         *)
@@ -38,9 +41,9 @@ Definition compatible w r :=
 Structure exec_event_struct := Pack {
   n     : nat;
   lab   : 'I_n -> label;
-  fpred : forall (m : 'I_n), option 'I_m;
-  frf   : forall m : 'I_n, is_read (lab m) ->
-            {l : 'I_m | (compatible (lab (advance m l)) (lab m))};
+  fpred : forall m : 'I_n, option 'I_m;
+  frf   : forall (r : 'I_n) (is_r : is_read_ext lab r), 
+            {w : 'I_r | compatible_ext lab w r} 
 }.
 
 Section ExecEventStructure.
@@ -56,18 +59,15 @@ Notation frf     := (frf es).
 (*     Event Types                                                                  *)
 (* ******************************************************************************** *)
 
-Definition oread (e : 'I_n) : option { e : 'I_n | is_read (lab e) } := 
+Definition oread (e : 'I_n) : option { e : 'I_n | is_read (te_ext lab e) } := 
   insub e.
 
-Definition owrite (e : 'I_n) : option { e : 'I_n | is_write (lab e) } := 
-  insub e.
-
+(*Definition owrite (e : 'I_n) : option { e : 'I_n | is_write (te_ext lab e) } := 
+  insub e.*)
 
 (* ******************************************************************************** *)
 (*     Predecessor and Successor                                                    *)
 (* ******************************************************************************** *)
-
-Definition olab := ext lab.
 
 Definition ofpred (e : nat) : option nat := 
   (if e < n as x return (e < n = x -> _) then
@@ -93,22 +93,24 @@ Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
 (*     Reads-From                                                                   *)
 (* ******************************************************************************** *)
 
+(* TODO : get rid of ofrf_aux *)
 Definition ofrf_aux (e : 'I_n) : option 'I_n :=
-  omap 
-    (fun r => 
-       let rv  := sval   r in 
-       let rpf := sproof r in 
+  omap
+    (fun r =>
+       let rv : 'I_n := sval   r in
+       let rpf       := sproof r in
        advance rv (sval (frf rv rpf))
-    ) 
+    )
     (oread e).
 
+(* TODO: lemma like opred_ext *)
 Lemma ofrf_aux_le r w : ofrf_aux r = some w -> w < r.
 Proof.
   rewrite /ofrf_aux /oread.
   case b: (is_read (lab r)); first last.
-  { by rewrite insubF. }
-  rewrite insubT//= => [[<-]]/=.
-  exact: ltn_ord. 
+  { by rewrite insubF // pred_dv_ext. }
+  rewrite insubT ?pred_dv_ext //= => ? [<-] /=.
+  exact: ltn_ord.
 Qed.
 
 Definition ofrf (e : nat) : option nat := 
@@ -183,6 +185,7 @@ Definition orderMixin :=
 Definition ev_display : unit.
 Proof. exact: tt. Qed.
 
+(* TODO: make this canonocal projection work *)
 Canonical predorderType := POrderType ev_display nat orderMixin.
 
 Import Order.LTheory.
@@ -199,8 +202,8 @@ Notation "x <=c y" := (ca x y) (at level 10).
 Definition icf (e1 e2 : nat) :=
   [&& (e1 != e2),
       ofpred e1 == ofpred e2,
-      isnt_ts (olab e1) &
-      isnt_ts (olab e2)].
+      isnt_ts (te_ext lab e1) &
+      isnt_ts (te_ext lab e2)].
 
 Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
 Proof. move/and3P=>[??/andP[*]]. apply/and4P; split; by rewrite 1?eq_sym. Qed.
@@ -321,3 +324,6 @@ End PrimeEventStructure.
 
 Notation "x <=c y" := (@Order.le ev_display _ x y) (at level 10).
 Notation "a # b" := (cf _ a b) (at level 10).
+Notation te_ext := (dv_ext TE).
+Notation is_read_ext f r := (is_read (te_ext f r)).
+Notation compatible_ext f := (compatible \o2 (te_ext f)).
