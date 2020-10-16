@@ -3,22 +3,30 @@ From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 
 
+(* TODO: use `valP` from `subType` instead *)
 Definition sproof {A : Type} {P : A -> Prop} (e : {x : A | P x}) : P (sval e) := 
   @proj2_sig A P e.
 
 Definition advance {n} (m : 'I_n) (k : 'I_m) : 'I_n :=
   widen_ord (ltnW (ltn_ord m)) k.
 
-Arguments advance : simpl never.
-
 Lemma advanceE {n} (m : 'I_n) (k : 'I_m) : 
  advance m k = k :> nat.
 Proof. by case: m k => ??[]. Qed.
 
+Arguments advance : simpl never.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Unset Printing Implicit Defensive.
+Notation none := None.
+
+Notation ord := Ordinal.
+
+Definition comp2 {A B C : Type} (f : B -> B -> A) (g : C -> B) x y := f (g x) (g y).
+
+Notation "f \o2 g" := (comp2 f g) (at level 50) : fun_scope.
+
+(* Set Implicit Arguments. *)
+(* Unset Strict Implicit. *)
+(* Unset Printing Implicit Defensive. *)
 
 (***** ssrnatlia ******)
 
@@ -133,9 +141,8 @@ Proof. by case: a; case: b; case: c. Qed.
 Lemma fifth_true5 a b c d: [|| a, b, c, d | true].
 Proof. apply/orP; right. exact: frth_true4. Qed.
 
-Lemma ltS_neq_lt {n N : nat}: (n < N.+1 -> N <> n -> n < N)%N.
-Proof. slia. Qed. 
-
+Lemma ltS_neq_lt {n N : nat} : n < N.+1 -> N <> n -> n < N.
+Proof. slia. Qed.
 
 Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
 
@@ -164,9 +171,6 @@ Definition orel {A : Type} (r : rel A) : rel (option A) :=
     | _     , _      => false
     end.
 
-Definition ext {T : Type} {n : nat} (f : 'I_n -> T) : nat -> option T := 
-  fun m => omap f (insub m).
-
 (* need that because of inconsistency in Coq stdlib (duplicate name) *)
 Notation rtn1_trans := Coq.Relations.Relation_Operators.rtn1_trans.
 
@@ -185,3 +189,169 @@ Proof.
   { by rewrite last_rcons. }
   rewrite rcons_path -E. by apply/andP.
 Qed.
+
+(* TODO: generalize to `subType` *)
+Definition ext {T : Type} {n : nat} (f : 'I_n -> T) : nat -> option T := 
+  fun m => omap f (insub m).
+
+Definition inc_ord {n} (m : 'I_n) : 'I_n.+1 := 
+  ord (ltnSn n).
+
+Definition dec_ord {n} (m : 'I_n.+1) (neq : n <> m) : 'I_n :=
+  ord (ltS_neq_lt (ltn_ord m) neq).
+
+Lemma dec_ordE {n} (m : 'I_n.+1) (neq : n <> m) : 
+  dec_ord m neq = m :> nat.
+Proof. by case: m neq. Qed.
+
+(* TODO: better names? *)
+
+Definition opred {A : Type} (p : pred A) : pred (option A) :=
+  fun ox => if ox is some x then p x else false.
+
+Lemma opred_ext {A : Type} {n} (p : pred A) (f : 'I_n -> A) : 
+  forall m, (p \o f) m -> (opred p \o ext f) m. 
+Proof. 
+  rewrite /comp /ext /opred. 
+  move=> m. case: m.
+  move=> m hlt Pm.
+  rewrite insubT //.
+Qed.
+
+Definition upd {T : nat -> Type} {n}
+               (f : forall m : 'I_n, T m) (x : T n) : 
+           forall m : 'I_n.+1, T m := 
+  fun m => 
+    match n =P m :> nat with
+    | ReflectT eq  => let 'erefl := eq in x
+    | ReflectF neq => f (dec_ord m neq)
+    end.
+
+Lemma upd_ord_max {T : nat -> Type} {n} 
+                  (f : forall m : 'I_n, T m) (x : T n) :
+  upd f x ord_max = x.
+Proof.
+  rewrite /upd; case: eqP=> /=; last by case.
+  by move=> pf; rewrite (eq_irrelevance pf (erefl n)).
+Qed.
+
+Lemma upd_lt {T : nat -> Type} {n} 
+             (f : forall m : 'I_n, T m) (x : T n) 
+             (m : 'I_n.+1) (ltm : m < n) : 
+      upd f x m = f (ord ltm).
+Proof. 
+  rewrite /upd. elim: eqP=> [eq | neq]. 
+  { exfalso. slia. }
+  rewrite /dec_ord.
+  suff: ltS_neq_lt (ltn_ord m) neq = ltm.
+  { by move ->. }
+  apply /eq_irrelevance.
+Qed.
+
+Lemma upd_pred {T : Type} {n} 
+               (f : 'I_n -> T) (x : T) (p : pred T) : 
+  (p \o f) =1 (p \o upd f x \o inc_ord).
+Proof. Admitted.
+
+(* TODO: check that using '_' in `Notation` won't break something *)
+(* TODO: generalize notation to partial/total orders? *)
+Notation "'_' < n" := ((fun m => m < n) : pred nat) (at level 90).
+
+Lemma upd_ext_pred {T : Type} {n}
+               (f : 'I_n -> T) (x : T) (p : pred T) :
+  { in _ < n, (opred p \o ext f) =1 (opred p \o ext (upd f x)) }.
+Proof. Admitted.
+
+Lemma upd_rel {T : Type} {n} 
+              (f : 'I_n -> T) (x : T) (r : rel T) : 
+  (r \o2 f) =1 (r \o2 (upd f x \o inc_ord)).
+Proof. Admitted.
+
+Lemma upd_ext_rel {T : Type} {n}
+                  (f : 'I_n -> T) (x : T) (r : rel T) :
+  { in _ < n, (orel r \o2 ext f) =2 (orel r \o2 ext (upd f x)) }.
+Proof. Admitted.
+
+Definition is_some {A : Type} : pred (option A) := 
+  fun ox => 
+    match ox with 
+    | some _ => true
+    | none   => false
+    end.
+
+Definition is_none {A : Type} : pred (option A) := 
+  fun ox => 
+    match ox with 
+    | some _ => false
+    | none   => true
+    end.
+
+Definition oguard {A : Type} (b : bool) (p : pred A) : pred (option A) :=
+  fun ox => if b then odflt false (omap p ox) else is_none ox.
+
+(* Fancy notation for `oguard`-ed dependent sum.
+ *
+ * `{ x : T | b |- p(x) } === { ox : option T | oguard b (fun x => p(x)) ox}`.
+ * 
+ * The intuition behind `|-` here is that `oguard` acts a kind of implication.
+ *)
+Notation "{ x :? T | b |- P }" := 
+  (sig (fun ox => oguard b (fun x : T => P) ox))  
+    (at level 0, x at level 99) : type_scope.
+
+(* check that notation is working and we didn't break the standard notation *)
+(*Check { x : nat | (x == 1) }.
+Check forall x, { y :? nat | x == 1 |- y == 1 }.*)
+
+Lemma oguard_some {A : Type} {b : bool} {p : pred A} (pf : b) (x : A) (Px : p x) : 
+  oguard b p (some x).
+Proof. case: b pf=> //=. Qed.
+
+Lemma oguard_none {A : Type} {b : bool} {p : pred A} (pf : ~ b) : 
+  oguard b p none.
+Proof. case: b pf=> //=. Qed.
+
+Lemma oguard_mapP {A : Type} {b : bool} {p q : pred A} 
+                             (f : forall a, p a -> q a) : 
+  forall oa, oguard b p oa -> oguard b q oa. 
+Proof. case: b=> [[|]|] //=. Qed.
+
+Lemma oguard_comapB {A : Type} {b b' : bool} {p : pred A} 
+                               (h : ~ b' -> forall x, ~ p x)
+                               (f : b' -> b) : 
+      forall oa, oguard b p oa -> oguard b' p oa.
+Proof. 
+  rewrite /oguard.
+  case: b' h f=> //=.
+  { by move=> ? ->. }
+  move=> h _ [x|] //=.
+  case: b=> [Px|] //=.
+  exfalso.
+  apply: (h notF x Px).
+Qed.
+
+Definition oguardT {A : Type} {p : pred A} {b : bool}
+                              (ox : { x :? A | b |- p x })
+                              (pf : b) :
+           { x: A | p x }.
+Proof.
+  move: ox pf. case: b=> [[[x|]]|] //=.
+  move=> Px _. exact (exist p x Px). 
+Qed.
+
+Lemma eqfun_implL {A : Type} {p q : pred A} :
+  p =1 q -> forall a, p a -> q a.
+Proof. by move=> eqf a; rewrite -(eqf a). Qed.
+
+
+(* TODO: how do we call this pattern in category theory? *)
+(* Lemma oguard_iffB {A : Type} {b b' : bool} {p : pred A}  *)
+(*                              (i : b <-> b') : *)
+(*       oguard b p =1 oguard b' p.  *)
+(* Proof. by rewrite (Bool.eq_true_iff_eq b b' i). Qed.  *)
+
+(* Lemma oguard_mapP_iffB {A : Type} {b b' : bool} {p q : pred A}  *)
+(*                                   (f : forall a, p a -> q a)  *)
+(*                                   (i : b <-> b') : *)
+(*       forall oa, oguard b p oa -> oguard b' q oa.  *)
+(* Proof. by move=> oa /(oguard_mapP f oa) /(eqfun_impl (oguard_iffB i) oa). Qed. *)

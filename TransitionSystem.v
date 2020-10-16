@@ -1,184 +1,102 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
 From event_struct Require Import utilities EventStructure.
-From Coq Require Import Arith.
-From Equations Require Import Equations.
-(*Section foo.
-Context {N : nat}.
-Implicit Type (x y : 'I_N).
-Definition lt_ord (x y : 'I_N) := (x < y)%N.
 
-Lemma ltn_def (x y : 'I_N) : (x < y)%N = (y != x) && (x <= y)%N.
-Proof. by rewrite ltn_neqAle eq_sym. Qed.
+Section transition_system.
 
-Lemma leqnn' x : (x <= x)%N.
-Proof. Admitted.
+Context {val : eqType}.
 
-Lemma anti_leq' : @antisymmetric 'I_N [eta leq].
-Proof. Admitted.
-
-Lemma leq_trans': @transitive 'I_N [eta leq].
-Proof. Admitted.
-
-Print anti_leq.
-
-Definition orderMixin' :=
-LePOrderMixin ltn_def leqnn' anti_leq' leq_trans'.
-
-Definition ev_display' : unit.
-Proof. exact: tt. Qed.
-
-Canonical porderType := POrderType ev_display' 'I_N orderMixin'.
-End foo.*)
-(*Section transition_system.
-Context {val : eqType} {dv : val}.
 Notation exec_event_struct := (@exec_event_struct val).
 Notation cexec_event_struct := (@cexec_event_struct val).
-Implicit Types (x : var) (a : val) (t : tid).
+
 Notation label := (@label val).
 Notation n := (@n val).
 
+Implicit Types (x : var) (a : val).
 
 (* Section with definitions for execution graph with added event *)
 Section adding_event.
-Variable 
-  (l : label)               (* label of an event which we want to add      *)
-  (e : exec_event_struct)     (* execution graph in which we want to add l *)
-  (ipred : option 'I_(n e)). (* pred-child of new event (if it exists)        *)
 
-Notation N      := (n e).
-Notation lab    := (lab e).
-Notation fpred  := (fpred e).
-Notation frf    := (frf e).
+(* execution graph in which we want to add l *)
+Variable es : exec_event_struct.
 
+Notation n      := (n es).
+Notation lab    := (lab es).
+Notation fpred  := (fpred es).
+Notation frf    := (frf es).
 
-Definition add_lab : 'I_N.+1 -> label := fun '(@Ordinal _ n L) =>
-  if N =P n is ReflectF p then lab (Ordinal (ltS_neq_lt L p)) else l.
+(* label of an event which we want to add *)
+Variable l : label.
 
-(* add_lab correctness first lemma *)
-Lemma add_lab_eq_nat (m : 'I_N) (n : 'I_N.+1):
-  n = m :> nat -> add_lab n = lab m.
-Proof.
-case: n. case: m => ? L ??/=. case: eqP=> *; last by apply/congr1/ord_inj.
-exfalso. move: L. slia.
-Qed.
+ (* predecessor of the new event (if it exists) *)
+Variable p : option 'I_n.
 
-(* add_lab correctness second lemma *)
-Lemma add_lab_N {L : N < N.+1}: add_lab (Ordinal L) = l.
-Proof. move=> /=. by case: eqP. Qed.
+Definition add_lab : 'I_n.+1 -> label := 
+  @upd (fun _ => label) n lab l.
 
-
-Definition add_pred (m : 'I_N.+1) : option 'I_m := 
-  let '(Ordinal m' L) := m in 
-  match N =P m' with
-  | ReflectT eq => let 'erefl := eq in ipred
-  | ReflectF p => (fpred (Ordinal (ltS_neq_lt L p))) 
-  end.
-
-(* if l \in 'I_N.+1 and l <> N then we can convert it's type to 'I_N *)
-Definition decr_ord (l : 'I_N.+1) (neq : N <> l) : 'I_N :=
-  Ordinal (ltS_neq_lt (ltn_ord l) neq).
-
-Lemma decr_ord_ord k p: (decr_ord k p) = k :> nat.
-Proof. by case: k p. Qed.
+Definition add_fpred : forall m : 'I_n.+1, option 'I_m := 
+  @upd (fun m => option 'I_m) n fpred p.
 
 (* auxiliary lemma  *)
-Lemma advance_is_read {K: N < N.+1} {m : 'I_(Ordinal K)} {L} L' : 
-  compatible (lab m)                           (add_lab (@Ordinal _ N L)) ->
-  compatible (add_lab (advance (Ordinal K) m)) (add_lab (@Ordinal _ N L')).
-Proof.
-rewrite [add_lab (advance _ _)](add_lab_eq_nat m)//.
-have->//: (add_lab (Ordinal L)) = (add_lab (Ordinal L')).
-by apply/congr1/ord_inj.
-Qed.
+Lemma advance_is_read {m : 'I_n} : 
+  (orel compatible) (ext lab m)     (ext add_lab n) ->
+  (orel compatible) (ext add_lab m) (ext add_lab n).
+Proof. Admitted.
 
 (* auxiliary lemma *)
-Lemma is_read_add_lab k neq: 
-  is_read (add_lab k) -> is_read (lab (decr_ord k neq)).
-Proof.
-have->//: add_lab k = lab (decr_ord k neq). case: k neq=> /= m ? neq.
-case: eqP=> [/neq|?]//. by apply/congr1/ord_inj.
-Qed.
+(* Lemma is_read_add_lab k neq:  *)
+(*   is_read (add_lab k) -> is_read (lab (decr_ord k neq)). *)
+(* Proof. *)
+(* have->//: add_lab k = lab (decr_ord k neq). case: k neq=> /= m ? neq. *)
+(* case: eqP=> [/neq|?]//. by apply/congr1/ord_inj. *)
+(* Qed. *)
 
 Arguments add_lab : simpl never.
 
-Lemma compatible_lab_decr_ord 
-  (k : 'I_N.+1) (m : nat) (r : 'I_N) (eq : r = k :> nat)
-  (L : m < r) (L' : m < k) : 
-  (compatible (lab     (advance r (Ordinal L)))  (lab r)) ->
-  (compatible (add_lab (advance k (Ordinal L'))) (add_lab k)).
-Proof.
-by rewrite (add_lab_eq_nat (advance r (Ordinal L)))// (add_lab_eq_nat r).
-Qed.
+Lemma add_lab_is_read {r : 'I_n} : 
+  (is_read \o lab) r <-> (is_read \o add_lab) (inc_ord r).
+Proof. Admitted.
 
-Equations incr_rf_codom 
-  {k : 'I_N.+1} {r : 'I_N} (eq : r = k :> nat)
-  (m : {l : 'I_r | (compatible (lab     (advance r l)) (lab r))}) :
-       {l : 'I_k | (compatible (add_lab (advance k l)) (add_lab k))} :=
-@incr_rf_codom (Ordinal L) (Ordinal L') erefl (@exist _ _ (@Ordinal m i) H) :=
-  @exist _ _ (@Ordinal _ m i) (compatible_lab_decr_ord (Ordinal L) m (Ordinal L') erefl i i H).
+Lemma add_lab_ext_is_read {r : 'I_n} : 
+  (opred is_read \o ext add_lab) r -> (opred is_read \o ext lab) r.
+Proof. Admitted.
 
-Equations add_rf_some_aux 
-  (k : 'I_N.+1) (m : 'I_N)
-  (RF : compatible (lab m) (add_lab ord_max)) (IR : is_read (add_lab k)) :
-  {l : 'I_k | (compatible (add_lab (advance k l)) (add_lab k))} :=
-add_rf_some_aux (@Ordinal k' L) _ _ _ with Nat.eq_dec N k' := {
-  add_rf_some_aux (Ordinal L) _ _ IR (right p) := 
-  incr_rf_codom (decr_ord_ord (Ordinal L) p) (frf (decr_ord (Ordinal L) p) (is_read_add_lab (Ordinal L) p IR));
-  add_rf_some_aux (Ordinal L) m RF IR (left erefl) :=
-  (@exist _ (fun m => compatible (add_lab (advance (Ordinal L) m)) (add_lab (Ordinal L)))
-  m (advance_is_read L RF))
-}.
+Lemma add_lab_compatible {w r : nat} :
+  (orel compatible \o2 ext lab    ) w r ->
+  (orel compatible \o2 ext add_lab) w r.
+Proof. Admitted.
 
-(*Definition add_rf_some_aux : forall
-  (k : 'I_N.+1) (m : 'I_N)
-  (RF : compatible (lab m) (add_lab ord_max)) (IR : is_read (add_lab k)),
-  {l : 'I_k | (compatible (add_lab (advance k l)) (add_lab k))} :=
-  (fun '(Ordinal k' L) =>
-  match N =P k' with
-  | ReflectF p => fun _ _ IR => 
-      incr_rf_codom (decr_ord_ord (Ordinal L) p) (rff (decr_ord (Ordinal L) p) (is_read_add_lab (Ordinal L) p IR))
-  | ReflectT eq => match eq, L with erefl, L => fun m RF IR =>
-  (@exist _ (fun m => compatible (add_lab (advance (Ordinal L) m)) (add_lab (Ordinal L)))
-            m (advance_is_read L RF))
-  end end).*)
+(* TODO: generalize to `subType` *)
+Definition sproof_map {A : Type} {P Q : A -> Prop} 
+                      (f : forall a : A, P a -> Q a) 
+                      (e : {x | P x}) : 
+           {x | Q x} := 
+  exist Q (sval e) (f (sval e) (sproof e)).
 
-Definition add_rf_some : forall (m : 'I_N) (RF : compatible (lab m) l) 
-  (k : 'I_N.+1) (IR : is_read (add_lab k)),
-  {l : 'I_k | (compatible (add_lab (advance k l)) (add_lab k))} :=
-  fun m => match (@add_lab_N (ltnSn N)) with
-             erefl => fun (RF : compatible (lab m) (add_lab ord_max)) k IR =>
-                        add_rf_some_aux k m RF IR
-           end.
-
-Lemma ord_P {L} : (~ is_read l) -> (~ is_read (add_lab (@Ordinal N.+1 N L))).
-Proof. by rewrite add_lab_N. Qed.
-
-Equations add_rf_None_aux  
-  (k : 'I_N.+1)
-  (NR : ~ is_read l)
-  (IR : is_read (add_lab k)) :
-  {l : 'I_k | (compatible (add_lab (advance k l)) (add_lab k))} :=
-add_rf_None_aux (@Ordinal k' L) _ _ with Nat.eq_dec N k' := {
-  add_rf_None_aux (Ordinal L) _ IR (right p) :=
-  incr_rf_codom (decr_ord_ord (Ordinal L) p) (frf (decr_ord (Ordinal L) p) (is_read_add_lab (Ordinal L) p IR));
-  add_rf_None_aux _ NR IR (left erefl) with (ord_P NR) IR := {}
-}.
-
-(*Definition add_rf_None_aux : forall
-  (k : 'I_N.+1)
-  (NR : ~ is_read l)
-  (IR : is_read (add_lab k)),
-  {l : 'I_k | (compatible (add_lab (advance k l)) (add_lab k))} :=
-  fun '(Ordinal k' L) =>
-  match N =P k' with
-  | ReflectF p => fun _ IR => 
-      incr_rf_codom (decr_ord_ord (Ordinal L) p) (rf (decr_ord (Ordinal L) p) (is_read_add_lab (Ordinal L) p IR))
-  | ReflectT eq => match eq, L with erefl, L => fun NR IR =>
-      match (ord_P NR) IR with end end
-  end.*)
-
-Definition add_rf_None := fun i j k => add_rf_None_aux j i k.
+Definition add_frf (ow : { m :? 'I_n | 
+                              (opred is_read \o ext add_lab) n
+                           |- (orel compatible \o2 ext add_lab) m n    
+                         }
+                   ) :
+           forall (r : 'I_n.+1) (is_r : (opred is_read \o ext add_lab) r),
+             { w : 'I_r | (orel compatible \o2 ext add_lab) w r }.
+Proof. 
+  (*refine (
+      let T (r : nat) := 
+          forall (is_r : (opred is_read \o ext add_lab) r), 
+            { w : 'I_r | (orel compatible \o2 ext add_lab) w r }
+      in
+      let frf' (r : 'I_n) : T r := 
+          fun is_r =>
+            let fP (w : 'I_r) := @add_lab_compatible w r in
+            sproof_map fP (frf r (add_lab_ext_is_read is_r))
+      in
+      @upd T n frf' (oguardT ow)
+  ).
+Qed.*) Admitted.
+  
+Lemma add_lab_N : ext add_lab n = some l.
+Proof. Admitted.
 
 End adding_event.
 
@@ -186,9 +104,9 @@ End adding_event.
 Section add_event_def.
 Variables (e : exec_event_struct) (ipred : option 'I_(n e)).
 
-Inductive add_label := 
+(*Inductive add_label := 
 | add_W : tid -> var -> val -> add_label
-| add_R (n : 'I_(n e)) t x a : compatible (lab e n) (R t x a) -> add_label.
+| add_R (n : 'I_(n e)) t x a : ocompatible (ext (lab e) n) (some (R t x a)) -> add_label.
 
 Definition add_event (l : add_label) := 
   match l with
@@ -196,83 +114,14 @@ Definition add_event (l : add_label) :=
                          (n e).+1 
                          (add_lab (W t x a) e)
                          (add_pred e ipred) 
-                         (add_rf_None (W t x a) e not_false_is_true)
+                         (add_rf_None (W t x a) e ipred not_false_is_true)
   | add_R k t x a RF => Pack
                          (n e).+1 
                          (add_lab (R t x a) e)
                          (add_pred e ipred)
-                         (add_rf_some (R t x a) e k RF)
-  end.
+                         (add_rf_some (R t x a) e ipred k RF)
+  end.*)
 
-Lemma n_add_event l: n (add_event l) = (n e).+1.
-Proof. by case: l. Qed.
-
-Definition ord_f_to_onat {N M} (f : 'I_N -> option 'I_M) (n : nat) : option nat :=
-  (match n < N as L return (n < N = L -> _) with
-   | true  => fun pf => (omap (@nat_of_ord M)) (f (Ordinal pf))
-   | false => fun=> None
-   end erefl).
-
-Definition T_f_to_nat {T N} i (f : 'I_N -> T) (n : nat) : T := 
-  (match n < N as L return (n < N = L -> _) with
-   | true  => fun pf => (f (Ordinal pf))
-   | false => fun=> i
-   end erefl).
-
-
-Definition opredn (e' : exec_event_struct) := ord_f_to_onat (ofpred e').
-
-Definition orffn (e' : exec_event_struct)  := ord_f_to_onat (ofrf e').
-
-Definition labn (e' : exec_event_struct)  := T_f_to_nat (R 0 0 dv) (lab e').
-
-Definition ord_restr N (f : nat -> nat) (n : 'I_N) : nat := f n.
-
-Definition lab_of_add_lab al := 
-  match al with
-  | add_W t x a     => W t x a
-  | add_R _ t x a _ => R t x a
-  end.
 End add_event_def.
 
-
-
-Definition eq_al {e1 e2 : exec_event_struct}
-    (al1 : add_label e1) (al2 : add_label e2) : bool :=
-match al1, al2 with
-| add_W t x a, add_W l y b         => (t == l) && (x == y) && (a == b)
-| add_R n t x a _, add_R k l y b _ => 
-  (n == k :> nat) && (t == l) && (x == y) && (a == b)
-| _, _                             => false
-end.
-
-Section confluence.
-
-Definition is_iso (e e' : exec_event_struct) (f : nat -> nat) :=
-  ((((n e = n e') *  
-   (injective (ord_restr (n e) f))) *
-   ((forall k, (ord_restr (n e) f) k < n e') * (*???*)
-   ((opredn e') \o f =1 (omap f) \o (opredn e)))) *
-   (((orffn e') \o f =1 (omap f) \o (orffn e)) *
-   ((labn e')  \o f =1 labn e)))%type.
-
-Definition equviv (a b : exec_event_struct) := exists f, is_iso a b f.
-
-Notation "e ~~ e'" := (equviv e e') (at level 20).
-
-Implicit Type (e : cexec_event_struct).
-
-
-Definition ev_rel e e' := exists k al, add_event e k al = e'.
-
-Notation "e '-->' e'" := (ev_rel e e') (at level 20).
-
-Inductive ev_rel_str : cexec_event_struct -> cexec_event_struct -> Prop :=
-  | Base e : ev_rel_str e e
-  | Step {e1} e2 e3 (ers : ev_rel_str e1 e2) (er : e2 --> e3) : ev_rel_str e1 e3.
-
-Notation "e '-*->' e'" := (ev_rel_str e e') (at level 20).
-
-End confluence.
-
-End transition_system.*)
+End transition_system.
