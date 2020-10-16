@@ -164,13 +164,6 @@ Ltac dcase :=
     case: {2}a {-1}(@erefl _ a) erefl=> {2 3}->
   end.
 
-Definition orel {A : Type} (r : rel A) : rel (option A) :=
-  fun ox oy => 
-    match ox, oy with
-    | some x, some y => r x y
-    | _     , _      => false
-    end.
-
 (* need that because of inconsistency in Coq stdlib (duplicate name) *)
 Notation rtn1_trans := Coq.Relations.Relation_Operators.rtn1_trans.
 
@@ -208,6 +201,13 @@ Proof. by case: m neq. Qed.
 
 Definition opred {A : Type} (p : pred A) : pred (option A) :=
   fun ox => if ox is some x then p x else false.
+
+Definition orel {A : Type} (r : rel A) : rel (option A) :=
+  fun ox oy => 
+    match ox, oy with
+    | some x, some y => r x y
+    | _     , _      => false
+    end.
 
 Lemma opred_ext {A : Type} {n} (p : pred A) (f : 'I_n -> A) : 
   forall m, (p \o f) m -> (opred p \o ext f) m. 
@@ -300,8 +300,8 @@ Notation "{ x :? T | b |- P }" :=
     (at level 0, x at level 99) : type_scope.
 
 (* check that notation is working and we didn't break the standard notation *)
-(*Check { x : nat | (x == 1) }.
-Check forall x, { y :? nat | x == 1 |- y == 1 }.*)
+Check { x : nat | (x == 1) }.
+Check forall x, { y :? nat | x == 1 |- y == 1 }.
 
 Lemma oguard_some {A : Type} {b : bool} {p : pred A} (pf : b) (x : A) (Px : p x) : 
   oguard b p (some x).

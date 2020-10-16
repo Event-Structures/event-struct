@@ -4,7 +4,7 @@ From event_struct Require Import utilities EventStructure.
 
 Section transition_system.
 
-Context {val : eqType}.
+Context {val : eqType} {dv : val}.
 
 Notation exec_event_struct := (@exec_event_struct val).
 Notation cexec_event_struct := (@cexec_event_struct val).
@@ -81,7 +81,7 @@ Definition add_frf (ow : { m :? 'I_n |
            forall (r : 'I_n.+1) (is_r : (opred is_read \o ext add_lab) r),
              { w : 'I_r | (orel compatible \o2 ext add_lab) w r }.
 Proof. 
-  (*refine (
+  refine (
       let T (r : nat) := 
           forall (is_r : (opred is_read \o ext add_lab) r), 
             { w : 'I_r | (orel compatible \o2 ext add_lab) w r }
@@ -93,8 +93,8 @@ Proof.
       in
       @upd T n frf' (oguardT ow)
   ).
-Qed.*) Admitted.
-  
+Qed.
+
 Lemma add_lab_N : ext add_lab n = some l.
 Proof. Admitted.
 
@@ -104,7 +104,7 @@ End adding_event.
 Section add_event_def.
 Variables (e : exec_event_struct) (ipred : option 'I_(n e)).
 
-(*Inductive add_label := 
+Inductive add_label := 
 | add_W : tid -> var -> val -> add_label
 | add_R (n : 'I_(n e)) t x a : ocompatible (ext (lab e) n) (some (R t x a)) -> add_label.
 
@@ -120,7 +120,7 @@ Definition add_event (l : add_label) :=
                          (add_lab (R t x a) e)
                          (add_pred e ipred)
                          (add_rf_some (R t x a) e ipred k RF)
-  end.*)
+  end.
 
 End add_event_def.
 
