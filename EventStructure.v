@@ -13,22 +13,22 @@ Context {val : eqType}.
 (* ******************************************************************************** *)
 
 Inductive label :=
-| R : var -> val -> label
-| W : var -> val -> label
-| TS
-| TE.
+| Read : var -> val -> label
+| Write : var -> val -> label
+| ThreadStart
+| ThreadEnd.
 
-Definition is_read  l := if l is (R _ _) then true else false.
+Definition is_read  l := if l is (Read _ _) then true else false.
 
-Definition isnt_ts ol := if ol is TS then false else true.
+Definition isnt_ts ol := if ol is ThreadStart then false else true.
 
 Definition compatible w r := 
   match w, r with
-  | (W x a), (R y b) => (x == y) && (a == b)
+  | (Write x a), (Read y b) => (x == y) && (a == b)
   | _, _                 => false
   end.
 
-Notation te_ext := (dv_ext TE).
+Notation te_ext := (ext ThreadEnd).
 
 Notation is_read_ext f r := (is_read (te_ext f r)).
 
@@ -48,7 +48,7 @@ Structure exec_event_struct := Pack {
 
 Section ExecEventStructure.
 
-Variables (es : exec_event_struct) (l : label).
+Variables (es : exec_event_struct).
 
 Notation n       := (n es).
 Notation lab     := (lab es).
@@ -59,20 +59,21 @@ Notation frf     := (frf es).
 (*     Event Types                                                                  *)
 (* ******************************************************************************** *)
 
-Definition oread (e : 'I_n) : option { e : 'I_n | is_read (te_ext lab e) } := 
-  insub e.
-
-(*Definition owrite (e : 'I_n) : option { e : 'I_n | is_write (te_ext lab e) } := 
-  insub e.*)
+Definition oread (e : nat) : {? e : 'I_n | is_read (te_ext lab e) } := 
+  if insub_ord n e is some a then insub a else none.
 
 (* ******************************************************************************** *)
 (*     Predecessor and Successor                                                    *)
 (* ******************************************************************************** *)
 
 Definition ofpred (e : nat) : option nat := 
-  (if e < n as x return (e < n = x -> _) then
-    fun pf => omap (@nat_of_ord e) (fpred (Ordinal pf))
-  else fun=> None) erefl.
+  if insub_ord n e is some a then
+    omap (@nat_of_ord a) (fpred a)
+  else none.
+
+Lemma ofpred_n m (_ : m >= n) : ofpred m = none.
+Proof. rewrite /ofpred. insub_case. slia. Qed.
+
 
 Definition pred e1 e2 := ofpred e1 == some e2.
 
@@ -80,7 +81,7 @@ Definition succ e1 e2 := ofpred e2 == some e1.
 
 Lemma ofpred_lt e1 e2 : ofpred e1 = some e2 -> e2 < e1.
 Proof.
-  rewrite /ofpred. dcase=> // ?. by case: (fpred _)=> //= [[/= ?? [<-]]].
+  rewrite /ofpred. insub_case=> L. by case: (fpred _)=> //= [[/= ?? [<-]]].
 Qed.
 
 Lemma pred_lt e1 e2 : pred e1 e2 -> e2 < e1.
@@ -93,8 +94,16 @@ Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
 (*     Reads-From                                                                   *)
 (* ******************************************************************************** *)
 
+Definition ofrf (e : nat) : option nat := 
+  if oread e is some r then
+    some (nat_of_ord (sval (frf _ (sproof r))))
+  else none.
+
+Lemma ofrf_n m (_ : m >= n) : ofrf m = none.
+Proof. rewrite /ofrf /oread. insub_case. slia. Qed.
+
 (* TODO : get rid of ofrf_aux *)
-Definition ofrf_aux (e : 'I_n) : option 'I_n :=
+(*Definition ofrf_aux (e : 'I_n) : option 'I_n :=
   omap
     (fun r =>
        let rv : 'I_n := sval   r in
@@ -108,21 +117,21 @@ Lemma ofrf_aux_le r w : ofrf_aux r = some w -> w < r.
 Proof.
   rewrite /ofrf_aux /oread.
   case b: (is_read (lab r)); first last.
-  { by rewrite insubF // pred_dv_ext. }
-  rewrite insubT ?pred_dv_ext //= => ? [<-] /=.
+  { by rewrite insubF // pred_ext. }
+  rewrite insubT ?pred_ext //= => ? [<-] /=.
   exact: ltn_ord.
 Qed.
 
 Definition ofrf (e : nat) : option nat := 
   (if e < n as x return (e < n = x -> _) then
     fun pf => omap (@nat_of_ord n) (ofrf_aux (Ordinal pf))
-  else fun=> None) erefl.
+  else fun=> None) erefl.*)
 
 Lemma ofrf_le r w : ofrf r = some w -> w < r.
-Proof. 
-  rewrite /ofrf. dcase=> // L. case H: (ofrf_aux _)=> //= [[/=]] [<-].
+Proof. Admitted.
+(*  rewrite /ofrf. dcase=> // L. case H: (ofrf_aux _)=> //= [[/=]] [<-].
   by move /ofrf_aux_le: H.
-Qed.
+Qed.*)
 
 (* Reads-From relation *)
 Definition rf : rel nat := 
@@ -271,7 +280,7 @@ Qed.
 Definition consistency := [forall k : 'I_n, [forall m : 'I_n,
    (ofrf m == some (nat_of_ord k)) ==> ~~ m # k]].
 
-Hypothesis (consist : consistency).
+Hypothesis consist : consistency.
 
 Lemma rff_consist {e1 e2} (rf : ofrf e2 = some e1) : ~ e2 # e1.
 Proof.
@@ -279,8 +288,8 @@ Proof.
   { move /ofrf_le: (rf)=> L1. have L3: (e1 < n)%N by slia.
     move /forallP /(_ (Ordinal L3)) /forallP /(_ (Ordinal L)): consist.
     by move /eqP : rf=> /swap /implyP /apply /negP. }
-  move: rf. rewrite /ofrf. by dcase.
-Qed.
+  move: rf. rewrite /ofrf. (*by dcase.*) admit.
+Admitted.
 
 Lemma cf_irrelf : irreflexive cf.
 Proof.
@@ -324,6 +333,6 @@ End PrimeEventStructure.
 
 Notation "x <=c y" := (@Order.le ev_display _ x y) (at level 10).
 Notation "a # b" := (cf _ a b) (at level 10).
-Notation te_ext := (dv_ext TE).
+Notation te_ext := (ext ThreadEnd).
 Notation is_read_ext f r := (is_read (te_ext f r)).
 Notation compatible_ext f := (compatible \o2 (te_ext f)).

@@ -104,7 +104,7 @@ Ltac ssrnatify :=
   repeat progress ssrnatify_op.
 
 (* Preprocessing + lia *)
-Ltac slia := move=> *; do [ ssrnatify; lia | exfalso; ssrnatify; lia].
+Ltac slia := do [ ssrnatify; lia | move=> * //=; exfalso; ssrnatify; lia].
 
 (***** hand made swithes *****)
 
@@ -219,39 +219,46 @@ Section default_value.
 
 Context {T : Type} (dv : T).
 
-Definition dv_ext {n} (f : 'I_n -> T) (k : nat) := 
+Definition ext {n} (f : 'I_n -> T) (k : nat) := 
   (if k < n as x return (k < n = x -> _) then
     fun pf => f (ord pf)
   else fun=> dv) erefl.
 
-Lemma dv_ext_upd {x n} {f : 'I_n -> T} (r : 'I_n): 
-  dv_ext (upd f x) r = dv_ext f r.
+Lemma ext_upd {x n} {f : 'I_n -> T} (r : 'I_n): 
+  ext (upd f x) r = ext f r.
 Proof.
-  case: r=> /= ??. rewrite /dv_ext. dcase=> ?; dcase=> //; try slia.
+  case: r=> /= ??. rewrite /ext. dcase=> ?; dcase=> //; try slia.
   move => L. rewrite upd_lt. exact /congr1 /ord_inj.
 Qed.
 
-Lemma dv_ext_upd_n  {x n} {f : 'I_n -> T} :
-  dv_ext (upd f x) n = x.
-Proof. rewrite /dv_ext. dcase=> *; try slia. by rewrite upd_ord_max. Qed.
+Lemma ext_upd_n  {x n} {f : 'I_n -> T} :
+  ext (upd f x) n = x.
+Proof. rewrite /ext. dcase=> *; try slia. by rewrite upd_ord_max. Qed.
 
-Lemma pred_dv_ext {n} (f : 'I_n -> T) (p : pred T) (r : 'I_n) :
- p (dv_ext f r) = p (f r).
+Lemma pred_ext {n} (f : 'I_n -> T) (p : pred T) (r : 'I_n) :
+ p (ext f r) = p (f r).
 Proof.
-  case: r=> /= *. rewrite /dv_ext. dcase=> [?|]; try slia.
+  case: r=> /= *. rewrite /ext. dcase=> [?|]; try slia.
   exact /congr1 /congr1 /ord_inj.
 Qed.
 
-Lemma rel_dv_ext {n x} (f : 'I_n -> T) (r : rel T) (a b : nat)
+Lemma rel_ext {n x} (f : 'I_n -> T) (r : rel T) (a b : nat)
   (rdvx : forall x, r dv x = false) (rxdv : forall x, r x dv = false) :
-  (r \o2 dv_ext f) a b -> (r \o2 dv_ext (upd f x)) a b.
+  (r \o2 ext f) a b -> (r \o2 ext (upd f x)) a b.
 Proof.
   rewrite /comp2. case L: (a < n).
-  { rewrite -{2}[a]/(nat_of_ord (ord L)) dv_ext_upd.
+  { rewrite -{2}[a]/(nat_of_ord (ord L)) ext_upd.
     case L': (b < n). 
-    { by rewrite -{2}[b]/(nat_of_ord (ord L')) dv_ext_upd. }
-    rewrite {2}/dv_ext. dcase=> [? _|_]; try slia. by rewrite rxdv. }
-  rewrite {1}/dv_ext. dcase=> [? _|_]; try slia. by rewrite rdvx.
+    { by rewrite -{2}[b]/(nat_of_ord (ord L')) ext_upd. }
+    rewrite {2}/ext. dcase=> [? _|_]; try slia. by rewrite rxdv. }
+  rewrite {1}/ext. dcase=> [? _|_]; try slia. by rewrite rdvx.
 Qed.
 
 End default_value.
+
+Definition insub_ord (n k : nat) : option 'I_n := 
+  (if k < n as L return (k < n = L -> _) then
+   fun pf => some (ord pf)
+   else fun=> none) erefl.
+
+Ltac insub_case := rewrite /insub_ord; dcase=> //=.
