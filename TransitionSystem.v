@@ -1,7 +1,7 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
 From event_struct Require Import utilities EventStructure.
-From Coq Require Import ssrsearch Lia.
+From Coq Require Import ssrsearch.
 
 Section TransitionSystem.
 
@@ -49,30 +49,36 @@ Definition ow : is_read l -> {k : 'I_n | compatible (te_ext lab k) l}.
 (*Variable ow : is_read l -> {k : 'I_n | compatible (te_ext lab k) l}.*)
 
 Definition add_lab : 'I_n.+1 -> label := 
-  @upd (fun=> label) n lab l.
+  @add (fun=> label) n lab l.
 
 Definition add_fpred : forall m : 'I_n.+1, option 'I_m := 
-  @upd (option \o ordinal) n fpred op.
+  @add (option \o ordinal) n fpred op.
 
 Arguments add_lab : simpl never.
 
 Lemma is_read_add_lab {r : 'I_n} :
   is_read_ext add_lab r -> is_read_ext lab r.
-Proof. by rewrite /add_lab ext_upd. Qed.
+Proof. rewrite /add_lab ext_add //. case: r=> /= *. slia. Qed.
 
 Lemma add_lab_compatible {w r : nat}
   (_ : compatible_ext lab w r) : compatible_ext add_lab w r.
-Proof. rewrite /add_lab rel_ext //. by case. Qed.
+Proof. 
+  rewrite /add_lab rel_ext // => [[]]; 
+  rewrite /rdom /codom /compatible=> [[//]]. by case. 
+Qed.
 
 Lemma is_read_add_lab_n: is_read_ext add_lab n = is_read l.
-Proof. by rewrite /add_lab ext_upd_n. Qed.
+Proof. by rewrite /add_lab ext_add_n. Qed.
 
 Lemma is_read_add_lab_n_aux: is_read_ext add_lab n -> is_read l.
 Proof. by rewrite is_read_add_lab_n. Qed.
 
 Lemma compatible_add_lab (r : 'I_n) : 
   compatible (te_ext lab r) l -> compatible_ext add_lab r n.
-Proof. by rewrite /add_lab /comp2 ext_upd ext_upd_n. Qed.
+Proof. 
+  rewrite /add_lab /comp2 ext_add ?ext_add_n //. 
+  case: r=> /= *. slia.
+Qed.
 
 Definition  ow_add_lab (is_r : is_read_ext add_lab n) :
   {r : 'I_n |compatible_ext add_lab r n} :=
@@ -92,13 +98,13 @@ Definition add_frf : forall
         let fP (w : 'I_r) := @add_lab_compatible w r in
         sproof_map fP (frf r (is_read_add_lab is_r))
   in
-  upd frf' ow_add_lab.
+  add frf' ow_add_lab.
 
 Lemma sval_add_frf (e1 : 'I_n.+1) (e2 : 'I_n) p p' : e1 = e2 :> nat ->
   sval (add_frf e1 p) = sval (frf e2 p') :> nat.
 Proof.
   case: e1 e2 p p'=> ? L1 [? L2 /= P1 P2] E. case: _ / E P1 P2 L1 L2 => *.
-  rewrite /add_frf upd_lt /=. do ?apply /congr1. exact: eq_irrelevance.
+  rewrite /add_frf add_lt /=. do ?apply /congr1. exact: eq_irrelevance.
 Qed.
 
 Definition add_event := Pack n.+1 add_lab add_fpred add_frf.
@@ -107,9 +113,9 @@ Lemma ofpred_add_event e : ofpred add_event e =
   if e == n then omap (@nat_of_ord n) op else ofpred es e.
 Proof.
   rewrite /ofpred. insub_case=> L; insub_case=> ?; try case : ifP; try slia.
-  { move=> ?. apply /congr1. by rewrite /add_fpred upd_lt. }
+  { move=> ?. apply /congr1. by rewrite /add_fpred add_lt. }
   move=> /eqP /esym E. move: E L. case: _ / => ?. 
-  by rewrite /add_fpred upd_ord_max.
+  by rewrite /add_fpred add_ord_max.
 Qed.
 
 Definition owr := 
@@ -123,9 +129,9 @@ Lemma sval_oread {e}:
   omap ((@nat_of_ord n.+1) \o sval) (oread add_event e).
 Proof.
   move=> ?. rewrite /oread. insub_case; dcase; (try slia)=> ? L.
-  case R: (is_read_ext lab e).
-  { by rewrite ?insubT /= /add_lab -[e]/(nat_of_ord (ord L)) ext_upd. }
-  by rewrite ?insubF //= /add_lab -[e]/(nat_of_ord (ord L)) ext_upd.
+  case R: (is_read_ext lab e); [rewrite insubT | rewrite insubF]=> //=;
+  [rewrite insubT | rewrite insubF]=> //=.
+  all: rewrite /add_lab ext_add //; slia.
 Qed.
 
 Arguments oread : simpl never.
@@ -137,7 +143,7 @@ Proof.
   { rewrite /owr. dcase.
     { rewrite /oread /=. insub_case=> [? R|]; last slia.
       rewrite insubT /= ?is_read_add_lab_n // => R'. 
-      rewrite /add_frf upd_ord_max /=. do? apply /congr1. 
+      rewrite /add_frf add_ord_max /=. do? apply /congr1. 
       exact: eq_irrelevance. }
     rewrite /oread /=. insub_case=> *. 
     by rewrite insubF // is_read_add_lab_n. }
@@ -171,9 +177,22 @@ Hypothesis ncf_rf : forall e, owr = some e -> ~~ (cf add_event n e).
 Lemma ca_add_event e1 e2: e2 != n -> ca es e1 e2 = ca add_event e1 e2.
 Proof. Admitted.
 
+Arguments cfP {_ _ _ _}.
+
+Lemma icf_add_event e1 e2  (_ : e1 != n) (_ : e2 != n) :
+  icf es e1 e2 = icf add_event e1 e2.
+Proof.
+  rewrite /icf !ofpred_add_event /=. do ?case: ifP; try slia.
+  by rewrite /add_lab ?ext_add.
+Qed.
+
 Lemma cf_add_event e1 e2  (_ : e1 != n) (_ : e2 != n) :
   cf es e1 e2 = cf add_event e1 e2.
-Proof. Admitted.
+Proof.
+  apply /(refleqP cfP cfP). do ?apply /exists_eq => ?. 
+  rewrite -?ca_add_event //. apply /Bool.eq_iff_eq_true.
+  do 2?apply /and_eq=> /ca_field /orP[|/andP[]]*; rewrite icf_add_event; slia.
+Qed.
 
 Lemma consist_add_event: consistency add_event.
 Proof.

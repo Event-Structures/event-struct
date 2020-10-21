@@ -178,6 +178,28 @@ Proof. by case: m neq. Qed.
 Arguments advance : simpl never.
 
 (* ******************************************************************************** *)
+(*     properties of doamin and codomain of relation                                *)
+(* ******************************************************************************** *)
+
+Section DomCodomR.
+
+Context {T : Type} (r : rel T).
+
+Definition rdom x := exists y, r x y.
+
+Definition rcodom x := exists y, r y x.
+
+Definition field x := rdom x \/ rcodom x.
+
+Lemma dom_field x y (_ : r x y) : field x.
+Proof. by left; exists y. Qed.
+
+Lemma codom_field x y (_ : r y x) : field x.
+Proof. by right; exists y. Qed.
+
+End DomCodomR.
+
+(* ******************************************************************************** *)
 (*     uprading ordinal function on one element                                     *)
 (* ******************************************************************************** *)
 
@@ -193,21 +215,21 @@ Section upgrade.
 
 Context {T : nat -> Type} {n : nat}  (f : forall m : 'I_n, T m) (x : T n).
 
-Definition upd (m : 'I_n.+1) : T m := 
+Definition add (m : 'I_n.+1) : T m := 
     match n =P m :> nat with
     | ReflectT eq  => let 'erefl := eq in x
     | ReflectF neq => f (dec_ord m neq)
     end.
 
-Lemma upd_ord_max {L : n < n.+1} : upd (ord L) = x.
+Lemma add_ord_max {L : n < n.+1} : add (ord L) = x.
 Proof.
-  rewrite /upd; case: eqP=> /=; last by case.
+  rewrite /add; case: eqP=> /=; last by case.
   move=> pf. by rewrite (eq_irrelevance pf (erefl n)).
 Qed.
 
-Lemma upd_lt (m : 'I_n.+1) (ltm : m < n) : upd m = f (ord ltm).
+Lemma add_lt (m : 'I_n.+1) (ltm : m < n) : add m = f (ord ltm).
 Proof. 
-  rewrite /upd. elim: eqP=> [?| neq]; first slia.
+  rewrite /add. elim: eqP=> [?| neq]; first slia.
   rewrite /dec_ord.
   suff->: ltS_neq_lt (ltn_ord m) neq = ltm =>//.
   exact: eq_irrelevance.
@@ -224,16 +246,16 @@ Definition ext {n} (f : 'I_n -> T) (k : nat) :=
     fun pf => f (ord pf)
   else fun=> dv) erefl.
 
-Lemma ext_upd {x n} {f : 'I_n -> T} (r : 'I_n): 
-  ext (upd f x) r = ext f r.
+Lemma ext_add {x n} {f : 'I_n -> T} r (_ : r != n) :
+  ext (add f x) r = ext f r.
 Proof.
-  case: r=> /= ??. rewrite /ext. dcase=> ?; dcase=> //; try slia.
-  move => L. rewrite upd_lt. exact /congr1 /ord_inj.
+  rewrite /ext. dcase=> ?; dcase=> //; try slia.
+  move => L. rewrite add_lt. exact /congr1 /ord_inj.
 Qed.
 
-Lemma ext_upd_n  {x n} {f : 'I_n -> T} :
-  ext (upd f x) n = x.
-Proof. rewrite /ext. dcase=> *; try slia. by rewrite upd_ord_max. Qed.
+Lemma ext_add_n  {x n} {f : 'I_n -> T} :
+  ext (add f x) n = x.
+Proof. rewrite /ext. dcase=> *; try slia. by rewrite add_ord_max. Qed.
 
 Lemma pred_ext {n} (f : 'I_n -> T) (p : pred T) (r : 'I_n) :
  p (ext f r) = p (f r).
@@ -242,16 +264,17 @@ Proof.
   exact /congr1 /congr1 /ord_inj.
 Qed.
 
+
 Lemma rel_ext {n x} (f : 'I_n -> T) (r : rel T) (a b : nat)
-  (rdvx : forall x, r dv x = false) (rxdv : forall x, r x dv = false) :
-  (r \o2 ext f) a b -> (r \o2 ext (upd f x)) a b.
+  (dv_not_in_r : ~ (field r dv)) :
+  (r \o2 ext f) a b -> (r \o2 ext (add f x)) a b.
 Proof.
   rewrite /comp2. case L: (a < n).
-  { rewrite -{2}[a]/(nat_of_ord (ord L)) ext_upd.
+  { rewrite ext_add //; try slia.
     case L': (b < n). 
-    { by rewrite -{2}[b]/(nat_of_ord (ord L')) ext_upd. }
-    rewrite {2}/ext. dcase=> [? _|_]; try slia. by rewrite rxdv. }
-  rewrite {1}/ext. dcase=> [? _|_]; try slia. by rewrite rdvx.
+    { rewrite ext_add //. slia. }
+    rewrite {2}/ext. dcase=> [? _|_]; (try slia). by move /(codom_field r). }
+  rewrite {1}/ext. dcase=> [? _|_]; try slia. by move /(dom_field r).
 Qed.
 
 End default_value.
@@ -262,3 +285,15 @@ Definition insub_ord (n k : nat) : option 'I_n :=
    else fun=> none) erefl.
 
 Ltac insub_case := rewrite /insub_ord; dcase=> //=.
+
+Lemma refleqP {a b A B} (rA : reflect A a) (rB : reflect B b) :
+  A <-> B -> a = b.
+Proof. case=> *; exact /(sameP rA)/(iffP rB). Qed.
+
+Lemma exists_eq {T} {A B : T -> Prop} (_ : forall x, A x <-> B x) : 
+  (exists x, A x) <-> exists x, B x.
+Proof. split=> [][] x /H ?; by exists x. Qed.
+
+Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
+Proof. by case: a=> // /(_ erefl) ->. Qed.
+

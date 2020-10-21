@@ -60,16 +60,14 @@ Notation frf     := (frf es).
 (* ******************************************************************************** *)
 
 Definition oread (e : nat) : {? e : 'I_n | is_read (te_ext lab e) } := 
-  if insub_ord n e is some a then insub a else none.
+  oapp insub none (insub_ord n e).
 
 (* ******************************************************************************** *)
 (*     Predecessor and Successor                                                    *)
 (* ******************************************************************************** *)
 
-Definition ofpred (e : nat) : option nat := 
-  if insub_ord n e is some a then
-    omap (@nat_of_ord a) (fpred a)
-  else none.
+Definition ofpred (e : nat) : option nat :=
+  oapp (fun (a : 'I_n) => omap (@nat_of_ord a) (fpred a)) none (insub_ord n e).
 
 Lemma ofpred_n m (_ : m >= n) : ofpred m = none.
 Proof. rewrite /ofpred. insub_case. slia. Qed.
@@ -95,43 +93,17 @@ Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
 (* ******************************************************************************** *)
 
 Definition ofrf (e : nat) : option nat := 
-  if oread e is some r then
-    some (nat_of_ord (sval (frf _ (sproof r))))
-  else none.
+  omap (fun r => (nat_of_ord (sval (frf _ (sproof r))))) (oread e).
 
 Lemma ofrf_n m (_ : m >= n) : ofrf m = none.
 Proof. rewrite /ofrf /oread. insub_case. slia. Qed.
 
-(* TODO : get rid of ofrf_aux *)
-(*Definition ofrf_aux (e : 'I_n) : option 'I_n :=
-  omap
-    (fun r =>
-       let rv : 'I_n := sval   r in
-       let rpf       := sproof r in
-       advance rv (sval (frf rv rpf))
-    )
-    (oread e).
-
-(* TODO: lemma like opred_ext *)
-Lemma ofrf_aux_le r w : ofrf_aux r = some w -> w < r.
-Proof.
-  rewrite /ofrf_aux /oread.
-  case b: (is_read (lab r)); first last.
-  { by rewrite insubF // pred_ext. }
-  rewrite insubT ?pred_ext //= => ? [<-] /=.
-  exact: ltn_ord.
-Qed.
-
-Definition ofrf (e : nat) : option nat := 
-  (if e < n as x return (e < n = x -> _) then
-    fun pf => omap (@nat_of_ord n) (ofrf_aux (Ordinal pf))
-  else fun=> None) erefl.*)
-
 Lemma ofrf_le r w : ofrf r = some w -> w < r.
-Proof. Admitted.
-(*  rewrite /ofrf. dcase=> // L. case H: (ofrf_aux _)=> //= [[/=]] [<-].
-  by move /ofrf_aux_le: H.
-Qed.*)
+Proof.
+  rewrite /ofrf /oread. insub_case=> L. case H: (is_read_ext lab (ord L)).
+  { rewrite insubT /= => [[<-]]. by case: (sval (frf (ord L) H)). }
+  by rewrite insubF.
+Qed.
 
 (* Reads-From relation *)
 Definition rf : rel nat := 
@@ -179,6 +151,15 @@ Qed.
 Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
 Proof. move /closureP. elim=> [] //. move=> ??/ica_lt. slia. Qed.
 
+Lemma ca_field e1 e2 (_ : ca e1 e2) : (e1 == e2) || (e1 < n) && (e2 < n).
+Proof.
+  case N: (e1 == e2)=> //=. apply/andP. suff E: (e2 < n).
+  { split=> //. move /ca_le: H. slia. }
+  move /closureP: H N. elim=> [/eqP|? e] //.
+  rewrite /ica /succ /rf. case H: (e < n)=> //. have ?: (e >= n) by slia.
+  by rewrite ofrf_n ?ofpred_n.
+Qed.
+
 Lemma ca_anti: antisymmetric ca.
 Proof. move=> ?? /andP[/ca_le ? /ca_le ?]. slia. Qed.
 
@@ -224,7 +205,7 @@ Definition cf e1 e2 :=
 
 Notation "a # b" := (cf a b) (at level 10).
 
-Lemma cfP e1 e2 :
+Lemma cfP {e1 e2}:
   reflect (exists e1' e2', [&& ca e1' e1, ca e2' e2 & icf e1' e2']) (e1 # e2).
 Proof.
   apply (iffP existsP).
@@ -288,8 +269,8 @@ Proof.
   { move /ofrf_le: (rf)=> L1. have L3: (e1 < n)%N by slia.
     move /forallP /(_ (Ordinal L3)) /forallP /(_ (Ordinal L)): consist.
     by move /eqP : rf=> /swap /implyP /apply /negP. }
-  move: rf. rewrite /ofrf. (*by dcase.*) admit.
-Admitted.
+  move: rf. rewrite /ofrf /oread. by insub_case. 
+Qed.
 
 Lemma cf_irrelf : irreflexive cf.
 Proof.
@@ -301,18 +282,17 @@ Proof.
     1,2: move/C; by rewrite // cf_symm.
     1,2: move/rff_consist; by rewrite // cf_symm. }
   move=> k /swap /cfP[x [y /and3P[]]]. case E: (x == m).
-  { move/eqP :E =>-> ? /ca_le ? /and3P[? /eqP-> ? /eqP /succ_lt].
-    slia. }
+  { move/eqP :E =>-> ? /ca_le ? /and3P[? /eqP-> ? /eqP /succ_lt]. slia. }
   move/negbT/ca_decr: E => /apply.
   case=> z /andP[? /orP[] /eqP E1 L ? E2].
   { apply/(IHn z).
-    { by apply /succ_lt /eqP. }
+    { exact /succ_lt /eqP. }
     apply/cfP; exists x, y.
     apply/and3P; split=>//.
     by move: E1 E2=>->[->]. }
   apply/(rff_consist E1)/cfP.
   exists y, x; apply/and3P; split=>//.
-  { by apply /(ca_trans L) /succ_ca /eqP. }
+  { exact /(ca_trans L) /succ_ca /eqP. }
   by rewrite icf_symm. 
 Qed.
 
