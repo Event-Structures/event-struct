@@ -20,7 +20,7 @@ Inductive label :=
 
 Definition is_read  l := if l is (Read _ _) then true else false.
 
-Definition isnt_ts ol := if ol is ThreadStart then false else true.
+Definition is_thdstart ol := if ol is ThreadStart then true else false.
 
 Definition compatible w r := 
   match w, r with
@@ -182,8 +182,6 @@ Import Order.LTheory.
 Open Scope order_scope.
 Import Order.NatOrder.
 
-Notation "x <=c y" := (ca x y) (at level 10).
-
 (* ******************************************************************************** *)
 (*     Conflict                                                                     *)
 (* ******************************************************************************** *)
@@ -192,8 +190,8 @@ Notation "x <=c y" := (ca x y) (at level 10).
 Definition icf (e1 e2 : nat) :=
   [&& (e1 != e2),
       ofpred e1 == ofpred e2,
-      isnt_ts (te_ext lab e1) &
-      isnt_ts (te_ext lab e2)].
+      ~~ is_thdstart (te_ext lab e1) &
+      ~~ is_thdstart (te_ext lab e2)].
 
 Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
 Proof. move/and3P=>[??/andP[*]]. apply/and4P; split; by rewrite 1?eq_sym. Qed.

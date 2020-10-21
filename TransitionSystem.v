@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
-From event_struct Require Import utilities EventStructure.
+From event_struct Require Import utilities EventStructure relations.
 From Coq Require Import ssrsearch.
 
 Section TransitionSystem.
@@ -174,10 +174,21 @@ Qed.
 Hypothesis consist : consistency es.
 Hypothesis ncf_rf : forall e, owr = some e -> ~~ (cf add_event n e).
 
-Lemma ca_add_event e1 e2: e2 != n -> ca es e1 e2 = ca add_event e1 e2.
-Proof. Admitted.
-
 Arguments cfP {_ _ _ _}.
+Arguments closureP {_ _ _}.
+Notation step := (Relation_Operators.rtn1_trans).
+
+Lemma ca_add_event e1 e2 (N : e2 != n) : ca es e1 e2 = ca add_event e1 e2.
+Proof.
+  apply/(refleqP closureP closureP). 
+  split; move: N=> /swap; elim; try constructor.
+  all: move=> y ? I ? H ?; apply /(step _ _ _ y)=> //.
+  { rewrite ica_add_event; apply /orP. by left. }
+  { apply/H. case /irel_rt_cl /ca_field /orP: I=> [|/andP[]]; slia. }
+  { move: I. rewrite ica_add_event=> /orP[]// /andP[]. slia. }
+  apply /H.
+  case/irel_rt_cl /ca_field /orP: (I) (I)=> /= [|/andP[?? /ica_lt]]; slia.
+Qed.
 
 Lemma icf_add_event e1 e2  (_ : e1 != n) (_ : e2 != n) :
   icf es e1 e2 = icf add_event e1 e2.

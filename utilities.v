@@ -44,6 +44,12 @@ Ltac ssrnatify_rel :=
      rewrite <-  (rwP (@eqP _ _ _)) in H
   | |- context [ is_true (negb (@eq_op _ ?x ?y))] =>
      rewrite <- (rwP (@eqP _ x y))
+  | H : (negb (@eq_op _  _ _)) = true |- _ => move/eqP: H => H
+  | |- (negb (@eq_op _  _ _)) = true => apply/eqP
+  | H : context [ (negb (@eq_op _ _ _)) = true ] |- _ =>
+     rewrite <-  (rwP (@eqP _ _ _)) in H
+  | |- context [ (negb (@eq_op _ ?x ?y)) = true ] =>
+     rewrite <- (rwP (@eqP _ x y))
 
   | H : (leq _ _) = true |- _ => move/leP: H => H
   | H : context [ (leq ?a ?b) = true] |- _ =>
@@ -104,7 +110,7 @@ Ltac ssrnatify :=
   repeat progress ssrnatify_op.
 
 (* Preprocessing + lia *)
-Ltac slia := do [ ssrnatify; lia | move=> * //=; exfalso; ssrnatify; lia].
+Ltac slia := try (move=> * //=); do [ ssrnatify; lia | exfalso; ssrnatify; lia].
 
 (***** hand made swithes *****)
 
@@ -240,11 +246,14 @@ End upgrade.
 Section default_value.
 
 Context {T : Type} (dv : T).
+(* T = label (val : eqType)  *)
 
-Definition ext {n} (f : 'I_n -> T) (k : nat) := 
+Definition ext {n} (f : 'I_n -> T) : nat -> T :=
+  fun k =>
   (if k < n as x return (k < n = x -> _) then
     fun pf => f (ord pf)
   else fun=> dv) erefl.
+
 
 Lemma ext_add {x n} {f : 'I_n -> T} r (_ : r != n) :
   ext (add f x) r = ext f r.
