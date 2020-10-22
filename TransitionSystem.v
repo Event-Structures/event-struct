@@ -11,12 +11,11 @@ Notation exec_event_struct := (@exec_event_struct val).
 Notation cexec_event_struct := (@cexec_event_struct val).
 
 Notation label := (@label val).
-Notation n := (@n val).
 
 Implicit Types (x : var) (a : val) (es : exec_event_struct).
 
 (* Section with definitions for execution graph with added event *)
-Section adding_event.
+Section AddEvent.
 
 (* execution graph in which we want to add l *)
 Context (es : exec_event_struct).
@@ -26,27 +25,23 @@ Notation lab    := (lab es).
 Notation fpred  := (fpred es).
 Notation frf    := (frf es).
 
-Inductive add_label :=
-  Add : forall 
-    (l : label),
-    option 'I_n ->
-    (is_read l -> {k : 'I_n | compatible (te_ext lab k) l}) ->
-    add_label.
+Structure add_label :=
+  Add {
+    lb     : label;
+    opred  : option 'I_n;
+    owrite : is_read lb -> {k : 'I_n | compatible (te_ext lab k) lb}
+  }.
 
 Variable al : add_label.
 
 (* label of an event which we want to add     *)
-Definition l := let '(Add lb _ _) := al in lb.
-(*Variable l : label.*)
+Notation l := (lb al).
 
 (* predecessor of the new event (if it exists) *)
-Definition op := let '(Add _ opr _) := al in opr.
-(*Variable op : option 'I_n.*)
+Notation op := (opred al).
 
 (* if event is `Read` then we should give `Write` from wich we read *)
-Definition ow : is_read l -> {k : 'I_n | compatible (te_ext lab k) l}.
-  rewrite /l. case: al=> ??. exact. Defined.
-(*Variable ow : is_read l -> {k : 'I_n | compatible (te_ext lab k) l}.*)
+Notation ow := (owrite al).
 
 Definition add_lab : 'I_n.+1 -> label := 
   @add (fun=> label) n lab l.
@@ -184,10 +179,10 @@ Proof.
   split; move: N=> /swap; elim; try constructor.
   all: move=> y ? I ? H ?; apply /(step _ _ _ y)=> //.
   { rewrite ica_add_event; apply /orP. by left. }
-  { apply/H. case /irel_rt_cl /ca_field /orP: I=> [|/andP[]]; slia. }
+  { apply/H. case /irel_rt_cl /ca_rfield /orP: I=> [|/andP[]]; slia. }
   { move: I. rewrite ica_add_event=> /orP[]// /andP[]. slia. }
   apply /H.
-  case/irel_rt_cl /ca_field /orP: (I) (I)=> /= [|/andP[?? /ica_lt]]; slia.
+  case/irel_rt_cl /ca_rfield /orP: (I) (I)=> /= [|/andP[?? /ica_lt]]; slia.
 Qed.
 
 Lemma icf_add_event e1 e2  (_ : e1 != n) (_ : e2 != n) :
@@ -202,7 +197,7 @@ Lemma cf_add_event e1 e2  (_ : e1 != n) (_ : e2 != n) :
 Proof.
   apply /(refleqP cfP cfP). do ?apply /exists_eq => ?. 
   rewrite -?ca_add_event //. apply /Bool.eq_iff_eq_true.
-  do 2?apply /and_eq=> /ca_field /orP[|/andP[]]*; rewrite icf_add_event; slia.
+  do 2?apply /and_eq=> /ca_rfield /orP[|/andP[]]*; rewrite icf_add_event; slia.
 Qed.
 
 Lemma consist_add_event: consistency add_event.
@@ -215,7 +210,7 @@ Proof.
   apply /cf. rewrite cf_add_event; slia.
 Qed.
 
-End adding_event.
+End AddEvent.
 
 Definition tr_add_event es1 es2 := exists al, es2 = add_event es1 al.
 

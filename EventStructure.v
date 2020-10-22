@@ -20,7 +20,7 @@ Inductive label :=
 
 Definition is_read  l := if l is (Read _ _) then true else false.
 
-Definition is_thdstart ol := if ol is ThreadStart then true else false.
+Definition is_thrdstart ol := if ol is ThreadStart then true else false.
 
 Definition compatible w r := 
   match w, r with
@@ -67,7 +67,7 @@ Definition oread (e : nat) : {? e : 'I_n | is_read (te_ext lab e) } :=
 (* ******************************************************************************** *)
 
 Definition ofpred (e : nat) : option nat :=
-  oapp (fun (a : 'I_n) => omap (@nat_of_ord a) (fpred a)) none (insub_ord n e).
+  obind (fun (a : 'I_n) => omap (@nat_of_ord a) (fpred a)) (insub_ord n e).
 
 Lemma ofpred_n m (_ : m >= n) : ofpred m = none.
 Proof. rewrite /ofpred. insub_case. slia. Qed.
@@ -151,7 +151,7 @@ Qed.
 Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
 Proof. move /closureP. elim=> [] //. move=> ??/ica_lt. slia. Qed.
 
-Lemma ca_field e1 e2 (_ : ca e1 e2) : (e1 == e2) || (e1 < n) && (e2 < n).
+Lemma ca_rfield e1 e2 (_ : ca e1 e2) : (e1 == e2) || (e1 < n) && (e2 < n).
 Proof.
   case N: (e1 == e2)=> //=. apply/andP. suff E: (e2 < n).
   { split=> //. move /ca_le: H. slia. }
@@ -186,12 +186,13 @@ Import Order.NatOrder.
 (*     Conflict                                                                     *)
 (* ******************************************************************************** *)
 
+
 (* Immediate conflict relation *)
 Definition icf (e1 e2 : nat) :=
   [&& (e1 != e2),
       ofpred e1 == ofpred e2,
-      ~~ is_thdstart (te_ext lab e1) &
-      ~~ is_thdstart (te_ext lab e2)].
+      ~~ is_thrdstart (te_ext lab e1) &
+      ~~ is_thrdstart (te_ext lab e2)].
 
 Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
 Proof. move/and3P=>[??/andP[*]]. apply/and4P; split; by rewrite 1?eq_sym. Qed.

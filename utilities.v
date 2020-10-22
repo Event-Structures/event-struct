@@ -195,12 +195,12 @@ Definition rdom x := exists y, r x y.
 
 Definition rcodom x := exists y, r y x.
 
-Definition field x := rdom x \/ rcodom x.
+Definition rfield x := rdom x \/ rcodom x.
 
-Lemma dom_field x y (_ : r x y) : field x.
+Lemma dom_rfield x y (_ : r x y) : rfield x.
 Proof. by left; exists y. Qed.
 
-Lemma codom_field x y (_ : r y x) : field x.
+Lemma codom_rfield x y (_ : r y x) : rfield x.
 Proof. by right; exists y. Qed.
 
 End DomCodomR.
@@ -275,15 +275,15 @@ Qed.
 
 
 Lemma rel_ext {n x} (f : 'I_n -> T) (r : rel T) (a b : nat)
-  (dv_not_in_r : ~ (field r dv)) :
+  (dv_not_in_r : ~ (rfield r dv)) :
   (r \o2 ext f) a b -> (r \o2 ext (add f x)) a b.
 Proof.
   rewrite /comp2. case L: (a < n).
   { rewrite ext_add //; try slia.
     case L': (b < n). 
     { rewrite ext_add //. slia. }
-    rewrite {2}/ext. dcase=> [? _|_]; (try slia). by move /(codom_field r). }
-  rewrite {1}/ext. dcase=> [? _|_]; try slia. by move /(dom_field r).
+    rewrite {2}/ext. dcase=> [? _|_]; (try slia). by move /(codom_rfield r). }
+  rewrite {1}/ext. dcase=> [? _|_]; try slia. by move /(dom_rfield r).
 Qed.
 
 End default_value.
