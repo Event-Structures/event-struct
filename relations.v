@@ -5,8 +5,9 @@ From Coq Require Import Relations Program.Basics.
 From event_struct Require Import utilities.
 
 Set Implicit Arguments.
-Unset Strict Implicit.
+(*Unset Strict Implicit.*)
 Unset Printing Implicit Defensive.
+Set Equations Transparent.
 
 Section well_founded.
 
@@ -14,73 +15,48 @@ Definition rel_of_fun f : rel nat := [rel a b | f b == some a].
 
 Variable (f : nat ->  seq nat). (* f : nat -> option nat *)
 Hypothesis descend : forall a b, a \in (f b) -> a < b. 
-(*Hypothesis descend : forall a, if (f a) is some b then b < a else true.*) (* for option nat *)
+(*Hypothesis descend : forall a, if (f a) is some b then b < a else true.*)
 (*Hypothesis wf_rel : well_founded (rel_of_fun f).*)
-
-(*Lemma closureP a b : 
-  reflect (clos_refl_trans_n1 nat (rel_of_fun f) a b) (rt_closure a b).
-Proof.
-  rewrite /rel_of_fun /rt_closure /pred_of. apply /(iffP idP).
-  { funelim (pred_of_aux b [::]).
-    { have: pred_of_aux 0 [::] = [::]. done.
-      move=>->. done. }
-    (*apply: H=> //=.
-    apply_funelim (pred_of_aux n.+1 [::]).
-    move=> {b} b s H predfb. econstructor. auto. by apply: H.*) admit. }
-  funelim (pred_of_aux b [::]).
-  admit.
-  move=> {b} b s H tr. apply: H. 
-Qed.*)
 
 (* Well-founded relation closure definition *)
 Equations rt_closure (n : nat) : seq nat by wf n lt :=
-  rt_closure n := rt_clos_seq (f n) _
-where
-  rt_clos_seq (s : seq nat) (m : exists n' p, f n' = p ++ s /\ (n' <= n)) : seq nat :=
-  rt_clos_seq (h :: xs) m := rt_closure h ++ rt_clos_seq xs _;
-  rt_clos_seq [::] _ := [::].
+  rt_closure 0 := [::];
+  rt_closure n.+1 :=
+  let fix rt_clos_seq (s : seq nat) :=
+    if s is _ :: xs then rt_closure (head 0 (f n.+1)) ++ rt_clos_seq xs
+    else [::] in
+  n.+1 :: rt_clos_seq (f n.+1).
 Next Obligation.
-move: (descend h m).
-by rewrite H0 mem_cat inE eq_refl orbT=> /(_ isT) /leq_trans/(_ H1) /ltP. Qed.
-Next Obligation.
-rewrite -cat_rcons in H0; eexists m, _; split=> //; exact: H0. Qed.
-Next Obligation.
-by exists n, [::]. Qed.
+  case H: (f n.+1)=> /=. slia.
+  apply/ltP. apply: descend. rewrite H. exact: mem_head.
+Qed.
+
+(*Lemma closureel (a b : nat) : a \in rt_closure b -> a \in (f b) \/
+  exists c, c \in (f b) -> a \in rt_closure c.
+Proof.
+  generalize dependent a.
+  elim/ssrnat.ltn_ind: b => b.
+  funelim (rt_closure b)=> //= IH a.
 
 Definition rel_of_closure (a b : nat) : bool := a \in rt_closure b.
 
-(*Equations rt_closure (a b : nat) : bool by wf b :=
-  rt_closure a b with (a > b) => {
-    rt_closure a b true := false;
-    rt_closure a b false with (a == b) => {
-      rt_closure a b false true := true;
-      rt_closure a b false false := rt_closure a (f b)
-    }
-  }.
-Next Obligation.
-  apply: ltP. exact: descend.
-Qed.
-
-Lemma rt_closure_subleq a b : rt_closure a b -> a <= b.
+Lemma rel_of_closure_subleq a b : rel_of_closure a b -> a <= b.
 Proof.
-  funelim (rt_closure a b); try slia.
-  by rewrite -Heqcall.
-Qed.
-
-Lemma add_seq (a : nat) (s : seq nat) : 
-  rt_closure_aux a s = rt_closure_aux a [::] ++ s.
-Proof.
-  generalize a. elim: s=> {a} a; first by rewrite cats0.
-  move=> s IHs b.
-  apply_funelim (rt_closure_aux a s)=> {a s} a s. 
-  apply_funelim (rt_closure_aux a [::]).
-  rewrite -Heqcall -Heqcall0. case: (f a).
-
-Lemma rt_sub_lt (a b : nat) : rel_of_closure a b -> a < b.
-Proof.
-  rewrite /rel_of_closure /rt_closure. funelim (rt_closure_aux b [::]).
-  rewrite -Heqcall. case: (f a).
+  rewrite /rel_of_closure.
+  generalize dependent a.
+  elim/ssrnat.ltn_ind: b.
+  move=> b.
+  funelim (rt_closure b)=> /=. move=> //=.
+  move=> IH a. case H: (f n.+1)=> //=.
+  rewrite mem_cat=> /orP[art |].
+  { apply: leq_trans.
+    { apply: IH; last by apply: art.
+      apply: descend. rewrite H. exact: mem_head. }
+    apply: ltnW. apply: descend. rewrite H. exact: mem_head. }
+   apply: IH.
+   admit.
   
+Qed.
 
 (* Well-founded relations properties *)
 Lemma closureP a b : 
