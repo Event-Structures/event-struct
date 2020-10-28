@@ -2,27 +2,34 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order c
 From mathcomp Require Import eqtype fingraph path.
 From event_struct Require Import utilities relations.
 
-Definition var := nat.
+Definition loc := nat.
+
+Inductive label (Rval Wval : Type) :=
+| Read : loc -> Rval -> label Rval Wval
+| Write : loc -> Wval -> label Rval Wval
+| ThreadStart
+| ThreadEnd.
+
+Arguments Read {_ _}.
+Arguments Write {_ _}.
+Arguments ThreadStart {_ _}.
+Arguments ThreadEnd {_ _}.
 
 Section PrimeEventStructure.
 
 Context {val : eqType}.
-
 (* ******************************************************************************** *)
 (*     Label                                                                        *)
 (* ******************************************************************************** *)
 
-Inductive label :=
-| Read : var -> val -> label
-| Write : var -> val -> label
-| ThreadStart
-| ThreadEnd.
+Local Notation label := (label val val).
+Implicit Type l : label.
 
 Definition is_read  l := if l is (Read _ _) then true else false.
 
-Definition is_thrdstart ol := if ol is ThreadStart then true else false.
+Definition is_thrdstart l := if l is ThreadStart then true else false.
 
-Definition compatible w r := 
+Definition compatible (w r : label) := 
   match w, r with
   | (Write x a), (Read y b) => (x == y) && (a == b)
   | _, _                 => false
