@@ -77,7 +77,7 @@ Qed.
 Definition  ow_add_lab (is_r : is_read_ext add_lab n) :
   {r : 'I_n |compatible_ext add_lab r n} :=
    let w := ow (is_read_add_lab_n_aux is_r) in
-     @exist _ _ (sval w) (compatible_add_lab _ (sproof w)).
+     @exist _ _ (sval w) (compatible_add_lab _ (svalP w)).
 
 Definition add_frf : forall
   (r : 'I_n.+1)
