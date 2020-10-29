@@ -72,7 +72,7 @@ Definition oread (e : nat) : {? e : 'I_n | is_read (ext lab e) } :=
 (* ******************************************************************************** *)
 
 Definition ofpred (e : nat) : option nat :=
-  oapp (fun (a : 'I_n) => omap (@nat_of_ord a) (fpred a)) none (insub_ord n e).
+  obind (fun (a : 'I_n) => omap (@nat_of_ord a) (fpred a)) (insub_ord n e).
 
 Lemma ofpred_n m (_ : m >= n) : ofpred m = none.
 Proof. rewrite /ofpred. insub_case. slia. Qed.
@@ -191,12 +191,18 @@ Import Order.NatOrder.
 (*     Conflict                                                                     *)
 (* ******************************************************************************** *)
 
+
 (* Immediate conflict relation *)
 Definition icf (e1 e2 : nat) :=
   [&& (e1 != e2),
       ofpred e1 == ofpred e2,
+<<<<<<< HEAD
       ~~ is_thdstart (ext lab e1) &
       ~~ is_thdstart (ext lab e2)].
+=======
+      ~~ is_thrdstart (te_ext lab e1) &
+      ~~ is_thrdstart (te_ext lab e2)].
+>>>>>>> master
 
 Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
 Proof. move/and3P=>[??/andP[*]]. apply/and4P; split; by rewrite 1?eq_sym. Qed.
