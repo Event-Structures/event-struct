@@ -195,12 +195,12 @@ Definition rdom x := exists y, r x y.
 
 Definition rcodom x := exists y, r y x.
 
-Definition field x := rdom x \/ rcodom x.
+Definition rfield x := rdom x \/ rcodom x.
 
-Lemma dom_field x y (_ : r x y) : field x.
+Lemma dom_rfield x y (_ : r x y) : rfield x.
 Proof. by left; exists y. Qed.
 
-Lemma codom_field x y (_ : r y x) : field x.
+Lemma codom_rfield x y (_ : r y x) : rfield x.
 Proof. by right; exists y. Qed.
 
 End DomCodomR.
@@ -243,7 +243,7 @@ Qed.
 
 End upgrade.
 
-Section default_value.
+(*Section default_value.
 
 Context {T : Type} (dv : T).
 (* T = label (val : eqType)  *)
@@ -286,7 +286,7 @@ Proof.
   rewrite {1}/ext. dcase=> [? _|_]; try slia. by move /(dom_field r).
 Qed.
 
-End default_value.
+End default_value.*)
 
 Definition insub_ord (n k : nat) : option 'I_n := 
   (if k < n as L return (k < n = L -> _) then

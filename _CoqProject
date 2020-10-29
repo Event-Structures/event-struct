@@ -8,6 +8,7 @@
 -arg -w -arg -deprecated-ssr-search
 
 utilities.v
+InhType.v
 relations.v
 EventStructure.v
 TransitionSystem.v

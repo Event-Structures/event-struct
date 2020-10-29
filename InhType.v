@@ -3,25 +3,23 @@ From mathcomp Require Import eqtype fingraph path.
 From Coq Require Import ssrsearch.
 From event_struct Require Import utilities.
 
-Structure inhType : Type := Inhabitant {type :> Type; _ : type}.
+Structure inhType : Type := Inhabitant {type :> Type; inh : type}.
 
 Implicit Type T : inhType.
 
-Definition inh T := let: Inhabitant _ inh := T return type T in inh.
-
 Section Extension.
 
-Variable (T : inhType).
+Context {T : inhType}.
 Implicit Types (x : T) (n : nat).
 Notation inh := (inh T).
 
 Definition ext {n} (f : 'I_n -> T) : nat -> T := fun k =>
   if insub_ord n k is some k then f k else inh.
 
-Lemma ext_add {x n} {f : 'I_n -> T} r (_ : r != n) :
+Lemma ext_add {x n} {f : 'I_n -> T} r : r != n ->
   ext (add f x) r = ext f r.
 Proof.
-  rewrite /ext. insub_case=> ?; insub_case=> //; try slia.
+  rewrite /ext. insub_case=> ??; insub_case=> //; try slia.
   move => L. rewrite add_lt. exact /congr1 /ord_inj.
 Qed.
 
@@ -38,15 +36,15 @@ Qed.
 
 
 Lemma rel_ext {n x} (f : 'I_n -> T) (r : rel T) (a b : nat)
-  (dv_not_in_r : ~ (field r inh)) :
+  (dv_not_in_r : ~ (rfield r inh)) :
   (r \o2 ext f) a b -> (r \o2 ext (add f x)) a b.
 Proof.
   rewrite /comp2. case L: (a < n).
   { rewrite ext_add //; try slia.
     case L': (b < n). 
     { rewrite ext_add //. slia. }
-    rewrite {2}/ext. insub_case=> [? _|_/(codom_field r)]; slia. }
-  rewrite {1}/ext. insub_case=> [? _|_/(dom_field r)]; slia.
+    rewrite {2}/ext. insub_case=> [? _|_/(codom_rfield r)]; slia. }
+  rewrite {1}/ext. insub_case=> [? _|_/(dom_rfield r)]; slia.
 Qed.
 
 End Extension.
