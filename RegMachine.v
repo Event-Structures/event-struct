@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order choice.
 From mathcomp Require Import eqtype fingraph path finmap. 
-From event_struct Require Import utilities EventStructure inhType.
+From event_struct Require Import utilities EventStructure InhType.
 
 Section RegMachine.
 
