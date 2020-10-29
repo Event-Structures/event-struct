@@ -196,13 +196,8 @@ Import Order.NatOrder.
 Definition icf (e1 e2 : nat) :=
   [&& (e1 != e2),
       ofpred e1 == ofpred e2,
-<<<<<<< HEAD
       ~~ is_thdstart (ext lab e1) &
       ~~ is_thdstart (ext lab e2)].
-=======
-      ~~ is_thrdstart (te_ext lab e1) &
-      ~~ is_thrdstart (te_ext lab e2)].
->>>>>>> master
 
 Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
 Proof. move/and3P=>[??/andP[*]]. apply/and4P; split; by rewrite 1?eq_sym. Qed.
