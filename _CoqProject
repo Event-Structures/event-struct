@@ -6,6 +6,7 @@
 -arg -w -arg -duplicate-clear
 -arg -w -arg -redundant-canonical-projection
 -arg -w -arg  -notation-incompatible-format
+-arg -w -arg -deprecated-ssr-search
 
 utilities.v
 InhType.v
