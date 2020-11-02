@@ -33,12 +33,10 @@ Proof.
   exact /congr1 /congr1 /ord_inj.
 Qed.
 
-
-Lemma rel_ext {n x} (f : 'I_n -> T) (r : rel T) (a b : nat)
-  (dv_not_in_r : ~ (rfield r inh)) :
-  (r \o2 ext f) a b -> (r \o2 ext (add f x)) a b.
+Lemma rel_ext {n x} (f : 'I_n -> T) (r : rel T) (a b : nat) :
+   ~ (rfield r inh) -> (r \o2 ext f) a b -> (r \o2 ext (add f x)) a b.
 Proof.
-  rewrite /comp2. case L: (a < n).
+  rewrite /comp2=> ?. case L: (a < n).
   { rewrite ext_add //; try slia.
     case L': (b < n). 
     { rewrite ext_add //. slia. }
