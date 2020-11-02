@@ -5,8 +5,10 @@
 -arg -w -arg -non-reversible-notation
 -arg -w -arg -duplicate-clear
 -arg -w -arg -redundant-canonical-projection
+-arg -w -arg  -notation-incompatible-format
 
 utilities.v
+InhType.v
 relations.v
 EventStructure.v
 TransitionSystem.v
