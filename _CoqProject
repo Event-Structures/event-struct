@@ -8,6 +8,7 @@
 -arg -w -arg  -notation-incompatible-format
 
 utilities.v
+InhType.v
 relations.v
 EventStructure.v
 TransitionSystem.v

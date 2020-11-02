@@ -1,7 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
-From event_struct Require Import utilities EventStructure relations.
-From Coq Require Import ssrsearch.
+From event_struct Require Import utilities EventStructure relations InhType.
 
 Section TransitionSystem.
 
@@ -10,7 +9,7 @@ Context {val : eqType}.
 Notation exec_event_struct := (@exec_event_struct val).
 Notation cexec_event_struct := (@cexec_event_struct val).
 
-Notation label := (@label val).
+Notation label := (@label val val).
 
 Implicit Types (x : var) (a : val) (es : exec_event_struct).
 
@@ -29,7 +28,7 @@ Structure add_label :=
   Add {
     lb     : label;
     opred  : option 'I_n;
-    owrite : is_read lb -> {k : 'I_n | compatible (te_ext lab k) lb}
+    owrite : is_read lb -> {k : 'I_n | compatible (ext lab k) lb}
   }.
 
 Variable al : add_label.
@@ -69,7 +68,7 @@ Lemma is_read_add_lab_n_aux: is_read_ext add_lab n -> is_read l.
 Proof. by rewrite is_read_add_lab_n. Qed.
 
 Lemma compatible_add_lab (r : 'I_n) : 
-  compatible (te_ext lab r) l -> compatible_ext add_lab r n.
+  compatible (ext lab r) l -> compatible_ext add_lab r n.
 Proof. 
   rewrite /add_lab /comp2 ext_add ?ext_add_n //. 
   case: r=> /= *. slia.

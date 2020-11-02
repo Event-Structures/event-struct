@@ -243,7 +243,7 @@ Qed.
 
 End upgrade.
 
-Section default_value.
+(*Section default_value.
 
 Context {T : Type} (dv : T).
 (* T = label (val : eqType)  *)
@@ -286,7 +286,7 @@ Proof.
   rewrite {1}/ext. dcase=> [? _|_]; try slia. by move /(dom_rfield r).
 Qed.
 
-End default_value.
+End default_value.*)
 
 Definition insub_ord (n k : nat) : option 'I_n := 
   (if k < n as L return (k < n = L -> _) then
