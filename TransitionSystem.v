@@ -2,7 +2,7 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
 From event_struct Require Import utilities EventStructure relations InhType.
 
-Section TransitionSystem.
+(*Section TransitionSystem.
 
 Context {val : eqType}.
 
@@ -103,10 +103,10 @@ Qed.
 
 Definition add_event := Pack n.+1 add_lab add_fpred add_frf.
 
-Lemma ofpred_add_event e : ofpred add_event e =
-  if e == n then omap (@nat_of_ord n) op else ofpred es e.
+Lemma fpredn_add_event e : fpredn add_event e =
+  if e == n then omap (@nat_of_ord n) op else fpredn es e.
 Proof.
-  rewrite /ofpred. insub_case=> L; insub_case=> ?; try case : ifP; try slia.
+  rewrite /fpredn. insub_case=> L; insub_case=> ?; try case : ifP; try slia.
   { move=> ?. apply /congr1. by rewrite /add_fpred add_lt. }
   move=> /eqP /esym E. move: E L. case: _ / => ?. 
   by rewrite /add_fpred add_ord_max.
@@ -130,10 +130,10 @@ Qed.
 
 Arguments oread : simpl never.
 
-Lemma ofrf_add_event e: ofrf add_event e = 
-  if e == n then owr else ofrf es e.
+Lemma frfn_add_event e: frfn add_event e = 
+  if e == n then owr else frfn es e.
 Proof.
-  rewrite /ofrf/=. case: ifP=> [/eqP ->| efn].
+  rewrite /frfn/=. case: ifP=> [/eqP ->| efn].
   { rewrite /owr. dcase.
     { rewrite /oread /=. insub_case=> [? R|]; last slia.
       rewrite insubT /= ?is_read_add_lab_n // => R'. 
@@ -152,7 +152,7 @@ Qed.
        (omap (@nat_of_ord n) op == some e1) || (owr == some e1)
     else ica es e1 e2.
 Proof. 
-  rewrite /ica /succ /rf ofrf_add_event ofpred_add_event. by case: ifP. 
+  rewrite /ica /succ /rf frfn_add_event fpredn_add_event. by case: ifP. 
 Qed.*)
 
 Lemma ica_add_event e1 e2: 
@@ -160,8 +160,8 @@ Lemma ica_add_event e1 e2:
   (ica es e1 e2) || 
   ((e2 == n) && ((omap (@nat_of_ord n) op == some e1) || (owr == some e1))).
 Proof.
-  rewrite /ica /succ /rf ofrf_add_event ofpred_add_event. case: ifP=>/=.
-  { move /eqP->. by rewrite ofpred_n ?ofrf_n. }
+  rewrite /ica /succ /rf frfn_add_event fpredn_add_event. case: ifP=>/=.
+  { move /eqP->. by rewrite fpredn_n ?frfn_n. }
   by rewrite orbF.
 Qed.
 
@@ -187,7 +187,7 @@ Qed.
 Lemma icf_add_event e1 e2  (_ : e1 != n) (_ : e2 != n) :
   icf es e1 e2 = icf add_event e1 e2.
 Proof.
-  rewrite /icf !ofpred_add_event /=. do ?case: ifP; try slia.
+  rewrite /icf !fpredn_add_event /=. do ?case: ifP; try slia.
   by rewrite /add_lab ?ext_add.
 Qed.
 
@@ -202,9 +202,9 @@ Qed.
 Lemma consist_add_event: consistency add_event.
 Proof.
   rewrite /consistency. apply /forallP=> e1. apply /forallP => e2.
-  apply /implyP=> /eqP. rewrite ofrf_add_event. case: ifP=> [/eqP->/ncf_rf|]//.
+  apply /implyP=> /eqP. rewrite frfn_add_event. case: ifP=> [/eqP->/ncf_rf|]//.
   case: e1 e2=> /= x? [y? /=]. case yEn: (x == n).
-  { move /eqP: yEn=>-> ? /ofrf_le. slia. }
+  { move /eqP: yEn=>-> ? /frfn_le. slia. }
   move=> E. move /rff_consist: consist => /apply cf. apply /negP=> cf'.
   apply /cf. rewrite cf_add_event; slia.
 Qed.
@@ -219,4 +219,4 @@ Definition ltr_add_event es1 al es2 := es2 = add_event es1 al.
 
 Notation "es1 '--' al '-->' es2" := (ltr_add_event es1 al es2) (at level 0).
 
-End TransitionSystem.
+End TransitionSystem.*)

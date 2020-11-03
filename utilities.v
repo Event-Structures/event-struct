@@ -110,7 +110,7 @@ Ltac ssrnatify :=
   repeat progress ssrnatify_op.
 
 (* Preprocessing + lia *)
-Ltac slia := try (move=> * //=); do [ ssrnatify; lia | exfalso; ssrnatify; lia].
+Ltac slia := move=> /=; try (move=> * //=); do [ ssrnatify; lia | exfalso; ssrnatify; lia].
 
 (***** hand made swithes *****)
 
@@ -120,6 +120,11 @@ Notation swap :=
 Notation apply := (
    ltac: (let f := fresh "_top_" in move=> f {}/f)
 ).
+
+Notation double := (
+  ltac: (let f := fresh "_top_" in move=> f; move: (f) (f)=> {f})
+).
+
 
 (****** Hints to deal with dummy bolean goals ******)
 
@@ -137,6 +142,11 @@ Proof. by case: a; case: b; case: c. Qed.
 
 Lemma fifth_true5 a b c d: [|| a, b, c, d | true].
 Proof. apply/orP; right. exact: frth_true4. Qed.
+
+Lemma and5P (b1 b2 b3 b4 b5 : bool) :
+       reflect [/\ b1, b2, b3, b4 & b5] [&& b1, b2, b3, b4 & b5].
+Proof. by apply: (iffP and4P)=> [[->->->/andP[]]|[->->->]]->->. Qed.
+
 
 Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
 
