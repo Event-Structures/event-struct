@@ -64,7 +64,7 @@ Notation frf     := (frf es).
 (* ******************************************************************************** *)
 
 Definition oread (e : nat) : {? e : 'I_N | is_read (ext lab e) } := 
-  oapp insub none (insub_ord N e).
+  obind insub (insub_ord N e).
 
 (* ******************************************************************************** *)
 (*     Predecessor and Successor                                                    *)
