@@ -265,8 +265,6 @@ Qed.
 
 End upgrade.
 
-Tactic Notation "insub_case" := case: insubP=> //=.
-
 Lemma refleqP {a b A B} (rA : reflect A a) (rB : reflect B b) :
   A <-> B -> a = b.
 Proof. case=> *; exact /(sameP rA)/(iffP rB). Qed.
@@ -277,4 +275,8 @@ Proof. split=> [][] x /H ?; by exists x. Qed.
 
 Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
 Proof. by case: a=> // /(_ erefl) ->. Qed.
+
+Lemma all2_in (T : eqType) (s1 s2 : seq T) r x y:
+   all2 r s1 s2 -> x \in s1 -> y \in s2 -> r x y.
+Proof. Admitted.
 

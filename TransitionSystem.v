@@ -19,7 +19,7 @@ Section AddEvent.
 (* execution graph in which we want to add l *)
 Context (es : exec_event_struct).
 
-Notation n      := (n es).
+Notation N      := (N es).
 Notation lab    := (lab es).
 Notation fpred  := (fpred es).
 Notation frf    := (frf es).
@@ -27,8 +27,8 @@ Notation frf    := (frf es).
 Structure add_label :=
   Add {
     lb     : label;
-    opred  : option 'I_n;
-    owrite : is_read lb -> {k : 'I_n | compatible (ext lab k) lb}
+    opred  : 'I_N.+1;
+    owrite : {k : 'I_N.+1 | write_read (ext lab k) lb (+) (k == N :> nat)}
   }.
 
 Variable al : add_label.
@@ -42,54 +42,54 @@ Notation op := (opred al).
 (* if event is `Read` then we should give `Write` from wich we read *)
 Notation ow := (owrite al).
 
-Definition add_lab : 'I_n.+1 -> label := 
-  @add (fun=> label) n lab l.
+Definition add_lab : 'I_N.+1 -> label := 
+  @add (fun=> label) N lab l.
 
-Definition add_fpred : forall m : 'I_n.+1, option 'I_m := 
-  @add (option \o ordinal) n fpred op.
+Definition add_fpred : forall m : 'I_N.+1, 'I_m.+1 := 
+  @add (ordinal \o S) N fpred op.
 
 Arguments add_lab : simpl never.
 
-Lemma is_read_add_lab {r : 'I_n} :
+(*Lemma is_read_add_lab {r : 'I_N} :
   is_read_ext add_lab r -> is_read_ext lab r.
-Proof. rewrite /add_lab ext_add //. case: r=> /= *. slia. Qed.
+Proof. rewrite /add_lab ext_add //. case: r=> /= *. slia. Qed.*)
 
-Lemma add_lab_compatible {w r : nat}
-  (_ : compatible_ext lab w r) : compatible_ext add_lab w r.
-Proof. 
-  rewrite /add_lab rel_ext // => [[]]; 
-  rewrite /rdom /codom /compatible=> [[//]]. by case. 
-Qed.
 
-Lemma is_read_add_lab_n: is_read_ext add_lab n = is_read l.
+Lemma add_lab_write_read {r : 'I_N} {w : 'I_r.+1} :
+  (w == r :> nat) (+) write_read_ext lab w r ->
+  (w == r :> nat) (+) write_read_ext add_lab w r.
+Proof. Admitted.
+(*  move=> /addbP E. apply/addbP. rewrite E /add_lab. rel_ext //. => [[]].
+  rewrite /rdom /codom /write_read=> [[//]]. by case. 
+Qed.*)
+
+(*Lemma is_read_add_lab_n: is_read_ext add_lab n = is_read l.
 Proof. by rewrite /add_lab ext_add_n. Qed.
 
 Lemma is_read_add_lab_n_aux: is_read_ext add_lab n -> is_read l.
 Proof. by rewrite is_read_add_lab_n. Qed.
 
-Lemma compatible_add_lab (r : 'I_n) : 
-  compatible (ext lab r) l -> compatible_ext add_lab r n.
+Lemma write_read_add_lab (r : 'I_n) : 
+  write_read (ext lab r) l -> write_read_ext add_lab r n.
 Proof. 
   rewrite /add_lab /comp2 ext_add ?ext_add_n //. 
   case: r=> /= *. slia.
-Qed.
+Qed.*)
 
-Definition  ow_add_lab (is_r : is_read_ext add_lab n) :
-  {r : 'I_n |compatible_ext add_lab r n} :=
-   let w := ow (is_read_add_lab_n_aux is_r) in
-     @exist _ _ (sval w) (compatible_add_lab _ (sproof w)).
+Definition  ow_add_lab : 
+  {w : 'I_N.+1 |
+  (w == N :> nat) (+) write_read_ext add_lab w N}. Admitted.
+(*   let w := ow (is_read_add_lab_n_aux is_r) in
+     @exist _ _ (sval w) (write_read_add_lab _ (sproof w)).*)
 
 Definition add_frf : forall
-  (r : 'I_n.+1)
-  (is_r : is_read_ext add_lab r),
-  { w : 'I_r | compatible_ext add_lab w r } := 
-  let T (r : nat) := 
-      forall (is_r : is_read_ext add_lab r), 
-        { w : 'I_r | compatible_ext add_lab w r }
+  (r : 'I_n.+1),
+  { w : 'I_r | (w == r :> nat) (+) write_read_ext add_lab w r } := 
+  let T (r : nat) :=  
+        {w : 'I_r.+1 | (w == r :> nat) (+) write_read_ext add_lab w r}
   in
   let frf' (r : 'I_n) : T r := 
-      fun is_r =>
-        let fP (w : 'I_r) := @add_lab_compatible w r in
+        let fP (w : 'I_r) := @add_lab_write_read w r in
         sproof_map fP (frf r (is_read_add_lab is_r))
   in
   add frf' ow_add_lab.

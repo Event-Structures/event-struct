@@ -28,7 +28,7 @@ Definition is_read  l := if l is (Read _ _) then true else false.
 
 Definition is_thdstart l := if l is ThreadStart then true else false.
 
-Definition compatible (w r : label) := 
+Definition write_read (w r : label) := 
   match w, r with
   | (Write x a), (Read y b) => (x == y) && (a == b)
   | _, _                    => false
@@ -36,7 +36,7 @@ Definition compatible (w r : label) :=
 
 Notation is_read_ext f r := (is_read (ext f r)).
 
-Notation compatible_ext f := (relpre (ext f) compatible).
+Notation write_read_ext f := (relpre (ext f) write_read).
 
 (* ******************************************************************************** *)
 (*     Exec Event Structure                                                         *)
@@ -47,7 +47,7 @@ Structure exec_event_struct := Pack {
   lab   : 'I_N -> label;
   fpred : forall m : 'I_N, 'I_m.+1;
   frf   : forall (r : 'I_N), {w : 'I_r.+1 |
-                             (~~ compatible_ext lab w r) ==> (w == r :> nat)}
+                              (w == r :> nat) (+) write_read_ext lab w r}
 }.
 
 Section ExecEventStructure.
@@ -77,7 +77,7 @@ Definition pred e1 e2 := (e1 != e2) && (fpredn e1 == e2).
 Definition succ e1 e2 := (e1 != e2) && (fpredn e2 == e1).
 
 Lemma fpredn_lt e: fpredn e <= e.
-Proof. rewrite /fpredn. insub_case=> ?? <-. by case: (fpred _). Qed.
+Proof. rewrite /fpredn. case: insubP=> //= ?? <-. by case: (fpred _). Qed.
 
 Lemma pred_lt e1 e2 : pred e1 e2 -> e2 < e1.
 Proof. case/andP. move: (fpredn_lt e1). slia. Qed.
@@ -93,7 +93,7 @@ Definition frfn (e : nat) : nat :=
   if insub e is some k then sval (frf k) else e.
 
 Lemma frfn_lt r : frfn r <= r.
-Proof. rewrite /frfn. insub_case=> ?? <-. case: (sval (frf _)). slia. Qed.
+Proof. rewrite /frfn. case: insubP=> //= ?? <-. case: (sval _). slia. Qed.
 
 (* Reads-From relation *)
 Definition rf w r := (w != r) && (frfn r == w).
@@ -113,7 +113,7 @@ Lemma ica_lt e1 e2 : ica e1 e2 -> e1 < e2.
 Proof. by move /orP=> [/succ_lt | /rf_lt]. Qed.
 
 Lemma ica_lt_N e1 e2: ica e1 e2 -> e2 < N.
-Proof. case/orP=>/andP[]; rewrite /fpredn /frfn; insub_case; slia. Qed.
+Proof. case/orP=>/andP[]; rewrite /fpredn /frfn; case: insubP; slia. Qed.
 
 (* Causality relation *)
 Definition ca := rt_cl ica.
@@ -269,7 +269,7 @@ Proof.
   move=> c. suff L: (e < N)%N. 
   { by move /forallP /(_ (ord L)) /negP: consist c. }
   case L: (e < N)=> //. move: c. rewrite /frfn.
-  insub_case=> ? /cfP[?[? /and3P[/ca_rfield/orP[/eqP->|/andP[]//]]]].
+  case: insubP=> //= ? /cfP[?[? /and3P[/ca_rfield/orP[/eqP->|/andP[]//]]]].
   by case/ca_rfield/orP=> [/eqP->|/andP[//]] /andP[/eqP].
 Qed.
 
@@ -312,4 +312,4 @@ Notation "x <=c y" := (@Order.le ev_display _ x y) (at level 10).
 Notation "a # b" := (cf _ a b) (at level 10).
 Notation te_ext := (ext ThreadEnd).
 Notation is_read_ext f r := (is_read (ext f r)).
-Notation compatible_ext f := (relpre (ext f) compatible).
+Notation write_read_ext f := (relpre (ext f) write_read).
