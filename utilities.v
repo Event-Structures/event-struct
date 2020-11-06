@@ -276,7 +276,7 @@ Proof. split=> [][] x /H ?; by exists x. Qed.
 Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
 Proof. by case: a=> // /(_ erefl) ->. Qed.
 
-Lemma all_in (T : eqType) x (s : seq T) p: all p s -> x \in s -> p x.
+Lemma all2_in (T : eqType) (s1 s2 : seq T) r x y:
+   all2 r s1 s2 -> x \in s1 -> y \in s2 -> r x y.
 Proof. Admitted.
-
 
