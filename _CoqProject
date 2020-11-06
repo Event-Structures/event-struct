@@ -7,6 +7,7 @@
 -arg -w -arg -redundant-canonical-projection
 -arg -w -arg -notation-inwrite_read-format
 -arg -w -arg -ssr-search-moved
+-arg -w -arg -notation-incompatible-format
 
 utilities.v
 InhType.v
