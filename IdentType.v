@@ -2,7 +2,8 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype.
 From mathcomp Require Import eqtype fingraph path order tuple path. 
 From event_struct Require Import utilities WfType.
 
-Import Order.TTheory.
+Import WellFounded.
+
 Open Scope order_scope.
 
 Definition new_axiom {T : eqType} (f : seq T -> T) := forall x, f x \notin x.
