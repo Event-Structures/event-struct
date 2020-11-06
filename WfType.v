@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype.
-From mathcomp Require Import eqtype fingraph path order. 
+From mathcomp Require Import eqtype fingraph path order choice. 
 From event_struct Require Import utilities.
 
 Set Implicit Arguments.
@@ -32,8 +32,8 @@ Definition mixin_of T0 (b : Order.POrder.class_of T0) (T := Order.POrder.Pack tt
 Set Primitive Projections.
 
 Record class_of (T : Type) := Class {
-  base  : Order.POrder.class_of T;
-  mixin : mixin_of base;
+  base   : Order.POrder.class_of T;
+  mixin  : mixin_of base;
 }.
 
 Unset Primitive Projections.
@@ -48,20 +48,29 @@ Variables (T : Type) (disp : unit) (cT : type disp).
 
 Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
 
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack disp cT class.
-
 End ClassDef.
 
+Module Exports.
+
+Notation wfType := (type tt).
 Coercion base : class_of >-> Order.POrder.class_of.
+Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
+Canonical eqType.
+Canonical choiceType.
 Canonical porderType.
+
+End Exports.
 
 End WellFounded.
 
-Notation wfType := (WellFounded.type tt).
-
-Import WellFounded.
+Export WellFounded.Exports.
 
 Section WfInduction.
 
@@ -73,6 +82,9 @@ Proof. by case: T=> ? []. Qed.
 Lemma wf_ind (P : T -> Type) :
   (forall n, (forall m, m < n -> P m) -> P n) ->
   forall n, P n.
-Proof. move=> accP M. by elim: (wf M) => ?? /accP. Qed.
+Proof.
+  move=> accP M.
+  by elim: (wf M) => ?? /accP. 
+Qed.
 
 End  WfInduction.

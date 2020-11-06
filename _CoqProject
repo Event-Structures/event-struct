@@ -8,6 +8,7 @@
 -arg -w -arg -notation-inwrite_read-format
 -arg -w -arg -ssr-search-moved
 -arg -w -arg -notation-incompatible-format
+-arg -w -arg -ambiguous-paths
 
 utilities.v
 InhType.v
