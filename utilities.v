@@ -1,6 +1,6 @@
-From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
+From Coq Require Import Lia.
 
 
 (* TODO: use `valP` from `subType` instead *)
@@ -276,7 +276,4 @@ Proof. split=> [][] x /H ?; by exists x. Qed.
 Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
 Proof. by case: a=> // /(_ erefl) ->. Qed.
 
-Lemma all2_in (T : eqType) (s1 s2 : seq T) r x y:
-   all2 r s1 s2 -> x \in s1 -> y \in s2 -> r x y.
-Proof. Admitted.
 
