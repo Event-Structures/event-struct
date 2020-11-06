@@ -89,12 +89,3 @@ Lemma fun_of_cons_tuple
   (rafd : r a fd) x:
   ` (rafd :ft: t) x = if x == fd then a else `t x.
 Proof. rewrite /fun_of /cons_tuple /= eq_sym. by case: ifP. Qed.
-
-
-
-
-
-
-
-
-
