@@ -1,15 +1,16 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype.
-From mathcomp Require Import eqtype fingraph path order tuple path. 
-From event_struct Require Import utilities.
+From mathcomp Require Import eqtype fingraph path order tuple path finmap. 
+From event_struct Require Import utilities InhType.
 
 (* ************************************************************************* *)
 (*     Functional Tuples                                                     *)
 (* ************************************************************************* *)
 
 
-Structure ftuple (n : nat) {T : eqType} (dom : n.-tuple T) (r : rel T) := 
+Structure ftuple {n : nat} {T S : eqType}
+  (dflt : T -> S) (dom : n.-tuple T) (r : S -> T -> bool) := 
   DTuple {
-  codom :> n.-tuple T; 
+  codom :> n.-tuple S; 
   #[canonical(false)] dep : all2 r codom dom
 }.
 (* For example if we take                                                    *)
@@ -22,18 +23,22 @@ Structure ftuple (n : nat) {T : eqType} (dom : n.-tuple T) (r : rel T) :=
 (* `tupeval`, and `x` else (look at `fun_of` and `axiom_fun_of`)             *)
 
 Canonical ftuple_subType 
-  n T dom r
-   := Eval hnf in [subType for (@codom n T dom r)].
+  n T S cont dom r
+   := Eval hnf in [subType for (@codom n T S cont dom r)].
 
 Section ftupleProperties.
 
 Notation "x ':t:' y" := (cons_tuple x y) (at level 0).
 
-Context {n : nat} {T : eqType} {dom : n.-tuple T} {r : rel T}.
-Variable t : ftuple n dom r.
+Context {n : nat} {T S : eqType} {cont : T -> S}
+        {dom : n.-tuple T} {r : S -> T -> bool}.
+Variable t : ftuple cont dom r.
 
 Lemma size_ftuple: size t = size dom.
-Proof. case: t=> /= *. by rewrite !size_tuple. Qed.
+Proof. 
+  case: t=> /= *.
+  by rewrite !size_tuple. 
+Qed.
 
 (* ************************************************************************* *)
 (*     Function of ftuple                                                    *)
@@ -43,20 +48,25 @@ Section FunOfftuple.
 
 (* TODO: make as coercion *)
 (* `fun_of` constructs function corresponding to `t : ftuple n dom r` *)
-Definition fun_of x : T := nth x t (index x dom).
+Definition fun_of x : S := nth (cont x) t (index x dom).
 
-Lemma fun_of_notin x: x \notin dom -> fun_of x = x.
+Lemma fun_of_notin x: x \notin dom -> fun_of x = cont x.
 Proof.
-  rewrite /fun_of=> /memNindex ->. by rewrite nth_default // size_ftuple.
+  rewrite /fun_of=> /memNindex ->.
+  by rewrite nth_default // size_ftuple.
 Qed.
 
 (* for each `x \in dom` for `fun_of` function must holds such axiom *)
 Lemma axiom_fun_of x : x \in dom -> r (fun_of x) x.
 Proof. 
-  rewrite /fun_of=> ?. case: t => tp /=. rewrite all2E=> /andP[E /all_in H].
-  apply /(H (nth x tp (index x dom), x)) /(nthP (x, x)). exists (index x dom).
+  rewrite /fun_of=> ?.
+  case: t => tp /=. 
+  rewrite all2E=> /andP[E /all_in H].
+  apply /(H (nth (cont x) tp (index x dom), x)) /(nthP (cont x, x)).
+  exists (index x dom).
   { by rewrite (eqP (zip_tupleP _ _)) -{2}(size_tuple dom) index_mem. }
-  rewrite nth_zip ?(eqP E) //. exact/congr1/nth_index.
+  rewrite nth_zip ?(eqP E) //.
+  exact/congr1/nth_index.
 Qed.
 
 End FunOfftuple.
@@ -67,7 +77,7 @@ End FunOfftuple.
 
 Section AddingElement.
 
-Context {a  : T}. (* this elemnt we want to add to `tupeval` *)
+Context {a  : S}. (* this elemnt we want to add to `tupeval` *)
 Context {fd : T}. (* fresh element of type T *)
 
 Lemma dep_add : r a fd -> all2 r (a :t: t) (fd :t: dom).
@@ -77,15 +87,20 @@ End AddingElement.
 
 End ftupleProperties.
 
-Canonical cons_ftuple {T : eqType} {n dom ns a} {r : rel T}
-  (rafd : r a ns) (t : @ftuple n T dom r) :=
-  DTuple _ _ _ _ _ (dep_add t rafd).
+Coercion fun_of : ftuple >-> Funclass.
+
+Canonical cons_ftuple {T S : eqType} {n dom ns a} {cont : T -> S} {r : S -> T -> bool}
+  (rafd : r a ns) (t : @ftuple n T S cont dom r) :=
+  DTuple _ _ _ cont _ _ _ (dep_add t rafd).
 
 Notation "pf ':ft:' t" := (cons_ftuple pf t) (at level 20).
-Notation "` t" := (fun_of t) (at level 0).
 
 Lemma fun_of_cons_tuple
-  n (T : eqType) dom (r : rel T) (t : ftuple n dom r) a fd
+  n (T : eqType) cont (dom : n.-tuple T) (r : rel T) (t : ftuple cont dom r) a fd
   (rafd : r a fd) x:
-  ` (rafd :ft: t) x = if x == fd then a else `t x.
+  (rafd :ft: t) x = if x == fd then a else t x.
 Proof. rewrite /fun_of /cons_tuple /= eq_sym. by case: ifP. Qed.
+
+Lemma unzip2_tupleP n T S (t : n.-tuple (T * S)) : size (unzip2 t) == n.
+Proof. by rewrite /unzip2 size_map size_tuple. Qed.
+Canonical unzip2_tuple {n T S} t := Tuple (unzip2_tupleP n T S t).

@@ -2,16 +2,7 @@ From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 From Coq Require Import Lia.
 
-
-(* TODO: use `valP` from `subType` instead *)
-Definition sproof {A : Type} {P : A -> Prop} (e : {x : A | P x}) : P (sval e) := 
-  @proj2_sig A P e.
-
 Notation none := None.
-
-Definition comp2 {A B C : Type} (f : B -> B -> A) (g : C -> B) x y := f (g x) (g y).
-
-Notation "f \o2 g" := (comp2 f g) (at level 50) : fun_scope.
 
 (* ******************************************************************************** *)
 (*     Some atomation with Hints, tacticts and iduction scheme                      *)
@@ -162,49 +153,6 @@ Proof. by apply: (iffP and4P)=> [[->->->/andP[]]|[->->->]]->->. Qed.
 
 Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
 
-(***** well-founded induction for `nat` *****)
-
-Lemma ltn_ind (P : nat -> Type) :
-  (forall n, (forall m, m < n -> P m) -> P n) ->
-  forall n, P n.
-Proof.
-  move=> accP M. have [n leMn] := ubnP M. elim: n => // n IHn in M leMn *.
-  by apply: accP=> m /leq_trans/(_ leMn)/IHn.
-Qed.
-
-(**** useful `case`-variant tactics *****)
-
-(*Ltac ocase := let H := fresh in
-  try match goal with  |- context [if ?a is some _ then _ else _] =>
-    case H: a; move: H => //=
-  end.
-
-Ltac dcase := 
-  match goal with  |- context [if ?a as _ return (_) then _ else _] =>
-    case: {2}a {-1}(@erefl _ a) erefl=> {2 3}->
-  end.*)
-
-(* ******************************************************************************** *)
-(*     helper function to deal with ordinals                                        *)
-(* ******************************************************************************** *)
-
-Notation ord := Ordinal.
-
-Definition advance {n} (m : 'I_n) (k : 'I_m) : 'I_n :=
-  widen_ord (ltnW (ltn_ord m)) k.
-
-Lemma ltS_neq_lt {n N : nat} : n < N.+1 -> N <> n -> n < N.
-Proof. slia. Qed.
-
-Definition dec_ord {n} (m : 'I_n.+1) (neq : n <> m) : 'I_n :=
-  ord (ltS_neq_lt (ltn_ord m) neq).
-
-Lemma dec_ordE {n} (m : 'I_n.+1) (neq : n <> m) : 
-  dec_ord m neq = m :> nat.
-Proof. by case: m neq. Qed.
-
-Arguments advance : simpl never.
-
 (* ******************************************************************************** *)
 (*     properties of doamin and codomain of relation                                *)
 (* ******************************************************************************** *)
@@ -227,44 +175,6 @@ Proof. by right; exists y. Qed.
 
 End DomCodomR.
 
-(* ******************************************************************************** *)
-(*     uprading ordinal function on one element                                     *)
-(* ******************************************************************************** *)
-
-(* TODO: better names? *)
-(* TODO: generalize to `subType` *)
-Definition sproof_map {A : Type} {P Q : A -> Prop} 
-                      (f : forall a : A, P a -> Q a) 
-                      (e : {x | P x}) : 
-           {x | Q x} := 
-  exist Q (sval e) (f (sval e) (sproof e)).
-
-Section upgrade.
-
-Context {T : nat -> Type} {n : nat}  (f : forall m : 'I_n, T m) (x : T n).
-
-Definition add (m : 'I_n.+1) : T m := 
-    match n =P m :> nat with
-    | ReflectT eq  => let 'erefl := eq in x
-    | ReflectF neq => f (dec_ord m neq)
-    end.
-
-Lemma add_ord_max {L : n < n.+1} : add (ord L) = x.
-Proof.
-  rewrite /add; case: eqP=> /=; last by case.
-  move=> pf. by rewrite (eq_irrelevance pf (erefl n)).
-Qed.
-
-Lemma add_lt (m : 'I_n.+1) (ltm : m < n) : add m = f (ord ltm).
-Proof. 
-  rewrite /add. elim: eqP=> [?| neq]; first slia.
-  rewrite /dec_ord.
-  suff->: ltS_neq_lt (ltn_ord m) neq = ltm =>//.
-  exact: eq_irrelevance.
-Qed.
-
-End upgrade.
-
 Lemma refleqP {a b A B} (rA : reflect A a) (rB : reflect B b) :
   A <-> B -> a = b.
 Proof. case=> *; exact /(sameP rA)/(iffP rB). Qed.
@@ -275,5 +185,12 @@ Proof. split=> [][] x /H ?; by exists x. Qed.
 
 Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
 Proof. by case: a=> // /(_ erefl) ->. Qed.
+
+Lemma all_in (T : eqType) (s : seq T) x p: all p s -> x \in s -> p x.
+Proof.
+  elim: s=> //= ?? IHs /andP[? /IHs H]. 
+  by rewrite inE=> /orP[/eqP->|/H].
+Qed.
+
 
 

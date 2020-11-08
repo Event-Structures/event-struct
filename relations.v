@@ -27,3 +27,5 @@ Lemma closureP e1 e2:
 Proof. Admitted.
 
 End well_founded.
+
+Notation closure := (clos_refl_trans_n1).

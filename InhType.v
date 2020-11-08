@@ -6,7 +6,7 @@ Structure inhType : Type := Inhabitant {type :> Type; #[canonical(false)] inh : 
 
 Implicit Type T : inhType.
 
-Section Extension.
+(*Section Extension.
 
 Context {T : inhType}.
 Implicit Types (x : T) (n : nat).
@@ -48,6 +48,6 @@ Proof.
   by move/1$/(dom_rfield _).
 Qed.
  
-End Extension.
+End Extension.*)
 
 

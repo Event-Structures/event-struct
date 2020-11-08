@@ -9,8 +9,6 @@ Unset Printing Implicit Defensive.
 Import Order.LTheory.
 Open Scope order_scope.
 
-Notation ordType := (orderType tt).
-
 Section WfDef.
 
 Context {T : Type} (r : rel T).
