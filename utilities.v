@@ -2,11 +2,6 @@ From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 
-
-(* TODO: use `valP` from `subType` instead *)
-Definition sproof {A : Type} {P : A -> Prop} (e : {x : A | P x}) : P (sval e) := 
-  @proj2_sig A P e.
-
 Notation none := None.
 
 Definition comp2 {A B C : Type} (f : B -> B -> A) (g : C -> B) x y := f (g x) (g y).
@@ -215,7 +210,7 @@ Definition sproof_map {A : Type} {P Q : A -> Prop}
                       (f : forall a : A, P a -> Q a) 
                       (e : {x | P x}) : 
            {x | Q x} := 
-  exist Q (sval e) (f (sval e) (sproof e)).
+  exist Q (sval e) (f (sval e) (svalP e)).
 
 Section upgrade.
 

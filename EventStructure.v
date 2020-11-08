@@ -98,7 +98,7 @@ Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
 (* ******************************************************************************** *)
 
 Definition ofrf (e : nat) : option nat := 
-  omap (fun r => (nat_of_ord (sval (frf _ (sproof r))))) (oread e).
+  omap (fun r => (nat_of_ord (sval (frf _ (svalP r))))) (oread e).
 
 Lemma ofrf_n m (_ : m >= n) : ofrf m = none.
 Proof. rewrite /ofrf /oread. insub_case. slia. Qed.
