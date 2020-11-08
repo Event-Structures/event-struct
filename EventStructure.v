@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order choice.
 From mathcomp Require Import eqtype fingraph path.
-From event_struct Require Import utilities relations InhType.
+From event_struct Require Import utilities relations inhtype.
 Definition var := nat.
 
 Inductive label {Rval Wval : Type} :=

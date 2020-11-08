@@ -15,11 +15,12 @@ Structure ftuple (n : nat) {T : eqType} (dom : n.-tuple T) (r : rel T) :=
 (* For example if we take                                                    *)
 (* dom := 0,...,n                                                            *)
 (* r := <=                                                                   *)
-(* then `ftuple` n dom r will be a tuple with each element not bigger than   *)
+(* then `ftuple n dom` r will be a tuple with each element not bigger than   *)
 (* number of it position (such ftuple can code fpred funtion)                *)
 (* In general `ftuple n dom r` corresponds to the function wich takes        *)
 (* `x : T` and if `x \in dom` it returns element with the same index in      *)
 (* `tupeval`, and `x` else (look at `fun_of` and `axiom_fun_of`)             *)
+(* Note: this version models only endofunctions                              *)
 
 Canonical ftuple_subType 
   n T dom r
@@ -50,7 +51,6 @@ Proof.
   rewrite /fun_of=> /memNindex ->. by rewrite nth_default // size_ftuple.
 Qed.
 
-(* for each `x \in dom` for `fun_of` function must holds such axiom *)
 Lemma axiom_fun_of x : x \in dom -> r (fun_of x) x.
 Proof. 
   rewrite /fun_of=> ?. case: t => tp /=. rewrite all2E=> /andP[E /all_in H].
@@ -67,8 +67,10 @@ End FunOfftuple.
 
 Section AddingElement.
 
-Context {a  : T}. (* this elemnt we want to add to `tupeval` *)
-Context {fd : T}. (* fresh element of type T *)
+(* the elemnt we want to add to `tupeval` *)
+Context {a  : T}.
+(* fresh element of type T *)
+Context {fd : T}. 
 
 Lemma dep_add : r a fd -> all2 r (a :t: t) (fd :t: dom).
 Proof. move=>/=->. by rewrite dep. Qed.
@@ -82,10 +84,14 @@ Canonical cons_ftuple {T : eqType} {n dom ns a} {r : rel T}
   DTuple _ _ _ _ _ (dep_add t rafd).
 
 Notation "pf ':ft:' t" := (cons_ftuple pf t) (at level 20).
-Notation "` t" := (fun_of t) (at level 0).
+
+Coercion fun_of: ftuple >-> Funclass.
 
 Lemma fun_of_cons_tuple
   n (T : eqType) dom (r : rel T) (t : ftuple n dom r) a fd
   (rafd : r a fd) x:
-  ` (rafd :ft: t) x = if x == fd then a else `t x.
-Proof. rewrite /fun_of /cons_tuple /= eq_sym. by case: ifP. Qed.
+  (rafd :ft: t) x = if x == fd then a else t x.
+Proof. 
+  rewrite /fun_of /cons_tuple /= eq_sym.
+  by case: ifP. 
+Qed.

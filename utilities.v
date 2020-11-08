@@ -276,4 +276,11 @@ Proof. split=> [][] x /H ?; by exists x. Qed.
 Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
 Proof. by case: a=> // /(_ erefl) ->. Qed.
 
+Lemma all_in {T : eqType} (s : seq T) p x: all p s -> x \in s -> p x.
+Proof.
+  elim: s=> //= ?? IHs /andP[? /swap].
+  by rewrite inE=> /orP[/eqP->|/swap /IHs /apply].
+Qed.
+
+
 
