@@ -170,3 +170,33 @@ Proof.
   { by rewrite last_rcons. }
   rewrite rcons_path -E. by apply/andP.
 Qed.
+
+Notation "'[' 'dup' ']'" := (ltac:(move;
+   lazymatch goal with
+   | |- forall (x : _), _ =>
+     let x := fresh x in move=> x;
+     let copy := fresh x in have copy := x; move: copy x
+   | |- let x := _ in _ =>
+     let x := fresh x in move=> x;
+     let copy := fresh x in pose copy := x;
+     do [unfold x in (value of copy)]; move: @copy @x
+   | |- _ =>
+     let x := fresh "_top_" in move=> x;
+     let copy := fresh "_top" in have copy := x; move: copy x
+   end))
+   (at level 0, only parsing) : ssripat_scope.
+
+Section NthSpec.
+Variables (T : eqType) (x0 : T) (s : seq T) (n : nat).
+
+Variant nth_spec : T -> bool -> bool -> Type :=
+| NthIn of nth x0 s n \in s & n < size s : nth_spec (nth x0 s n) true false
+| NthOut of size s <= n : nth_spec x0 false true.
+
+Lemma nth_sizeP : nth_spec (nth x0 s n) (n < size s) (size s <= n).
+Proof.
+case: (ltnP n (size s)).
+- by move=> /[dup]/(mem_nth x0) *; constructor.
+by move=> /[dup] /(nth_default x0)-> *; constructor.
+Qed.
+End NthSpec.
