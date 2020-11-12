@@ -13,8 +13,8 @@
 utilities.v
 inhtype.v
 wftype.v
-rffun.v
+rfsfun.v
 identtype.v
 relations.v
 eventstructure.v
-TransitionSystem.v
+transitionsystem.v

@@ -2,11 +2,14 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
 From event_struct Require Import utilities eventstructure relations identtype.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+
 (*Section TransitionSystem.
 
 Context {val : eqType}.
 
-Notation exec_event_struct := (@exec_event_struct val).
+Notation exec_event_struct := (exec_event_struct).
 Notation cexec_event_struct := (@cexec_event_struct val).
 
 Notation label := (@label val val).

@@ -1,9 +1,12 @@
 From mathcomp Require Import ssreflect ssrnat ssrfun ssrbool seq fintype order.
 From mathcomp Require Import eqtype fingraph path tuple finmap finfun choice.
-From event_struct Require Import utilities relations rffun wftype.
+From event_struct Require Import utilities relations rfsfun wftype.
 
 Import Order.LTheory.
 Open Scope order_scope.
+
+Set Implicit Arguments.
+Unset Strict Implicit.
 
 Definition var := nat.
 
@@ -60,9 +63,9 @@ Notation "w << r" := (write_read_from w r) (at level 0).
 
 Structure exec_event_struct (E : wfType) := Pack {
   domain : {fset E};
-  lab    : rffun (fun=> ThreadEnd) domain (fun _ _ => true);
-  ffpred : rffun id domain (>=%O : rel E);
-  ffrf   : rffun id domain 
+  lab    : rfsfun (fun=> ThreadEnd) domain (fun _ _ => true);
+  ffpred : rfsfun id domain (>=%O : rel E);
+  ffrf   : rfsfun id domain 
            [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))]
 }.
 
@@ -70,17 +73,14 @@ Section ExecEventStructure.
 
 Context {E} (es : (exec_event_struct E)).
 
-Notation domain := (domain E es).
-Notation lab     := (lab E es).
-Notation ffpred   := (ffpred E es).
-Notation ffrf     := (ffrf E es).
+Notation domain := (domain es).
+Notation lab     := (lab es).
+Notation ffpred   := (ffpred es).
+Notation ffrf     := (ffrf es).
 
 (* ************************************************************************* *)
 (*     Event Types                                                           *)
 (* ************************************************************************* *)
-
-(*Definition oread (e : nat) : {? e : 'I_N | is_read (ext lab e) } := 
-  obind insub (insub e).*)
 
 (* ************************************************************************* *)
 (*     Predecessor and Successor                                             *)
@@ -94,13 +94,13 @@ Definition succ e1 e2 := (e1 != e2) && (fpred e2 == e1).
 
 Lemma fpred_lt e: fpred e <= e.
 Proof. 
-  case I: (e \in domain); first exact: (axiom_fun_of ffpred _ I).
-  by rewrite /fpred (fun_of_notin _ _ (negbT I)).
+  case I: (e \in domain); first exact (axiom_rfsfun ffpred I).
+  by rewrite /fpred (memNdom _ (negbT I)).
 Qed.
 
 Lemma frpred_domain e: (e \in domain) = false ->
   fpred e = e.
-Proof. by move/negbT/(fun_of_notin ffpred). Qed.
+Proof. by move/negbT/(memNdom ffpred). Qed.
 
 
 Lemma pred_lt e1 e2 : pred e1 e2 -> e2 < e1.
@@ -123,8 +123,8 @@ Definition frf : E -> E := ffrf.
 
 Lemma frf_lt r : frf r <= r.
 Proof.
-  case I: (r \in domain); first by case/andP: (axiom_fun_of ffrf _ I).
-  by rewrite /frf (fun_of_notin _ _ (negbT I)).
+  case I: (r \in domain); first by case/andP: (axiom_rfsfun ffrf I).
+  by rewrite /frf (memNdom _ (negbT I)).
 Qed.
 
 (* Reads-From relation *)
@@ -138,7 +138,7 @@ Qed.
 
 Lemma frf_domain e: (e \in domain) = false ->
   frf e = e.
-Proof. by move/negbT/(fun_of_notin ffrf). Qed.
+Proof. by move/negbT/(memNdom ffrf). Qed.
 
 (* ************************************************************************* *)
 (*     Causality                                                             *)
@@ -294,7 +294,7 @@ Qed.
 Notation cf_step e1 e2 := 
   [|| icf e1 e2,
   (ffpred e1) # e2,  e1 # (fpred e2),
-  (ffrf   e1) # e2 | e1 # (ffrf   e2)].
+  (ffrf   e1) # e2 | e1 # (ffrf  e2)].
 
 Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
 Proof.
@@ -347,7 +347,7 @@ Proof.
   { apply/(IHn z)=> //.
     apply/cfP; exists x, y; exact/and3P. }
   move: R C=> /andP[? /eqP<-] ? /ca_trans /(_ ca_fpredn) ? /icf_symm ?. 
-  apply/(rff_consist m)/cfP. 
+  apply/(@rff_consist m)/cfP. 
   exists y, x; exact/and3P.
 Qed.
 
