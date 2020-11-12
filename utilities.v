@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
-From mathcomp Require Import seq path fingraph fintype.
+From mathcomp Require Import seq path fingraph fintype choice finmap.
 From Coq Require Import Lia.
 
 Notation none := None.
@@ -112,7 +112,7 @@ Notation apply := (
    ltac: (let f := fresh "_top_" in move=> f {}/f)
 ).
 
-Notation double := (
+Notation dup := (
   ltac: (let f := fresh "_top_" in move=> f; move: (f) (f)=> {f})
 ).
 
@@ -186,11 +186,6 @@ Proof. split=> [][] x /H ?; by exists x. Qed.
 Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
 Proof. by case: a=> // /(_ erefl) ->. Qed.
 
-Lemma all_in (T : eqType) (s : seq T) x p: all p s -> x \in s -> p x.
-Proof.
-  elim: s=> //= ?? IHs /andP[? /IHs H]. 
-  by rewrite inE=> /orP[/eqP->|/H].
-Qed.
 
 
 

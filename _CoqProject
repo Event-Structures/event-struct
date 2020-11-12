@@ -11,10 +11,10 @@
 -arg -w -arg -ambiguous-paths
 
 utilities.v
-InhType.v
-WfType.v
-Ftuple.v
-IdentType.v
+inhtype.v
+wftype.v
+rffun.v
+identtype.v
 relations.v
-EventStructure.v
+eventstructure.v
 TransitionSystem.v

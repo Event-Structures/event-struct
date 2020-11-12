@@ -17,7 +17,7 @@ Definition ext {n} (f : 'I_n -> T) (k : nat) : T := oapp f inh (insub k).
 Lemma ext_add {x n} {f : 'I_n -> T} r : r != n ->
   ext (add f x) r = ext f r.
 Proof.
-  rewrite /ext. do ?case: insubP; try slia. move=> ?? <- [/= ??? /double ?<-?].
+  rewrite /ext. do ?case: insubP; try slia. move=> ?? <- [/= ??? /dup ?<-?].
   rewrite add_lt //=; try slia. move=> ?/=. exact /congr1 /ord_inj.
 Qed.
 
