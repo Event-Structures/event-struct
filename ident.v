@@ -83,7 +83,7 @@ End IdentTheory.
 Section Nfresh.
 Context {T : identType}.
 
-Definition nfresh (n : nat) := traject fresh (ident0 : T) n.
+Definition nfresh (n : nat) : seq T := traject fresh (ident0 : T) n.
 
 Lemma size_nfresh n : size (nfresh n) = n.
 Proof. by rewrite /nfresh size_traject. Qed.
