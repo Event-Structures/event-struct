@@ -1,10 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
-<<<<<<< regmachine
 From event_struct Require Import utilities EventStructure relations.
-=======
-From event_struct Require Import utilities EventStructure relations InhType.
->>>>>>> master
 
 Section TransitionSystem.
 
@@ -13,11 +9,7 @@ Context {val : eqType}.
 Notation exec_event_struct := (@exec_event_struct val).
 Notation cexec_event_struct := (@cexec_event_struct val).
 
-<<<<<<< regmachine
 Local Notation label := (label val val).
-=======
-Notation label := (@label val val).
->>>>>>> master
 
 Implicit Types (x : loc) (a : val) (es : exec_event_struct) (l : label).
 
