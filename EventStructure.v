@@ -31,22 +31,12 @@ Context {val : eqType}.
 (*     Label                                                                        *)
 (* ******************************************************************************** *)
 
-<<<<<<< regmachine
 Local Notation label := (label val val).
 Implicit Type l : label.
 
 Definition is_read  l := if l is (Read _ _) then true else false.
 
 Definition is_thrdstart l := if l is ThreadStart then true else false.
-=======
-Local Notation label := (@label val val).
-
-Implicit Type (l : label).
-
-Definition is_read  l := if l is (Read _ _) then true else false.
-
-Definition is_thdstart l := if l is ThreadStart then true else false.
->>>>>>> master
 
 Definition compatible (w r : label) := 
   match w, r with
