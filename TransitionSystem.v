@@ -1,6 +1,10 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
+<<<<<<< regmachine
 From event_struct Require Import utilities EventStructure relations.
+=======
+From event_struct Require Import utilities EventStructure relations InhType.
+>>>>>>> master
 
 Section TransitionSystem.
 
@@ -9,7 +13,11 @@ Context {val : eqType}.
 Notation exec_event_struct := (@exec_event_struct val).
 Notation cexec_event_struct := (@cexec_event_struct val).
 
+<<<<<<< regmachine
 Local Notation label := (label val val).
+=======
+Notation label := (@label val val).
+>>>>>>> master
 
 Implicit Types (x : loc) (a : val) (es : exec_event_struct) (l : label).
 
@@ -28,7 +36,7 @@ Structure add_label :=
   Add {
     lb     : label;
     opred  : option 'I_n;
-    owrite : is_read lb -> {k : 'I_n | compatible (te_ext lab k) lb}
+    owrite : is_read lb -> {k : 'I_n | compatible (ext lab k) lb}
   }.
 
 Variable al : add_label.
@@ -68,7 +76,7 @@ Lemma is_read_add_lab_n_aux: is_read_ext add_lab n -> is_read l.
 Proof. by rewrite is_read_add_lab_n. Qed.
 
 Lemma compatible_add_lab (r : 'I_n) : 
-  compatible (te_ext lab r) l -> compatible_ext add_lab r n.
+  compatible (ext lab r) l -> compatible_ext add_lab r n.
 Proof. 
   rewrite /add_lab /comp2 ext_add ?ext_add_n //. 
   case: r=> /= *. slia.
@@ -77,7 +85,7 @@ Qed.
 Definition  ow_add_lab (is_r : is_read_ext add_lab n) :
   {r : 'I_n |compatible_ext add_lab r n} :=
    let w := ow (is_read_add_lab_n_aux is_r) in
-     @exist _ _ (sval w) (compatible_add_lab _ (sproof w)).
+     @exist _ _ (sval w) (compatible_add_lab _ (svalP w)).
 
 Definition add_frf : forall
   (r : 'I_n.+1)

@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order choice.
 From mathcomp Require Import eqtype fingraph path.
-From event_struct Require Import utilities relations.
+From event_struct Require Import utilities relations InhType.
 
 Definition loc := nat.
 
@@ -15,6 +15,15 @@ Arguments Write {_ _}.
 Arguments ThreadStart {_ _}.
 Arguments ThreadEnd {_ _}.
 
+Inductive label {Rval Wval : Type} :=
+| Read of var & Rval
+| Write of var & Wval
+| ThreadStart
+| ThreadEnd.
+
+Canonical inhlabel (Rval Wval : Type) := 
+  Inhabitant (@label Rval Wval) ThreadEnd.
+
 Section PrimeEventStructure.
 
 Context {val : eqType}.
@@ -22,12 +31,22 @@ Context {val : eqType}.
 (*     Label                                                                        *)
 (* ******************************************************************************** *)
 
+<<<<<<< regmachine
 Local Notation label := (label val val).
 Implicit Type l : label.
 
 Definition is_read  l := if l is (Read _ _) then true else false.
 
 Definition is_thrdstart l := if l is ThreadStart then true else false.
+=======
+Local Notation label := (@label val val).
+
+Implicit Type (l : label).
+
+Definition is_read  l := if l is (Read _ _) then true else false.
+
+Definition is_thdstart l := if l is ThreadStart then true else false.
+>>>>>>> master
 
 Definition compatible (w r : label) := 
   match w, r with
@@ -35,11 +54,9 @@ Definition compatible (w r : label) :=
   | _, _                 => false
   end.
 
-Notation te_ext := (ext ThreadEnd).
+Notation is_read_ext f r := (is_read (ext f r)).
 
-Notation is_read_ext f r := (is_read (te_ext f r)).
-
-Notation compatible_ext f := (compatible \o2 (te_ext f)).
+Notation compatible_ext f := (compatible \o2 (ext f)).
 
 (* ******************************************************************************** *)
 (*     Exec Event Structure                                                         *)
@@ -66,7 +83,7 @@ Notation frf     := (frf es).
 (*     Event Types                                                                  *)
 (* ******************************************************************************** *)
 
-Definition oread (e : nat) : {? e : 'I_n | is_read (te_ext lab e) } := 
+Definition oread (e : nat) : {? e : 'I_n | is_read (ext lab e) } := 
   oapp insub none (insub_ord n e).
 
 (* ******************************************************************************** *)
@@ -100,7 +117,7 @@ Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
 (* ******************************************************************************** *)
 
 Definition ofrf (e : nat) : option nat := 
-  omap (fun r => (nat_of_ord (sval (frf _ (sproof r))))) (oread e).
+  omap (fun r => (nat_of_ord (sval (frf _ (svalP r))))) (oread e).
 
 Lemma ofrf_n m (_ : m >= n) : ofrf m = none.
 Proof. rewrite /ofrf /oread. insub_case. slia. Qed.
@@ -198,8 +215,8 @@ Import Order.NatOrder.
 Definition icf (e1 e2 : nat) :=
   [&& (e1 != e2),
       ofpred e1 == ofpred e2,
-      ~~ is_thrdstart (te_ext lab e1) &
-      ~~ is_thrdstart (te_ext lab e2)].
+      ~~ is_thdstart (ext lab e1) &
+      ~~ is_thdstart (ext lab e2)].
 
 Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
 Proof. move/and3P=>[??/andP[*]]. apply/and4P; split; by rewrite 1?eq_sym. Qed.
@@ -320,5 +337,5 @@ End PrimeEventStructure.
 Notation "x <=c y" := (@Order.le ev_display _ x y) (at level 10).
 Notation "a # b" := (cf _ a b) (at level 10).
 Notation te_ext := (ext ThreadEnd).
-Notation is_read_ext f r := (is_read (te_ext f r)).
-Notation compatible_ext f := (compatible \o2 (te_ext f)).
+Notation is_read_ext f r := (is_read (ext f r)).
+Notation compatible_ext f := (compatible \o2 (ext f)).
