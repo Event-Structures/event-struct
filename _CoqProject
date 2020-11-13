@@ -12,4 +12,4 @@ InhType.v
 relations.v
 EventStructure.v
 TransitionSystem.v
-identtype.v
+ident.v
