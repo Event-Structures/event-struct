@@ -1,6 +1,10 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
-From event_struct Require Import utilities EventStructure relations InhType.
+From event_struct Require Import utilities eventstructure relations inhtype.
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
 Section TransitionSystem.
 
@@ -11,7 +15,7 @@ Notation cexec_event_struct := (@cexec_event_struct val).
 
 Notation label := (@label val val).
 
-Implicit Types (x : var) (a : val) (es : exec_event_struct).
+Implicit Types (x : loc) (a : val) (es : exec_event_struct).
 
 (* Section with definitions for execution graph with added event *)
 Section AddEvent.
@@ -19,10 +23,10 @@ Section AddEvent.
 (* execution graph in which we want to add l *)
 Context (es : exec_event_struct).
 
-Notation n      := (n es).
-Notation lab    := (lab es).
-Notation fpred  := (fpred es).
-Notation frf    := (frf es).
+Notation n      := (@n val es).
+Notation lab    := (@lab val es).
+Notation fpred  := (@fpred val es).
+Notation frf    := (@frf val es).
 
 Structure add_label :=
   Add {
@@ -37,10 +41,10 @@ Variable al : add_label.
 Notation l := (lb al).
 
 (* predecessor of the new event (if it exists) *)
-Notation op := (opred al).
+Notation op := (@opred al).
 
 (* if event is `Read` then we should give `Write` from wich we read *)
-Notation ow := (owrite al).
+Notation ow := (@owrite al).
 
 Definition add_lab : 'I_n.+1 -> label := 
   @add (fun=> label) n lab l.
@@ -77,7 +81,7 @@ Qed.
 Definition  ow_add_lab (is_r : is_read_ext add_lab n) :
   {r : 'I_n |compatible_ext add_lab r n} :=
    let w := ow (is_read_add_lab_n_aux is_r) in
-     @exist _ _ (sval w) (compatible_add_lab _ (svalP w)).
+     @exist _ _ (sval w) (compatible_add_lab (svalP w)).
 
 Definition add_frf : forall
   (r : 'I_n.+1)
@@ -90,18 +94,18 @@ Definition add_frf : forall
   let frf' (r : 'I_n) : T r := 
       fun is_r =>
         let fP (w : 'I_r) := @add_lab_compatible w r in
-        sproof_map fP (frf r (is_read_add_lab is_r))
+        sproof_map fP (frf (is_read_add_lab is_r))
   in
   add frf' ow_add_lab.
 
 Lemma sval_add_frf (e1 : 'I_n.+1) (e2 : 'I_n) p p' : e1 = e2 :> nat ->
-  sval (add_frf e1 p) = sval (frf e2 p') :> nat.
+  sval (@add_frf e1 p) = sval (@frf e2 p') :> nat.
 Proof.
   case: e1 e2 p p'=> ? L1 [? L2 /= P1 P2] E. case: _ / E P1 P2 L1 L2 => *.
   rewrite /add_frf add_lt /=. do ?apply /congr1. exact: eq_irrelevance.
 Qed.
 
-Definition add_event := Pack n.+1 add_lab add_fpred add_frf.
+Definition add_event := Pack add_fpred add_frf.
 
 Lemma ofpred_add_event e : ofpred add_event e =
   if e == n then omap (@nat_of_ord n) op else ofpred es e.
@@ -211,11 +215,11 @@ Qed.
 
 End AddEvent.
 
-Definition tr_add_event es1 es2 := exists al, es2 = add_event es1 al.
+Definition tr_add_event es1 es2 := exists al, es2 = @add_event es1 al.
 
 Notation "es1 '-->' es2" := (tr_add_event es1 es2) (at level 0).
 
-Definition ltr_add_event es1 al es2 := es2 = add_event es1 al.
+Definition ltr_add_event es1 al es2 := es2 = @add_event es1 al.
 
 Notation "es1 '--' al '-->' es2" := (ltr_add_event es1 al es2) (at level 0).
 

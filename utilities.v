@@ -238,51 +238,6 @@ Qed.
 
 End upgrade.
 
-(*Section default_value.
-
-Context {T : Type} (dv : T).
-(* T = label (val : eqType)  *)
-
-Definition ext {n} (f : 'I_n -> T) : nat -> T :=
-  fun k =>
-  (if k < n as x return (k < n = x -> _) then
-    fun pf => f (ord pf)
-  else fun=> dv) erefl.
-
-
-Lemma ext_add {x n} {f : 'I_n -> T} r (_ : r != n) :
-  ext (add f x) r = ext f r.
-Proof.
-  rewrite /ext. dcase=> ?; dcase=> //; try slia.
-  move => L. rewrite add_lt. exact /congr1 /ord_inj.
-Qed.
-
-Lemma ext_add_n  {x n} {f : 'I_n -> T} :
-  ext (add f x) n = x.
-Proof. rewrite /ext. dcase=> *; try slia. by rewrite add_ord_max. Qed.
-
-Lemma pred_ext {n} (f : 'I_n -> T) (p : pred T) (r : 'I_n) :
- p (ext f r) = p (f r).
-Proof.
-  case: r=> /= *. rewrite /ext. dcase=> [?|]; try slia.
-  exact /congr1 /congr1 /ord_inj.
-Qed.
-
-
-Lemma rel_ext {n x} (f : 'I_n -> T) (r : rel T) (a b : nat)
-  (dv_not_in_r : ~ (rfield r dv)) :
-  (r \o2 ext f) a b -> (r \o2 ext (add f x)) a b.
-Proof.
-  rewrite /comp2. case L: (a < n).
-  { rewrite ext_add //; try slia.
-    case L': (b < n). 
-    { rewrite ext_add //. slia. }
-    rewrite {2}/ext. dcase=> [? _|_]; (try slia). by move /(codom_rfield r). }
-  rewrite {1}/ext. dcase=> [? _|_]; try slia. by move /(dom_rfield r).
-Qed.
-
-End default_value.*)
-
 Definition insub_ord (n k : nat) : option 'I_n := 
   (if k < n as L return (k < n = L -> _) then
    fun pf => some (ord pf)

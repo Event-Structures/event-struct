@@ -1,17 +1,40 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order choice.
 From mathcomp Require Import eqtype fingraph path.
-From event_struct Require Import utilities relations InhType.
+From event_struct Require Import utilities relations inhtype.
 
-Definition var := nat.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
-Inductive label {Rval Wval : Type} :=
-| Read of var & Rval
-| Write of var & Wval
+Definition loc := nat.
+
+Inductive label (Rval Wval : Type) :=
+| Read of loc & Rval
+| Write of loc & Wval
 | ThreadStart
 | ThreadEnd.
 
-Canonical inhlabel (Rval Wval : Type) := 
-  Inhabitant (@label Rval Wval) ThreadEnd.
+Definition eq_label {Rval Wval : eqType} (l l' : @label Rval Wval) := 
+  match l, l' with
+  | Read a x,  Read b y  | Write a x,   Write b y   => [&& a == b & x == y]
+  | ThreadEnd, ThreadEnd | ThreadStart, ThreadStart => true
+  | _, _                                           => false
+  end.
+
+Lemma eqlabelP (Rval Wval : eqType) : Equality.axiom (@eq_label Rval Wval).
+Proof. 
+  case=> [v x [] * /=|v x []* /=|[]|[]]; try constructor=>//;
+  by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
+Qed.
+
+Canonical label_eqMixin (Rval Wval : eqType) := EqMixin (@eqlabelP Rval Wval).
+Canonical label_eqType (Rval Wval : eqType) :=
+  Eval hnf in EqType (label Rval Wval) (@label_eqMixin Rval Wval).
+
+Canonical label_inhMixin (Rval Wval : eqType) := 
+  @Inhabitant.Mixin _ _ (@ThreadEnd Rval Wval).
+Canonical label_identType {Rval Wval : eqType} :=
+  Eval hnf in Inhabitant (label Rval Wval) (label_inhMixin Rval Wval).
 
 Section PrimeEventStructure.
 
@@ -55,10 +78,10 @@ Section ExecEventStructure.
 
 Variables (es : exec_event_struct).
 
-Notation n       := (n es).
-Notation lab     := (lab es).
-Notation fpred   := (fpred es).
-Notation frf     := (frf es).
+Notation n       := (@n es).
+Notation lab     := (@lab es).
+Notation fpred   := (@fpred es).
+Notation frf     := (@frf es).
 
 (* ******************************************************************************** *)
 (*     Event Types                                                                  *)
@@ -98,7 +121,7 @@ Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
 (* ******************************************************************************** *)
 
 Definition ofrf (e : nat) : option nat := 
-  omap (fun r => (nat_of_ord (sval (frf _ (svalP r))))) (oread e).
+  omap (fun r => (nat_of_ord (sval (frf (svalP r))))) (oread e).
 
 Lemma ofrf_n m (_ : m >= n) : ofrf m = none.
 Proof. rewrite /ofrf /oread. insub_case. slia. Qed.
@@ -106,7 +129,7 @@ Proof. rewrite /ofrf /oread. insub_case. slia. Qed.
 Lemma ofrf_le r w : ofrf r = some w -> w < r.
 Proof.
   rewrite /ofrf /oread. insub_case=> L. case H: (is_read_ext lab (ord L)).
-  { rewrite insubT /= => [[<-]]. by case: (sval (frf (ord L) H)). }
+  { rewrite insubT /= => [[<-]]. by case: (sval (frf H)). }
   by rewrite insubF.
 Qed.
 
