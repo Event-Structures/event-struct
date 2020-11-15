@@ -16,9 +16,11 @@ Inductive label (Rval Wval : Type) :=
 
 Definition eq_label {Rval Wval : eqType} (l l' : @label Rval Wval) := 
   match l, l' with
-  | Read a x,  Read b y  | Write a x,   Write b y   => [&& a == b & x == y]
-  | ThreadEnd, ThreadEnd | ThreadStart, ThreadStart => true
-  | _, _                                           => false
+  | Read a x,  Read b y      => [&& a == b & x == y]
+  | Write a x,   Write b y   => [&& a == b & x == y]
+  | ThreadEnd, ThreadEnd     => true
+  | ThreadStart, ThreadStart => true
+  | _, _                     => false
   end.
 
 Lemma eqlabelP (Rval Wval : eqType) : Equality.axiom (@eq_label Rval Wval).
