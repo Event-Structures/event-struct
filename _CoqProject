@@ -8,5 +8,6 @@
 
 utilities.v
 relations.v
+wftype.v
 EventStructure.v
 TransitionSystem.v

@@ -1,156 +1,124 @@
-From Coq Require Import Lia.
-From mathcomp Require Import ssreflect ssrbool eqtype ssrnat ssrfun fintype seq.
 From Equations Require Import Equations.
+From Coq Require Import Lia.
+From mathcomp Require Import ssreflect ssrbool eqtype ssrnat ssrfun fintype seq order.
 From Coq Require Import Relations Program.Basics.
-From event_struct Require Import utilities.
+From event_struct Require Import utilities wftype.
 
 Set Implicit Arguments.
 (*Unset Strict Implicit.*)
 Unset Printing Implicit Defensive.
 Set Equations Transparent.
 
+Import Order.LTheory.
+Open Scope order_scope.
+
 Section well_founded.
 
-Definition rel_of_fun (f : nat -> seq nat) : rel nat := 
-  [rel a b | a \in [seq x <- f b | x != b]].
+Context {T : wfType}.
 
-Variable (f : nat ->  seq nat).
-Hypothesis descend : forall a b, a \in (f b) -> a <= b.
+Definition rel_of_fun (f : T -> seq T) : rel T :=
+  [rel a b | a \in f b]. (*[seq x <- f b | x != b]].*)
 
-Lemma zero_in x : x \in f 0 -> x = 0.
+Variable (f : T -> seq T).
+
+Hypothesis descend : forall x n, x \in f n -> x < n.
+
+(*Lemma filter_lt n k : k \in [seq x <- f n | x != n] -> k < n.
 Proof.
-  move=> xf0. move: (descend _ _ xf0). by case: x xf0.
-Qed.
-
-Lemma zero_filter_empty: [seq x <- f 0 | x != 0] = [::].
-Proof.
-  case H: [seq x <- f 0 | x != 0]=> [| x s] //=.
-  have: x = 0.
-  { apply: zero_in.
-    have: x \in [seq x <- f 0 | x != 0].
-    { rewrite H. exact: mem_head. }
-    rewrite mem_filter=> /andP []. done. }
-  move=> x0. rewrite x0 in H.
-  have: 0 != 0.
-  { move: (mem_head 0 s). rewrite -H mem_filter. done. }
-  done.
-Qed.
-
-Lemma filter_lt n k : k \in [seq x <- f n | x != n] -> k < n.
-Proof.
-  rewrite mem_filter=> /andP [] kn /descend. slia.
-Qed.
+  by rewrite mem_filter lt_neqAle => /andP [] -> /p ->.
+Qed.*)
 
 Lemma rel_sublt a b : (rel_of_fun f) a b -> a < b.
 Proof.
-  rewrite/rel_of_fun /=. exact: filter_lt.
+  rewrite/rel_of_fun /=. exact: descend.
 Qed.
 
 (* Well-founded relation closure definition *)
-Equations t_closure (n : nat) : seq nat by wf n :=
-  t_closure 0 := [::];
-  t_closure n.+1 := 
-  let fix t_clos_seq (s : seq nat) (k : nat) :=
-    if s is _ :: xs then 
-      t_closure (nth 0 (filter (fun x => x != n.+1) (f n.+1)) k) ++ t_clos_seq xs k.+1
-    else [::] in
-    [seq x <- f n.+1 | x != n.+1] ++ t_clos_seq (filter (fun x => x != n.+1) (f n.+1)) 0.
-Next Obligation.
-  case H: [seq x <- f n.+1 | x != n.+1]=> [| x l] /=.
-  { rewrite nth_nil. slia. }
-  apply/ltP.
-  case: nth_sizeP=> [* | *].
-  { apply: filter_lt. by rewrite H. }
-  slia.
-Qed.
+Equations(noind) t_closure (n : T) : seq T by wf n (<%O : rel T) :=
+  t_closure n := (f n) ++ flatten
+                  (map 
+                      (fun x => if x \in (f n) =P true is ReflectT pf then
+                        t_closure x
+                      else [::]) 
+                      (f n)
+                  ).
 
-Definition rel_of_closure (a b : nat) : bool := a \in t_closure b.
+Definition rel_of_closure (a b : T) : bool := a \in t_closure b.
+
+Lemma cat_eq (s1 s2 s3 : seq T) : s1 = s2 <-> s3 ++ s1 = s3 ++ s2.
+Proof.
+  elim: s3.
+  { split=> /= [-> |] //. }
+  move=> h xs IHs. split=> [/IHs |].
+  { by rewrite !cat_cons => ->. }
+  rewrite !cat_cons => /eqP.
+  by rewrite eqseq_cons IHs => /andP [] ? /eqP.
+Qed.
 
 Lemma rel_of_closure_sublt a b : rel_of_closure a b -> a < b.
 Proof.
   rewrite /rel_of_closure.
-  elim/ssrnat.ltn_ind: b a=> b IH a.
-  funelim (t_closure b)=> //=.
-  rewrite mem_cat=> /orP[]; first by apply: filter_lt.
-  move: {1 4}[seq x <- f n.+1 | x != n.+1] (subseq_refl [seq x <- f n.+1 | x != n.+1]) {2} 0.
-  elim=> //= x s IHs xsfn k.
-  rewrite mem_cat => /orP[| H].
-  { case: nth_sizeP=> [H1 ? H2 |?].
-    { apply: ltn_trans.
-      { apply: IH; last by apply: H2. exact: filter_lt. }
-        exact: filter_lt. }
-    by funelim (t_closure 0). }
-  apply: IHs.
-  { apply/subseq_trans; first by apply: (subseq_cons s x).
-     done. }
-  exact: H.
+  move: b a.
+  apply: wf_ind => b IH a.
+  rewrite /t_closure /Subterm.FixWf Fix_eq.
+  { rewrite {1}/t_closure_functional mem_cat=> /orP [/descend //|].
+    case/flatten_mapP=> x /descend xinf.
+    case: eqP.
+    { move=> /descend /IH /apply ax. apply: lt_trans. exact: ax. done. }
+    done. }
+  move=> x g h H. rewrite /t_closure_functional. apply/eqP.
+  rewrite eqseq_cat //=. apply/andP. split=> //=. apply/eqP.
+  congr flatten. apply/eq_in_map. move=> y /descend. case: eqP=> //=.
 Qed.
 
-Lemma clos_trans_sublt a b : clos_trans_n1 nat (rel_of_fun f) a b -> a < b.
+Lemma clos_trans_sublt a b : clos_trans_n1 T (rel_of_fun f) a b -> a < b.
 Proof.
   rewrite/rel_of_fun /=.
-  elim=> [x | x y xfy acx ax]; first by apply: filter_lt.
-  apply: ltn_trans; first by apply: ax.
-  exact: filter_lt.
+  elim=> [x /descend // | x y xfy acx ax].
+  apply: lt_trans; first by apply: ax.
+  exact: descend.
 Qed. 
 
 (* Well-founded relations properties *)
 Lemma closureP a b : 
-  reflect (clos_trans_n1 nat (rel_of_fun f) a b) (rel_of_closure a b).
+  reflect (clos_trans_n1 T (rel_of_fun f) a b) (rel_of_closure a b).
 Proof.
   rewrite /rel_of_closure.
-  elim/ssrnat.ltn_ind: b a=> b.
-  funelim (t_closure b)=> //= IH a.
-  { apply /(iffP idP)=> //= a0.
-    exact: (clos_trans_sublt a0). }
+  move: b a. apply: wf_ind=> b IH a.
   apply /(iffP idP).
-  { rewrite mem_cat=> /orP[?|]; first by constructor.
-    move: {1 4}[seq x <- f n.+1 | x != n.+1] (subseq_refl [seq x <- f n.+1 | x != n.+1]) {2} 0.
-    elim=> //= x s IHs xsfn k.
-    rewrite mem_cat=> /orP[].
-    { case: nth_sizeP=> [atn | sz].
-      { move=> H1 H2. apply/clos_trans_tn1/t_trans.
-        { apply/clos_tn1_trans. apply/IH; last by apply: H2. exact: filter_lt. }
-        apply/clos_tn1_trans. by constructor. }
-      by funelim (t_closure 0). }
-    move=> H. apply: IHs.
-    { apply/subseq_trans; first by apply: (subseq_cons s x).
+  { rewrite /t_closure /Subterm.FixWf Fix_eq.
+    { rewrite {1}/t_closure_functional mem_cat => /orP [].
+      { by constructor. }
+      case/flatten_mapP=> x xinf. case: eqP.
+      { move=> /descend /IH /apply H. apply /clos_trans_tn1 /t_trans.
+        { apply /clos_tn1_trans. exact: H. }
+        by constructor. }
       done. }
-    exact: H. }
-  rewrite mem_cat=> closan. apply/orP.
-  move: (clos_tn1_trans _ (fun x x0 : nat => rel_of_fun f x x0) _ _ closan).
-  move=> ctnan.
-  move: (clos_trans_tn1 _ (fun x x0 : nat => rel_of_fun f x x0) _ _ ctnan)=> ctan.
-  move: ctan IH.
+    move=> x g h H. apply/eqP.
+    rewrite eqseq_cat //=. apply/andP. split=> //=. apply/eqP.
+    congr flatten. apply/eq_in_map.
+    move=> y /descend. case: eqP=> //=. }
+  move=> closab.
+  move: (clos_tn1_trans _ (fun x x0 => rel_of_fun f x x0) _ _ closab)=> ctnab.
+  move: (clos_trans_tn1 _ (fun x x0 => rel_of_fun f x x0) _ _ ctnab)=> ctab.
+  move: ctab IH.
   case.
-  { rewrite/rel_of_fun /= => x ->. by left. }
-  rewrite/rel_of_fun /= => b c bfc ctab IH.
-  have: a \in t_closure b.
-  { apply/IH; first by apply: filter_lt. done. }
-  move=> atb. right.
-  move: {1 3 4 5}[seq x <- f c | x != c] (subseq_refl [seq x <- f c | x != c]) bfc atb.
-  elim=> //= x s IHs xsfc.
-  rewrite in_cons=> /orP[/eqP | bs atb].
-  { move=> <- atb. by rewrite mem_cat atb. }
-  rewrite mem_cat. apply/orP. right.
-  have: forall n,
-        (fix t_clos_seq (s0 : seq nat) (k : nat) {struct s0} : seq nat :=
-          match s0 with
-          | [::] => [::]
-          | _ :: xs => t_closure (nth 0 s k) ++ t_clos_seq xs k.+1
-          end) s n =
-        (fix t_clos_seq (s0 : seq nat) (k : nat) {struct s0} : seq nat :=
-          match s0 with
-          | [::] => [::]
-          | _ :: xs => t_closure (nth 0 (x :: s) k) ++ t_clos_seq xs k.+1
-          end) s n.+1.
-  { move: {1 4 6}s (subseq_refl s). elim=> //= h t IHt hts k.
-    apply/eqP. rewrite eqseq_cat ?eq_refl=> //=.
-    rewrite IHt=> //=. apply/subseq_trans; first by apply: (subseq_cons t h).
-    done. }
-  move=> <-. apply: IHs=> //.
-  apply/subseq_trans; first by apply: (subseq_cons s x).
-  done.
+  { rewrite /rel_of_fun /= => c afc IH.
+    rewrite /t_closure /Subterm.FixWf Fix_eq.
+    { by rewrite {1}/t_closure_functional mem_cat afc. }
+    move=> x g h H. apply/eqP.
+    rewrite eqseq_cat //=. apply/andP. split=> //=. apply/eqP.
+    congr flatten. apply/eq_in_map.
+    move=> y /descend. case: eqP=> //=. }
+  move=> c d. rewrite /rel_of_fun /= => cfd ctac IHd.
+  rewrite /t_closure /Subterm.FixWf Fix_eq.
+  { rewrite {1}/t_closure_functional mem_cat. apply/orP.
+    right. apply/flatten_mapP. exists c=> //=. case: eqP=> //=.
+    move=> _. apply/IHd=> //=. exact: descend. }
+  move=> x g h H. apply/eqP.
+  rewrite eqseq_cat //=. apply/andP. split=> //=. apply/eqP.
+  congr flatten. apply/eq_in_map.
+  move=> y /descend. case: eqP=> //=.
 Qed.
 
 (* reflexive-transitive closure definition *)
@@ -174,7 +142,7 @@ Proof.
 Qed.
 
 Lemma rt_closureP a b :
-  reflect (clos_refl_trans_n1 nat (rel_of_fun f) a b) (rt_closure_rel a b).
+  reflect (clos_refl_trans_n1 T (rel_of_fun f) a b) (rt_closure_rel a b).
 Proof.
   apply /(iffP idP).
   { rewrite /rt_closure_rel. rewrite in_cons=> /orP[/eqP -> | atb].
@@ -186,9 +154,13 @@ Proof.
   move=> cab. rewrite /rt_closure_rel /rt_closure.
   rewrite in_cons. apply/orP.
   elim: cab => [| c d cfd crac [/eqP -> | ac]]; first by left.
-  { right. move: cfd. rewrite /rel_of_fun /=. funelim (t_closure d).
-    { by rewrite zero_filter_empty. }
-    by rewrite mem_cat=> ->. }
+  { right. move: cfd. rewrite /rel_of_fun /=.
+    rewrite /t_closure /Subterm.FixWf Fix_eq.
+    { by rewrite {1}/t_closure_functional mem_cat => ->. }
+  move=> x g h H. apply/eqP.
+  rewrite eqseq_cat //=. apply/andP. split=> //=. apply/eqP.
+  congr flatten. apply/eq_in_map.
+  move=> y /descend. case: eqP=> //=. }
   right. move: (closureP a c)=> refl. move: (refl ac)=> cac.
   apply /(closureP a d) /clos_trans_tn1 /t_trans.
   { apply /clos_tn1_trans. exact: cac. }
