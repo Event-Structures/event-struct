@@ -1,6 +1,9 @@
 From mathcomp Require Import ssreflect ssrnat ssrfun ssrbool seq fintype order.
 From mathcomp Require Import eqtype fingraph path tuple finmap finfun choice.
 From event_struct Require Import utilities relations rfsfun wftype.
+From Coq Require Import ssrsearch.
+
+Search _ "allpairs".
 
 Import Order.LTheory.
 Open Scope order_scope.
@@ -30,9 +33,11 @@ Implicit Type (l : label).
 
 Definition eq_label l l' := 
   match l, l' with
-  | Read a x,  Read b y  | Write a x,   Write b y   => [&& a == b & x == y]
-  | ThreadEnd, ThreadEnd | ThreadStart, ThreadStart => true
-  | _, _                                           => false
+  | Read a x,  Read b y      => [&& a == b & x == y]
+  | Write a x, Write b y     => [&& a == b & x == y]
+  | ThreadEnd, ThreadEnd     => true
+  | ThreadStart, ThreadStart => true
+  | _, _                     => false
   end.
 
 Lemma eqlabelP : Equality.axiom eq_label.
@@ -88,9 +93,9 @@ Notation ffrf     := (ffrf es).
 
 Definition fpred : E -> E := ffpred.
 
-Definition pred e1 e2 := (e1 != e2) && (fpred e1 == e2).
+(*Definition pred e1 e2 := (e1 != e2) && (fpred e1 == e2).
 
-Definition succ e1 e2 := (e1 != e2) && (fpred e2 == e1).
+Definition succ e1 e2 := (e1 != e2) && (fpred e2 == e1).*)
 
 Lemma fpred_lt e: fpred e <= e.
 Proof. 
@@ -103,7 +108,7 @@ Lemma frpred_domain e: (e \in domain) = false ->
 Proof. by move/negbT/(memNdom ffpred). Qed.
 
 
-Lemma pred_lt e1 e2 : pred e1 e2 -> e2 < e1.
+(*Lemma pred_lt e1 e2 : pred e1 e2 -> e2 < e1.
 Proof. 
   case/andP=> /swap /eqP <- N.
   by rewrite lt_def (fpred_lt e1) N.
@@ -113,7 +118,7 @@ Lemma succ_lt e1 e2 : succ e1 e2 -> e1 < e2.
 Proof. 
   case/andP=> /swap /eqP <- N.
   by rewrite lt_def (fpred_lt e2) eq_sym N. 
-Qed.
+Qed.*)
 
 (* ************************************************************************* *)
 (*     Reads-From                                                            *)
@@ -127,29 +132,45 @@ Proof.
   by rewrite /frf (memNdom _ (negbT I)).
 Qed.
 
+Definition fica e := [:: frf e; fpred e].
+Definition fsica e := [seq x <- fica e | x != e].
+
+Arguments fsica /.
+
 (* Reads-From relation *)
-Definition rf w r := (w != r) && (frf r == w).
+(*Definition rf w r := (w != r) && (frf r == w).
 
 Lemma rf_lt w r : rf w r -> w < r.
 Proof. 
   case/andP=> /swap /eqP <- N.
   by rewrite lt_def (frf_lt r) eq_sym N. 
-Qed.
+Qed.*)
 
 Lemma frf_domain e: (e \in domain) = false ->
   frf e = e.
 Proof. by move/negbT/(memNdom ffrf). Qed.
+
+Lemma fica_domain e: (e \in domain) = false ->
+  fica e = [:: e; e].
+Proof. by rewrite /fica=> /dup/frf_domain->/frpred_domain->. Qed.
+
+Lemma fica_le e1 e2: e1 \in (fica e2) -> e1 <= e2.
+Proof. by rewrite /fica ?inE=> /orP[]/eqP->; rewrite (frf_lt, fpred_lt). Qed.
+
+Lemma fsica_lt e1 e2: e1 \in (fsica e2) -> e1 < e2.
+Proof. by rewrite mem_filter lt_def eq_sym=> /andP[-> /fica_le ->]. Qed.
 
 (* ************************************************************************* *)
 (*     Causality                                                             *)
 (* ************************************************************************* *)
 
 (* Immediate causality relation *)
-Definition ica : rel E := 
-  fun e1 e2 => succ e1 e2 || rf e1 e2.
+Definition ica e1 e2: bool := e1 \in fsica e2.
+
+Arguments ica /.
 
 Lemma ica_lt e1 e2 : ica e1 e2 -> e1 < e2.
-Proof. by move /orP=> [/succ_lt | /rf_lt]. Qed.
+Proof. by move/fsica_lt. Qed.
 
 (* Causality relation *)
 Definition ca : rel E. Admitted.
@@ -158,11 +179,15 @@ Lemma closureP e1 e2:
   reflect (closure _ ica e1 e2) (ca e1 e2).
 Admitted.
 
-Lemma succ_ca x y : succ x y -> ca x y. Admitted.
+(*Lemma succ_ca x y : succ x y -> ca x y. Admitted.
 (*Proof. move=> ?. apply /irel_rt_cl. by apply /orP; left. Qed.*)
 
 Lemma rf_ca e1 e2 : rf e1 e2 -> ca e1 e2. Admitted.
-(*Proof. move=> ?. apply /irel_rt_cl. by apply /orP; right. Qed.*)
+(*Proof. move=> ?. apply /irel_rt_cl. by apply /orP; right. Qed.*)*)
+
+Lemma fica_ca e1 e2: e1 \in fica e2 -> ca e1 e2.
+Proof. Admitted.
+
 
 Lemma ca_refl: reflexive ca. Admitted.
 (*Proof. exact: rt_cl_refl. Qed.*)
@@ -192,7 +217,7 @@ Proof.
   by rewrite (@le_anti _ _ x y) // Eq.
 Qed.
 
-Lemma ca_fpredn {e}: ca (fpred e) e.
+(*Lemma ca_fpredn {e}: ca (fpred e) e.
 Proof.
   case Eq: (fpred e != e); last (move/eqP: Eq->; by rewrite ca_refl).
   by rewrite succ_ca // /succ eq_refl Eq.
@@ -202,12 +227,12 @@ Lemma ca_frfn e : ca (frf e) e.
 Proof.
   case Eq: (frf e != e); last (move/eqP: Eq->; by rewrite ca_refl).
   by rewrite rf_ca // /rf eq_refl Eq.
-Qed.
+Qed.*)
 
 Lemma ica_codom e1 e2: ica e1 e2 -> (e2 \in domain).
 Proof.
   case D: (e2 \in domain)=> //; move: D=>/dup /frf_domain /swap /frpred_domain.
-  by rewrite /ica /succ /rf =>->-> /orP[] /andP[/negP /swap /eqP->].
+  by rewrite /ica mem_filter ?inE=>->-> /andP[/eqP /swap /orP[]/eqP->].
 Qed.
 
 Lemma ca_codom e1 e2: ca e1 e2 -> (e2 \in domain) = false ->
@@ -260,21 +285,21 @@ Proof. Admitted.
 
 (* Conflict relation *)
 Definition cf e1 e2 :=
-  has (fun x => (has (icf x) (seqpred_ca e2))) (seqpred_ca e1).
+  has (fun p=> icf p.1 p.2)
+  (allpairs pair (seqpred_ca e1) (seqpred_ca e2)).
 
 Notation "a # b" := (cf a b) (at level 10).
 
 Lemma cfP {e1 e2}:
   reflect (exists e1' e2', [&& ca e1' e1, ca e2' e2 & icf e1' e2']) (e1 # e2).
 Proof.
-  apply/(iffP hasP)=> [[x /swap /hasP [y]]|[x [y /and3P[]]]].
-  { rewrite 2!seqpred_ca_in=> *.
+  apply/(iffP hasP)=> [[? /allpairsPdep[x[y[]]]]|[x [y /and3P[]]]].
+  { rewrite 2!seqpred_ca_in=> ?? -> /= ?.
     exists x, y.
     exact /and3P. }
   rewrite -2!seqpred_ca_in=> *.
-  exists x=> //.
-  apply /hasP. 
-  by exists y.
+  exists (x, y)=> //.
+  exact /allpairs_f. 
 Qed.
 
 Lemma cf_symm: symmetric cf.
@@ -291,27 +316,46 @@ Proof.
   apply/and3P; split=>//; by rewrite ((ca_trans C), (ca_trans C')).
 Qed.
 
-Notation cf_step e1 e2 := 
+(*Notation cf_step e1 e2 := 
   [|| icf e1 e2,
   (ffpred e1) # e2,  e1 # (fpred e2),
-  (ffrf   e1) # e2 | e1 # (ffrf  e2)].
+  (ffrf   e1) # e2 | e1 # (ffrf  e2)].*)
 
-Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
+Notation cf_step e1 e2 := 
+  [|| icf e1 e2,
+      has (cf e1) (fica e2) |
+      has (cf e2) (fica e1)].
+
+(*Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
 Proof.
   move/or4P => [|||/orP[]] => H.
   { apply/cfP; exists e1, e2.
     by rewrite !ca_refl. }
   all: apply/(consist_cf H)=> //; by rewrite ?ca_refl ?ca_fpredn ?ca_frfn.
+Qed.*)
+
+Lemma icf_cf e1 e2: icf e1 e2 -> e1 # e2.
+Proof.
+  move=> I; apply/cfP.
+  exists e1, e2; by rewrite ?ca_refl I.
+Qed.
+
+Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
+Proof.
+  case/or3P=> [/icf_cf||]// /hasP[? /fica_ca /swap /consist_cf /apply];
+  last rewrite cf_symm; apply; by rewrite ca_refl.
 Qed.
 
 Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
 Proof.
   apply /(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //.
   case=> ? [? /and3P[/closureP]].
-  elim=> [/closureP |].
-  { elim=> [-> |] //.
-    by move=> ?? /orP[]/andP[?] /eqP<- /closureP ? H /H /cf_step_cf->. }
-  by move=> ?? /orP[]/andP[?] /eqP<-/closureP ? IH L /(IH L) /cf_step_cf->.
+  elim=> [/closureP | ?? /swap ?].
+  - elim=> [-> |] // ?? /swap _.
+    rewrite /ica mem_filter ?inE => /andP[?/orP[] /eqP->] /apply /cf_step_cf;
+    move=> /= ->; by rewrite orbT.
+  rewrite /ica mem_filter ?inE => /andP[? /orP[] /eqP->] /apply/apply;
+  move/cf_step_cf; by rewrite cf_symm=> /= ->.
 Qed.
 
 (* ************************************************************************* *)
@@ -336,12 +380,10 @@ Proof.
   move=> m; apply/negbTE/negP.
   elim/(@wf_ind E): m=> m IHn.
   suff C: ~ m # (fpred m).
-  { rewrite cfE=> /or4P[|||/orP[]] //.
-    1-3: rewrite /icf (eq_refl, cf_symm) //.
-    all: exact/rff_consist. }
+  - by rewrite cfE /icf=> /or3P[/andP[/eqP]||] //= /or3P[]// /rff_consist.
   move=> /cfP[x [y /and3P[]]]; case Eq: (x == m).
-  { move/eqP :Eq =>-> ? /ca_le L /and5P[?/eqP<- ?] /(le_lt_trans L).
-    by rewrite ltxx. }
+  - move/eqP :Eq =>-> ? /ca_le L /and5P[?/eqP<- ?] /(le_lt_trans L).
+    by rewrite ltxx.
   move/negbT/ca_decr: Eq => /apply.
   case=> z /andP[C /orP[/dup /succ_lt ? /andP[? /eqP-> *]| R]].
   { apply/(IHn z)=> //.
