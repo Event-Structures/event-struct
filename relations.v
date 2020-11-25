@@ -1,11 +1,10 @@
-From Equations Require Import Equations.
 From Coq Require Import Lia.
-From mathcomp Require Import ssreflect ssrbool eqtype ssrnat ssrfun fintype seq order.
 From Coq Require Import Relations Program.Basics.
+From mathcomp Require Import ssreflect ssrbool eqtype ssrfun seq order.
+From Equations Require Import Equations.
 From event_struct Require Import utilities wftype.
 
 Set Implicit Arguments.
-(*Unset Strict Implicit.*)
 Unset Printing Implicit Defensive.
 Set Equations Transparent.
 
@@ -16,36 +15,34 @@ Section well_founded.
 
 Context {T : wfType}.
 
-Definition rel_of_fun (f : T -> seq T) : rel T :=
-  [rel a b | a \in [seq x <- f b | x != b]].
+Definition filter_neq (f : T -> seq T) : T -> seq T :=
+  fun n => filter (fun x => x != n) (f n).
+
+Definition sfrel (f : T -> seq T) : rel T :=
+  [rel a b | a \in (filter_neq f) b].
 
 Variable (f : T -> seq T).
 
 Hypothesis descend : forall x n, x \in f n -> x <= n.
 
-Lemma filter_lt n k : k \in [seq x <- f n | x != n] -> k < n.
-Proof.
-   by rewrite mem_filter lt_neqAle => /andP[] -> /descend ->.
-Qed.
+Lemma filter_lt n k : k \in (filter_neq f n) -> k < n.
+Proof. by rewrite mem_filter lt_neqAle => /andP[] -> /descend ->. Qed.
 
-Lemma rel_sublt a b : (rel_of_fun f) a b -> a < b.
-Proof.
-  rewrite/rel_of_fun /=. exact: filter_lt.
-Qed.
+Lemma rel_sublt a b : (sfrel f) a b -> a < b.
+Proof. rewrite/sfrel /=. exact: filter_lt. Qed.
 
 (* Well-founded relation closure definition *)
 Equations(noind) t_closure (n : T) : seq T by wf n (<%O : rel T) :=
   t_closure n := 
-    [seq x <- f n | x != n] ++ flatten
-      (map 
-          (fun x => if x \in [seq x <- f n | x != n] =P true is ReflectT pf then
-            t_closure x
-          else [::]) 
-          [seq x <- f n | x != n]
-      ).
-Next Obligation.
-  exact: filter_lt.
-Qed.
+    let ys := (filter_neq f n) in 
+    let ps := flatten (map^~ ys (fun x => 
+      if x \in ys =P true is ReflectT pf then
+        t_closure x
+      else 
+        [::]
+    )) in
+    ys ++ ps.
+Next Obligation. exact: filter_lt. Qed.
 
 Definition rel_of_closure (a b : T) : bool := a \in t_closure b.
 
@@ -61,19 +58,17 @@ Qed.
 Lemma rel_of_closure_sublt a b : rel_of_closure a b -> a < b.
 Proof.
   rewrite /rel_of_closure.
-  move: b a.
-  apply: wf_ind => b IH a.
+  move: b a. apply: wf_ind => b IH a.
   rewrite /t_closure /Subterm.FixWf Fix_eq; last by apply: ext_t_closure.
   rewrite {1}/t_closure_functional mem_cat => /orP [/filter_lt //|].
   case/flatten_mapP=> x /filter_lt xinf.
-  case: eqP => //.
-  move=> /filter_lt /IH /apply ax. apply: lt_trans; first by apply: ax.
-  done.
+  case: eqP => //. move=> /filter_lt /IH /apply ax. 
+  by apply: lt_trans; first apply: ax.
 Qed.
 
-Lemma clos_trans_sublt a b : clos_trans_n1 T (rel_of_fun f) a b -> a < b.
+Lemma clos_trans_sublt a b : clos_trans_n1 T (sfrel f) a b -> a < b.
 Proof.
-  rewrite/rel_of_fun /=.
+  rewrite/sfrel /=.
   elim=> [x /filter_lt // | x y xfy acx ax].
   apply: lt_trans; first by apply: ax.
   exact: filter_lt.
@@ -81,7 +76,7 @@ Qed.
 
 (* Well-founded relations properties *)
 Lemma closureP a b : 
-  reflect (clos_trans_n1 T (rel_of_fun f) a b) (rel_of_closure a b).
+  reflect (clos_trans_n1 T (sfrel f) a b) (rel_of_closure a b).
 Proof.
   rewrite /rel_of_closure.
   move: b a. apply: wf_ind=> b IH a.
@@ -89,20 +84,16 @@ Proof.
   { rewrite /t_closure /Subterm.FixWf Fix_eq; last by apply: ext_t_closure.
     rewrite {1}/t_closure_functional mem_cat => /orP [].
     { by constructor. }
-    case/flatten_mapP=> x xinf. case: eqP.
-    { move=> /filter_lt /IH /apply H. apply /clos_trans_tn1 /t_trans.
-      { apply /clos_tn1_trans. exact: H. }
-      by constructor. }
-    done. }
-  move=> closab.
-  move: (clos_tn1_trans _ (fun x x0 => rel_of_fun f x x0) _ _ closab)=> ctnab.
-  move: (clos_trans_tn1 _ (fun x x0 => rel_of_fun f x x0) _ _ ctnab)=> ctab.
-  move: ctab IH.
-  case.
-  { rewrite /rel_of_fun /= => c afc IH.
+    case/flatten_mapP=> x xinf. case: eqP=> //=.
+    move=> /filter_lt /IH /apply H. 
+    apply /clos_trans_tn1 /t_trans; first last.
+    { constructor. apply: xinf. }
+    apply /clos_tn1_trans. exact: H. }
+  move=> ctab. move: ctab IH. case.
+  { rewrite /sfrel /= => c afc IH.
     rewrite /t_closure /Subterm.FixWf Fix_eq; last by apply: ext_t_closure.
     by rewrite {1}/t_closure_functional mem_cat afc. }
-  move=> c d. rewrite /rel_of_fun /= => cfd ctac IHd.
+  move=> c d. rewrite /sfrel /= => cfd ctac IHd.
   rewrite /t_closure /Subterm.FixWf Fix_eq; last by apply: ext_t_closure.
   rewrite {1}/t_closure_functional mem_cat. apply/orP.
   right. apply/flatten_mapP. exists c=> //=. case: eqP=> //=.
@@ -130,7 +121,7 @@ Proof.
 Qed.
 
 Lemma rt_closureP a b :
-  reflect (clos_refl_trans_n1 T (rel_of_fun f) a b) (rt_closure_rel a b).
+  reflect (clos_refl_trans_n1 T (sfrel f) a b) (rt_closure_rel a b).
 Proof.
   apply /(iffP idP).
   { rewrite /rt_closure_rel. rewrite in_cons=> /orP[/eqP -> | atb].
@@ -142,7 +133,7 @@ Proof.
   move=> cab. rewrite /rt_closure_rel /rt_closure.
   rewrite in_cons. apply/orP.
   elim: cab => [| c d cfd crac [/eqP -> | ac]]; first by left.
-  { right. move: cfd. rewrite /rel_of_fun /=.
+  { right. move: cfd. rewrite /sfrel /=.
     rewrite /t_closure /Subterm.FixWf Fix_eq; last by apply: ext_t_closure.
     by rewrite {1}/t_closure_functional mem_cat => ->. }
   right. move: (closureP a c)=> refl. move: (refl ac)=> cac.
