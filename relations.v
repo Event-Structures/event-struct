@@ -1,7 +1,7 @@
 From Coq Require Import Lia.
 From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool eqtype ssrnat ssrfun fintype.
-From Equations Require Import Equations.
+(*From Equations Require Import Equations.*)
 From event_struct Require Import utilities.
 
 Set Implicit Arguments.

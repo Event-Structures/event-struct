@@ -15,6 +15,7 @@ utilities.v
 inhtype.v
 wftype.v
 rfsfun.v
+ident.v
 relations.v
 eventstructure.v
 transitionsystem.v

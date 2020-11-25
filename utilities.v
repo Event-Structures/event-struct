@@ -116,7 +116,7 @@ Notation dup := (
   ltac: (let f := fresh "_top_" in move=> f; move: (f) (f)=> {f})
 ).
 
-Ltac move_anon n :=
+(*Ltac move_anon n :=
   tryif
     lazymatch constr:(n) with
     | S ?n => move=> ?; move_anon n
@@ -127,7 +127,7 @@ Ltac move_anon n :=
 
 Notation "n '$'" :=
   (ltac:(move_anon n))
-  (at level 0, only parsing) : ssripat_scope.
+  (at level 0, only parsing) : ssripat_scope.*)
 
 (****** Hints to deal with dummy bolean goals ******)
 

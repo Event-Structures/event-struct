@@ -2,6 +2,15 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype.
 From mathcomp Require Import eqtype fingraph path order choice. 
 From event_struct Require Import utilities.
 
+(******************************************************************************)
+(* This file contains the definitions of:                                     *)
+(*       wfType d == type with wellfounded partitial ordrer                   *)
+(*       well_founded_bool r == r is decideble wellfounded relation           *)
+(*       wf == lemma that states that relation of wfType is wellfounded       *)
+(*       wf_ind == wellfounded induction for wfType                           *)
+(* This file also contains definitions of a Canonical wfType instance for nat *)
+(******************************************************************************)
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -24,8 +33,10 @@ Module WellFounded.
 
 Section ClassDef.
 
-Definition mixin_of T0 (b : Order.POrder.class_of T0) (T := Order.POrder.Pack tt b) :=
-  well_founded_bool (<%O : rel T).
+Record mixin_of T0 (b : Order.POrder.class_of T0)
+  (T := Order.POrder.Pack tt b) := Mixin {
+  _ : well_founded_bool (<%O : rel T);
+}.
 
 Set Primitive Projections.
 
@@ -45,6 +56,11 @@ Local Coercion sort : type >-> Sortclass.
 Variables (T : Type) (disp : unit) (cT : type disp).
 
 Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack disp T c.
+
+Definition pack :=
+  fun bT b & phant_id (@Order.POrder.class disp bT) b =>
+  fun m => Pack disp (@Class T b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
@@ -53,7 +69,7 @@ End ClassDef.
 
 Module Exports.
 
-Notation wfType := (type tt).
+Notation wfType := type.
 Coercion base : class_of >-> Order.POrder.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
@@ -63,6 +79,8 @@ Coercion porderType : type >-> Order.POrder.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
+Notation WfType disp T m := (@pack T disp _ _ id m).
+
 
 End Exports.
 
@@ -72,10 +90,10 @@ Export WellFounded.Exports.
 
 Section WfInduction.
 
-Context {T : wfType}.
+Context {disp : unit} {T : wfType disp}.
 
 Lemma wf : well_founded_bool (<%O : rel T).
-Proof. by case: T=> ? []. Qed.
+Proof. by case: T=> ? [] ? []. Qed.
 
 Lemma wf_ind (P : T -> Type) :
   (forall n, (forall m, m < n -> P m) -> P n) ->
@@ -86,3 +104,19 @@ Proof.
 Qed.
 
 End  WfInduction.
+
+Section NatWellFounded.
+
+Lemma nat_well_founded_bool:  well_founded_bool (<%O : rel nat).
+Proof.
+  elim=> [//|n /dup ? [IHn]].
+  constructor=> m; case E: (n == m)=> /= L; first by move/eqP: E=> <-.
+  apply/IHn=> /=. move: L. rewrite /Order.lt /=. slia.
+Qed.
+
+End NatWellFounded.
+
+Import Order.NatOrder.
+
+Definition nat_wfMixin := @WellFounded.Mixin nat _ nat_well_founded_bool.
+Canonical nat_wfType := Eval hnf in WfType nat_display nat nat_wfMixin.
