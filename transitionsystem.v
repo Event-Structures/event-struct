@@ -1,16 +1,17 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
-From mathcomp Require Import eqtype fingraph path. 
-From event_struct Require Import utilities eventstructure relations.
+From mathcomp Require Import eqtype fingraph path finmap. 
+From event_struct Require Import utilities eventstructure relations ident rfsfun.
 
-Set Implicit Arguments.
+(*Set Implicit Arguments.
 Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
-(*Section TransitionSystem.
+Section TransitionSystem.
 
-Context {val : eqType}.
+Context {val : eqType} {disp} (E : identType disp).
 
-Notation exec_event_struct := (exec_event_struct).
-Notation cexec_event_struct := (@cexec_event_struct val).
+Notation exec_event_struct := (@fin_exec_event_struct val disp E).
+Notation cexec_event_struct := (@cexec_event_struct val disp E).
 
 Notation label := (@label val val).
 
@@ -22,48 +23,90 @@ Section AddEvent.
 (* execution graph in which we want to add l *)
 Context (es : exec_event_struct).
 
-Notation N      := (N es).
+Notation N := (N es).
+Notation domain := (nfresh N).
 Notation lab    := (lab es).
-Notation fpred  := (fpred es).
-Notation frf    := (frf es).
+Notation ffpred  := (ffpred es).
+Notation ffrf    := (ffrf es).
+Notation fresh := (fresh_seq domain).
+
+Definition wr (lab : E -> label) := 
+  [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))].
 
 Structure add_label :=
   Add {
-    lb     : label;
-    opred  : 'I_N.+1;
-    owrite : {k : 'I_N.+1 | write_read (ext lab k) lb (+) (k == N :> nat)}
-  }.
+    lb            : label;
+
+    pred          : E;
+    pred_in_dom   : pred \in fresh :: domain(*@nfresh _ E N.+1;*)
+
+    write         : E;
+    write_in_dom  : write \in fresh :: domain (*@nfresh _ E N.+1*);
+    write_consist : (write == fresh) (+) ((lab write) << lb);
+}.
 
 Variable al : add_label.
 
 (* label of an event which we want to add     *)
-Notation l := (lb al).
+Notation l := (lb al). (* TODO: rename *)
 
 (* predecessor of the new event (if it exists) *)
-Notation op := (opred al).
+Notation p := (pred al). (* TODO: rename *)
 
 (* if event is `Read` then we should give `Write` from wich we read *)
-Notation ow := (owrite al).
+Notation w := (write al). (* TODO: rename *)
 
-Definition add_lab : 'I_N.+1 -> label := 
-  @add (fun=> label) N lab l.
+Definition add_lab := add_rfsfun fresh l erefl lab.
 
-Definition add_fpred : forall m : 'I_N.+1, 'I_m.+1 := 
-  @add (ordinal \o S) N fpred op.
+Definition add_ffpred :=
+  add_rfsfun fresh p (nfesh_le (pred_in_dom al)) ffpred.
 
 Arguments add_lab : simpl never.
 
+Lemma add_lab_write_read: wr add_lab fresh w.
+Admitted.
+
+Lemma add_lab_write_read_i: 
+  all 
+  (fun r => wr lab r (ffrf r) ==> wr add_lab r (ffrf r))
+  domain.
+Proof. Admitted.
+
+Definition add_ffrf := 
+  @add_rfsfun _ _ _ _ (wr add_lab)
+  fresh w add_lab_write_read
+  (rfsfun_impl add_lab_write_read_i).
+
+Definition add_event := @Pack _ _ _ N.+1 add_lab add_ffpred add_ffrf.
+
+Lemma fpred_add_eventE e : fpred add_event e = 
+  if e == fresh then p else fpred es e.
+Proof. by rewrite /fpred /add_event /= fsfun_withE. Qed.
+
+Lemma frf_add_eventE e : frf add_event e =
+  if e == fresh then w else frf es e.
+Proof. by rewrite /frf /add_event /= fsfun_withE. Qed.
+
+Lemma ica_add_event e1 e2: 
+  ica add_event e1 e2 =
+  ica es e1 e2 || (e2 == fresh) && ((p == e1) || (fresh == e1)).
+Proof.
+  rewrite /ica /fsica /fica frf_add_event fpred_add_event.
+  case: ifP; rewrite ?(andTb, andFb) ?orbF // => /eqP->.
+  rewrite /frf /fpred ?fsfun_dflt.
+  Search _ (_ \notin _) (fsfun).
+  do ? case: ifP=> //=; try rewrite ?orbF /= ?inE //.
+
 (*Lemma is_read_add_lab {r : 'I_N} :
   is_read_ext add_lab r -> is_read_ext lab r.
-Proof. rewrite /add_lab ext_add //. case: r=> /= *. slia. Qed.*)
+Proof. rewrite /add_lab ext_add //. case: r=> /= *. slia. Qed.
 
 
 Lemma add_lab_write_read {r : 'I_N} {w : 'I_r.+1} :
   (w == r :> nat) (+) write_read_ext lab w r ->
   (w == r :> nat) (+) write_read_ext add_lab w r.
 Proof. Admitted.
-(*  move=> /addbP E. apply/addbP. rewrite E /add_lab. rel_ext //. => [[]].
-  rewrite /rdom /codom /write_read=> [[//]]. by case. 
+
 Qed.*)
 
 (*Lemma is_read_add_lab_n: is_read_ext add_lab n = is_read l.
@@ -79,7 +122,7 @@ Proof.
   case: r=> /= *. slia.
 Qed.*)
 
-Definition  ow_add_lab : 
+(*Definition  ow_add_lab : 
   {w : 'I_N.+1 |
   (w == N :> nat) (+) write_read_ext add_lab w N}. Admitted.
 (*   let w := ow (is_read_add_lab_n_aux is_r) in
@@ -147,7 +190,7 @@ Proof.
   case H: (oread add_event e)=> [[/=]|];
   move: (H) (sval_oread efn)=>->/=; case H': (oread es e) => //= [[/=]][?].
   exact /congr1 /sval_add_frf.
-Qed.
+Qed.*)
 
 (*Lemma ica_add_event e1 e2: 
   ica add_event e1 e2 = 

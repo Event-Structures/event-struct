@@ -1,8 +1,15 @@
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype choice finmap.
-From Coq Require Import Lia.
+From Coq Require Import Lia Relations.
 
 Notation none := None.
+
+Arguments clos_rtn1_rt {_ _ _ _}.
+Arguments clos_rt_rt1n {_ _ _ _}.
+Arguments clos_rt_rtn1 {_ _ _ _}.
+Arguments clos_rt1n_rt {_ _ _ _}.
+
+Hint Resolve eqxx : core.
 
 (* ******************************************************************************** *)
 (*     Some atomation with Hints, tacticts and iduction scheme                      *)

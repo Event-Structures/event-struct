@@ -1,7 +1,7 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
 From mathcomp Require Import order choice finmap.
 From Coq Require Import ssrsearch.
-From event_struct Require Import wftype.
+From event_struct Require Import wftype utilities.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
@@ -10,10 +10,9 @@ From event_struct Require Import wftype.
 (*               relation) function                                           *)
 (*      fresh id == a fresh identifier coming after id.                       *)
 (*        ident0 == an initial identifier.                                    *)
-(*      nfresh n == nth fresh itendificator (strating with ident0)            *)
-(*      nfresh_seq n == a sequence of size n of fresh identifiers             *)
-(*                  starting with ident0.                                     *)
-(*      nfresh_set n == a set of size n of fresh identifiers                  *)
+(*      fresh_seq s == fresh h, where h is the head of s, or fresh ident0 if  *)
+(*                  s is empty                                                *)
+(*      nfresh n == a sequence of size n of fresh identifiers                 *)
 (*                  starting with ident0.                                     *)
 (* This file also contains definitions of a Canonical identType instance for  *)
 (* nat.                                                                       *)
@@ -96,42 +95,42 @@ Context {disp} {T : identType disp}.
 Local Notation ident0 := (@ident0 disp T).
 Local Notation fresh := (@fresh disp T).
 
-Definition nfresh n := iter n fresh ident0.
-
-Definition nfresh_seq n := rev (traject fresh ident0 n).
-
-Definition nfresh_set n := seq_fset tt (nfresh_seq n).
-
 Lemma fresh_lt x : x < fresh x. Proof. by case: T x=> ? [/= ? []]. Qed.
 
-Lemma sorted_nfresh n : sorted (>%O) (nfresh_seq n).
+Definition fresh_seq s := fresh (head ident0 s).
+
+Section Add_Sorted.
+
+Context {s : seq T} (s_sorted : sorted (>%O) s).
+
+Lemma path_fresh_seq: path (>%O) (fresh_seq s) s.
 Proof.
-  elim n=> // m; rewrite /nfresh_seq trajectSr rev_rcons.
-  case: m=> // ?; by rewrite trajectSr rev_rcons /= fresh_lt.
+  case: s s_sorted=> //= ??->.
+  by rewrite /fresh_seq /= fresh_lt.
 Qed.
 
-Lemma uniq_nfresh_seq n: uniq (nfresh_seq n).
+Lemma fresh_seq_le x: x \in s -> x < fresh_seq s.
 Proof.
-  apply/(sorted_uniq _ _ (sorted_nfresh _)).
-  - exact/rev_trans/lt_trans.
-  exact/lt_irreflexive.
+  move: path_fresh_seq; rewrite path_sortedE.
+  - by case/andP=>/swap ? /allP /apply.
+  exact/rev_trans/lt_trans.
 Qed.
 
-Lemma nfresh_seqS n: nfresh_seq n.+1 = (nfresh n) :: nfresh_seq n.
-Proof. by rewrite /nfresh_seq trajectSr rev_rcons. Qed.
+End Add_Sorted.
 
-Lemma nfresh_setS n : nfresh_set n.+1 = nfresh n |` nfresh_set n.
+Definition nfresh n := iter n (fun s => fresh_seq s :: s) [:: ident0].
+
+Lemma nfreshS n: nfresh n.+1 = fresh_seq (nfresh n) :: (nfresh n).
+Proof. by []. Qed.
+
+Lemma fresh_seq_iter n: fresh_seq (nfresh n) = iter n.+1 fresh ident0.
+Proof. by elim: n=> //= ? ->. Qed.
+
+Lemma nfesh_le x n: x \in nfresh n.+1 -> x <= fresh_seq (nfresh n).
 Proof.
-  apply/fsetP=> ?.
-  by rewrite /nfresh_set nfresh_seqS ?(inE, seq_fsetE).
-Qed.
-
-Lemma size_nfresh_seq n: size (nfresh_seq n) = n.
-Proof. by elim n=> //= ? {2}<-; rewrite nfresh_seqS. Qed.
-
-Lemma size_nfresh_set n: #|`nfresh_set n| = n.
-Proof. 
-  by rewrite size_seq_fset undup_id (size_nfresh_seq, uniq_nfresh_seq). 
+  elim n=> //= [|? IHn]; rewrite ?inE=> /orP[/eqP-> //|].
+  - move/eqP->; exact/(ltW (fresh_lt _)).
+  by rewrite {2}/fresh_seq /= => /IHn /le_trans/(_ (ltW (fresh_lt _))).
 Qed.
 
 End IdentTheory.
@@ -148,6 +147,6 @@ End IdentDataTypes.
 Canonical nat_identType := 
   Eval hnf in IdentType nat_display nat nat_identMixin.
 
-(*Eval cbv in (@nfresh_seq nat_display nat_identType 5).*)
+(*Eval cbv in (@nfresh nat_display nat_identType 5).*)
 
 (* Definition of wfidentType *)
