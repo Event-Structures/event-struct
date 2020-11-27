@@ -1,6 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
 From mathcomp Require Import order choice finmap.
-From Coq Require Import ssrsearch.
 From event_struct Require Import wftype utilities.
 
 (******************************************************************************)
@@ -109,12 +108,15 @@ Proof.
   by rewrite /fresh_seq /= fresh_lt.
 Qed.
 
-Lemma fresh_seq_le x: x \in s -> x < fresh_seq s.
+Lemma fresh_seq_lt x : x \in s -> x < fresh_seq s.
 Proof.
   move: path_fresh_seq; rewrite path_sortedE.
   - by case/andP=>/swap ? /allP /apply.
   exact/rev_trans/lt_trans.
 Qed.
+
+Lemma fresh_seq_le x: x \in (fresh_seq s :: s) -> x <= fresh_seq s.
+Proof. by rewrite ?inE => /orP[/eqP->|/fresh_seq_lt/ltW]. Qed.
 
 End Add_Sorted.
 
