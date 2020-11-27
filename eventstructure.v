@@ -156,6 +156,13 @@ Lemma fica_domain e: (e \in domain) = false ->
   fica e = [:: e; e].
 Proof. by move/negbT/dup/(memNdom ffpred)=> {4}<- /(memNdom ffrf) {2}<-. Qed.
 
+(*Lemma memNdom_fica e1 e2: e1 \in fica e2 -> e1 \in domain = false ->
+  e1 = e2.
+Proof.
+  rewrite ?inE.
+Qed.*)
+
+
 Lemma fica_le e1 e2: e1 \in (fica e2) -> e1 <= e2.
 Proof. Admitted.
 
@@ -225,6 +232,14 @@ Proof.
   move/closureP; elim=> //?? I ? Y Z; move: I Y.
   by rewrite /ica fica_domain // ?inE orbb=> /eqP-> /(_ Z).
 Qed.
+
+(*Lemma ca_dom e1 e2: ca e1 e2 -> (e1 \in domain) = false ->
+  e1 = e2.
+Proof.
+  move/closureP; elim=> // x y I /closureP ? IH /dup/IH.
+  move: I=> /swap .
+Qed.*)
+
 
 (* Strict (irreflexive) causality *)
 (*Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
