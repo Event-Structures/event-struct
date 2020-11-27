@@ -9,8 +9,9 @@
 
 utilities.v
 inhtype.v
+wftype.v
+ident.v
 relations.v
 eventstructure.v
 transitionsystem.v
 regmachine.v
-ident.v

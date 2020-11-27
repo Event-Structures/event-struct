@@ -116,6 +116,10 @@ Notation apply := (
    ltac: (let f := fresh "_top_" in move=> f {}/f)
 ).
 
+Notation dup := (
+   ltac: (let f := fresh "_top_" in move=> f; move: (f) (f)=> {f})
+ ).
+
 (****** Hints to deal with dummy bolean goals ******)
 
 Lemma snd_true3 a b : [|| a, true | b].
