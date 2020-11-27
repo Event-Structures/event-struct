@@ -101,12 +101,12 @@ Notation "w << r" := (write_read_from w r) (at level 0).
 (* ************************************************************************* *)
 
 Structure fin_exec_event_struct {disp} (E : identType disp) := Pack {
-  dom      : seq E;
-  sort_dom : sorted (>%O) dom;
-  lab      : rfsfun (fun=> ThreadEnd) dom (fun _ _ => true);
-  ffpred   : rfsfun id dom (>=%O : rel E);
-  ffrf     : rfsfun id dom
-             [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))]
+  dom        : seq E;
+  dom_sorted : sorted (>%O) dom;
+  lab        : rfsfun (fun=> ThreadEnd) dom (fun _ _ => true);
+  ffpred     : rfsfun id dom (>=%O : rel E);
+  ffrf       : rfsfun id dom
+               [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))]
 }.
 
 Section ExecEventStructure.
