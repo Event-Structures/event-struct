@@ -4,11 +4,11 @@ From event_struct Require Import utilities.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
-(*       wfType d == type with wellfounded partitial ordrer                   *)
-(*       well_founded_bool r == r is decideble wellfounded relation           *)
-(*       wf == lemma that states that relation of wfType is wellfounded       *)
-(*       wf_ind == wellfounded induction for wfType                           *)
-(* This file also contains definitions of a Canonical wfType instance for nat *)
+(*       wfType d == the structure for types with well-founded partial order. *)
+(*       well_founded_bool r == r is decidable well-founded relation          *)
+(*       wf == the well-founded order of wfType                               *)
+(*       wf_ind == well-founded induction for wfType                          *)
+(* This file also contains canonical instance of wfType for nat               *) 
 (******************************************************************************)
 
 Set Implicit Arguments.
