@@ -1,5 +1,4 @@
 From Coq Require Import Lia.
-
 From Coq Require Import Relations Program.Basics.
 From mathcomp Require Import ssreflect ssrbool eqtype ssrfun seq order.
 From Equations Require Import Equations.

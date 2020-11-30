@@ -1,6 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
 From mathcomp Require Import order choice finmap.
-From Coq Require Import ssrsearch.
 From event_struct Require Import wftype utilities.
 
 (******************************************************************************)
