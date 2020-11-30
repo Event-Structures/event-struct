@@ -102,7 +102,6 @@ Definition ofpred (e : nat) : option nat :=
 Lemma ofpred_n m (_ : m >= n) : ofpred m = none.
 Proof. rewrite /ofpred. insub_case. slia. Qed.
 
-
 Definition pred e1 e2 := ofpred e1 == some e2.
 
 Definition succ e1 e2 := ofpred e2 == some e1.
@@ -154,41 +153,41 @@ Lemma ica_lt e1 e2 : ica e1 e2 -> e1 < e2.
 Proof. rewrite /ica. by move /orP=> [/succ_lt | /rf_lt]. Qed.
 
 (* Causality relation *)
-Definition ca := rt_cl ica.
+Definition ca : rel nat := fun x y => false (* rt_closure ica *).
 
 Lemma succ_ca x y : succ x y -> ca x y.
-Proof. move=> ?. apply /irel_rt_cl. by apply /orP; left. Qed.
+Proof. Admitted. (* move=> ?. apply /irel_rt_cl. by apply /orP; left. Qed. *) 
 
 Lemma rf_ca e1 e2 : rf e1 e2 -> ca e1 e2.
-Proof. move=> ?. apply /irel_rt_cl. by apply /orP; right. Qed.
+Proof. Admitted. (* move=> ?. apply /irel_rt_cl. by apply /orP; right. Qed. *)
 
 Lemma ca_refl: reflexive ca.
-Proof. exact: rt_cl_refl. Qed.
+Proof. Admitted. (* exact: rt_cl_refl. Qed. *)
 
 Lemma ca_trans: transitive ca.
-Proof. exact: rt_cl_trans. Qed.
+Proof. Admitted. (* exact: rt_cl_trans. Qed. *)
 
 Arguments ca_trans {_ _ _}.
 
 Lemma ca_decr e1 e2 : e1 != e2 -> ca e1 e2 ->
   exists e3, ca e1 e3 && ica e3 e2. 
-Proof.
-  move /swap/closureP=> [/eqP // | e3 e4 ?].
-  move=> /closureP E *.
-  exists e3. by rewrite /ca E. 
-Qed.
+Proof. Admitted.
+(*   move /swap/closureP=> [/eqP // | e3 e4 ?]. *)
+(*   move=> /closureP E *. *)
+(*   exists e3. by rewrite /ca E.  *)
+(* Qed. *)
 
 Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
-Proof. move /closureP. elim=> [] //. move=> ??/ica_lt. slia. Qed.
+Proof. Admitted. (* move /closureP. elim=> [] //. move=> ??/ica_lt. slia. Qed. *)
 
 Lemma ca_rfield e1 e2 (_ : ca e1 e2) : (e1 == e2) || (e1 < n) && (e2 < n).
-Proof.
-  case N: (e1 == e2)=> //=. apply/andP. suff E: (e2 < n).
-  { split=> //. move /ca_le: H. slia. }
-  move /closureP: H N. elim=> [/eqP|? e] //.
-  rewrite /ica /succ /rf. case H: (e < n)=> //. have ?: (e >= n) by slia.
-  by rewrite ofrf_n ?ofpred_n.
-Qed.
+Proof. Admitted.
+(*   case N: (e1 == e2)=> //=. apply/andP. suff E: (e2 < n). *)
+(*   { split=> //. move /ca_le: H. slia. } *)
+(*   move /closureP: H N. elim=> [/eqP|? e] //. *)
+(*   rewrite /ica /succ /rf. case H: (e < n)=> //. have ?: (e >= n) by slia. *)
+(*   by rewrite ofrf_n ?ofpred_n. *)
+(* Qed. *)
 
 Lemma ca_anti: antisymmetric ca.
 Proof. move=> ?? /andP[/ca_le ? /ca_le ?]. slia. Qed.
@@ -265,23 +264,23 @@ Notation cf_step e1 e2 := [|| icf e1 e2,
   (if ofrf  e2 is some y then e1 # y else false)].
 
 Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
-Proof.
-  move/or4P => [? |||/orP[]].
-  { apply/cfP; exists e1, e2. by rewrite !ca_refl. }
-  all: ocase=> /eqP H C.
-  all: rewrite (consist_cf C) // ?ca_refl // /ca irel_rt_cl //.
-  all: by rewrite /ica /succ /rf H.
-Qed.
+Proof. Admitted.
+(*   move/or4P => [? |||/orP[]]. *)
+(*   { apply/cfP; exists e1, e2. by rewrite !ca_refl. } *)
+(*   all: ocase=> /eqP H C. *)
+(*   all: rewrite (consist_cf C) // ?ca_refl // /ca irel_rt_cl //. *)
+(*   all: by rewrite /ica /succ /rf H. *)
+(* Qed. *)
 
 Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
-Proof.
-  apply /(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //.
-  case=> ? [? /and3P[/closureP]].
-  elim=> [/closureP |].
-  { elim=> [-> |] //.
-    by move=> ?? /orP[] /eqP-> /closureP ? H /H /cf_step_cf->. }
-  by move=> ?? /orP[] /eqP->/closureP ? IH L /(IH L) /cf_step_cf->.
-Qed.
+Proof. Admitted. 
+(*   apply /(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //. *)
+(*   case=> ? [? /and3P[/closureP]]. *)
+(*   elim=> [/closureP |]. *)
+(*   { elim=> [-> |] //. *)
+(*     by move=> ?? /orP[] /eqP-> /closureP ? H /H /cf_step_cf->. } *)
+(*   by move=> ?? /orP[] /eqP->/closureP ? IH L /(IH L) /cf_step_cf->. *)
+(* Qed. *)
 
 (* ******************************************************************************** *)
 (*     Reads-From Consistency                                                       *)
@@ -317,12 +316,12 @@ Proof.
   { apply/(IHn z).
     { exact /succ_lt /eqP. }
     apply/cfP; exists x, y.
-    apply/and3P; split=>//.
-    by move: E1 E2=>->[->]. }
+    apply/and3P; split=>//. }
+    (* by move: E1 E2=>->[->]. } *)
   apply/(rff_consist E1)/cfP.
   exists y, x; apply/and3P; split=>//.
-  { exact /(ca_trans L) /succ_ca /eqP. }
-  by rewrite icf_symm. 
+  (* { exact /(ca_trans L) /succ_ca /eqP. } *)
+  (* by rewrite icf_symm.  *)
 Qed.
 
 End ExecEventStructure.

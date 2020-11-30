@@ -1,5 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype.
 From mathcomp Require Import eqtype fingraph path order choice. 
+Require Import Equations.Prop.Loader.
 From event_struct Require Import utilities.
 
 Set Implicit Arguments.
@@ -8,6 +9,8 @@ Unset Printing Implicit Defensive.
 
 Import Order.LTheory.
 Open Scope order_scope.
+
+Notation ordType := (orderType tt).
 
 Section WfDef.
 
@@ -83,6 +86,12 @@ Lemma wf_ind (P : T -> Type) :
 Proof.
   move=> accP M.
   by elim: (wf M) => ?? /accP. 
+Qed.
+
+Global Instance wf_wfType : 
+  Equations.Prop.Classes.WellFounded (<%O : rel T).
+Proof.
+  apply: wf_ind. by constructor.
 Qed.
 
 End  WfInduction.
