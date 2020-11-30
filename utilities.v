@@ -2,23 +2,15 @@ From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 
+Notation none := None.
 
-Definition sproof {A : Type} {P : A -> Prop} (e : {x : A | P x}) : P (sval e) := 
-  @proj2_sig A P e.
+Definition comp2 {A B C : Type} (f : B -> B -> A) (g : C -> B) x y := f (g x) (g y).
 
-Definition advance {n} (m : 'I_n) (k : 'I_m) : 'I_n :=
-  widen_ord (ltnW (ltn_ord m)) k.
+Notation "f \o2 g" := (comp2 f g) (at level 50) : fun_scope.
 
-Arguments advance : simpl never.
-
-Lemma advanceE {n} (m : 'I_n) (k : 'I_m) : 
- advance m k = k :> nat.
-Proof. by case: m k => ??[]. Qed.
-
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Unset Printing Implicit Defensive.
+(* ******************************************************************************** *)
+(*     Some atomation with Hints, tacticts and iduction scheme                      *)
+(* ******************************************************************************** *)
 
 (***** ssrnatlia ******)
 
@@ -46,6 +38,12 @@ Ltac ssrnatify_rel :=
   | H : context [ is_true (negb (@eq_op _ _ _))] |- _ =>
      rewrite <-  (rwP (@eqP _ _ _)) in H
   | |- context [ is_true (negb (@eq_op _ ?x ?y))] =>
+     rewrite <- (rwP (@eqP _ x y))
+  | H : (negb (@eq_op _  _ _)) = true |- _ => move/eqP: H => H
+  | |- (negb (@eq_op _  _ _)) = true => apply/eqP
+  | H : context [ (negb (@eq_op _ _ _)) = true ] |- _ =>
+     rewrite <-  (rwP (@eqP _ _ _)) in H
+  | |- context [ (negb (@eq_op _ ?x ?y)) = true ] =>
      rewrite <- (rwP (@eqP _ x y))
 
   | H : (leq _ _) = true |- _ => move/leP: H => H
@@ -107,8 +105,9 @@ Ltac ssrnatify :=
   repeat progress ssrnatify_op.
 
 (* Preprocessing + lia *)
-Ltac slia := move=> *; ssrnatify; lia.
+Ltac slia := try (move=> * //=); do [ ssrnatify; lia | exfalso; ssrnatify; lia].
 
+(***** hand made swithes *****)
 
 Notation swap := 
    (ltac:(let f := fresh "_top_" in let s := fresh "_s_" in move=> f s; move: s f)).
@@ -117,6 +116,7 @@ Notation apply := (
    ltac: (let f := fresh "_top_" in move=> f {}/f)
 ).
 
+(****** Hints to deal with dummy bolean goals ******)
 
 Lemma snd_true3 a b : [|| a, true | b].
 Proof. by case: a. Qed.
@@ -133,40 +133,126 @@ Proof. by case: a; case: b; case: c. Qed.
 Lemma fifth_true5 a b c d: [|| a, b, c, d | true].
 Proof. apply/orP; right. exact: frth_true4. Qed.
 
-Lemma ltS_neq_lt {n N : nat}: (n < N.+1 -> N <> n -> n < N)%N.
-Proof. slia. Qed. 
-
-
 Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
 
-Lemma ltn_ind N (P : 'I_N -> Type) :
-  (forall (n : 'I_N), (forall (m : 'I_N), (m < n)%N -> P m) -> P n) ->
+(***** well-founded induction for `nat` *****)
+
+Lemma ltn_ind (P : nat -> Type) :
+  (forall n, (forall m, m < n -> P m) -> P n) ->
   forall n, P n.
 Proof.
-move=> IH n. have [k le_size] := ubnP (nat_of_ord n). 
-elim: k n le_size=>// n IHn k le_size. apply/IH=> *. apply/IHn. slia.
+  move=> accP M. have [n leMn] := ubnP M. elim: n => // n IHn in M leMn *.
+  by apply: accP=> m /leq_trans/(_ leMn)/IHn.
 Qed.
+
+(**** useful `case`-variant tactics *****)
 
 Ltac ocase := let H := fresh in
   try match goal with  |- context [if ?a is some _ then _ else _] =>
     case H: a; move: H => //=
   end.
 
-(* need that because of inconsistency in Coq stdlib (duplicate name) *)
-Notation rtn1_trans := Coq.Relations.Relation_Operators.rtn1_trans.
+Ltac dcase := 
+  match goal with  |- context [if ?a as _ return (_) then _ else _] =>
+    case: {2}a {-1}(@erefl _ a) erefl=> {2 3}->
+  end.
 
-Lemma crtn1_connectP {n : nat} {r : rel 'I_n} e1 e2:
-  reflect (clos_refl_trans_n1 'I_n r e1 e2) (connect r e1 e2).
+(* ******************************************************************************** *)
+(*     helper function to deal with ordinals                                        *)
+(* ******************************************************************************** *)
+
+Notation ord := Ordinal.
+
+Definition advance {n} (m : 'I_n) (k : 'I_m) : 'I_n :=
+  widen_ord (ltnW (ltn_ord m)) k.
+
+Lemma ltS_neq_lt {n N : nat} : n < N.+1 -> N <> n -> n < N.
+Proof. slia. Qed.
+
+Definition dec_ord {n} (m : 'I_n.+1) (neq : n <> m) : 'I_n :=
+  ord (ltS_neq_lt (ltn_ord m) neq).
+
+Lemma dec_ordE {n} (m : 'I_n.+1) (neq : n <> m) : 
+  dec_ord m neq = m :> nat.
+Proof. by case: m neq. Qed.
+
+Arguments advance : simpl never.
+
+(* ******************************************************************************** *)
+(*     properties of doamin and codomain of relation                                *)
+(* ******************************************************************************** *)
+
+Section DomCodomR.
+
+Context {T : Type} (r : rel T).
+
+Definition rdom x := exists y, r x y.
+
+Definition rcodom x := exists y, r y x.
+
+Definition rfield x := rdom x \/ rcodom x.
+
+Lemma dom_rfield x y (_ : r x y) : rfield x.
+Proof. by left; exists y. Qed.
+
+Lemma codom_rfield x y (_ : r y x) : rfield x.
+Proof. by right; exists y. Qed.
+
+End DomCodomR.
+
+(* ******************************************************************************** *)
+(*     uprading ordinal function on one element                                     *)
+(* ******************************************************************************** *)
+
+(* TODO: better names? *)
+(* TODO: generalize to `subType` *)
+Definition sproof_map {A : Type} {P Q : A -> Prop} 
+                      (f : forall a : A, P a -> Q a) 
+                      (e : {x | P x}) : 
+           {x | Q x} := 
+  exist Q (sval e) (f (sval e) (svalP e)).
+
+Section upgrade.
+
+Context {T : nat -> Type} {n : nat}  (f : forall m : 'I_n, T m) (x : T n).
+
+Definition add (m : 'I_n.+1) : T m := 
+    match n =P m :> nat with
+    | ReflectT eq  => let 'erefl := eq in x
+    | ReflectF neq => f (dec_ord m neq)
+    end.
+
+Lemma add_ord_max {L : n < n.+1} : add (ord L) = x.
 Proof.
-  apply /(iffP idP).
-  { move=> /connectP[]. move: e2=> /swap.
-    elim /last_ind=> [/=??->//|/= s x IHs]. 
-    { apply: rtn1_refl. }
-    rewrite rcons_path last_rcons => e2 /andP[/IHs/(_ erefl) ?? ->].
-    by apply (@rtn1_trans _ _ _ (last e1 s) x). }
-  elim=> [|e3 e4]; first by rewrite connect0.
-  move=> HR Hcrtn1 /connectP[s p E].
-  apply /connectP. exists (rcons s e4); last first.
-  { by rewrite last_rcons. }
-  rewrite rcons_path -E. by apply/andP.
+  rewrite /add; case: eqP=> /=; last by case.
+  move=> pf. by rewrite (eq_irrelevance pf (erefl n)).
 Qed.
+
+Lemma add_lt (m : 'I_n.+1) (ltm : m < n) : add m = f (ord ltm).
+Proof. 
+  rewrite /add. elim: eqP=> [?| neq]; first slia.
+  rewrite /dec_ord.
+  suff->: ltS_neq_lt (ltn_ord m) neq = ltm =>//.
+  exact: eq_irrelevance.
+Qed.
+
+End upgrade.
+
+Definition insub_ord (n k : nat) : option 'I_n := 
+  (if k < n as L return (k < n = L -> _) then
+   fun pf => some (ord pf)
+   else fun=> none) erefl.
+
+Ltac insub_case := rewrite /insub_ord; dcase=> //=.
+
+Lemma refleqP {a b A B} (rA : reflect A a) (rB : reflect B b) :
+  A <-> B -> a = b.
+Proof. case=> *; exact /(sameP rA)/(iffP rB). Qed.
+
+Lemma exists_eq {T} {A B : T -> Prop} (_ : forall x, A x <-> B x) : 
+  (exists x, A x) <-> exists x, B x.
+Proof. split=> [][] x /H ?; by exists x. Qed.
+
+Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
+Proof. by case: a=> // /(_ erefl) ->. Qed.
+

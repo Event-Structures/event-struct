@@ -1,0 +1,34 @@
+opam-version: "2.0"
+maintainer: "volodeyka@gmail.com"
+version: "dev"
+
+homepage: "https://github.com/volodeyka/event-struct"
+dev-repo: "git+https://github.com/volodeyka/event-struct.git"
+bug-reports: "https://github.com/volodeyka/event-struct/issues"
+doc: "https://volodeyka.github.io/event-struct/"
+license: "TODO: MIT recommended"
+
+synopsis: "Formalization of event structures in Coq"
+description: """
+TODO
+Blah-blah-blah."""
+
+build: [make "-j%{jobs}%" ]
+install: [make "install"]
+depends: [
+  "coq" {(>= "8.10" & < "8.13~") | (= "dev")}
+  "coq-mathcomp-finmap"
+  "coq-mathcomp-ssreflect" {(>= "1.11" & < "1.12~") | (= "dev")}
+  "coq-equations"
+]
+conflicts: [
+  "coq-equations" {(= "dev+HoTT")}
+]
+
+tags: [
+  "category:Computer Science/Concurrency"
+  "logpath:event_struct"
+]
+authors: [
+  "TODO"
+]

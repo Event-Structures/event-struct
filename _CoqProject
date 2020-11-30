@@ -12,7 +12,10 @@
 -arg -w -arg -deprecated-ssr-search
 
 utilities.v
-relations.v
+inhtype.v
 wftype.v
-EventStructure.v
-TransitionSystem.v
+relations.v
+ident.v
+eventstructure.v
+transitionsystem.v
+regmachine.v

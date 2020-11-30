@@ -1,4 +1,5 @@
 From Coq Require Import Lia.
+
 From Coq Require Import Relations Program.Basics ssrsearch.
 From mathcomp Require Import ssreflect ssrbool eqtype ssrfun seq order.
 From Equations Require Import Equations.
@@ -12,6 +13,7 @@ Import Order.LTheory.
 Open Scope order_scope.
 
 Section well_founded.
+
 
 Definition sfrel {T : eqType} (f : T -> seq T) : rel T :=
   [rel a b | b \in f a].
