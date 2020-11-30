@@ -5,13 +5,16 @@
 -arg -w -arg -non-reversible-notation
 -arg -w -arg -duplicate-clear
 -arg -w -arg -redundant-canonical-projection
--arg -w -arg  -notation-incompatible-format
+-arg -w -arg -notation-incompatible-format
+-arg -w -arg -ssr-search-moved
+-arg -w -arg -deprecated-ssr-search
+-arg -w -arg -ambiguous-paths
 
 utilities.v
 inhtype.v
 wftype.v
-ident.v
 relations.v
+ident.v
 eventstructure.v
 transitionsystem.v
 regmachine.v
