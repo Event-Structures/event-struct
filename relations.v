@@ -1,5 +1,4 @@
 From Coq Require Import Lia.
-
 From Coq Require Import Relations Program.Basics.
 From mathcomp Require Import ssreflect ssrbool eqtype ssrfun seq order.
 From Equations Require Import Equations.
@@ -23,7 +22,7 @@ Definition filter_neq {T : eqType} (f : T -> seq T) : T -> seq T :=
 
 Notation "f '\eq'" := (filter_neq f) (at level 5, format "f '\eq'").
 
-Context {T : wfType}.
+Context {disp : unit} {T : wfType disp}.
 
 Variable (f : T -> seq T).
 
