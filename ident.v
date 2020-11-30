@@ -95,7 +95,8 @@ Context {disp} {T : identType disp}.
 Local Notation ident0 := (@ident0 disp T).
 Local Notation fresh := (@fresh disp T).
 
-Lemma fresh_lt x : x < fresh x. Proof. by case: T x=> ? [/= ? []]. Qed.
+Lemma fresh_lt x : x < fresh x. 
+Proof. by case: T x=> ? [/= ? []]. Qed.
 
 Definition fresh_seq s := fresh (head ident0 s).
 
@@ -116,7 +117,6 @@ Proof.
   exact/rev_trans/lt_trans.
 Qed.
 
-
 Lemma fresh_seq_le x: x \in (fresh_seq s :: s) -> x <= fresh_seq s.
 Proof. by rewrite ?inE=> /orP[/eqP->|/fresh_seq_lt/ltW]. Qed.
 
@@ -130,7 +130,7 @@ Proof. by []. Qed.
 Lemma fresh_seq_iter n: fresh_seq (nfresh n) = iter n.+1 fresh ident0.
 Proof. by elim: n=> //= ? ->. Qed.
 
-Lemma nfesh_le x n: x \in nfresh n.+1 -> x <= fresh_seq (nfresh n).
+Lemma nfresh_le x n: x \in nfresh n.+1 -> x <= fresh_seq (nfresh n).
 Proof.
   elim n=> //= [|? IHn]; rewrite ?inE=> /orP[/eqP-> //|].
   - move/eqP->; exact/(ltW (fresh_lt _)).
