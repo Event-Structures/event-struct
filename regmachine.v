@@ -10,13 +10,13 @@ Unset Printing Implicit Defensive.
 Arguments Read {_ _}.
 Arguments Write {_ _}.
 
-Section RegMachine.
+(*Section RegMachine.
 
 Open Scope fmap.
 Context {val : inhType}.
 
-Notation n := (@n val).
-Notation exec_event_struct := (@exec_event_struct val).
+(*Notation n := (@n val).*)
+Notation exec_event_struct := (@fin_exec_event_struct val).
 Notation lab := (@lab val).
 
 
@@ -109,4 +109,4 @@ Definition add_label_unit_val
   | _          => [::]
   end.
 
-End RegMachine.
+End RegMachine.*)

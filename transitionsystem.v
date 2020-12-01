@@ -2,7 +2,7 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
 From event_struct Require Import utilities eventstructure relations inhtype.
 
-Set Implicit Arguments.
+(*Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
@@ -225,4 +225,4 @@ Definition ltr_add_event es1 al es2 := es2 = @add_event es1 al.
 
 Notation "es1 '--' al '-->' es2" := (ltr_add_event es1 al es2) (at level 0).
 
-End TransitionSystem.
+End TransitionSystem.*)
