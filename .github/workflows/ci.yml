@@ -27,13 +27,15 @@ jobs:
         image:
           - mathcomp/mathcomp:1.11.0-coq-8.11
           - mathcomp/mathcomp:1.11.0-coq-8.12
-          - mathcomp/mathcomp-dev:coq-dev
+#          - mathcomp/mathcomp-dev:coq-dev
       max-parallel: 4
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
       - uses: coq-community/docker-coq-action@v1
         with:
+          before_install: opam config list; opam repo list;
+           opam list; opam pin add coq-mathcomp-finmap --dev-repo --no-action
           opam_file: './coq-event-struct.opam'
           custom_image: ${{ matrix.image }}
 
