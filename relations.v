@@ -11,6 +11,7 @@ Set Equations Transparent.
 
 Import Order.LTheory.
 Local Open Scope order_scope.
+Import Relation_Operators.
 
 Section well_founded.
 
@@ -80,29 +81,27 @@ Proof.
   exact: filter_lt.
 Qed. 
 
+Print  t1n_trans.
+Arguments t1n_trans {_ _ _ _ _}.
+Arguments t1n_step {_ _ _ _}.
+
 (* Transitive closure reflection lemma *)
 Lemma t_closureP a b : 
   reflect (clos_trans_1n T (sfrel f\eq) a b) (t_closure a b).
 Proof.
-  rewrite /t_closure.
-  move: a b. apply: wf_ind=> a IH b.
+  rewrite /t_closure /sfrel /=.
+  elim/(@wf_ind disp): a=> a IH in b *.
   apply /(iffP idP).
-  { rewrite /s_up_set /Subterm.FixWf Fix_eq; last by apply: ext_s_up_set.
-    rewrite {1}/s_up_set_functional mem_cat => /orP [].
-    { by constructor. }
-    case/flatten_mapP=> x xinf. case: eqP=> //=.
-    move=> /filter_lt /IH /apply H.
-    apply: Relation_Operators.t1n_trans; last exact H.
-    exact xinf. }
-  move=> ctab. move: ctab IH. case.
-  { rewrite /sfrel /= => c afc IH.
-    rewrite /s_up_set /Subterm.FixWf Fix_eq; last by apply: ext_s_up_set.
-    by rewrite {1}/s_up_set_functional mem_cat afc. }
-  move=> c d. rewrite /sfrel /= => cfd ctac IHd.
+  - rewrite /s_up_set /Subterm.FixWf Fix_eq; last exact: ext_s_up_set.
+    rewrite {1}/s_up_set_functional mem_cat => /orP[]; first by constructor.
+    case/flatten_mapP=> ? S;
+    by case: eqP=> // /filter_lt /IH /apply /(t1n_trans S).
+  move: IH=> /swap [[? S ?|c ? /dup ? /filter_lt L /swap /(_ _ L) /apply ?]].
+  - rewrite /s_up_set /Subterm.FixWf Fix_eq; last by apply: ext_s_up_set.
+    by rewrite {1}/s_up_set_functional mem_cat S.
   rewrite /s_up_set /Subterm.FixWf Fix_eq; last by apply: ext_s_up_set.
-  rewrite {1}/s_up_set_functional mem_cat. apply/orP.
-  right. apply/flatten_mapP. exists c=> //=. case: eqP=> //=.
-  move=> _. apply/IHd=> //=. exact: filter_lt.
+  rewrite {1}/s_up_set_functional mem_cat; apply/orP; right. 
+  apply/flatten_mapP; exists c=> //=; by case: eqP.
 Qed.
 
 
