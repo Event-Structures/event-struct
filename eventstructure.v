@@ -1,199 +1,249 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order choice.
-From mathcomp Require Import eqtype fingraph path.
-From event_struct Require Import utilities relations inhtype.
+From Coq Require Import Relations.
+From mathcomp Require Import ssreflect ssrnat ssrfun ssrbool seq fintype order.
+From mathcomp Require Import eqtype fingraph path tuple finmap finfun choice.
+From event_struct Require Import utilities relations rfsfun wftype ident.
+
+(******************************************************************************)
+(* This file contains the definitions of:                                     *)
+(*     fin_exec_event_structure d E == definition of finite execution event   *)
+(*                              structure where E : identType d               *)
+(*           label R W == label that can be: Read x a, Write x a, ThreadEnd   *)
+(*                      or ThreadStart                                        *)
+(*           w << r == r can read from w                                      *)
+(* --> it_contains:                                                           *)
+(*          1) dom : seq E == all elements of our event structure. It should  *)
+(*                   by sorted because we want to create a fresh element,     *)
+(*                   that is not in dom just by taking fresh of it's biggest  *)
+(*                   element                                                  *)
+(*          2) lab : rfsfun (fun=> ThreadEnd) dom (fun _ _ => true)           *)
+(*                    == labeling finite function on dom, that returns        *)
+(*                   ThreadEnd if out of domain                               *)
+(*          3) ffpred : rfsfun id dom (>=%O) == finite function that returns  *)
+(*                  predsessor of arbitrary element x if he has one, or x     *)
+(*                  otherwise                                                 *)
+(*          4) ffrf   :                                                       *)
+(*             rfsufn id dom                                                  *)
+(*             [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))]*)
+(*             == finite function that by x returns element form that x reads *)
+(*              if lab x = Read and x otherwise                               *)
+(* Then we are trying to derive some theory of finite event structure:        *)
+(*               ica x y iff x = ffred y or x = ffrf y                        *)
+(*               ca == casuality relation (just reflexive-transitive closure  *)
+(*                  of ica                                                    *)
+(*               cf == conflict relation (e1 # e2 -- notation for cf e1 e2)   *)
+(* If we ask that reads are not in conflict with the writes where they read   *)
+(* from, we can prove irreflexivity of our conflict relation.                 *)
+(* So we can define:                                                          *)
+(*             cexec_event_structure == subtype of fin_exec_event_structure   *)
+(*                where reads and corresponding writes are conflict-free and  *)
+(*                thus conflict relation is irreflexive                       *)
+(******************************************************************************)
+
+Import Order.LTheory.
+Open Scope order_scope.
+
 
 Set Implicit Arguments.
 Unset Strict Implicit.
-Unset Printing Implicit Defensive.
 
-Definition loc := nat.
+Definition var := nat.
 
-Inductive label (Rval Wval : Type) :=
-| Read of loc & Rval
-| Write of loc & Wval
+Inductive label {Rval Wval : Type} :=
+| Read of var & Rval
+| Write of var & Wval
 | ThreadStart
 | ThreadEnd.
-
-Definition eq_label {Rval Wval : eqType} (l l' : @label Rval Wval) := 
-  match l, l' with
-  | Read a x,  Read b y      => [&& a == b & x == y]
-  | Write a x,   Write b y   => [&& a == b & x == y]
-  | ThreadEnd, ThreadEnd     => true
-  | ThreadStart, ThreadStart => true
-  | _, _                     => false
-  end.
-
-Lemma eqlabelP (Rval Wval : eqType) : Equality.axiom (@eq_label Rval Wval).
-Proof. 
-  case=> [v x [] * /=|v x []* /=|[]|[]]; try constructor=>//;
-  by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
-Qed.
-
-Canonical label_eqMixin (Rval Wval : eqType) := EqMixin (@eqlabelP Rval Wval).
-Canonical label_eqType (Rval Wval : eqType) :=
-  Eval hnf in EqType (label Rval Wval) (@label_eqMixin Rval Wval).
-
-Canonical label_inhMixin (Rval Wval : eqType) := 
-  @Inhabitant.Mixin _ _ (@ThreadEnd Rval Wval).
-Canonical label_identType {Rval Wval : eqType} :=
-  Eval hnf in Inhabitant (label Rval Wval) (label_inhMixin Rval Wval).
 
 Section PrimeEventStructure.
 
 Context {val : eqType}.
 
-(* ******************************************************************************** *)
-(*     Label                                                                        *)
-(* ******************************************************************************** *)
+(* ************************************************************************* *)
+(*     Label                                                                 *)
+(* ************************************************************************* *)
 
 Local Notation label := (@label val val).
 
 Implicit Type (l : label).
 
+Definition eq_label l l' := 
+  match l, l' with
+  | Read a x,  Read b y      => [&& a == b & x == y]
+  | Write a x, Write b y     => [&& a == b & x == y]
+  | ThreadEnd, ThreadEnd     => true
+  | ThreadStart, ThreadStart => true
+  | _, _                     => false
+  end.
+
+Lemma eqlabelP : Equality.axiom eq_label.
+Proof. 
+  case=> [v x [] * /=|v x []* /=|[]|[]]; try constructor=>//;
+  by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
+Qed.
+
+Canonical label_eqMixin := EqMixin eqlabelP.
+Canonical label_eqType := Eval hnf in EqType label label_eqMixin.
+
 Definition is_read  l := if l is (Read _ _) then true else false.
 
 Definition is_thdstart l := if l is ThreadStart then true else false.
 
-Definition compatible (w r : label) := 
+Definition write_read_from (w r : label) := 
   match w, r with
   | (Write x a), (Read y b) => (x == y) && (a == b)
-  | _, _                 => false
+  | _, _                    => false
   end.
 
-Notation is_read_ext f r := (is_read (ext f r)).
+Notation "w << r" := (write_read_from w r) (at level 0).
 
-Notation compatible_ext f := (compatible \o2 (ext f)).
+(* ************************************************************************* *)
+(*     Exec Event Structure                                                  *)
+(* ************************************************************************* *)
 
-(* ******************************************************************************** *)
-(*     Exec Event Structure                                                         *)
-(* ******************************************************************************** *)
-
-Structure exec_event_struct := Pack {
-  n     : nat;
-  lab   : 'I_n -> label;
-  fpred : forall m : 'I_n, option 'I_m;
-  frf   : forall (r : 'I_n) (is_r : is_read_ext lab r), 
-            {w : 'I_r | compatible_ext lab w r} 
+Structure fin_exec_event_struct {disp} (E : identType disp) := Pack {
+  dom        : seq E;
+  dom_sorted : sorted (>%O) dom;
+  lab        : rfsfun (fun=> ThreadEnd) dom (fun _ _ => true);
+  ffpred     : rfsfun id dom (>=%O : rel E);
+  ffrf       : rfsfun id dom
+               [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))]
 }.
 
 Section ExecEventStructure.
 
-Variables (es : exec_event_struct).
+Context {disp} {E : identType disp} (es : (fin_exec_event_struct E)).
 
-Notation n       := (@n es).
-Notation lab     := (@lab es).
-Notation fpred   := (@fpred es).
-Notation frf     := (@frf es).
+Notation domain := (dom es).
+Notation lab     := (lab es).
+Notation ffpred   := (ffpred es).
+Notation ffrf     := (ffrf es).
 
-(* ******************************************************************************** *)
-(*     Event Types                                                                  *)
-(* ******************************************************************************** *)
+(* ************************************************************************* *)
+(*     Event Types                                                           *)
+(* ************************************************************************* *)
 
-Definition oread (e : nat) : {? e : 'I_n | is_read (ext lab e) } := 
-  oapp insub none (insub_ord n e).
+(* ************************************************************************* *)
+(*     Predecessor                                                           *)
+(* ************************************************************************* *)
 
-(* ******************************************************************************** *)
-(*     Predecessor and Successor                                                    *)
-(* ******************************************************************************** *)
+Definition fpred : E -> E := ffpred.
 
-Definition ofpred (e : nat) : option nat :=
-  obind (fun (a : 'I_n) => omap (@nat_of_ord a) (fpred a)) (insub_ord n e).
-
-Lemma ofpred_n m (_ : m >= n) : ofpred m = none.
-Proof. rewrite /ofpred. insub_case. slia. Qed.
-
-Definition pred e1 e2 := ofpred e1 == some e2.
-
-Definition succ e1 e2 := ofpred e2 == some e1.
-
-Lemma ofpred_lt e1 e2 : ofpred e1 = some e2 -> e2 < e1.
-Proof.
-  rewrite /ofpred. insub_case=> L. by case: (fpred _)=> //= [[/= ?? [<-]]].
+Lemma fpred_le e: fpred e <= e.
+Proof. 
+  case I: (e \in domain); first exact (axiom_rfsfun ffpred I).
+  by rewrite /fpred (memNdom _ (negbT I)).
 Qed.
 
-Lemma pred_lt e1 e2 : pred e1 e2 -> e2 < e1.
-Proof. rewrite /pred. by move /eqP /ofpred_lt. Qed.
+(* ************************************************************************* *)
+(*     Reads-From                                                            *)
+(* ************************************************************************* *)
 
-Lemma succ_lt e1 e2 : succ e1 e2 -> e1 < e2.
-Proof. rewrite /succ. by move /eqP /ofpred_lt. Qed.
+Definition frf : E -> E := ffrf.
 
-(* ******************************************************************************** *)
-(*     Reads-From                                                                   *)
-(* ******************************************************************************** *)
-
-Definition ofrf (e : nat) : option nat := 
-  omap (fun r => (nat_of_ord (sval (frf (svalP r))))) (oread e).
-
-Lemma ofrf_n m (_ : m >= n) : ofrf m = none.
-Proof. rewrite /ofrf /oread. insub_case. slia. Qed.
-
-Lemma ofrf_le r w : ofrf r = some w -> w < r.
+Lemma frf_le r : frf r <= r.
 Proof.
-  rewrite /ofrf /oread. insub_case=> L. case H: (is_read_ext lab (ord L)).
-  { rewrite insubT /= => [[<-]]. by case: (sval (frf H)). }
-  by rewrite insubF.
+  case I: (r \in domain); first by case/andP: (axiom_rfsfun ffrf I).
+  by rewrite /frf (memNdom _ (negbT I)).
 Qed.
 
-(* Reads-From relation *)
-Definition rf : rel nat := 
-  fun w r => ofrf r == some w.
+Lemma frf_domain e: (e \in domain) = false ->
+  frf e = e.
+Proof. by move/negbT/(memNdom ffrf). Qed.
 
-Lemma rf_lt w r : rf w r -> w < r.
-Proof. rewrite /rf. by move /eqP /ofrf_le. Qed.
+Definition fica e := [:: frf e; fpred e].
 
-(* ******************************************************************************** *)
-(*     Causality                                                                    *)
-(* ******************************************************************************** *)
+Lemma fica_domain e: (e \in domain) = false ->
+  fica e = [:: e; e].
+Proof. by move/negbT/dup/(memNdom ffpred)=> {4}<- /(memNdom ffrf) {2}<-. Qed.
+
+Lemma fica_le e1 e2: e1 \in (fica e2) -> e1 <= e2.
+Proof. rewrite ?inE=> /orP[]/eqP->; by rewrite (frf_le, fpred_le). Qed.
+
+(* ************************************************************************* *)
+(*     Causality                                                             *)
+(* ************************************************************************* *)
 
 (* Immediate causality relation *)
-Definition ica : rel nat := 
-  fun e1 e2 => succ e1 e2 || rf e1 e2.
+Definition ica e1 e2: bool := e1 \in fica e2.
 
-Lemma ica_lt e1 e2 : ica e1 e2 -> e1 < e2.
-Proof. rewrite /ica. by move /orP=> [/succ_lt | /rf_lt]. Qed.
+Arguments ica /.
+
+Lemma ica_le e1 e2 : ica e1 e2 -> e1 <= e2.
+Proof. by move/fica_le. Qed.
+
+Arguments clos_rtn1_rt {_ _ _ _}.
+Arguments clos_rt_rt1n {_ _ _ _}.
+Arguments clos_rt_rtn1 {_ _ _ _}.
+Arguments clos_rt1n_rt {_ _ _ _}.
 
 (* Causality relation *)
-Definition ca : rel nat := fun x y => false (* rt_closure ica *).
+Definition ca : rel E := rt_closure fica fica_le.
 
-Lemma succ_ca x y : succ x y -> ca x y.
-Proof. Admitted. (* move=> ?. apply /irel_rt_cl. by apply /orP; left. Qed. *) 
+Lemma closureP e1 e2: 
+  reflect (clos_refl_trans_n1 _ ica e1 e2) (ca e1 e2).
+Proof. exact/(equivP (rt_closureP _ _ _ _)). Qed.
 
-Lemma rf_ca e1 e2 : rf e1 e2 -> ca e1 e2.
-Proof. Admitted. (* move=> ?. apply /irel_rt_cl. by apply /orP; right. Qed. *)
+Lemma fica_ca e1 e2: e1 \in fica e2 -> ca e1 e2.
+Proof. 
+  move=> H. apply/closureP/(Relation_Operators.rtn1_trans); first exact: H.
+  exact: rtn1_refl.
+Qed.
 
 Lemma ca_refl: reflexive ca.
-Proof. Admitted. (* exact: rt_cl_refl. Qed. *)
+Proof. exact: rt_closure_refl. Qed.
 
-Lemma ca_trans: transitive ca.
-Proof. Admitted. (* exact: rt_cl_trans. Qed. *)
+Lemma ca_trans: transitive ca. 
+Proof. move=>???. exact: rt_closure_trans. Qed.
 
 Arguments ca_trans {_ _ _}.
 
-Lemma ca_decr e1 e2 : e1 != e2 -> ca e1 e2 ->
-  exists e3, ca e1 e3 && ica e3 e2. 
-Proof. Admitted.
-(*   move /swap/closureP=> [/eqP // | e3 e4 ?]. *)
-(*   move=> /closureP E *. *)
-(*   exists e3. by rewrite /ca E.  *)
-(* Qed. *)
-
 Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
-Proof. Admitted. (* move /closureP. elim=> [] //. move=> ??/ica_lt. slia. Qed. *)
+Proof. 
+  move/closureP.
+  by elim=> [] // ??/ica_le L ? /le_trans /(_ L).
+Qed.
 
-Lemma ca_rfield e1 e2 (_ : ca e1 e2) : (e1 == e2) || (e1 < n) && (e2 < n).
-Proof. Admitted.
-(*   case N: (e1 == e2)=> //=. apply/andP. suff E: (e2 < n). *)
-(*   { split=> //. move /ca_le: H. slia. } *)
-(*   move /closureP: H N. elim=> [/eqP|? e] //. *)
-(*   rewrite /ica /succ /rf. case H: (e < n)=> //. have ?: (e >= n) by slia. *)
-(*   by rewrite ofrf_n ?ofpred_n. *)
-(* Qed. *)
+Lemma ca_decr e1 e2 : e1 != e2 -> ca e1 e2 ->
+  exists e3, [&& ca e1 e3, ica e3 e2 & e3 < e2]. 
+Proof.
+  move/swap/closureP/clos_rtn1_rt/clos_rt_rt1n; elim=> [?/eqP//|].
+  move=> x y z I /clos_rt1n_rt/clos_rt_rtn1/closureP L.
+  case N: (y != z). 
+  - case/(_ erefl)=> e /and3P[C *]; exists e; apply/and3P; split=> //.
+    exact/(ca_trans _ C)/fica_ca.
+  move/eqP: N I L=> -> I ?? N; exists x.
+  by rewrite ca_refl I /= lt_def eq_sym N /= ica_le.
+Qed.
 
 Lemma ca_anti: antisymmetric ca.
-Proof. move=> ?? /andP[/ca_le ? /ca_le ?]. slia. Qed.
+Proof.
+  move=> x y /andP[/ca_le Eq /ca_le ?]. 
+  by rewrite (@le_anti _ _ x y) // Eq.
+Qed.
+
+Lemma ca_fpred {e}: ca (fpred e) e.
+Proof.
+  case Eq: (fpred e != e); last (move/eqP: Eq->; by rewrite ca_refl).
+  by apply/fica_ca; rewrite ?inE eq_refl.
+Qed.
+
+Lemma ca_codom e1 e2: ca e1 e2 -> (e2 \in domain) = false ->
+  (e1 == e2).
+Proof. 
+  move/closureP; elim=> //?? I ? Y Z; move: I Y.
+  by rewrite /ica fica_domain // ?inE orbb=> /eqP-> /(_ Z).
+Qed.
+
+(*Lemma ca_dom e1 e2: ca e1 e2 -> (e1 \in domain) = false ->
+  e1 = e2.
+Proof.
+  move/closureP; elim=> // x y I /closureP ? IH /dup/IH.
+  move: I=> /swap .
+Qed.*)
+
 
 (* Strict (irreflexive) causality *)
-Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
+(*Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
 
 Lemma sca_def : forall e1 e2, sca e1 e2 = (e2 != e1) && (ca e1 e2).
 Proof. done. Qed.
@@ -205,42 +255,49 @@ Definition ev_display : unit.
 Proof. exact: tt. Qed.
 
 (* TODO: make this canonocal projection work *)
-Canonical predorderType := POrderType ev_display nat orderMixin.
+Canonical predorderType := POrderType ev_display E orderMixin.
 
-Import Order.LTheory.
-Open Scope order_scope.
-Import Order.NatOrder.
+Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 0).*)
 
-(* ******************************************************************************** *)
-(*     Conflict                                                                     *)
-(* ******************************************************************************** *)
-
+(* ************************************************************************* *)
+(*     Conflict                                                              *)
+(* ************************************************************************* *)
 
 (* Immediate conflict relation *)
-Definition icf (e1 e2 : nat) :=
+Definition icf (e1 e2 : E) :=
   [&& (e1 != e2),
-      ofpred e1 == ofpred e2,
-      ~~ is_thdstart (ext lab e1) &
-      ~~ is_thdstart (ext lab e2)].
+      fpred e1 == fpred e2,
+      fpred e1 < e1,
+      fpred e2 < e2,
+      ~~ is_thdstart (lab e1) &
+      ~~ is_thdstart (lab e2)].
 
 Lemma icf_symm e1 e2: icf e1 e2 -> icf e2 e1.
-Proof. move/and3P=>[??/andP[*]]. apply/and4P; split; by rewrite 1?eq_sym. Qed.
+Proof. 
+  case/and5P=>*. 
+  by apply/and5P; split=> //; rewrite 1?eq_sym // andbC.
+Qed.
+
+Definition seqpred_ca := up_set fica fica_le .
+
+Lemma seqpred_ca_in e1 e2: e1 \in seqpred_ca e2 = ca e1 e2.
+Proof. by []. Qed.
 
 (* Conflict relation *)
 Definition cf e1 e2 :=
-  [exists e1' : 'I_e1.+1, [exists e2' : 'I_e2.+1,
-  [&& ca e1' e1, ca e2' e2 & icf e1' e2']]].
+  has (fun p=> icf p.1 p.2)
+  (allpairs pair (seqpred_ca e1) (seqpred_ca e2)).
 
 Notation "a # b" := (cf a b) (at level 10).
 
 Lemma cfP {e1 e2}:
   reflect (exists e1' e2', [&& ca e1' e1, ca e2' e2 & icf e1' e2']) (e1 # e2).
 Proof.
-  apply (iffP existsP).
-  { case=> [[m ? /existsP[[/= n ?]]]]. by exists m, n. }
-  case=> x [y /and4P[Lc1 Lc2 *]]. move /ca_le: (Lc1) (Lc2) => L1 /ca_le L2.
-  exists (@Ordinal e1.+1 _ L1). apply /existsP. exists (@Ordinal e2.+1 _ L2).
-  by apply /and4P.
+  apply/(iffP hasP)=> [[? /allpairsPdep[x[y[]]]]|[x [y /and3P[]]]].
+  - rewrite 2!seqpred_ca_in=> ?? -> /= ?.
+    exists x, y; exact /and3P.
+  rewrite -2!seqpred_ca_in=> *.
+  exists (x, y)=> //; exact /allpairs_f. 
 Qed.
 
 Lemma cf_symm: symmetric cf.
@@ -257,90 +314,90 @@ Proof.
   apply/and3P; split=>//; by rewrite ((ca_trans C), (ca_trans C')).
 Qed.
 
-Notation cf_step e1 e2 := [|| icf e1 e2,
-  (if ofpred e1 is some x then x # e2 else false),
-  (if ofpred e2 is some y then e1 # y else false),
-  (if ofrf  e1 is some x then x # e2 else false) |
-  (if ofrf  e2 is some y then e1 # y else false)].
+Notation cf_step e1 e2 := 
+  [|| icf e1 e2,
+      has (cf e1) (fica e2) |
+      has (cf e2) (fica e1)].
+
+Lemma icf_cf e1 e2: icf e1 e2 -> e1 # e2.
+Proof.
+  move=> I; apply/cfP.
+  exists e1, e2; by rewrite ?ca_refl I.
+Qed.
 
 Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
-Proof. Admitted.
-(*   move/or4P => [? |||/orP[]]. *)
-(*   { apply/cfP; exists e1, e2. by rewrite !ca_refl. } *)
-(*   all: ocase=> /eqP H C. *)
-(*   all: rewrite (consist_cf C) // ?ca_refl // /ca irel_rt_cl //. *)
-(*   all: by rewrite /ica /succ /rf H. *)
-(* Qed. *)
+Proof.
+  case/or3P=> [/icf_cf||]// /hasP[? /fica_ca /swap /consist_cf /apply];
+  last rewrite cf_symm; apply; by rewrite ca_refl.
+Qed.
 
 Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
-Proof. Admitted. 
-(*   apply /(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //. *)
-(*   case=> ? [? /and3P[/closureP]]. *)
-(*   elim=> [/closureP |]. *)
-(*   { elim=> [-> |] //. *)
-(*     by move=> ?? /orP[] /eqP-> /closureP ? H /H /cf_step_cf->. } *)
-(*   by move=> ?? /orP[] /eqP->/closureP ? IH L /(IH L) /cf_step_cf->. *)
-(* Qed. *)
+Proof.
+  apply /(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //.
+  case=> ? [? /and3P[/closureP]].
+  elim=> [/closureP | ?? /swap ?].
+  - elim=> [-> |] // ?? /swap _.
+    rewrite /ica ?inE=> /orP[]/eqP-> /apply /cf_step_cf /= -> //=;
+    by rewrite orbT.
+  rewrite /ica ?inE=> /orP[]/eqP-> /apply/apply /cf_step_cf /=;
+  by rewrite cf_symm=> /= ->.
+Qed.
 
-(* ******************************************************************************** *)
-(*     Reads-From Consistency                                                       *)
-(* ******************************************************************************** *)
+(* ************************************************************************* *)
+(*     Reads-From Consistency                                                *)
+(* ************************************************************************* *)
 
-Definition consistency := [forall k : 'I_n, [forall m : 'I_n,
-   (ofrf m == some (nat_of_ord k)) ==> ~~ m # k]].
+Definition consistency :=  all (fun e => ~~ e # (frf e)) domain.
 
 Hypothesis consist : consistency.
 
-Lemma rff_consist {e1 e2} (rf : ofrf e2 = some e1) : ~ e2 # e1.
+Lemma rff_consist e : ~ e # (frf e).
 Proof.
-  suff L: (e2 < n)%N.
-  { move /ofrf_le: (rf)=> L1. have L3: (e1 < n)%N by slia.
-    move /forallP /(_ (Ordinal L3)) /forallP /(_ (Ordinal L)): consist.
-    by move /eqP : rf=> /swap /implyP /apply /negP. }
-  move: rf. rewrite /ofrf /oread. by insub_case. 
+  case D: (e \in domain).
+  - apply/negP; by move/allP/(_ _ D): consist.
+  rewrite frf_domain // => /cfP[? [? /and3P[/ca_codom/(_ D) /eqP ->]]].
+  by move/ca_codom/(_ D)/eqP-> => /andP[/negP].
 Qed.
 
 Lemma cf_irrelf : irreflexive cf.
 Proof.
-  move=> m. apply/negbTE/negP.
-  elim/ltn_ind: m=> m IHn.
-  suff C: forall n, ofpred m = some n -> ~ m # n.
-  { rewrite cfE=> /or4P[|||/orP[]]; ocase.
-    { by rewrite/icf eq_refl. }
-    1,2: move/C; by rewrite // cf_symm.
-    1,2: move/rff_consist; by rewrite // cf_symm. }
-  move=> k /swap /cfP[x [y /and3P[]]]. case E: (x == m).
-  { move/eqP :E =>-> ? /ca_le ? /and3P[? /eqP-> ? /eqP /succ_lt]. slia. }
-  move/negbT/ca_decr: E => /apply.
-  case=> z /andP[? /orP[] /eqP E1 L ? E2].
-  { apply/(IHn z).
-    { exact /succ_lt /eqP. }
-    apply/cfP; exists x, y.
-    apply/and3P; split=>//. }
-    (* by move: E1 E2=>->[->]. } *)
-  apply/(rff_consist E1)/cfP.
-  exists y, x; apply/and3P; split=>//.
-  (* { exact /(ca_trans L) /succ_ca /eqP. } *)
-  (* by rewrite icf_symm.  *)
+  move=> m; apply/negbTE/negP.
+  elim/(@wf_ind disp E): m=> m IHn.
+  suff C: ~ m # (fpred m).
+  - by rewrite cfE /icf=> /or3P[/andP[/eqP]||] //= /or3P[]// /rff_consist.
+  move=> /cfP[x [y /and3P[]]]; case Eq: (x == m).
+  - move/eqP :Eq =>-> ? /ca_le L /and5P[?/eqP<- ?] /(le_lt_trans L).
+    by rewrite ltxx.
+  move/negbT/ca_decr: Eq => /apply[[z /and3P[/swap]]].
+  rewrite /ica=> /or3P[]// /eqP-> C1 ?.
+  - move/ca_trans /(_ ca_fpred)=> ? /icf_cf; rewrite cf_symm=> C. 
+    exact/(@rff_consist m)/(consist_cf C).
+  move=> C2 /icf_cf /consist_cf/(_ C1 C2); exact/IHn.
 Qed.
 
 End ExecEventStructure.
 
-Inductive cexec_event_struct := Consist e of (consistency e).
+Section Consistency.
+
+Context {disp}{E : identType disp}.
+Implicit Type es : (@fin_exec_event_struct disp E).
+
+Inductive cexec_event_struct := Consist es of (consistency es).
 
 Arguments Consist {_}.
 
-Coercion ev_struct_of (e : cexec_event_struct) := let '(Consist e' _) := e in e'.
+Coercion ev_struct_of (ces : cexec_event_struct) :=
+  let '(Consist es _) := ces in es.
 
 Canonical consist_subType := [subType for ev_struct_of].
 
 Lemma consist_inj : injective (ev_struct_of).
 Proof. exact: val_inj. Qed.
 
+End Consistency.
+
 End PrimeEventStructure.
 
-Notation "x <=c y" := (@Order.le ev_display _ x y) (at level 10).
+(*Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 10).*)
 Notation "a # b" := (cf _ a b) (at level 10).
-Notation te_ext := (ext ThreadEnd).
-Notation is_read_ext f r := (is_read (ext f r)).
-Notation compatible_ext f := (compatible \o2 (ext f)).
+Notation "w << r" := (write_read_from w r) (at level 0). 

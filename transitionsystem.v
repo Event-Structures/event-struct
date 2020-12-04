@@ -1,21 +1,48 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
-From mathcomp Require Import eqtype fingraph path. 
-From event_struct Require Import utilities eventstructure relations inhtype.
+From mathcomp Require Import eqtype fingraph path finmap. 
+From event_struct Require Import utilities relations ident rfsfun.
+From event_struct Require Import eventstructure.
+
+(******************************************************************************)
+(* Here we want to make function that by event and event structure creates a  *)
+(* new event structure with added event. Than we want to describe behavior of *)
+(* ca, cf, ... on new sructure in terms of ca, cf, ... on old one. Finally we *)
+(* we want to proof that if our structure is consisten, and we are adding the *)
+(* element that is bot conflicting with his predsessors, than our new         *)
+(* stucture is going to be consistent, too.                                   *)
+(*                                                                            *)
+(* This file contains the definitions of:                                     *)
+(*         add_label == special record with all nesessary information about   *)
+(*                   event that we want to add to a fin_exec_event_structure  *)
+(*         add_event es al == function that takes fin_exec_event_structure    *)
+(*                   and record add_label with event we want to add and       *)
+(*                   returns new fin_exec_event_structure with added element  *)
+(*         'function'_add_eventE == lemma that determines behavior of         *)
+(*                   'function' on the new event structure with added element *)
+(*                    in terms of 'function' on event structure without one   *)
+(*         consist_add_event == statement about consistance of our new        *)
+(*                    structure                                               *)
+(*         tr_add_event e1 e2 == we can add some event to e1 and obtain e2    *)
+(*         ltr_add_event e1 al e2 == we can add al to e1 and obtain e2        *)
+(******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Import Order.LTheory.
+Open Scope order_scope.
+
 Section TransitionSystem.
 
-Context {val : eqType}.
+Context {val : eqType} {disp} (E : identType disp).
 
-Notation exec_event_struct := (@exec_event_struct val).
-Notation cexec_event_struct := (@cexec_event_struct val).
+Notation exec_event_struct := (@fin_exec_event_struct val disp E).
+Notation cexec_event_struct := (@cexec_event_struct val disp E).
 
 Notation label := (@label val val).
 
-Implicit Types (x : loc) (a : val) (es : exec_event_struct).
+Implicit Types (x : var) (a : val) (es : exec_event_struct).
 
 (* Section with definitions for execution graph with added event *)
 Section AddEvent.
@@ -23,196 +50,149 @@ Section AddEvent.
 (* execution graph in which we want to add l *)
 Context (es : exec_event_struct).
 
-Notation n      := (@n val es).
-Notation lab    := (@lab val es).
-Notation fpred  := (@fpred val es).
-Notation frf    := (@frf val es).
+Notation dom := (dom es).
+Notation lab    := (lab es).
+Notation ffpred  := (ffpred es).
+Notation ffrf    := (ffrf es).
+Notation fresh := (fresh_seq dom).
+
+Definition wr (lab : E -> label) := 
+  [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))].
 
 Structure add_label :=
   Add {
-    lb     : label;
-    opred  : option 'I_n;
-    owrite : is_read lb -> {k : 'I_n | compatible (ext lab k) lb}
-  }.
+    add_lb            : label;
+
+    add_pred          : E;
+    add_pred_in_dom   : add_pred \in fresh :: dom;
+
+    add_write         : E;
+    add_write_in_dom  : add_write \in fresh :: dom;
+    add_write_consist : (add_write == fresh) (+) ((lab add_write) << add_lb);
+}.
 
 Variable al : add_label.
 
 (* label of an event which we want to add     *)
-Notation l := (lb al).
+Notation lb := (add_lb al). 
 
 (* predecessor of the new event (if it exists) *)
-Notation op := (@opred al).
+Notation pred := (add_pred al).
 
 (* if event is `Read` then we should give `Write` from wich we read *)
-Notation ow := (@owrite al).
+Notation write := (add_write al).
 
-Definition add_lab : 'I_n.+1 -> label := 
-  @add (fun=> label) n lab l.
+Definition add_lab := add_rfsfun fresh lb erefl lab.
 
-Definition add_fpred : forall m : 'I_n.+1, option 'I_m := 
-  @add (option \o ordinal) n fpred op.
+Definition add_ffpred :=
+  add_rfsfun fresh pred (fresh_seq_le (dom_sorted es) (add_pred_in_dom al)) ffpred.
 
-Arguments add_lab : simpl never.
-
-Lemma is_read_add_lab {r : 'I_n} :
-  is_read_ext add_lab r -> is_read_ext lab r.
-Proof. rewrite /add_lab ext_add //. case: r=> /= *. slia. Qed.
-
-Lemma add_lab_compatible {w r : nat}
-  (_ : compatible_ext lab w r) : compatible_ext add_lab w r.
-Proof. 
-  rewrite /add_lab rel_ext // => [[]]; 
-  rewrite /rdom /codom /compatible=> [[//]]. by case. 
-Qed.
-
-Lemma is_read_add_lab_n: is_read_ext add_lab n = is_read l.
-Proof. by rewrite /add_lab ext_add_n. Qed.
-
-Lemma is_read_add_lab_n_aux: is_read_ext add_lab n -> is_read l.
-Proof. by rewrite is_read_add_lab_n. Qed.
-
-Lemma compatible_add_lab (r : 'I_n) : 
-  compatible (ext lab r) l -> compatible_ext add_lab r n.
-Proof. 
-  rewrite /add_lab /comp2 ext_add ?ext_add_n //. 
-  case: r=> /= *. slia.
-Qed.
-
-Definition  ow_add_lab (is_r : is_read_ext add_lab n) :
-  {r : 'I_n |compatible_ext add_lab r n} :=
-   let w := ow (is_read_add_lab_n_aux is_r) in
-     @exist _ _ (sval w) (compatible_add_lab (svalP w)).
-
-Definition add_frf : forall
-  (r : 'I_n.+1)
-  (is_r : is_read_ext add_lab r),
-  { w : 'I_r | compatible_ext add_lab w r } := 
-  let T (r : nat) := 
-      forall (is_r : is_read_ext add_lab r), 
-        { w : 'I_r | compatible_ext add_lab w r }
-  in
-  let frf' (r : 'I_n) : T r := 
-      fun is_r =>
-        let fP (w : 'I_r) := @add_lab_compatible w r in
-        sproof_map fP (frf (is_read_add_lab is_r))
-  in
-  add frf' ow_add_lab.
-
-Lemma sval_add_frf (e1 : 'I_n.+1) (e2 : 'I_n) p p' : e1 = e2 :> nat ->
-  sval (@add_frf e1 p) = sval (@frf e2 p') :> nat.
+Lemma add_lab_write_read: wr add_lab fresh write.
 Proof.
-  case: e1 e2 p p'=> ? L1 [? L2 /= P1 P2] E. case: _ / E P1 P2 L1 L2 => *.
-  rewrite /add_frf add_lt /=. do ?apply /congr1. exact: eq_irrelevance.
+  move: (add_write_consist al).
+  rewrite /add_lab /= ?fsfun_with fsfun_withE.
+  case: ifP=> /= [/eqP->|?->]; first by (case: lb=> //= *; rewrite lexx).
+  by move/(fresh_seq_le (dom_sorted es)): (add_write_in_dom al)=>->.
 Qed.
 
-Definition add_event := Pack add_fpred add_frf.
-
-Lemma ofpred_add_event e : ofpred add_event e =
-  if e == n then omap (@nat_of_ord n) op else ofpred es e.
+Lemma add_lab_write_read_i: 
+  all (fun r => wr lab r (ffrf r) ==> wr add_lab r (ffrf r)) dom.
 Proof.
-  rewrite /ofpred. insub_case=> L; insub_case=> ?; try case : ifP; try slia.
-  { move=> ?. apply /congr1. by rewrite /add_fpred add_lt. }
-  move=> /eqP /esym E. move: E L. case: _ / => ?. 
-  by rewrite /add_fpred add_ord_max.
+  apply/allP=> x.
+  rewrite /add_lab /= ?fsfun_withE => /(fresh_seq_lt (dom_sorted es)).
+  case X: (ffrf x <= x)=> //= /dup /le_lt_trans; move/(_ _ X).
+  case: ifP=> [/eqP->|?]; first by rewrite lt_irreflexive.
+  case: ifP=> [/eqP->|]; by rewrite (lt_irreflexive, implybb).
 Qed.
 
-Definition owr := 
-  (if is_read l as is_r return (is_read l = is_r -> option nat) then
-    fun pf => some (nat_of_ord (sval (ow pf))) 
-  else fun=> none) erefl.
+Definition add_ffrf := 
+  @add_rfsfun _ _ _ _ (wr add_lab)
+  fresh write add_lab_write_read
+  (rfsfun_impl add_lab_write_read_i).
 
-Lemma sval_oread {e}: 
-  (e == n = false) -> 
-  omap ((@nat_of_ord n) \o sval) (oread es e) =
-  omap ((@nat_of_ord n.+1) \o sval) (oread add_event e).
-Proof.
-  move=> ?. rewrite /oread. insub_case; dcase; (try slia)=> ? L.
-  case R: (is_read_ext lab e); [rewrite insubT | rewrite insubF]=> //=;
-  [rewrite insubT | rewrite insubF]=> //=.
-  all: rewrite /add_lab ext_add //; slia.
-Qed.
-
-Arguments oread : simpl never.
-
-Lemma ofrf_add_event e: ofrf add_event e = 
-  if e == n then owr else ofrf es e.
-Proof.
-  rewrite /ofrf/=. case: ifP=> [/eqP ->| efn].
-  { rewrite /owr. dcase.
-    { rewrite /oread /=. insub_case=> [? R|]; last slia.
-      rewrite insubT /= ?is_read_add_lab_n // => R'. 
-      rewrite /add_frf add_ord_max /=. do? apply /congr1. 
-      exact: eq_irrelevance. }
-    rewrite /oread /=. insub_case=> *. 
-    by rewrite insubF // is_read_add_lab_n. }
-  case H: (oread add_event e)=> [[/=]|];
-  move: (H) (sval_oread efn)=>->/=; case H': (oread es e) => //= [[/=]][?].
-  exact /congr1 /sval_add_frf.
-Qed.
-
-(*Lemma ica_add_event e1 e2: 
-  ica add_event e1 e2 = 
-    if (e2 == n) then
-       (omap (@nat_of_ord n) op == some e1) || (owr == some e1)
-    else ica es e1 e2.
-Proof. 
-  rewrite /ica /succ /rf ofrf_add_event ofpred_add_event. by case: ifP. 
-Qed.*)
-
-Lemma ica_add_event e1 e2: 
-  ica add_event e1 e2 =
-  (ica es e1 e2) || 
-  ((e2 == n) && ((omap (@nat_of_ord n) op == some e1) || (owr == some e1))).
-Proof.
-  rewrite /ica /succ /rf ofrf_add_event ofpred_add_event. case: ifP=>/=.
-  { move /eqP->. by rewrite ofpred_n ?ofrf_n. }
-  by rewrite orbF.
-Qed.
+Definition add_event := 
+  @Pack _ _ _ (fresh :: dom) (path_fresh_seq (dom_sorted es)) add_lab add_ffpred add_ffrf.
 
 Hypothesis consist : consistency es.
-Hypothesis ncf_rf : forall e, owr = some e -> ~~ (cf add_event n e).
+Hypothesis ncf_rf : ~~ (cf add_event fresh write).
 
 Arguments cfP {_ _ _ _}.
-(* Arguments closureP {_ _ _}. *)
-Notation step := (Relation_Operators.rtn1_trans).
+Import Relation_Operators.
 
-(* Lemma ca_add_event e1 e2 (N : e2 != n) : ca es e1 e2 = ca add_event e1 e2. *)
-(* Proof. *)
-(*   apply/(refleqP closureP closureP).  *)
-(*   split; move: N=> /swap; elim; try constructor. *)
-(*   all: move=> y ? I ? H ?; apply /(step _ _ _ y)=> //. *)
-(*   { rewrite ica_add_event; apply /orP. by left. } *)
-(*   { apply/H. case /irel_rt_cl /ca_rfield /orP: I=> [|/andP[]]; slia. } *)
-(*   { move: I. rewrite ica_add_event=> /orP[]// /andP[]. slia. } *)
-(*   apply /H. *)
-(*   case/irel_rt_cl /ca_rfield /orP: (I) (I)=> /= [|/andP[?? /ica_lt]]; slia. *)
-(* Qed. *)
+Lemma fpred_add_eventE e : fpred add_event e = 
+  if e == fresh then pred else fpred es e.
+Proof. by rewrite /fpred /add_event /= fsfun_withE. Qed.
 
-Lemma icf_add_event e1 e2  (_ : e1 != n) (_ : e2 != n) :
-  icf es e1 e2 = icf add_event e1 e2.
+Lemma frf_add_eventE e : frf add_event e =
+  if e == fresh then write else frf es e.
+Proof. by rewrite /frf /add_event /= fsfun_withE. Qed.
+
+Lemma ica_add_eventE e1 e2: 
+  ica add_event e1 e2 =
+  if e2 == fresh then 
+    (pred == e1) || (write == e1)
+  else ica es e1 e2.
 Proof.
-  rewrite /icf !ofpred_add_event /=. do ?case: ifP; try slia.
-  by rewrite /add_lab ?ext_add.
+  rewrite /ica /fica frf_add_eventE fpred_add_eventE.
+  by case: ifP=> ?; rewrite ?(andTb, andFb) ?orbF // ?inE eq_sym orbC eq_sym.
 Qed.
 
-Lemma cf_add_event e1 e2  (_ : e1 != n) (_ : e2 != n) :
+Lemma ica_fresh e: ica es fresh e -> e = fresh.
+Proof.
+  move/dup/fica_ca/ca_codom/swap/fica_le.
+  rewrite /ica ?inE. 
+  case I: (e \in dom); last by move=> ?/(_ erefl)/eqP->.
+  by move/lt_geF: (fresh_seq_lt (dom_sorted es) I)=>->.
+Qed.
+
+Lemma ca_fresh e: ca es fresh e -> e = fresh.
+Proof. by move/closureP; elim=> // ?? /swap ? /swap-> /ica_fresh. Qed.
+
+Lemma ca_add_eventE e1 e2: e2 != fresh -> ca es e1 e2 = ca add_event e1 e2.
+Proof.
+  move=> N.
+  apply (refleqP (closureP _ _ _) (closureP _ _ _)).
+  split; move: N=> /swap; elim; try constructor.
+  all: move=> y ? I ? H /negbTE Z; apply (rtn1_trans _ _ _ y)=> //.
+  2,4: apply/H/negP; move: I.
+  - by rewrite ica_add_eventE Z.
+  - move/swap/eqP=>->/ica_fresh Ez.
+    by move/eqP: Z Ez.
+  - rewrite ica_add_eventE Z=> /swap/eqP->/ica_fresh.
+    by move/eqP: Z.
+  move: I; by rewrite ica_add_eventE Z.
+Qed.
+
+Lemma icf_add_eventE e1 e2 :
+  e1 != fresh -> e2 != fresh ->
+  icf es e1 e2 = icf add_event e1 e2.
+Proof.
+  by rewrite /icf !fpred_add_eventE /= ?fsfun_withE => /negbTE->/negbTE->.
+Qed.
+
+Lemma cf_add_eventE e1 e2:
+  e1 != fresh -> e2 != fresh ->
   cf es e1 e2 = cf add_event e1 e2.
 Proof.
-  apply /(refleqP cfP cfP). do ?apply /exists_eq => ?. 
-  rewrite -?ca_add_event //. 
-  (* apply /Bool.eq_iff_eq_true. *)
-  (* do 2?apply /and_eq=> /ca_rfield /orP[|/andP[]]*. *)
-  (* rewrite icf_add_event; slia. *)
+  move=> /dup ? /negP N1 /dup ? /negP N2.
+  apply: (refleqP (cfP _ _ ) (cfP _ _)). 
+  apply /exists_eq => x; apply /exists_eq=> y.
+  rewrite -?ca_add_eventE //. 
+  apply /Bool.eq_iff_eq_true/and_eq => C; apply /and_eq=> ?.
+  rewrite icf_add_eventE //; apply/eqP=> Eq.
+  - apply/N1/eqP/ca_fresh; by rewrite -Eq.
+  apply/N2/eqP/ca_fresh; by rewrite -Eq.
 Qed.
 
 Lemma consist_add_event: consistency add_event.
 Proof.
-  rewrite /consistency. apply /forallP=> e1. apply /forallP => e2.
-  apply /implyP=> /eqP. rewrite ofrf_add_event. case: ifP=> [/eqP->/ncf_rf|]//.
-  case: e1 e2=> /= x? [y? /=]. case yEn: (x == n).
-  { move /eqP: yEn=>-> ? /ofrf_le. slia. }
-  move=> E. move /rff_consist: consist => /apply cf. apply /negP=> cf'.
-  apply /cf. rewrite cf_add_event; slia.
+  rewrite /consistency; apply /allP=> e1.
+  rewrite /add_event /frf /= fsfun_withE ?inE.
+  case: ifP=> /= [/eqP->|/negbT N /(allP consist)] //.
+  rewrite -cf_add_eventE //.
+  apply/negP=> /eqP Ef.
+  have /ica_fresh /eqP /(negP N) //: ica es fresh e1.
+  by rewrite /ica ?inE -Ef eq_refl.
 Qed.
 
 End AddEvent.
