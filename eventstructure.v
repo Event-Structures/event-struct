@@ -46,11 +46,11 @@ Open Scope order_scope.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Definition var := nat.
+Definition loc := nat.
 
 Inductive label {Rval Wval : Type} :=
-| Read of var & Rval
-| Write of var & Wval
+| Read of loc & Rval
+| Write of loc & Wval
 | ThreadStart
 | ThreadEnd.
 

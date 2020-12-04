@@ -42,7 +42,7 @@ Notation cexec_event_struct := (@cexec_event_struct val disp E).
 
 Notation label := (@label val val).
 
-Implicit Types (x : var) (a : val) (es : exec_event_struct).
+Implicit Types (x : loc) (a : val) (es : exec_event_struct).
 
 (* Section with definitions for execution graph with added event *)
 Section AddEvent.
