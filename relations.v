@@ -5,7 +5,6 @@ From Equations Require Import Equations.
 From event_struct Require Import utilities wftype.
 
 Set Implicit Arguments.
-(* Unset Strict Implicit. *)
 Unset Printing Implicit Defensive.
 Set Equations Transparent.
 
@@ -58,17 +57,16 @@ Lemma ext_s_up_set (x : T) (g h : forall y : T, y < x -> seq T) :
 Proof.
   move=> H. rewrite /s_up_set_functional. apply/eqP.
   rewrite eqseq_cat //=. apply/andP. split=> //=. apply/eqP.
-  congr flatten. apply/eq_in_map. move=> y /filter_lt. case: eqP=> //=.
+  congr flatten. apply/eq_in_map => y /filter_lt. by case: eqP.
 Qed.
 
 Lemma t_closure_lt a b : t_closure a b -> b < a.
 Proof.
-  rewrite /t_closure.
   move: a b. apply: wf_ind => a IH b.
-  rewrite /s_up_set /Subterm.FixWf Fix_eq; last by apply: ext_s_up_set.
+  rewrite /t_closure /s_up_set /Subterm.FixWf Fix_eq; last exact: ext_s_up_set.
   rewrite {1}/s_up_set_functional mem_cat => /orP [/filter_lt //|].
   case/flatten_mapP=> x /filter_lt xinf.
-  case: eqP => //. move=> /filter_lt /IH /apply ax. 
+  case: eqP => // /filter_lt /IH /apply ax. 
   by apply: lt_trans; first apply: ax.
 Qed.
 
@@ -87,22 +85,22 @@ Proof.
   rewrite /t_closure.
   move: a b. apply: wf_ind=> a IH b.
   apply /(iffP idP).
-  { rewrite /s_up_set /Subterm.FixWf Fix_eq; last by apply: ext_s_up_set.
+  { rewrite /s_up_set /Subterm.FixWf Fix_eq; last exact: ext_s_up_set.
     rewrite {1}/s_up_set_functional mem_cat => /orP [].
     { by constructor. }
     case/flatten_mapP=> x xinf. case: eqP=> //=.
     move=> /filter_lt /IH /apply H.
     apply: Relation_Operators.t1n_trans; last exact H.
-    exact xinf. }
+    exact: xinf. }
   move=> ctab. move: ctab IH. case.
   { rewrite /sfrel /= => c afc IH.
-    rewrite /s_up_set /Subterm.FixWf Fix_eq; last by apply: ext_s_up_set.
+    rewrite /s_up_set /Subterm.FixWf Fix_eq; last exact: ext_s_up_set.
     by rewrite {1}/s_up_set_functional mem_cat afc. }
-  move=> c d. rewrite /sfrel /= => cfd ctac IHd.
-  rewrite /s_up_set /Subterm.FixWf Fix_eq; last by apply: ext_s_up_set.
+  rewrite /sfrel /= => c d cfd ctac IHd.
+  rewrite /s_up_set /Subterm.FixWf Fix_eq; last exact: ext_s_up_set.
   rewrite {1}/s_up_set_functional mem_cat. apply/orP.
-  right. apply/flatten_mapP. exists c=> //=. case: eqP=> //=.
-  move=> _. apply/IHd=> //=. exact: filter_lt.
+  right. apply/flatten_mapP. exists c=> //=. case: eqP=> //= _.
+  apply/IHd=> //=. exact: filter_lt.
 Qed.
 
 
@@ -113,22 +111,6 @@ Qed.
 Definition up_set a := a :: s_up_set a.
 
 Definition rt_closure a b := b \in up_set a. 
-
-Lemma rt_closure_refl a : rt_closure a a.
-Proof. rewrite /rt_closure /up_set. exact: mem_head. Qed.
-
-Lemma rt_closure_trans a b c :
-  rt_closure a b -> rt_closure b c -> rt_closure a c.
-Proof.
-  rewrite /rt_closure.
-  rewrite !in_cons => /orP [/eqP -> //|].
-  move=> ba /orP [/eqP -> //|].
-  { by rewrite ba. }
-  move=> cb. apply /orP. right.
-  apply /t_closureP. apply: clos_trans_t1n. apply: t_trans.
-  { apply /clos_t1n_trans /t_closureP. exact: ba. }
-  apply /clos_t1n_trans /t_closureP. exact: cb.
-Qed.
 
 (* Reflexive-transitive closure reflection lemma *)
 Lemma rt_closureP a b :
@@ -161,6 +143,16 @@ Proof.
   { apply: clos_t1n_trans. exact: ct. }
   apply: t_step. rewrite /sfrel /filter_neq //=. 
   rewrite mem_filter. by apply /predD1P. 
+Qed.
+
+Lemma rt_closure_refl : reflexive rt_closure.
+Proof. move=> a. exact: mem_head. Qed.
+
+Lemma rt_closure_trans : transitive rt_closure.
+Proof.
+  move=> b a c /rt_closureP ab /rt_closureP bc.
+  apply/rt_closureP /clos_rt_rt1n /rt_trans.
+  apply/clos_rt1n_rt /ab. exact: clos_rt1n_rt.
 Qed.
 
 End well_founded.
