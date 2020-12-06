@@ -57,7 +57,8 @@ Notation ffrf    := (ffrf es).
 Notation fresh := (fresh_seq dom).
 
 Definition wr (lab : E -> label) := 
-  [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))].
+  [rel r w : E | (w <= r) &&
+  (((w == r) && (~~ is_read (lab r))) || ((lab w) << (lab r)))].
 
 Structure add_label :=
   Add {
@@ -68,7 +69,8 @@ Structure add_label :=
 
     add_write         : E;
     add_write_in_dom  : add_write \in fresh :: dom;
-    add_write_consist : (add_write == fresh) (+) ((lab add_write) << add_lb);
+    add_write_consist : ((add_write == fresh) && (~~ is_read add_lb)) ||
+                        ((lab add_write) << add_lb);
 }.
 
 Variable al : add_label.
@@ -91,7 +93,7 @@ Lemma add_lab_write_read: wr add_lab fresh write.
 Proof.
   move: (add_write_consist al).
   rewrite /add_lab /= ?fsfun_with fsfun_withE.
-  case: ifP=> /= [/eqP->|?->]; first by (case: lb=> //= *; rewrite lexx).
+  case: ifP=> /= [/eqP->|?->]; first by rewrite lab_fresh /= orbF lexx=>->.
   by move/(fresh_seq_le (dom_sorted es)): (add_write_in_dom al)=>->.
 Qed.
 
