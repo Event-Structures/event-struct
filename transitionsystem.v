@@ -24,6 +24,8 @@ From event_struct Require Import eventstructure.
 (*                    structure                                               *)
 (*         tr_add_event e1 e2 == we can add some event to e1 and obtain e2    *)
 (*         ltr_add_event e1 al e2 == we can add al to e1 and obtain e2        *)
+(*         add_label_of_Nread == takes non-read label and precessor and       *)
+(*                    returns corresponding add_label structure               *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -72,6 +74,27 @@ Structure add_label :=
     add_write_consist : ((add_write == fresh) && (~~ is_read add_lb)) ||
                         ((lab add_write) << add_lb);
 }.
+
+
+Lemma lab_fresh: lab fresh = ThreadEnd.
+Proof.
+  rewrite memNdom //=.
+  apply/negP=> /(fresh_seq_lt (dom_sorted _)).
+  by rewrite lt_irreflexive.
+Qed.
+
+
+Lemma add_write_consist_of_fresh l: ~~ is_read l ->
+  ((fresh == fresh) && (~~ is_read l)) || ((lab fresh) << l).
+Proof. by move->; rewrite eq_refl lab_fresh. Qed.
+
+Definition add_label_of_Nread l
+ {p} (p_mem :p \in fresh :: dom) : ~~ is_read l -> add_label :=
+ fun nr => 
+  Add 
+    p_mem 
+    (mem_head fresh dom) 
+    (add_write_consist_of_fresh nr).
 
 Variable al : add_label.
 
