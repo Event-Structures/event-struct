@@ -96,39 +96,73 @@ Definition up_set a := a :: s_up_set a.
 
 Definition rt_closure a b := a \in up_set b. 
 
+Lemma refl_t_rt a b :
+  reflect (clos_refl T t_closure a b) (rt_closure a b).
+Proof.
+  rewrite /rt_closure /up_set. funelim (s_up_set b).
+  apply /(iffP idP).
+  { rewrite -cat_cons mem_cat in_cons => /orP[/orP[/eqP ->|]|].
+    { exact: r_refl. }
+    { constructor. rewrite /t_closure. funelim (s_up_set n).
+      by rewrite mem_cat b. }
+    constructor. rewrite /t_closure. funelim (s_up_set n).
+    by rewrite mem_cat b. }
+  case=> [b |]; last exact: mem_head.
+  rewrite /t_closure in_cons. by funelim (s_up_set b) => ->.
+Qed.
+
+Lemma trans_refl_trans a b  {R : rel T}:
+  clos_trans T R a b -> clos_refl_trans T R a b.
+Proof.
+  elim=> [|c d e ctcd crtcd ctde crtce]; first by constructor.
+  apply /rt_trans; first exact: crtcd. exact: crtce.
+Qed.
+
+Lemma filter_clos_sub a b :
+  clos_trans_n1 T (sfrel f\eq) a b -> clos_trans_n1 T (sfrel f) a b.
+Proof.
+  elim=> [c sfac | c d sfcd ctacn ctac].
+  { apply /tn1_step. move: sfac.
+    by rewrite /filter_neq /sfrel /= mem_filter => /andP[]. }
+  apply /tn1_trans; last exact: ctac. move: sfcd. 
+  by rewrite /filter_neq /sfrel /= mem_filter => /andP[].
+Qed.
+
+Lemma refl_eq_neq a b {R : relation T} :
+  clos_refl T R a b -> (a == b) \/ R a b.
+Proof. case; first by right. left. exact: eq_refl. Qed.
+
+Lemma refl_trans_refl_rt a b :
+  clos_refl_trans_n1 T (sfrel f) a b -> clos_refl T t_closure a b.
+Proof.
+  rewrite /sfrel /=. 
+  elim=> [|c d sfcd crtac /refl_t_rt rtac]; first exact: r_refl.
+  case: (c =P d) => [<-| /eqP neq].
+  { apply /refl_t_rt. case: (refl_t_rt a c rtac) => [e|]; last exact: mem_head.
+    by rewrite /rt_closure /up_set /t_closure in_cons => ->. }
+  constructor. apply /t_closureP. elim: crtac => //.
+  case: (a =P c) => [->|nac].
+  { constructor. rewrite /sfrel /filter_neq /= mem_filter. apply /andP.
+  split; first exact: neq. done. }
+  apply /clos_trans_tn1 /t_trans.
+  { move: (refl_eq_neq (refl_t_rt a c rtac)) => [/eqP //|tac].
+  apply /clos_tn1_trans /t_closureP /tac. }
+  constructor. rewrite /sfrel /filter_neq /= mem_filter. apply /andP.
+  split; first exact: neq. done.
+Qed.
+
+Lemma rt_closure_refl : reflexive rt_closure.
+Proof. move=> a. exact: mem_head. Qed.
+
 (* Reflexive-transitive closure reflection lemma *)
 Lemma rt_closureP a b :
   reflect (clos_refl_trans_n1 T (sfrel f) a b) (rt_closure a b).
 Proof.
   apply /(iffP idP).
-  { rewrite /rt_closure. 
-    rewrite in_cons=> /orP[/eqP -> | atb].
-    { constructor. }
-    move: (t_closureP a b). 
-    rewrite /t_closure => refl. move: (refl atb). 
-    elim=> [c cfd | c d cfd st rt].
-    { apply: rtn1_trans; last by constructor.
-      move: cfd. rewrite /sfrel /filter_neq //=.
-      rewrite mem_filter. by move=> /andP [??]. }
-    apply: rtn1_trans; last exact: rt.
-    move: cfd. rewrite /sfrel /filter_neq //=.
-    rewrite mem_filter. move=> /andP [? H]. exact: H. }
-  move=> cab. rewrite /rt_closure /up_set.
-  rewrite in_cons. apply/orP.
-  elim: cab => [| c d st rt [/eqP -> | efd]]; first by left.
-  { case: (c =P d)=> [eq| /eqP neq] //=; first by left.
-    right. move: st. rewrite /sfrel /=.
-    funelim (s_up_set d) => cfn. rewrite /hack mem_cat. apply/orP. left.
-    by rewrite mem_filter cfn neq. }
-  case: (c =P d)=> [<-| /eqP neq] //=; first by right. 
-  right. move: (t_closureP a c)=> refl. move: (refl efd)=> ct.
-  apply /(t_closureP a d) /clos_trans_tn1 /t_trans.
-  { apply /clos_tn1_trans. exact: ct. }
-  apply: t_step. rewrite /sfrel /filter_neq //= mem_filter neq. exact: st.
+  { move=> /refl_t_rt. case => [c /t_closureP cac|]; last by constructor.
+    by apply /clos_rt_rtn1 /trans_refl_trans /clos_tn1_trans /filter_clos_sub. }
+  by move=> /refl_trans_refl_rt /refl_t_rt.
 Qed.
-
-Lemma rt_closure_refl : reflexive rt_closure.
-Proof. move=> a. exact: mem_head. Qed.
 
 Lemma rt_closure_trans : transitive rt_closure.
 Proof.
