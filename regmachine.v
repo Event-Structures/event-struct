@@ -135,8 +135,19 @@ Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 Definition wval (l : @label val val) : val := 
   if l is Write _ v then v else inh.
 
-Definition wpred (x : loc) (w : E)
-  := (lab w) << (Read x (wval (lab w))).
+(* label location *)
+Definition lloc (l : @label val val) := 
+  match l with
+  | Write x _ => some x
+  | Read  x _ => some x
+  | _         => none
+  end.
+
+Definition is_write (l : @label val val) := 
+  if l is Write _ _ then true else false.
+
+Definition wpred (x : loc) (w : E) :=
+   (lloc (lab w) == some x) && (is_write (lab w)).
 
 Arguments wpred /.
 
@@ -154,7 +165,10 @@ Lemma ws_wpred x (w : {y | (wpred x y) && (y \in dom)}) :
   let: wr := sval w in
   let: read_lab := Read x (wval (lab wr)) in
     add_wr wr fresh_id lab read_lab.
-Proof. by case: w=> /= ? /andP[->]. Qed.
+Proof. 
+  case: w=> /= e /andP[].
+  case: (lab e)=> //= [?? /andP[]|?? /andP[/eqP[->]]] //; by rewrite ?eq_refl.
+Qed.
 
 (* TODO: filter by consistentcy *)
 Definition es_seq x {pr} (pr_mem : pr \in fresh_id :: dom) :
