@@ -106,12 +106,13 @@ Definition thrd_sem (st : thrd_state) :
                      fun _ => {| ip     := i.+1;
                                  regmap := [fsfun map with r |-> v] |})
   | ReadLoc  r x => (some (Read x __), 
-                     fun v => {| ip := i.+1;
+                     fun v => {| ip     := i.+1;
                                  regmap := [fsfun map with r |-> v] |})
   | WriteLoc v x => (some (Write x v), 
-                     fun _ => {| ip := i.+1; regmap := map |})
+                     fun _ => {| ip     := i.+1;
+                                 regmap := map |})
   | CJmp     r n => (none,             
-                     fun _ => {| ip := if map r != inh then n else i.+1;
+                     fun _ => {| ip     := if map r != inh then n else i.+1;
                                  regmap := map |} )
   end.
 
