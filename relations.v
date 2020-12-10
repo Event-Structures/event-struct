@@ -104,6 +104,12 @@ Proof.
   apply /t_closureP /t_trans; first exact: ab. exact: bc.
 Qed.
 
+Lemma t_closure_antisym : antisymmetric t_closure.
+Proof.
+  move=> a b /andP[] /t_closure_lt ab /t_closure_lt ba. apply /eqP.
+  by rewrite eq_le !ltW.
+Qed.
+
 (* Computation of the (non-strict) upward set of a given element
  * w.r.t relation R derived from function `f`,
  * i.e. up_set(x) = { y | x = y \/ x R y } 
@@ -179,6 +185,18 @@ Proof.
   move=> b a c /rt_closureP ab /rt_closureP bc.
   apply/rt_closureP /clos_rt_rtn1 /rt_trans.
   apply/clos_rtn1_rt /ab. exact: clos_rtn1_rt.
+Qed.
+
+Lemma rt_closure_lt a b : rt_closure a b -> a <= b.
+Proof.
+  rewrite /rt_closure /up_set in_cons => /orP[/eqP -> //|] asb.
+  rewrite le_eqVlt. apply /orP. right. by apply /t_closure_lt.
+Qed.
+
+Lemma rt_closure_antisym : antisymmetric rt_closure.
+Proof.
+  move=> a b /andP[] /rt_closure_lt ab /rt_closure_lt ba. apply /eqP.
+  by rewrite eq_le ab ba.
 Qed.
 
 End well_founded.
