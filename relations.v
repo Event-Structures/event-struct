@@ -16,10 +16,20 @@ Section well_founded.
 Definition sfrel {T : eqType} (f : T -> seq T) : rel T :=
   [rel a b | a \in f b].
 
-Definition filter_neq {T : eqType} (f : T -> seq T) : T -> seq T :=
+Definition strict {T : eqType} (f : T -> seq T) : T -> seq T :=
   fun n => filter^~ (f n) (fun x => x != n).
 
-Notation "f '\eq'" := (filter_neq f) (at level 5, format "f '\eq'").
+Notation "f '\eq'" := (strict f) (at level 5, format "f '\eq'").
+
+Lemma strict_in_sfrel {T : eqType} (f : T -> seq T) a b : 
+  sfrel f\eq a b -> sfrel f a b.
+Proof. by rewrite /strict /sfrel /= mem_filter => /andP[]. Qed.
+
+Lemma in_strict {T : eqType} (f : T -> seq T) a b :
+  (a != b) -> (a \in f b) -> ((sfrel f\eq) a b).
+Proof. by rewrite /sfrel /strict /= mem_filter => -> ->. Qed. 
+
+Hint Resolve strict_in_sfrel in_strict : core.
 
 Context {disp : unit} {T : wfType disp}.
 
@@ -27,54 +37,62 @@ Variable (f : T -> seq T).
 
 Hypothesis descend : forall x n, x \in f n -> x <= n.
 
-Lemma filter_lt n k : k \in f\eq n -> k < n.
+Lemma strict_lt n k : k \in f\eq n -> k < n.
 Proof. by rewrite mem_filter lt_neqAle => /andP[] -> /descend ->. Qed.
 
-Lemma rel_sublt a b : (sfrel f\eq) a b -> a < b.
-Proof. rewrite/sfrel /=. exact: filter_lt. Qed.
+Hint Resolve strict_lt : core.
 
-Definition hack n (g : forall x : T, x < n -> seq T) := 
+Lemma rel_sublt a b : (sfrel f\eq) a b -> a < b.
+Proof. rewrite/sfrel /=. exact: strict_lt. Qed.
+
+Definition s_up_set_aux n (g : forall x : T, x < n -> seq T) := 
   let ys := f\eq n in 
   let ps := flatten (map^~ ys (fun x => 
   if x \in ys =P true is ReflectT pf then
-    g x (filter_lt _ _ pf)
+    g x (strict_lt _ _ pf)
   else
     [::]
 )) in ys ++ ps.
 
-Arguments hack /.
+Arguments s_up_set_aux /.
 
 (* Computation of the strict upward set of a given element
  * w.r.t relation R derived from function `f`,
  * i.e. s_up_set(x) = { y | x R y } 
  *)
 Equations s_up_set (n : T) : seq T by wf n (<%O : rel T) :=
-  s_up_set n := hack n s_up_set.
+  s_up_set n := s_up_set_aux n s_up_set.
 
 Definition t_closure (a b : T) : bool := a \in s_up_set b.
 
-Lemma clos_trans_lt a b : clos_trans_n1 T (sfrel f\eq) a b -> a < b.
+Lemma clos_trans_n1_lt a b : clos_trans_n1 T (sfrel f\eq) a b -> a < b.
 Proof.
-  rewrite/sfrel /=.
-  elim=> [x /filter_lt // | x y xfy acx ax].
-  apply: lt_trans; first exact: ax.
-  exact: filter_lt.
+  rewrite/sfrel //=.
+  elim=> [x| x y xfy acx ax]. auto.
+  apply: lt_trans; first exact: ax. auto.
 Qed.
 
-Notation step := (@tn1_trans T (sfrel f\eq) _ _ _).
-Notation base := (@tn1_step T (sfrel f\eq) _).
+Lemma clos_trans_lt a b : clos_trans T (sfrel f\eq) a b -> a < b.
+Proof. move=> cab. by apply /clos_trans_n1_lt /clos_trans_tn1. Qed.
 
 (* Transitive closure reflection lemma *)
-Lemma t_closureP a b : 
+Lemma t_closure_n1P a b : 
   reflect (clos_trans_n1 T (sfrel f\eq) a b) (t_closure a b).
 Proof.
   rewrite /t_closure. funelim (s_up_set b)=> /=. 
   apply /(iffP idP); rewrite mem_cat /sfrel /=.
-  { move=> /orP[/base|/flatten_mapP[x]] //.
-    by case: eqP=> // S /filter_lt/X/(_ a x erefl) /apply /(step S). }
-  move: X=> /swap[[?->//|y ? /dup ? /filter_lt L /swap /(_ _ L a y erefl)]].
+  { move=> /orP[|/flatten_mapP[x]] //; first exact: tn1_step.
+    case: eqP=> // S /strict_lt/X/(_ a x erefl) /apply. exact: tn1_trans. }
+  move: X=> /swap[[?->//|y ? /dup ? L /swap]].
   move=> /apply ?; apply/orP; right; apply/flatten_mapP.
-  exists y=> //. by case eqP.
+  exists y=> //. case: eqP; auto.
+Qed.
+
+Lemma t_closureP a b :
+  reflect (clos_trans T (sfrel f\eq) a b) (t_closure a b).
+Proof.
+  apply /(iffP idP) => [/t_closure_n1P| cab]; first exact: clos_tn1_trans.
+  apply /t_closure_n1P. exact: clos_trans_tn1.
 Qed.
 
 Lemma t_closure_lt a b : t_closure a b -> a < b.
@@ -83,9 +101,7 @@ Proof. by move=> /t_closureP /clos_trans_lt. Qed.
 Lemma t_closure_trans : transitive t_closure.
 Proof.
   move=> b a c /t_closureP ab /t_closureP bc.
-  apply /t_closureP /clos_trans_tn1 /t_trans.
-  { apply /clos_tn1_trans /ab. }
-  exact: clos_tn1_trans.
+  apply /t_closureP /t_trans; first exact: ab. exact: bc.
 Qed.
 
 (* Computation of the (non-strict) upward set of a given element
@@ -96,7 +112,7 @@ Definition up_set a := a :: s_up_set a.
 
 Definition rt_closure a b := a \in up_set b. 
 
-Lemma refl_t_rt a b :
+Lemma rt_closure_reflP a b :
   reflect (clos_refl T t_closure a b) (rt_closure a b).
 Proof.
   rewrite /rt_closure /up_set. funelim (s_up_set b).
@@ -111,7 +127,7 @@ Proof.
   rewrite /t_closure in_cons. by funelim (s_up_set b) => ->.
 Qed.
 
-Lemma trans_refl_trans a b  {R : rel T}:
+Lemma clos_t_clos_rt {R : rel T} a b :
   clos_trans T R a b -> clos_refl_trans T R a b.
 Proof.
   elim=> [|c d e ctcd crtcd ctde crtce]; first by constructor.
@@ -122,46 +138,40 @@ Lemma filter_clos_sub a b :
   clos_trans_n1 T (sfrel f\eq) a b -> clos_trans_n1 T (sfrel f) a b.
 Proof.
   elim=> [c sfac | c d sfcd ctacn ctac].
-  { apply /tn1_step. move: sfac.
-    by rewrite /filter_neq /sfrel /= mem_filter => /andP[]. }
-  apply /tn1_trans; last exact: ctac. move: sfcd. 
-  by rewrite /filter_neq /sfrel /= mem_filter => /andP[].
+  { apply /tn1_step. move: sfac. auto. }
+  apply /tn1_trans; last exact: ctac. move: sfcd. auto.
 Qed.
-
-Lemma refl_eq_neq a b {R : relation T} :
-  clos_refl T R a b -> (a == b) \/ R a b.
-Proof. case; first by right. left. exact: eq_refl. Qed.
 
 Lemma refl_trans_refl_rt a b :
   clos_refl_trans_n1 T (sfrel f) a b -> clos_refl T t_closure a b.
 Proof.
   rewrite /sfrel /=. 
-  elim=> [|c d sfcd crtac /refl_t_rt rtac]; first exact: r_refl.
+  elim=> [|c d sfcd crtac /rt_closure_reflP rtac]; first exact: r_refl.
   case: (c =P d) => [<-| /eqP neq].
-  { apply /refl_t_rt. case: (refl_t_rt a c rtac) => [e|]; last exact: mem_head.
+  { apply /rt_closure_reflP. 
+    case: (rt_closure_reflP a c rtac) => [e|]; last exact: mem_head.
     by rewrite /rt_closure /up_set /t_closure in_cons => ->. }
   constructor. apply /t_closureP. elim: crtac => //.
   case: (a =P c) => [->|nac].
-  { constructor. rewrite /sfrel /filter_neq /= mem_filter. apply /andP.
-  split; first exact: neq. done. }
-  apply /clos_trans_tn1 /t_trans.
-  { move: (refl_eq_neq (refl_t_rt a c rtac)) => [/eqP //|tac].
-  apply /clos_tn1_trans /t_closureP /tac. }
-  constructor. rewrite /sfrel /filter_neq /= mem_filter. apply /andP.
-  split; first exact: neq. done.
+  { constructor. auto. }
+  apply /t_trans.
+  { have: (a = c) \/ t_closure a c.
+    { case: (rt_closure_reflP a c rtac); first by right. by left. }
+    case; first by []. exact: t_closureP. }
+  constructor. auto.
 Qed.
 
-Lemma rt_closure_refl : reflexive rt_closure.
-Proof. move=> a. exact: mem_head. Qed.
+Lemma rt_closure_refl a : rt_closure a a.
+Proof. exact: mem_head. Qed.
 
 (* Reflexive-transitive closure reflection lemma *)
 Lemma rt_closureP a b :
   reflect (clos_refl_trans_n1 T (sfrel f) a b) (rt_closure a b).
 Proof.
   apply /(iffP idP).
-  { move=> /refl_t_rt. case => [c /t_closureP cac|]; last by constructor.
-    by apply /clos_rt_rtn1 /trans_refl_trans /clos_tn1_trans /filter_clos_sub. }
-  by move=> /refl_trans_refl_rt /refl_t_rt.
+  { move=> /rt_closure_reflP. case => [c /t_closure_n1P cac|]; last by constructor.
+    by apply /clos_rt_rtn1 /clos_t_clos_rt /clos_tn1_trans /filter_clos_sub. }
+  by move=> /refl_trans_refl_rt /rt_closure_reflP.
 Qed.
 
 Lemma rt_closure_trans : transitive rt_closure.
