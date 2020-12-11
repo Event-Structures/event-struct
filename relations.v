@@ -161,9 +161,8 @@ Proof.
   case: (a =P c) => [->|nac].
   { constructor. auto. }
   apply /t_trans.
-  { have: (a = c) \/ t_closure a c.
-    { case: (rt_closure_reflP a c rtac); first by right. by left. }
-    case; first by []. exact: t_closureP. }
+  { move: (rt_closure_reflP a c rtac) => /clos_reflE. case; first by [].
+  exact: t_closureP. }
   constructor. auto.
 Qed.
 
@@ -171,7 +170,7 @@ Lemma rt_closure_refl a : rt_closure a a.
 Proof. exact: mem_head. Qed.
 
 (* Reflexive-transitive closure reflection lemma *)
-Lemma rt_closureP a b :
+Lemma rt_closure_n1P a b :
   reflect (clos_refl_trans_n1 T (sfrel f) a b) (rt_closure a b).
 Proof.
   apply /(iffP idP).
@@ -180,11 +179,18 @@ Proof.
   by move=> /refl_trans_refl_rt /rt_closure_reflP.
 Qed.
 
+Lemma rt_closureP a b :
+  reflect (clos_refl_trans T (sfrel f) a b) (rt_closure a b).
+Proof.
+  apply /(iffP idP).
+  { move=> /rt_closure_n1P. exact: clos_rtn1_rt. }
+  move=> rtab. apply /rt_closure_n1P. exact: clos_rt_rtn1.
+Qed.
+
 Lemma rt_closure_trans : transitive rt_closure.
 Proof.
   move=> b a c /rt_closureP ab /rt_closureP bc.
-  apply/rt_closureP /clos_rt_rtn1 /rt_trans.
-  apply/clos_rtn1_rt /ab. exact: clos_rtn1_rt.
+  apply/rt_closureP /rt_trans; first exact: ab. done.
 Qed.
 
 Lemma rt_closure_lt a b : rt_closure a b -> a <= b.

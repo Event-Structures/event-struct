@@ -260,3 +260,10 @@ Proof. split=> [][] x /H ?; by exists x. Qed.
 Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
 Proof. by case: a=> // /(_ erefl) ->. Qed.
 
+Lemma clos_reflE {T} {R : relation T} a b :
+  clos_refl T R a b <-> (a = b) \/ R a b.
+Proof.
+  split.
+  { case; first by right. by left. }
+  case=> [->|]; first exact: r_refl. exact: r_step.
+Qed.
