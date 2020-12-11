@@ -182,7 +182,7 @@ Definition ca : rel E := rt_closure fica fica_le.
 
 Lemma closureP e1 e2: 
   reflect (clos_refl_trans_n1 _ ica e1 e2) (ca e1 e2).
-Proof. exact/(equivP (rt_closureP _ _ _ _)). Qed.
+Proof. exact/(equivP (rt_closure_n1P _ _ _ _)). Qed.
 
 Lemma fica_ca e1 e2: e1 \in fica e2 -> ca e1 e2.
 Proof. 
