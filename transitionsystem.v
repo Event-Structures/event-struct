@@ -24,6 +24,8 @@ From event_struct Require Import eventstructure.
 (*                    structure                                               *)
 (*         tr_add_event e1 e2 == we can add some event to e1 and obtain e2    *)
 (*         ltr_add_event e1 al e2 == we can add al to e1 and obtain e2        *)
+(*         add_label_of_Nread == takes non-read label and predcessor and      *)
+(*                    returns corresponding add_label structure               *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -32,6 +34,11 @@ Unset Printing Implicit Defensive.
 
 Import Order.LTheory.
 Open Scope order_scope.
+
+Definition add_wr {E val : eqType} e1 e2 (lab : E -> @label val val) l := 
+  (e1 == e2) && (~~ is_read l) || (lab e1) << l.
+
+Arguments add_wr /.
 
 Section TransitionSystem.
 
@@ -42,7 +49,7 @@ Notation cexec_event_struct := (@cexec_event_struct val disp E).
 
 Notation label := (@label val val).
 
-Implicit Types (x : var) (a : val) (es : exec_event_struct).
+Implicit Types (x : loc) (a : val) (es : exec_event_struct).
 
 (* Section with definitions for execution graph with added event *)
 Section AddEvent.
@@ -54,22 +61,43 @@ Notation dom := (dom es).
 Notation lab    := (lab es).
 Notation ffpred  := (ffpred es).
 Notation ffrf    := (ffrf es).
-Notation fresh := (fresh_seq dom).
+Notation fresh_id := (fresh_seq dom).
 
 Definition wr (lab : E -> label) := 
-  [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))].
+  [rel r w : E | (w <= r) && add_wr w r lab (lab r)].
 
 Structure add_label :=
   Add {
     add_lb            : label;
 
     add_pred          : E;
-    add_pred_in_dom   : add_pred \in fresh :: dom;
+    add_pred_in_dom   : add_pred \in fresh_id :: dom;
 
     add_write         : E;
-    add_write_in_dom  : add_write \in fresh :: dom;
-    add_write_consist : (add_write == fresh) (+) ((lab add_write) << add_lb);
+    add_write_in_dom  : add_write \in fresh_id :: dom;
+    add_write_consist : add_wr add_write fresh_id lab add_lb;
 }.
+
+
+Lemma lab_fresh : lab fresh_id = ThreadEnd.
+Proof.
+  rewrite memNdom //=.
+  apply/negP=> /(fresh_seq_lt (dom_sorted _)).
+  by rewrite lt_irreflexive.
+Qed.
+
+
+Fact add_write_consist_of_fresh l: ~~ is_read l ->
+  ((fresh_id == fresh_id) && (~~ is_read l)) || ((lab fresh_id) << l).
+Proof. by move->; rewrite eq_refl lab_fresh. Qed.
+
+Definition add_label_of_Nread l
+ {p} (p_mem :p \in fresh_id :: dom) : ~~ is_read l -> add_label :=
+ fun nr => 
+  Add 
+    p_mem 
+    (mem_head fresh_id dom) 
+    (add_write_consist_of_fresh nr).
 
 Variable al : add_label.
 
@@ -82,16 +110,16 @@ Notation pred := (add_pred al).
 (* if event is `Read` then we should give `Write` from wich we read *)
 Notation write := (add_write al).
 
-Definition add_lab := add_rfsfun fresh lb erefl lab.
+Definition add_lab := add_rfsfun fresh_id lb erefl lab.
 
 Definition add_ffpred :=
-  add_rfsfun fresh pred (fresh_seq_le (dom_sorted es) (add_pred_in_dom al)) ffpred.
+  add_rfsfun fresh_id pred (fresh_seq_le (dom_sorted es) (add_pred_in_dom al)) ffpred.
 
-Lemma add_lab_write_read: wr add_lab fresh write.
+Lemma add_lab_write_read: wr add_lab fresh_id write.
 Proof.
   move: (add_write_consist al).
   rewrite /add_lab /= ?fsfun_with fsfun_withE.
-  case: ifP=> /= [/eqP->|?->]; first by (case: lb=> //= *; rewrite lexx).
+  case: ifP=> /= [/eqP->|?->]; first by rewrite lab_fresh /= orbF lexx=>->.
   by move/(fresh_seq_le (dom_sorted es)): (add_write_in_dom al)=>->.
 Qed.
 
@@ -107,29 +135,29 @@ Qed.
 
 Definition add_ffrf := 
   @add_rfsfun _ _ _ _ (wr add_lab)
-  fresh write add_lab_write_read
+  fresh_id write add_lab_write_read
   (rfsfun_impl add_lab_write_read_i).
 
 Definition add_event := 
-  @Pack _ _ _ (fresh :: dom) (path_fresh_seq (dom_sorted es)) add_lab add_ffpred add_ffrf.
+  @Pack _ _ _ (fresh_id :: dom) (path_fresh_seq (dom_sorted es)) add_lab add_ffpred add_ffrf.
 
 Hypothesis consist : consistency es.
-Hypothesis ncf_rf : ~~ (cf add_event fresh write).
+Hypothesis ncf_rf : ~~ (cf add_event fresh_id write).
 
 Arguments cfP {_ _ _ _}.
 Import Relation_Operators.
 
 Lemma fpred_add_eventE e : fpred add_event e = 
-  if e == fresh then pred else fpred es e.
+  if e == fresh_id then pred else fpred es e.
 Proof. by rewrite /fpred /add_event /= fsfun_withE. Qed.
 
 Lemma frf_add_eventE e : frf add_event e =
-  if e == fresh then write else frf es e.
+  if e == fresh_id then write else frf es e.
 Proof. by rewrite /frf /add_event /= fsfun_withE. Qed.
 
 Lemma ica_add_eventE e1 e2: 
   ica add_event e1 e2 =
-  if e2 == fresh then 
+  if e2 == fresh_id then 
     (pred == e1) || (write == e1)
   else ica es e1 e2.
 Proof.
@@ -137,7 +165,7 @@ Proof.
   by case: ifP=> ?; rewrite ?(andTb, andFb) ?orbF // ?inE eq_sym orbC eq_sym.
 Qed.
 
-Lemma ica_fresh e: ica es fresh e -> e = fresh.
+Lemma ica_fresh e: ica es fresh_id e -> e = fresh_id.
 Proof.
   move/dup/fica_ca/ca_codom/swap/fica_le.
   rewrite /ica ?inE. 
@@ -145,10 +173,10 @@ Proof.
   by move/lt_geF: (fresh_seq_lt (dom_sorted es) I)=>->.
 Qed.
 
-Lemma ca_fresh e: ca es fresh e -> e = fresh.
+Lemma ca_fresh e: ca es fresh_id e -> e = fresh_id.
 Proof. by move/closureP; elim=> // ?? /swap ? /swap-> /ica_fresh. Qed.
 
-Lemma ca_add_eventE e1 e2: e2 != fresh -> ca es e1 e2 = ca add_event e1 e2.
+Lemma ca_add_eventE e1 e2: e2 != fresh_id -> ca es e1 e2 = ca add_event e1 e2.
 Proof.
   move=> N.
   apply (refleqP (closureP _ _ _) (closureP _ _ _)).
@@ -164,14 +192,14 @@ Proof.
 Qed.
 
 Lemma icf_add_eventE e1 e2 :
-  e1 != fresh -> e2 != fresh ->
+  e1 != fresh_id -> e2 != fresh_id ->
   icf es e1 e2 = icf add_event e1 e2.
 Proof.
   by rewrite /icf !fpred_add_eventE /= ?fsfun_withE => /negbTE->/negbTE->.
 Qed.
 
 Lemma cf_add_eventE e1 e2:
-  e1 != fresh -> e2 != fresh ->
+  e1 != fresh_id -> e2 != fresh_id ->
   cf es e1 e2 = cf add_event e1 e2.
 Proof.
   move=> /dup ? /negP N1 /dup ? /negP N2.
@@ -191,7 +219,7 @@ Proof.
   case: ifP=> /= [/eqP->|/negbT N /(allP consist)] //.
   rewrite -cf_add_eventE //.
   apply/negP=> /eqP Ef.
-  have /ica_fresh /eqP /(negP N) //: ica es fresh e1.
+  have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
   by rewrite /ica ?inE -Ef eq_refl.
 Qed.
 

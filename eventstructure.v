@@ -46,11 +46,11 @@ Open Scope order_scope.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Definition var := nat.
+Definition loc := nat.
 
 Inductive label {Rval Wval : Type} :=
-| Read of var & Rval
-| Write of var & Wval
+| Read of loc & Rval
+| Write of loc & Wval
 | ThreadStart
 | ThreadEnd.
 
@@ -106,7 +106,8 @@ Structure fin_exec_event_struct {disp} (E : identType disp) := Pack {
   lab        : rfsfun (fun=> ThreadEnd) dom (fun _ _ => true);
   ffpred     : rfsfun id dom (>=%O : rel E);
   ffrf       : rfsfun id dom
-               [rel r w : E | (w <= r) && ((w == r) (+) ((lab w) << (lab r)))]
+               [rel r w : E | (w <= r) &&
+               (((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r)))]
 }.
 
 Section ExecEventStructure.
