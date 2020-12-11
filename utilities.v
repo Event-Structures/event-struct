@@ -143,54 +143,32 @@ Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
 (*     Mapping using proof of a membership                                          *)
 (* ******************************************************************************** *)
 
-Fact mem_cons {T : eqType} {x y} {s : seq T} : x \in s -> x \in y :: s.
+Fact mem_cons {T : eqType} {x} {y} {s : seq T} : x \in s -> x \in y :: s.
 Proof. by rewrite ?inE=> ->. Qed.
 
-Fixpoint map_in_aux {T} {S : eqType} (s s' : seq S) (sub : subseq s' s)
-  (f : forall x, x \in s -> T) : seq T :=
-  match s' as x with
-  | h :: t => fun sub' => 
-    f _ (mem_subseq sub' (mem_head h t)) ::
-     map_in_aux _ t (subseq_trans (subseq_cons t h) sub') f
-  | [::] => fun=> [::]
-  end sub.
+Fixpoint seq_in_sub {T : eqType} (s s' : seq T) (sub : subseq s' s) :
+  seq {x | x \in s} :=
+  (if s' is h :: t then 
+    fun sub => exist _ h (mem_subseq sub (mem_head h t)) :: 
+    seq_in_sub s t (subseq_trans (subseq_cons t h) sub)
+  else fun=> [::]) sub.
 
-Lemma map_in_aux_cons {S : eqType} T s s' y
-  (sub1 : subseq s' (y :: s)) sub2 
-  (f : forall x : S, x \in y :: s -> T)
-  (g : forall x : S, x \in s -> T) :
-  (forall x p p', f x p = g x p') ->
-  map_in_aux (y :: s) s' sub1 f =
-  map_in_aux s s' sub2 g.
+Definition seq_in {T : eqType} (s : seq T) := seq_in_sub s s (subseq_refl s).
+
+Lemma sval_seq_in_sub {T : eqType} (s s' : seq T) sub: 
+  map sval (seq_in_sub s s' sub) = s'.
 Proof.
-  move=> ?.
-  elim: s' sub1 sub2=> //= ?? IHs' ??.
-  exact/congr2.
+  elim: s'=> //= ?? IHs in sub *.
+  by rewrite IHs.
 Qed.
 
-Definition map_in {T} {S : eqType} (s : seq S) f:= 
-  @map_in_aux T _ s s (subseq_refl s) f.
-
-Lemma map_inE T (S : eqType) (s : seq S)
-  (f : forall x, x \in s -> T) d : 
-    map_in s f = 
-    map (fun x =>
-      if x \in s =P true is ReflectT pf then
-        f _ pf
-      else d) s.
+Lemma seq_in_subE {T : eqType} (s s' : seq T) sub: 
+  seq_in_sub s s' sub = pmap insub s'.
 Proof.
-  move: {-2 9}s (erefl s) f.
-  elim: s=> [? -> //| x s IHs ?-> f /=]. 
-  case: eqP=> [p /=|F]; last by rewrite ?inE eq_refl in F.
-  set g := fun x => f x \o mem_cons.
-  have?: forall x p q, f x p = g x q by move=> *; exact/congr1/eq_irrelevance.
-  suff->: map_in (x :: s) f = f x p :: map_in s g.
-  - apply/congr1; rewrite IHs //. 
-    apply/eq_in_map=> ?; do ?case: eqP=> //.
-    move=> F E; by rewrite ?inE E orbT in F.
-  rewrite /map_in /=.
-  apply/congr2; first exact/congr1/eq_irrelevance.
-  exact/map_in_aux_cons.
+  elim: s'=> //= ?? IHs in sub *.
+  rewrite IHs /oapp insubT ?(mem_subseq sub) ?mem_head //.
+  move=> ?; congr cons.
+  exact: val_inj.
 Qed.
 
 (***** well-founded induction for `nat` *****)
