@@ -34,8 +34,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: coq-community/docker-coq-action@v1
         with:
-          before_install: opam config list; opam repo list;
-           opam list; opam pin add coq-mathcomp-finmap --dev-repo --no-action
           opam_file: './coq-event-struct.opam'
           custom_image: ${{ matrix.image }}
 
