@@ -39,7 +39,7 @@ Section ClassDef.
 Record mixin_of T0 (b : Order.POrder.class_of T0)
   (T := Order.POrder.Pack tt b) := Mixin {
   _ : well_founded_bool (<%O : rel T);
-}.
+}. 
 
 Set Primitive Projections.
 
