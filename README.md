@@ -4,45 +4,45 @@
 
 [github-actions-badge]: https://github.com/volodeyka/event-struct/workflows/CI/badge.svg
 
-A Coq library of formalized event structure theory with applications to concurrency semantics.
-Includes notion and theory of execution event structures, labeled transition
-system on execution event structures, big-step semantics for simple
-register machine, and well-founded relations theory.
+A Coq library of formalized theory of event structures with applications to concurrency semantics.
+Includes a theory of prime event structures and 
+operational small-step semantics for their incremental construction.
 
 ## Description of Files
-All files include description of its content.
+All files include a more detailed description of their contents.
 
 ### `utilities.v`
-Some extra lemmas and tactics to make our work more convenient.
+Utility lemmas and tactics.
 Includes `lia` analouge for ssreflect -- `slia`.
 Based on: https://github.com/amahboubi/lia4mathcomp
 
 ### `inhtype.v`
-Interface for inhabited type.
+Interface for inhabited type, that is a type with one distinguished inhabitant. 
 
 ### `wftype.v`
-Interface for types with well-founded order.
+Interface for types with well-founded partial order.
 
 ### `ident.v`
 Interface for types that can be used as identifiers.
-In other words we, require:
-1) `ident0` -- first identifier
-2) `<` -- well-founded order
-3) `fresh : T -> T` -- function that returns fresh identifier
-4) `forall x, x < fresh x` -- freshness axiom
+We require the following properties.
+1) `ident0` -- first identifier.
+2) `fresh : T -> T` -- function that returns a fresh identifier.
+3) `forall x, x < fresh x` -- freshness axiom. 
+   We require `<` to be well-founded order.  
 
 ### `relations.v`
-Theory of transitive closure of well-founded relations.
+Theory of computable transitive closure of well-founded relations.
 
 ### `rfsfun.v`
-Theory of functions on a finite subset of some type `E` that can be extended
-on whole type `E` and embedded in fixed relation. 
+Theory of functions on a finite subset of some type `E` 
+that can be extended on whole type `E` and embedded in fixed relation. 
 
 ### `eventstructure.v`
-Theory of finite execution event structures.
+Theory of finite prime event structures.
 
 ### `transitionsystem.v`
-Labeled transition system on execution event structures.
+Labeled transition system defined on prime event structures.
+The transition relation adds a single event to the event structure.
 
 ### `regmachine.v`
-Small-step semantics for simple register machine.
+Operational small-step semantics for a simple register machine.
