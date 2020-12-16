@@ -6,7 +6,7 @@ homepage: "https://github.com/volodeyka/event-struct"
 dev-repo: "git+https://github.com/volodeyka/event-struct.git"
 bug-reports: "https://github.com/volodeyka/event-struct/issues"
 doc: "https://volodeyka.github.io/event-struct/"
-license: "TODO: MIT recommended"
+license: "MIT"
 
 synopsis: "Formalization of event structures in Coq"
 description: """
