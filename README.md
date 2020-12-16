@@ -11,18 +11,18 @@ operational small-step semantics for their incremental construction.
 ## Description of Files
 All files include a more detailed description of their contents.
 
-### `utilities.v`
+##### `utilities.v`
 Utility lemmas and tactics.
 Includes `lia` analouge for ssreflect -- `slia`.
 Based on: https://github.com/amahboubi/lia4mathcomp
 
-### `inhtype.v`
+##### `inhtype.v`
 Interface for inhabited type, that is a type with one distinguished inhabitant. 
 
-### `wftype.v`
+##### `wftype.v`
 Interface for types with well-founded partial order.
 
-### `ident.v`
+##### `ident.v`
 Interface for types that can be used as identifiers.
 We require the following properties.
 1) `ident0` -- first identifier.
@@ -30,19 +30,19 @@ We require the following properties.
 3) `forall x, x < fresh x` -- freshness axiom. 
    We require `<` to be well-founded order.  
 
-### `relations.v`
+##### `relations.v`
 Theory of computable transitive closure of well-founded relations.
 
-### `rfsfun.v`
+##### `rfsfun.v`
 Theory of functions on a finite subset of some type `E` 
 that can be extended on whole type `E` and embedded in fixed relation. 
 
-### `eventstructure.v`
+##### `eventstructure.v`
 Theory of finite prime event structures.
 
-### `transitionsystem.v`
+##### `transitionsystem.v`
 Labeled transition system defined on prime event structures.
 The transition relation adds a single event to the event structure.
 
-### `regmachine.v`
+##### `regmachine.v`
 Operational small-step semantics for a simple register machine.
