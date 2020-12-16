@@ -152,41 +152,36 @@ Definition wpred (x : loc) (w : E) :=
 
 Arguments wpred /.
 
-Definition writes_seq x : seq {y | (wpred x y) && (y \in dom)} :=
-  pmap insub dom.
+Definition writes_seq x := [seq y <- dom | wpred x y].
 
-Lemma ws_mem x (w : {y | (wpred x y) && (y \in dom)}) :
-   (sval w) \in fresh_id :: dom .
-Proof.
-  rewrite ?inE.
-  by case: w=> /= ? /andP[?->]. 
-Qed.
+Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: dom .
+Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
-Lemma ws_wpred x (w : {y | (wpred x y) && (y \in dom)}) :
-  let: wr := sval w in
-  let: read_lab := Read x (wval (lab wr)) in
-    add_wr wr fresh_id lab read_lab.
+Lemma ws_wpred x w :
+    w \in writes_seq x ->
+    add_wr w fresh_id lab (Read x (wval (lab w))).
 Proof. 
-  case: w=> /= e /andP[].
-  case: (lab e)=> //= [?? /andP[]|?? /andP[/eqP[->]]] //; by rewrite ?eq_refl.
+  rewrite mem_filter=> /andP[] /=.
+  case: (lab w)=> //= [?? /andP[]|?? /andP[/eqP[->]]] //; by rewrite ?eq_refl.
 Qed.
 
 (* TODO: filter by consistentcy *)
 Definition es_seq x {pr} (pr_mem : pr \in fresh_id :: dom) :
  (seq (exec_event_struct * val)) := 
   [seq
-    let: wr := sval w in
+    let: wr       := sval w in
+    let: w_in     := valP w in
     let: read_lab := Read x (wval (lab wr)) in
     (
       add_event
         {| add_lb            := read_lab;
            add_pred_in_dom   := pr_mem;
-           add_write_in_dom  := @ws_mem x w;
-           add_write_consist := ws_wpred w; |},
+           add_write_in_dom  := ws_mem   w_in;
+           add_write_consist := ws_wpred w_in; |},
       wval (lab (eqtype.val w))
-    ) | w <- (writes_seq x)].
+    ) | w <- (seq_in (writes_seq x))].
 
-Definition add_hole  
+Definition add_hole
   (l : @label unit val) {pr} (pr_mem : pr \in fresh_id :: dom) :
   seq (exec_event_struct * val) :=
   match l with

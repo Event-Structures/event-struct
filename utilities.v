@@ -139,6 +139,38 @@ Proof. apply/orP; right. exact: frth_true4. Qed.
 
 Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
 
+(* ******************************************************************************** *)
+(*     Mapping using proof of a membership                                          *)
+(* ******************************************************************************** *)
+
+Fact mem_cons {T : eqType} {x} {y} {s : seq T} : x \in s -> x \in y :: s.
+Proof. by rewrite ?inE=> ->. Qed.
+
+Fixpoint seq_in_sub {T : eqType} (s s' : seq T) (sub : subseq s' s) :
+  seq {x | x \in s} :=
+  (if s' is h :: t then 
+    fun sub => exist _ h (mem_subseq sub (mem_head h t)) :: 
+    seq_in_sub s t (subseq_trans (subseq_cons t h) sub)
+  else fun=> [::]) sub.
+
+Definition seq_in {T : eqType} (s : seq T) := seq_in_sub s s (subseq_refl s).
+
+Lemma sval_seq_in_sub {T : eqType} (s s' : seq T) sub: 
+  map sval (seq_in_sub s s' sub) = s'.
+Proof.
+  elim: s'=> //= ?? IHs in sub *.
+  by rewrite IHs.
+Qed.
+
+Lemma seq_in_subE {T : eqType} (s s' : seq T) sub: 
+  seq_in_sub s s' sub = pmap insub s'.
+Proof.
+  elim: s'=> //= ?? IHs in sub *.
+  rewrite IHs /oapp insubT ?(mem_subseq sub) ?mem_head //.
+  move=> ?; congr cons.
+  exact: val_inj.
+Qed.
+
 (***** well-founded induction for `nat` *****)
 
 Lemma ltn_ind (P : nat -> Type) :
