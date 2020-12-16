@@ -10,8 +10,10 @@ license: "TODO: MIT recommended"
 
 synopsis: "Formalization of event structures in Coq"
 description: """
-TODO
-Blah-blah-blah."""
+A Coq library of formalized theory of event structures with applications to
+concurrency semantics. Includes a theory of prime event structures and
+operational small-step semantics for their incremental construction.
+"""
 
 build: [make "-j%{jobs}%" ]
 install: [make "install"]
