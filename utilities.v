@@ -99,7 +99,7 @@ Ltac ssrnatify :=
   repeat progress ssrnatify_op.
 
 (* Preprocessing + lia *)
-Ltac slia := try (move=> * //=); do [ ssrnatify; lia | exfalso; ssrnatify; lia].
+Ltac ssrnatlia := try (move=> * //=); do [ ssrnatify; lia | exfalso; ssrnatify; lia].
 
 (***** hand made swithes *****)
 
@@ -197,7 +197,7 @@ Definition advance {n} (m : 'I_n) (k : 'I_m) : 'I_n :=
   widen_ord (ltnW (ltn_ord m)) k.
 
 Lemma ltS_neq_lt {n N : nat} : n < N.+1 -> N <> n -> n < N.
-Proof. slia. Qed.
+Proof. ssrnatlia. Qed.
 
 Definition dec_ord {n} (m : 'I_n.+1) (neq : n <> m) : 'I_n :=
   ord (ltS_neq_lt (ltn_ord m) neq).
@@ -260,7 +260,7 @@ Qed.
 
 Lemma add_lt (m : 'I_n.+1) (ltm : m < n) : add m = f (ord ltm).
 Proof. 
-  rewrite /add. elim: eqP=> [?| neq]; first slia.
+  rewrite /add. elim: eqP=> [?| neq]; first ssrnatlia.
   rewrite /dec_ord.
   suff->: ltS_neq_lt (ltn_ord m) neq = ltm =>//.
   exact: eq_irrelevance.
