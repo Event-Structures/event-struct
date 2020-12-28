@@ -157,22 +157,19 @@ Notation "'[' 'dup' ']'" := (ltac:(move;
 
 (****** Hints to deal with dummy bolean goals ******)
 
-Lemma snd_true3 a b : [|| a, true | b].
+Lemma orbTb a b : [|| a, true | b].
 Proof. by case: a. Qed.
 
-Lemma trd_true3 a b : [|| b, a | true].
-Proof. by case: a; case b. Qed.
+Lemma orbbT a b : [|| a, b | true].
+Proof. by rewrite !orbT. Qed.
 
-Lemma snd_true2 a : a || true.
-Proof. by case: a. Qed.
+Lemma orbbbT a b c: [|| a, b, c | true].
+Proof. by rewrite !orbT. Qed.
 
-Lemma frth_true4 a b c: [|| a, b, c | true].
-Proof. by case: a; case: b; case: c. Qed.
+Lemma orbbbbT a b c d: [|| a, b, c, d | true].
+Proof. by rewrite !orbT. Qed.
 
-Lemma fifth_true5 a b c d: [|| a, b, c, d | true].
-Proof. apply/orP; right. exact: frth_true4. Qed.
-
-Hint Resolve trd_true3 snd_true3 snd_true2 frth_true4 fifth_true5 : core.
+Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
 (* ******************************************************************************** *)
 (*     Mapping using proof of a membership                                          *)
