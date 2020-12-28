@@ -128,7 +128,7 @@ Lemma add_lab_write_read_i:
 Proof.
   apply/allP=> x.
   rewrite /add_lab /= ?fsfun_withE => /(fresh_seq_lt (dom_sorted es)).
-  case X: (ffrf x <= x)=> //= /dup /le_lt_trans; move/(_ _ X).
+  case X: (ffrf x <= x)=> //= /[dup] /le_lt_trans; move/(_ _ X).
   case: ifP=> [/eqP->|?]; first by rewrite lt_irreflexive.
   case: ifP=> [/eqP->|]; by rewrite (lt_irreflexive, implybb).
 Qed.
@@ -167,26 +167,26 @@ Qed.
 
 Lemma ica_fresh e: ica es fresh_id e -> e = fresh_id.
 Proof.
-  move/dup/fica_ca/ca_codom/swap/fica_le.
+  move/[dup]/fica_ca/ca_codom/[swap]/fica_le.
   rewrite /ica ?inE. 
   case I: (e \in dom); last by move=> ?/(_ erefl)/eqP->.
   by move/lt_geF: (fresh_seq_lt (dom_sorted es) I)=>->.
 Qed.
 
 Lemma ca_fresh e: ca es fresh_id e -> e = fresh_id.
-Proof. by move/closureP; elim=> // ?? /swap ? /swap-> /ica_fresh. Qed.
+Proof. by move/closureP; elim=> // ?? /[swap] ? /[swap]-> /ica_fresh. Qed.
 
 Lemma ca_add_eventE e1 e2: e2 != fresh_id -> ca es e1 e2 = ca add_event e1 e2.
 Proof.
   move=> N.
   apply (refleqP (closureP _ _ _) (closureP _ _ _)).
-  split; move: N=> /swap; elim; try constructor.
+  split; move: N=> /[swap]; elim; try constructor.
   all: move=> y ? I ? H /negbTE Z; apply (rtn1_trans _ _ _ y)=> //.
   2,4: apply/H/negP; move: I.
   - by rewrite ica_add_eventE Z.
-  - move/swap/eqP=>->/ica_fresh Ez.
+  - move/[swap]/eqP=>->/ica_fresh Ez.
     by move/eqP: Z Ez.
-  - rewrite ica_add_eventE Z=> /swap/eqP->/ica_fresh.
+  - rewrite ica_add_eventE Z=> /[swap]/eqP->/ica_fresh.
     by move/eqP: Z.
   move: I; by rewrite ica_add_eventE Z.
 Qed.
@@ -202,7 +202,7 @@ Lemma cf_add_eventE e1 e2:
   e1 != fresh_id -> e2 != fresh_id ->
   cf es e1 e2 = cf add_event e1 e2.
 Proof.
-  move=> /dup ? /negP N1 /dup ? /negP N2.
+  move=> /[dup] ? /negP N1 /[dup] ? /negP N2.
   apply: (refleqP (cfP _ _ ) (cfP _ _)). 
   apply /exists_eq => x; apply /exists_eq=> y.
   rewrite -?ca_add_eventE //. 

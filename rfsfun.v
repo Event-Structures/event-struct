@@ -63,12 +63,12 @@ Proof.
   move /negP=> D.
   apply/eqP; rewrite -memNfinsupp; apply/negP.
   move=> I; apply/D; move: I.
-  by move/forallP: (dom_f t)=> /swap L /(_ [` L]).
+  by move/forallP: (dom_f t)=> /[swap] L /(_ [` L]).
 Qed.
 
 (* for each `x \in dom` for `fun_of` function must holds such axiom *)
 Lemma axiom_rfsfun x : x \in dom -> r x (t x).
-Proof. by move/allP: (dep t)=> /apply. Qed.
+Proof. by move/allP: (dep t)=> /[apply]. Qed.
 
 End FunOfrffun.
 
@@ -108,7 +108,7 @@ Context {r' : S -> T -> bool}
 Lemma dep_r': all (fun x => r' x (t x)) dom.
 Proof.
   apply/allP.
-  by move/allP: rr'=> H ? /dup I /H /implyP /(_ (allP (dep t) _ I)).
+  by move/allP: rr'=> H ? /[dup] I /H /implyP /(_ (allP (dep t) _ I)).
 Qed.
 
 Definition rfsfun_impl := Rfsfun (dom_f t) (dep_r').

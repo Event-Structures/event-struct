@@ -155,7 +155,7 @@ Definition fica e := [:: frf e; fpred e].
 
 Lemma fica_domain e: (e \in domain) = false ->
   fica e = [:: e; e].
-Proof. by move/negbT/dup/(memNdom ffpred)=> {4}<- /(memNdom ffrf) {2}<-. Qed.
+Proof. by move/negbT/[dup]/(memNdom ffpred)=> {4}<- /(memNdom ffrf) {2}<-. Qed.
 
 Lemma fica_le e1 e2: e1 \in (fica e2) -> e1 <= e2.
 Proof. rewrite ?inE=> /orP[]/eqP->; by rewrite (frf_le, fpred_le). Qed.
@@ -207,7 +207,7 @@ Qed.
 Lemma ca_decr e1 e2 : e1 != e2 -> ca e1 e2 ->
   exists e3, [&& ca e1 e3, ica e3 e2 & e3 < e2]. 
 Proof.
-  move/swap/closureP/clos_rtn1_rt/clos_rt_rt1n; elim=> [?/eqP//|].
+  move/[swap]/closureP/clos_rtn1_rt/clos_rt_rt1n; elim=> [?/eqP//|].
   move=> x y z I /clos_rt1n_rt/clos_rt_rtn1/closureP L.
   case N: (y != z). 
   - case/(_ erefl)=> e /and3P[C *]; exists e; apply/and3P; split=> //.
@@ -238,8 +238,8 @@ Qed.
 (*Lemma ca_dom e1 e2: ca e1 e2 -> (e1 \in domain) = false ->
   e1 = e2.
 Proof.
-  move/closureP; elim=> // x y I /closureP ? IH /dup/IH.
-  move: I=> /swap .
+  move/closureP; elim=> // x y I /closureP ? IH /[dup]/IH.
+  move: I=> /[swap] .
 Qed.*)
 
 
@@ -328,7 +328,7 @@ Qed.
 
 Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
 Proof.
-  case/or3P=> [/icf_cf||]// /hasP[? /fica_ca /swap /consist_cf /apply];
+  case/or3P=> [/icf_cf||]// /hasP[? /fica_ca /[swap] /consist_cf /[apply]];
   last rewrite cf_symm; apply; by rewrite ca_refl.
 Qed.
 
@@ -336,11 +336,11 @@ Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
 Proof.
   apply /(sameP idP)/(iffP idP)=> [/cf_step_cf | /cfP] //.
   case=> ? [? /and3P[/closureP]].
-  elim=> [/closureP | ?? /swap ?].
-  - elim=> [-> |] // ?? /swap _.
-    rewrite /ica ?inE=> /orP[]/eqP-> /apply /cf_step_cf /= -> //=;
+  elim=> [/closureP | ?? /[swap] ?].
+  - elim=> [-> |] // ?? /[swap] _.
+    rewrite /ica ?inE=> /orP[]/eqP-> /[apply] /cf_step_cf /= -> //=;
     by rewrite orbT.
-  rewrite /ica ?inE=> /orP[]/eqP-> /apply/apply /cf_step_cf /=;
+  rewrite /ica ?inE=> /orP[]/eqP-> /[apply]/[apply] /cf_step_cf /=;
   by rewrite cf_symm=> /= ->.
 Qed.
 
@@ -369,7 +369,7 @@ Proof.
   move=> /cfP[x [y /and3P[]]]; case Eq: (x == m).
   - move/eqP :Eq =>-> ? /ca_le L /and5P[?/eqP<- ?] /(le_lt_trans L).
     by rewrite ltxx.
-  move/negbT/ca_decr: Eq => /apply[[z /and3P[/swap]]].
+  move/negbT/ca_decr: Eq => /[apply] [[z /and3P[/[swap]]]].
   rewrite /ica=> /or3P[]// /eqP-> C1 ?.
   - move/ca_trans /(_ ca_fpred)=> ? /icf_cf; rewrite cf_symm=> C. 
     exact/(@rff_consist m)/(consist_cf C).
