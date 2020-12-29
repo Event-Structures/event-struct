@@ -175,7 +175,7 @@ Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 (*     Mapping using proof of membership                                      *)
 (* ************************************************************************** *)
 
-Section SeqElemsPairedWithProofOfMembership.
+Section SeqIn.
 
 Context {T : eqType}.
 Implicit Type s : seq T.
@@ -196,8 +196,7 @@ Lemma seq_in_subE s s' sub:
   seq_in_sub s s' sub = pmap insub s'.
 Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
 
-End SeqElemsPairedWithProofOfMembership.
-
+End SeqIn.
 
 Lemma refleqP {a b A B} (rA : reflect A a) (rB : reflect B b) :
   A <-> B -> a = b.
