@@ -2,9 +2,9 @@ From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 
-(* ******************************************************************************** *)
-(*     Some atomation with Hints, tacticts and iduction scheme                      *)
-(* ******************************************************************************** *)
+(* ************************************************************************** *)
+(*     Some automation with Hints, tactics and induction scheme               *)
+(* ************************************************************************** *)
 
 (***** ssrnatlia ******)
 
@@ -171,37 +171,32 @@ Proof. by rewrite !orbT. Qed.
 
 Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
-(* ******************************************************************************** *)
-(*     Mapping using proof of a membership                                          *)
-(* ******************************************************************************** *)
+(* ************************************************************************** *)
+(*     Mapping using proof of membership                                      *)
+(* ************************************************************************** *)
 
-Fact mem_cons {T : eqType} {x} {y} {s : seq T} : x \in s -> x \in y :: s.
-Proof. by rewrite ?inE=> ->. Qed.
+Section SeqIn.
 
-Fixpoint seq_in_sub {T : eqType} (s s' : seq T) (sub : subseq s' s) :
-  seq {x | x \in s} :=
-  (if s' is h :: t then 
-    fun sub => exist _ h (mem_subseq sub (mem_head h t)) :: 
-    seq_in_sub s t (subseq_trans (subseq_cons t h) sub)
-  else fun=> [::]) sub.
+Context {T : eqType}.
+Implicit Type s : seq T.
 
-Definition seq_in {T : eqType} (s : seq T) := seq_in_sub s s (subseq_refl s).
+Fixpoint seq_in_sub s s' (sub : subseq s' s) : seq {x in s} :=
+  (if s' is h :: t then
+     fun sub => exist _ h (mem_subseq sub (mem_head h t)) ::
+       seq_in_sub s t (subseq_trans (subseq_cons t h) sub)
+   else fun=> [::]) sub.
 
-Lemma sval_seq_in_sub {T : eqType} (s s' : seq T) sub: 
+Definition seq_in s : seq {x in s} := seq_in_sub s s (subseq_refl s).
+
+Lemma sval_seq_in_sub s s' sub :
   map sval (seq_in_sub s s' sub) = s'.
-Proof.
-  elim: s'=> //= ?? IHs in sub *.
-  by rewrite IHs.
-Qed.
+Proof. by elim: s'=> //= ?? IHs in sub *; rewrite IHs. Qed.
 
-Lemma seq_in_subE {T : eqType} (s s' : seq T) sub: 
+Lemma seq_in_subE s s' sub:
   seq_in_sub s s' sub = pmap insub s'.
-Proof.
-  elim: s'=> //= ?? IHs in sub *.
-  rewrite IHs /oapp insubT ?(mem_subseq sub) ?mem_head //.
-  move=> ?; congr cons.
-  exact: val_inj.
-Qed.
+Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
+
+End SeqIn.
 
 (***** well-founded induction for `nat` *****)
 
