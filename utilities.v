@@ -101,18 +101,59 @@ Ltac ssrnatify :=
 (* Preprocessing + lia *)
 Ltac ssrnatlia := try (move=> * //=); do [ ssrnatify; lia | exfalso; ssrnatify; lia].
 
-(***** hand made swithes *****)
+(***** Intro pattern ltac views *****)
+(* This is due to Cyril Cohen.
+   TODO: remove when https://github.com/math-comp/math-comp/pull/501 is merged *)
 
-Notation swap := 
-   (ltac:(let f := fresh "_top_" in let s := fresh "_s_" in move=> f s; move: s f)).
+Module Export ipat.
 
-Notation apply := (
-   ltac: (let f := fresh "_top_" in move=> f {}/f)
-).
-
-Notation dup := (
-   ltac: (let f := fresh "_top_" in move=> f; move: (f) (f)=> {f})
- ).
+Notation "'[' '1' '!' rules ']'"     := (ltac:(rewrite rules))
+  (at level 0, rules at level 200, only parsing) : ssripat_scope.
+Notation "'[' '!' rules ']'"         := (ltac:(rewrite !rules))
+  (at level 0, rules at level 200, only parsing) : ssripat_scope.
+Notation "'[' 'apply' ']'" := (ltac:(let f := fresh "_top_" in move=> f {}/f))
+  (at level 0, only parsing) : ssripat_scope.
+ (* we try to preserve the naming by matching the names from the goal *)
+(* we do move to perform a hnf before trying to match                *)
+Notation "'[' 'swap' ']'" := (ltac:(move;
+  lazymatch goal with
+  | |- forall (x : _), _ => let x := fresh x in move=> x; move;
+    lazymatch goal with
+    | |- forall (y : _), _ => let y := fresh y in move=> y; move: y x
+    | |- let y := _ in _ => let y := fresh y in move=> y; move: @y x
+    | _ => let y := fresh "_top_" in move=> y; move: y x
+    end
+  | |- let x := _ in _ => let x := fresh x in move => x; move;
+    lazymatch goal with
+    | |- forall (y : _), _ => let y := fresh y in move=> y; move: y @x
+    | |- let y := _ in _ => let y := fresh y in move=> y; move: @y @x
+    | _ => let y := fresh "_top_" in move=> y; move: y x
+    end
+  | _ => let x := fresh "_top_" in let x := fresh x in move=> x; move;
+    lazymatch goal with
+    | |- forall (y : _), _ => let y := fresh y in move=> y; move: y @x
+    | |- let y := _ in _ => let y := fresh y in move=> y; move: @y @x
+    | _ => let y := fresh "_top_" in move=> y; move: y x
+    end
+  end))
+  (at level 0, only parsing) : ssripat_scope.
+ (* we try to preserve the naming by matching the names from the goal *)
+(* we do move to perform a hnf before trying to match                *)
+Notation "'[' 'dup' ']'" := (ltac:(move;
+  lazymatch goal with
+  | |- forall (x : _), _ =>
+    let x := fresh x in move=> x;
+    let copy := fresh x in have copy := x; move: copy x
+  | |- let x := _ in _ =>
+    let x := fresh x in move=> x;
+    let copy := fresh x in pose copy := x;
+    do [unfold x in (value of copy)]; move: @copy @x
+  | |- _ =>
+    let x := fresh "_top_" in move=> x;
+    let copy := fresh "_top" in have copy := x; move: copy x
+  end))
+  (at level 0, only parsing) : ssripat_scope.
+ End ipat.
 
 (****** Hints to deal with dummy bolean goals ******)
 

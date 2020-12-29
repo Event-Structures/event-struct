@@ -82,9 +82,9 @@ Proof.
   rewrite /t_closure. funelim (s_up_set b)=> /=. 
   apply /(iffP idP); rewrite mem_cat /sfrel /=.
   { move=> /orP[|/flatten_mapP[x]] //; first exact: tn1_step.
-    case: eqP=> // S /strict_lt/X/(_ a x erefl) /apply. exact: tn1_trans. }
-  move: X=> /swap[[?->//|y ? /dup ? L /swap]].
-  move=> /apply ?; apply/orP; right; apply/flatten_mapP.
+    case: eqP=> // S /strict_lt/X/(_ a x erefl) /[apply]. exact: tn1_trans. }
+  move: X=> /[swap] [[?->//|y ? /[dup] ? L /[swap]]].
+  move=> /[apply] ?; apply/orP; right; apply/flatten_mapP.
   exists y=> //. case: eqP; auto.
 Qed.
 

@@ -112,7 +112,7 @@ Qed.
 Lemma fresh_seq_lt x : x \in s -> x < fresh_seq s.
 Proof.
   move: path_fresh_seq; rewrite path_sortedE ?inE.
-  - by case/andP=> /swap ? /allP /apply.
+  - by case/andP=> /[swap] ? /allP /[apply].
   exact/rev_trans/lt_trans.
 Qed.
 
