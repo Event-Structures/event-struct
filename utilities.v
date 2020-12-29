@@ -4,10 +4,6 @@ From mathcomp Require Import seq path fingraph fintype.
 
 Notation none := None.
 
-Definition comp2 {A B C : Type} (f : B -> B -> A) (g : C -> B) x y := f (g x) (g y).
-
-Notation "f \o2 g" := (comp2 f g) (at level 50) : fun_scope.
-
 (* ******************************************************************************** *)
 (*     Some atomation with Hints, tacticts and iduction scheme                      *)
 (* ******************************************************************************** *)
