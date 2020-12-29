@@ -198,8 +198,6 @@ Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
 
 End SeqIn.
 
-End SeqElemsPairedWithProofOfMembership.
-
 (**** useful `case`-variant tactics *****)
 
 Ltac ocase := let H := fresh in
