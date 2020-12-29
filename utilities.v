@@ -3,7 +3,7 @@ From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 
 (* ************************************************************************** *)
-(*     Some automation with Hints, tactics and induction scheme               *)
+(*     Some automation with hints and tactics                                 *)
 (* ************************************************************************** *)
 
 (***** ssrnatlia ******)
@@ -197,16 +197,6 @@ Lemma seq_in_subE s s' sub:
 Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
 
 End SeqElemsPairedWithProofOfMembership.
-
-(***** well-founded induction for `nat` *****)
-
-Lemma ltn_ind (P : nat -> Type) :
-  (forall n, (forall m, m < n -> P m) -> P n) ->
-  forall n, P n.
-Proof.
-  move=> accP M. have [n leMn] := ubnP M. elim: n => // n IHn in M leMn *.
-  by apply: accP=> m /leq_trans/(_ leMn)/IHn.
-Qed.
 
 (**** useful `case`-variant tactics *****)
 
