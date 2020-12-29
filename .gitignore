@@ -11,3 +11,5 @@ CoqMakefile.conf
 *.cache
 *.json
 #*#
+dependency_graph.dot
+dependency_graph.png
