@@ -102,25 +102,25 @@ Definition thrd_sem (st : thrd_state) :
   (option (@label unit val) * (val -> thrd_state))%type :=
   let: {| ip := i; regmap := map |} := st in
   match nth p i with
-  | WriteReg v r => (none,
+  | WriteReg v r => (None,
                      fun _ => {| ip     := i.+1;
                                  regmap := [fsfun map with r |-> v] |})
-  | ReadLoc  r x => (some (Read x __), 
+  | ReadLoc  r x => (Some (Read x __),
                      fun v => {| ip     := i.+1;
                                  regmap := [fsfun map with r |-> v] |})
-  | WriteLoc v x => (some (Write x v), 
+  | WriteLoc v x => (Some (Write x v),
                      fun _ => {| ip     := i.+1;
                                  regmap := map |})
-  | CJmp     r n => (none,             
+  | CJmp     r n => (None,
                      fun _ => {| ip     := if map r != inh then n else i.+1;
                                  regmap := map |} )
   end.
 
 Definition ltr_thrd_sem (l : option (@label val val)) st1 st2 : bool :=
   match thrd_sem st1, l with
-  | (some (Write x v), st), some (Write y u) => [&& x == y, v == u & st inh == st2]
-  | (some (Read  x _), st), some (Read  y u) => (x == y) && (st u == st2)
-  | (none            , st), none             => st inh == st2
+  | (Some (Write x v), st), Some (Write y u) => [&& x == y, v == u & st inh == st2]
+  | (Some (Read  x _), st), Some (Read  y u) => (x == y) && (st u == st2)
+  | (None            , st), None             => st inh == st2
   | _, _                                     => false
   end.
 
@@ -139,16 +139,16 @@ Definition wval (l : @label val val) : val :=
 (* label location *)
 Definition lloc (l : @label val val) := 
   match l with
-  | Write x _ => some x
-  | Read  x _ => some x
-  | _         => none
+  | Write x _ => Some x
+  | Read  x _ => Some x
+  | _         => None
   end.
 
 Definition is_write (l : @label val val) := 
   if l is Write _ _ then true else false.
 
 Definition wpred (x : loc) (w : E) :=
-   (lloc (lab w) == some x) && (is_write (lab w)).
+   (lloc (lab w) == Some x) && (is_write (lab w)).
 
 Arguments wpred /.
 
@@ -194,7 +194,7 @@ Definition add_hole
 Definition eval_step (c : config) {pr} (pr_mem : pr \in fresh_id :: dom) 
   : seq config :=
   let: (l, cont_st) := thrd_sem (c pr) in
-  if l is some l then
+  if l is Some l then
     [seq let: (e, v) := x in 
           (Config e [fsfun c with fresh_id |-> cont_st v]) |
           x <- (add_hole l pr_mem)]

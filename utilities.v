@@ -2,8 +2,6 @@ From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 
-Notation none := None.
-
 (* ******************************************************************************** *)
 (*     Some atomation with Hints, tacticts and iduction scheme                      *)
 (* ******************************************************************************** *)
@@ -269,13 +267,6 @@ Proof.
 Qed.
 
 End upgrade.
-
-Definition insub_ord (n k : nat) : option 'I_n := 
-  (if k < n as L return (k < n = L -> _) then
-   fun pf => some (ord pf)
-   else fun=> none) erefl.
-
-Ltac insub_case := rewrite /insub_ord; dcase=> //=.
 
 Lemma refleqP {a b A B} (rA : reflect A a) (rB : reflect B b) :
   A <-> B -> a = b.
