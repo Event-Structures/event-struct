@@ -199,16 +199,9 @@ Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
 End SeqIn.
 
 
-Lemma refleqP {a b A B} (rA : reflect A a) (rB : reflect B b) :
-  A <-> B -> a = b.
-Proof. case=> *; exact /(sameP rA)/(iffP rB). Qed.
-
-Lemma exists_eq {T} {A B : T -> Prop} (_ : forall x, A x <-> B x) : 
-  (exists x, A x) <-> exists x, B x.
-Proof. split=> [][] x /H ?; by exists x. Qed.
-
-Lemma and_eq (a b c : bool): (a -> (b = c)) -> (a && b = a && c).
-Proof. by case: a=> // /(_ erefl) ->. Qed.
+Lemma exists_equiv {T} {A B : T -> Prop} :
+  (forall x, A x <-> B x) -> (exists x, A x) <-> exists x, B x.
+Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
 
 Lemma clos_reflE {T} {R : relation T} a b :
   clos_refl T R a b <-> (a = b) \/ R a b.

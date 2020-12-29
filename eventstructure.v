@@ -180,7 +180,7 @@ Arguments clos_rt1n_rt {_ _ _ _}.
 (* Causality relation *)
 Definition ca : rel E := rt_closure fica fica_le.
 
-Lemma closureP e1 e2: 
+Lemma closureP {e1 e2} :
   reflect (clos_refl_trans_n1 _ ica e1 e2) (ca e1 e2).
 Proof. exact/(equivP (rt_closure_n1P _ _ _ _)). Qed.
 
@@ -402,3 +402,5 @@ End PrimeEventStructure.
 (*Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 10).*)
 Notation "a # b" := (cf _ a b) (at level 10).
 Notation "w << r" := (write_read_from w r) (at level 0). 
+
+Arguments cfP {val disp E es e1 e2}.

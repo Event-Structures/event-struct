@@ -144,7 +144,6 @@ Definition add_event :=
 Hypothesis consist : consistency es.
 Hypothesis ncf_rf : ~~ (cf add_event fresh_id write).
 
-Arguments cfP {_ _ _ _}.
 Import Relation_Operators.
 
 Lemma fpred_add_eventE e : fpred add_event e = 
@@ -176,11 +175,18 @@ Qed.
 Lemma ca_fresh e: ca es fresh_id e -> e = fresh_id.
 Proof. by move/closureP; elim=> // ?? /[swap] ? /[swap]-> /ica_fresh. Qed.
 
+Lemma ca_fresh2 e1 e2 :
+  ca es e1 e2 -> e1 = fresh_id -> e2 = fresh_id.
+Proof. by move/[swap]->; apply: ca_fresh. Qed.
+
+Lemma ca_fresh_contra e1 e2 :
+  ca es e1 e2 -> e2 != fresh_id -> e1 != fresh_id.
+Proof. by move/ca_fresh2; apply: contra_neq. Qed.
+
 Lemma ca_add_eventE e1 e2: e2 != fresh_id -> ca es e1 e2 = ca add_event e1 e2.
 Proof.
   move=> N.
-  apply (refleqP (closureP _ _ _) (closureP _ _ _)).
-  split; move: N=> /[swap]; elim; try constructor.
+  apply/closureP/closureP; move: N=> /[swap]; elim; try constructor.
   all: move=> y ? I ? H /negbTE Z; apply (rtn1_trans _ _ _ y)=> //.
   2,4: apply/H/negP; move: I.
   - by rewrite ica_add_eventE Z.
@@ -202,14 +208,12 @@ Lemma cf_add_eventE e1 e2:
   e1 != fresh_id -> e2 != fresh_id ->
   cf es e1 e2 = cf add_event e1 e2.
 Proof.
-  move=> /[dup] ? /negP N1 /[dup] ? /negP N2.
-  apply: (refleqP (cfP _ _ ) (cfP _ _)). 
-  apply /exists_eq => x; apply /exists_eq=> y.
-  rewrite -?ca_add_eventE //. 
-  apply /Bool.eq_iff_eq_true/and_eq => C; apply /and_eq=> ?.
-  rewrite icf_add_eventE //; apply/eqP=> Eq.
-  - apply/N1/eqP/ca_fresh; by rewrite -Eq.
-  apply/N2/eqP/ca_fresh; by rewrite -Eq.
+  move=> nfr1 nfr2; apply/(sameP cfP)/(equivP cfP).
+  apply/exists_equiv=> x; apply/exists_equiv=> y.
+  rewrite -?ca_add_eventE //; apply/Bool.eq_iff_eq_true.
+  apply/andb_id2l=> /ca_fresh_contra /(_ nfr1) C1.
+  apply/andb_id2l=> /ca_fresh_contra /(_ nfr2) C2.
+  by rewrite icf_add_eventE.
 Qed.
 
 Lemma consist_add_event: consistency add_event.
