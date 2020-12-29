@@ -118,7 +118,7 @@ Lemma nat_well_founded_bool:  well_founded_bool (<%O : rel nat).
 Proof.
   elim=> [//|n /dup ? [IHn]].
   constructor=> m; case E: (n == m)=> /= L; first by move/eqP: E=> <-.
-  apply/IHn=> /=. move: L. rewrite /Order.lt /=. slia.
+  apply/IHn=> /=. move: L. rewrite /Order.lt /=. ssrnatlia.
 Qed.
 
 End NatWellFounded.
