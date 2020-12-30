@@ -1,6 +1,5 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
-From mathcomp Require Import eqtype fingraph path finmap. 
-From event_struct Require Import utilities relations ident rfsfun.
+From mathcomp Require Import ssreflect ssrfun ssrbool seq eqtype order finmap.
+From event_struct Require Import utilities ident rfsfun.
 From event_struct Require Import eventstructure.
 
 (******************************************************************************)
