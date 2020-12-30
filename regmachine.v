@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path finmap choice finfun. 
-From event_struct Require Import utilities eventstructure inhtype.
+From event_struct Require Import utilities eventstructure.
 From event_struct Require Import transitionsystem ident rfsfun.
 
 (******************************************************************************)
@@ -48,7 +48,7 @@ Arguments Write {_ _}.
 Section RegMachine.
 
 Open Scope fmap.
-Context {val : inhType} {disp} {E : identType disp}.
+Context {val : eqType} {inh : val} {disp} {E : identType disp}.
 
 (*Notation n := (@n val).*)
 Notation exec_event_struct := (@fin_exec_event_struct val _ E).
