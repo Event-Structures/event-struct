@@ -4,17 +4,17 @@ From event_struct Require Import utilities wftype.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
-(*   identType d == interface for inhabited types with decidable equality     *)
-(*                  equipped with increasing function fresh                   *)
-(*                  (w.r.t some well-founded order)                           *)
-(*                  which is used to generate "fresh" identifiers             *)
-(*      fresh id == a fresh identifier coming after id.                       *)
-(*        ident0 == an initial identifier.                                    *)
-(*      fresh_seq s == fresh h, where h is the head of s, or fresh ident0 if  *)
-(*                     s is empty                                             *)
-(*      nfresh n == a sequence of size n of fresh identifiers                 *)
-(*                  starting with ident0.                                     *)
-(* This file also contain canonical instance of identType for nat.            *)
+(*  identType d == interface for inhabited well-founded orders equipped with  *)
+(*                 increasing function to generate "fresh" identifiers.       *)
+(*     fresh id == a fresh identifier coming after id (id < fresh id).        *)
+(*       ident0 == an initial identifier.                                     *)
+(*     nfresh n == a decreasing sequence of size n+1 of fresh identifiers     *)
+(*                 with ident0 as the last element.                           *)
+(*  fresh_seq s == an identifier fresher than the head of the s sequence      *)
+(*                 (ident0 if s is empty). Helps with reducing time           *)
+(*                 complexity of incremental generation of sequences of fresh *)
+(*                 identifiers).                                              *)
+(* This file also contains canonical instance of identType for nat.           *)
 (******************************************************************************)
 
 Import Order.LTheory.
@@ -93,7 +93,7 @@ Context {disp} {T : identType disp}.
 Local Notation ident0 := (@ident0 disp T).
 Local Notation fresh := (@fresh disp T).
 
-Lemma fresh_lt x : x < fresh x. 
+Lemma fresh_lt x : x < fresh x.
 Proof. by case: T x=> ? [/= ? []]. Qed.
 
 Definition fresh_seq s := fresh (head ident0 s).
@@ -102,38 +102,50 @@ Section Add_Sorted.
 
 Context {s : seq T} (s_sorted : sorted (>%O) s).
 
-Lemma path_fresh_seq: path (>%O) (fresh_seq s) s.
-Proof.
-  case: s s_sorted=> //= ??->.
-  by rewrite /fresh_seq /= fresh_lt.
-Qed.
+Lemma path_fresh_seq : path (>%O) (fresh_seq s) s.
+Proof. by case: s s_sorted=> //= ??; rewrite fresh_lt. Qed.
 
 Lemma fresh_seq_lt x : x \in s -> x < fresh_seq s.
 Proof.
-  move: path_fresh_seq; rewrite path_sortedE ?inE.
-  - by case/andP=> /[swap] ? /allP /[apply].
+  move: path_fresh_seq; rewrite path_sortedE.
+  - by case/andP=> /allP + _ => /[apply].
   exact/rev_trans/lt_trans.
 Qed.
 
 Lemma fresh_seq_le x: x \in (fresh_seq s :: s) -> x <= fresh_seq s.
-Proof. by rewrite ?inE=> /orP[/eqP->|/fresh_seq_lt/ltW]. Qed.
+Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed.
 
 End Add_Sorted.
 
+
 Definition nfresh n := iter n (fun s => fresh_seq s :: s) [:: ident0].
 
-Lemma nfreshS n: nfresh n.+1 = fresh_seq (nfresh n) :: (nfresh n).
+Lemma nfreshS n : nfresh n.+1 = fresh_seq (nfresh n) :: (nfresh n).
 Proof. by []. Qed.
 
-Lemma fresh_seq_iter n: fresh_seq (nfresh n) = iter n.+1 fresh ident0.
+Lemma fresh_seq_iter n : fresh_seq (nfresh n) = iter n.+1 fresh ident0.
 Proof. by elim: n=> //= ? ->. Qed.
 
-Lemma nfresh_le x n: x \in nfresh n.+1 -> x <= fresh_seq (nfresh n).
+Section NfreshSpec.
+
+Lemma nfresh_sorted n : sorted (>%O) (nfresh n).
+Proof. by elim: n=> //= n IHn; rewrite path_fresh_seq. Qed.
+
+Lemma nfreshE n : nfresh n = rev (traject fresh ident0 n.+1).
 Proof.
-  elim n=> //= [|? IHn]; rewrite ?inE=> /orP[/eqP-> //|].
-  - move/eqP->; exact/(ltW (fresh_lt _)).
-  by rewrite {2}/fresh_seq /= => /IHn /le_trans/(_ (ltW (fresh_lt _))).
+  by elim: n=> // n IHn; rewrite nfreshS fresh_seq_iter trajectSr rev_rcons IHn.
 Qed.
+
+Lemma nfresh_size n : size (nfresh n) = n.+1.
+Proof. by rewrite nfreshE size_rev size_traject. Qed.
+
+Lemma nfresh_last n : last ident0 (nfresh n) = ident0.
+Proof. by rewrite nfreshE trajectS rev_cons -cats1 last_cat. Qed.
+
+End NfreshSpec.
+
+Lemma nfresh_le x n : x \in nfresh n.+1 -> x <= fresh_seq (nfresh n).
+Proof. by move=> /= /fresh_seq_le; apply; apply: nfresh_sorted. Qed.
 
 End IdentTheory.
 
@@ -146,9 +158,5 @@ Definition nat_identMixin :=
 
 End IdentDataTypes.
 
-Canonical nat_identType := 
+Canonical nat_identType :=
   Eval hnf in IdentType nat_display nat nat_identMixin.
-
-(*Eval cbv in (@nfresh nat_display nat_identType 5).*)
-
-(* Definition of wfidentType *)
