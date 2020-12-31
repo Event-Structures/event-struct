@@ -10,6 +10,18 @@ Set Equations Transparent.
 Import Order.LTheory.
 Local Open Scope order_scope.
 
+Arguments clos_rtn1_rt {_ _ _ _}.
+Arguments clos_rt_rt1n {_ _ _ _}.
+Arguments clos_rt_rtn1 {_ _ _ _}.
+Arguments clos_rt1n_rt {_ _ _ _}.
+Arguments clos_refl {_}.
+Arguments clos_refl_trans_n1 {_}.
+Arguments clos_trans {_}.
+Arguments clos_trans_n1 {_}.
+Arguments reflexive {_}.
+Arguments rtn1_trans {_ _ _ _ _}.
+Arguments rtn1_refl {_ _ _}.
+
 Section well_founded.
 
 Definition sfrel {T : eqType} (f : T -> seq T) : rel T :=
@@ -64,19 +76,19 @@ Equations s_up_set (n : T) : seq T by wf n (<%O : rel T) :=
 
 Definition t_closure (a b : T) : bool := a \in s_up_set b.
 
-Lemma clos_trans_n1_lt a b : clos_trans_n1 T (sfrel f\eq) a b -> a < b.
+Lemma clos_trans_n1_lt a b : clos_trans_n1 (sfrel f\eq) a b -> a < b.
 Proof.
   rewrite/sfrel //=.
   elim=> [x| x y xfy acx ax]. auto.
   apply: lt_trans; first exact: ax. auto.
 Qed.
 
-Lemma clos_trans_lt a b : clos_trans T (sfrel f\eq) a b -> a < b.
+Lemma clos_trans_lt a b : clos_trans (sfrel f\eq) a b -> a < b.
 Proof. move=> cab. by apply /clos_trans_n1_lt /clos_trans_tn1. Qed.
 
 (* Transitive closure reflection lemma *)
 Lemma t_closure_n1P a b : 
-  reflect (clos_trans_n1 T (sfrel f\eq) a b) (t_closure a b).
+  reflect (clos_trans_n1 (sfrel f\eq) a b) (t_closure a b).
 Proof.
   rewrite /t_closure. funelim (s_up_set b)=> /=. 
   apply /(iffP idP); rewrite mem_cat /sfrel /=.
@@ -88,7 +100,7 @@ Proof.
 Qed.
 
 Lemma t_closureP a b :
-  reflect (clos_trans T (sfrel f\eq) a b) (t_closure a b).
+  reflect (clos_trans (sfrel f\eq) a b) (t_closure a b).
 Proof.
   apply /(iffP idP) => [/t_closure_n1P| cab]; first exact: clos_tn1_trans.
   apply /t_closure_n1P. exact: clos_trans_tn1.
@@ -118,7 +130,7 @@ Definition up_set a := a :: s_up_set a.
 Definition rt_closure a b := a \in up_set b. 
 
 Lemma rt_closure_reflP a b :
-  reflect (clos_refl T t_closure a b) (rt_closure a b).
+  reflect (clos_refl t_closure a b) (rt_closure a b).
 Proof.
   rewrite /rt_closure /up_set. funelim (s_up_set b).
   apply /(iffP idP).
@@ -133,14 +145,14 @@ Proof.
 Qed.
 
 Lemma clos_t_clos_rt {R : rel T} a b :
-  clos_trans T R a b -> clos_refl_trans T R a b.
+  clos_trans R a b -> clos_refl_trans T R a b.
 Proof.
   elim=> [|c d e ctcd crtcd ctde crtce]; first by constructor.
   apply /rt_trans; first exact: crtcd. exact: crtce.
 Qed.
 
 Lemma filter_clos_sub a b :
-  clos_trans_n1 T (sfrel f\eq) a b -> clos_trans_n1 T (sfrel f) a b.
+  clos_trans_n1 (sfrel f\eq) a b -> clos_trans_n1 (sfrel f) a b.
 Proof.
   elim=> [c sfac | c d sfcd ctacn ctac].
   { apply /tn1_step. move: sfac. auto. }
@@ -148,7 +160,7 @@ Proof.
 Qed.
 
 Lemma refl_trans_refl_rt a b :
-  clos_refl_trans_n1 T (sfrel f) a b -> clos_refl T t_closure a b.
+  clos_refl_trans_n1 (sfrel f) a b -> clos_refl t_closure a b.
 Proof.
   rewrite /sfrel /=. 
   elim=> [|c d sfcd crtac /rt_closure_reflP rtac]; first exact: r_refl.
@@ -170,7 +182,7 @@ Proof. exact: mem_head. Qed.
 
 (* Reflexive-transitive closure reflection lemma *)
 Lemma rt_closure_n1P a b :
-  reflect (clos_refl_trans_n1 T (sfrel f) a b) (rt_closure a b).
+  reflect (clos_refl_trans_n1 (sfrel f) a b) (rt_closure a b).
 Proof.
   apply /(iffP idP).
   { move=> /rt_closure_reflP. case => [c /t_closure_n1P cac|]; last by constructor.
@@ -192,7 +204,7 @@ Proof.
   apply/rt_closureP /rt_trans; first exact: ab. done.
 Qed.
 
-Lemma rt_closure_lt a b : rt_closure a b -> a <= b.
+Lemma rt_closure_le a b : rt_closure a b -> a <= b.
 Proof.
   rewrite /rt_closure /up_set in_cons => /orP[/eqP -> //|] asb.
   rewrite le_eqVlt. apply /orP. right. by apply /t_closure_lt.
@@ -200,8 +212,13 @@ Qed.
 
 Lemma rt_closure_antisym : antisymmetric rt_closure.
 Proof.
-  move=> a b /andP[] /rt_closure_lt ab /rt_closure_lt ba. apply /eqP.
+  move=> a b /andP[] /rt_closure_le ab /rt_closure_le ba. apply /eqP.
   by rewrite eq_le ab ba.
 Qed.
 
+Lemma rt_closure_subrel : subrel (sfrel f) rt_closure.
+Proof. move=> a b sfrel; exact/rt_closure_n1P/(rtn1_trans sfrel rtn1_refl). Qed.
+
 End well_founded.
+
+Arguments rt_closure_n1P {disp T f descend a b}.

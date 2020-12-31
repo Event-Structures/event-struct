@@ -33,10 +33,6 @@ We require the following properties.
 ##### `relations.v`
 Theory of computable transitive closure of well-founded relations.
 
-##### `rfsfun.v`
-Theory of functions on a finite subset of some type `E` 
-that can be extended on whole type `E` and embedded in fixed relation. 
-
 ##### `eventstructure.v`
 Theory of finite prime event structures.
 
