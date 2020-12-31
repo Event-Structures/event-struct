@@ -1,6 +1,6 @@
 From Coq Require Import Relations.
-From mathcomp Require Import ssreflect ssrnat ssrfun ssrbool seq fintype order.
-From mathcomp Require Import eqtype fingraph path tuple finmap finfun choice.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
+From mathcomp Require Import eqtype choice order finmap.
 From event_struct Require Import utilities relations rfsfun wftype ident.
 
 (******************************************************************************)

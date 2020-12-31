@@ -1,5 +1,5 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype choice.
-From mathcomp Require Import eqtype fingraph path order tuple path finmap finfun finset. 
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq.
+From mathcomp Require Import choice fintype finset finmap.
 From event_struct Require Import utilities.
 
 (******************************************************************************)

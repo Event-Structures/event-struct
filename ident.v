@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
-From mathcomp Require Import order choice finmap.
-From event_struct Require Import wftype utilities.
+From mathcomp Require Import order choice.
+From event_struct Require Import utilities wftype.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
@@ -19,7 +19,6 @@ From event_struct Require Import wftype utilities.
 
 Import Order.LTheory.
 Open Scope order_scope.
-Open Scope fset_scope.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

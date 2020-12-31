@@ -1,6 +1,5 @@
-From Coq Require Import Lia.
-From Coq Require Import Relations Relation_Operators Program.Basics.
-From mathcomp Require Import ssreflect ssrbool eqtype ssrfun seq order.
+From Coq Require Import Relations Relation_Operators.
+From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order.
 From Equations Require Import Equations.
 From event_struct Require Import utilities wftype.
 
