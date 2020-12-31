@@ -363,7 +363,7 @@ Qed.
 Lemma cf_irrelf : irreflexive cf.
 Proof.
   move=> m; apply/negbTE/negP.
-  elim/(@wf_ind disp E): m=> m IHn.
+  elim/(@wfb_ind disp E): m=> m IHn.
   suff C: ~ m # (fpred m).
   - by rewrite cfE /icf=> /or3P[/andP[/eqP]||] //= /or3P[]// /rff_consist.
   move=> /cfP[x [y /and3P[]]]; case Eq: (x == m).

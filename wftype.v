@@ -1,27 +1,22 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype.
-From mathcomp Require Import eqtype fingraph path order choice. 
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat.
+From mathcomp Require Import eqtype choice order.
 Require Import Equations.Prop.Loader.
-From event_struct Require Import utilities.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
-(*       wfType d == the structure for types with well-founded partial order. *)
-(*       well_founded_bool r == r is decidable well-founded relation          *)
-(*       wf == the well-founded order of wfType                               *)
-(*       wf_ind == well-founded induction for wfType                          *)
-(* This file also contains canonical instance of wfType for nat               *) 
+(*             wfType d == the structure for types with                       *)
+(*                         well-founded partial order.                        *)
+(*  well_founded_bool r <-> r is a decidable well-founded relation.           *)
+(*                  wfb <-> wfType's order relation is well-founded.          *)
+(*              wfb_ind <-> well-founded induction principle for wfType.      *)
+(* This file also contains canonical instance of wfType for nat.              *)
 (******************************************************************************)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Order.LTheory.
-Open Scope order_scope.
-
-Notation ordType := (orderType tt).
-
-Section WfDef.
+Section WfBool.
 
 Context {T : Type} (r : rel T).
 
@@ -30,7 +25,9 @@ Inductive acc_bool (x : T) :=
 
 Definition well_founded_bool := forall x, acc_bool x.
 
-End WfDef.
+End WfBool.
+
+Open Scope order_scope.
 
 Module WellFounded.
 
@@ -39,7 +36,7 @@ Section ClassDef.
 Record mixin_of T0 (b : Order.POrder.class_of T0)
   (T := Order.POrder.Pack tt b) := Mixin {
   _ : well_founded_bool (<%O : rel T);
-}. 
+}.
 
 Set Primitive Projections.
 
@@ -84,46 +81,38 @@ Canonical choiceType.
 Canonical porderType.
 Notation WfType disp T m := (@pack T disp _ _ id m).
 
-
 End Exports.
 
 End WellFounded.
 
 Export WellFounded.Exports.
 
+
 Section WfInduction.
 
 Context {disp : unit} {T : wfType disp}.
 
-Lemma wf : well_founded_bool (<%O : rel T).
+Lemma wfb : well_founded_bool (<%O : rel T).
 Proof. by case: T=> ? [] ? []. Qed.
 
-Lemma wf_ind (P : T -> Type) :
+Lemma wfb_ind (P : T -> Type) :
   (forall n, (forall m, m < n -> P m) -> P n) ->
   forall n, P n.
-Proof.
-  move=> accP M.
-  by elim: (wf M) => ?? /accP. 
-Qed.
+Proof. by move=> accP M; elim: (wfb M) => ?? /accP. Qed.
 
 End WfInduction.
 
-Global Instance wf_wfType {disp : unit} {T : wfType disp} : 
+Global Instance wf_wfType {disp : unit} {T : wfType disp} :
   Equations.Prop.Classes.WellFounded (<%O : rel T).
-Proof. apply: wf_ind. by constructor. Qed.
+Proof. by apply: wfb_ind; constructor. Qed.
 
-Section NatWellFounded.
 
-Lemma nat_well_founded_bool:  well_founded_bool (<%O : rel nat).
-Proof.
-  elim=> [//|n /[dup] ? [IHn]].
-  constructor=> m; case E: (n == m)=> /= L; first by move/eqP: E=> <-.
-  apply/IHn=> /=. move: L. rewrite /Order.lt /=. ssrnatlia.
-Qed.
-
-End NatWellFounded.
+(* Canonical well-founded order for nat *)
 
 Import Order.NatOrder.
+
+Lemma nat_well_founded_bool:  well_founded_bool (<%O : rel nat).
+Proof. by elim/ltn_ind=> n IHn; constructor=> m /IHn. Qed.
 
 Definition nat_wfMixin := @WellFounded.Mixin nat _ nat_well_founded_bool.
 Canonical nat_wfType := Eval hnf in WfType nat_display nat nat_wfMixin.
