@@ -14,7 +14,6 @@ inhtype.v
 wftype.v
 relations.v
 ident.v
-rfsfun.v
 eventstructure.v
 transitionsystem.v
 regmachine.v
