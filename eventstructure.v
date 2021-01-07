@@ -407,10 +407,10 @@ Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
 Proof.
   apply/idP/idP; last by apply: cf_step_cf.
   case/cfP=> e1' [e2' [[/closureP]]].
-  elim=> [/closureP | ?? /[swap] _ + /[apply] + /[apply] + /cf_step_cf].
-  - elim=> [-> //| ?? + _ /[apply] + /cf_step_cf].
-    by rewrite /ica !inE=> /pred2P[]-> /= ->; rewrite orbT.
-  by rewrite cf_sym /ica ?inE=> /pred2P[]-> /= ->.
+  elim=> [/closureP |?? /[swap] _ I /[apply]/[apply]/cf_step_cf].
+  - elim=> [-> //| ?? I _ /[apply] /cf_step_cf].
+    by move: I; rewrite /ica !inE=> /pred2P[]-> /= ->; rewrite orbT.
+  by move: I; rewrite cf_sym /ica ?inE=> /pred2P[]-> /= ->.
 Qed.
 
 (* ************************************************************************* *)
