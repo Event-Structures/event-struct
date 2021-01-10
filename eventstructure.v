@@ -129,7 +129,7 @@ Section ExecEventStructure.
 
 Context {disp} {E : identType disp} (es : fin_exec_event_struct E).
 
-Notation domain := (dom es).
+Notation dom := (dom es).
 Notation lprf := (lprf es).
 Notation lab := (lab es).
 Notation fpred := (fpred es).
@@ -145,13 +145,13 @@ Lemma frfE e : frf e = (lprf e).2.
 Proof. by []. Qed.
 
 
-Lemma lprf_dom : {subset (finsupp lprf) <= domain}.
+Lemma lprf_dom : {subset (finsupp lprf) <= dom}.
 Proof. by case: es. Qed.
 
 (***** Labels and Freshness *****)
 Section LabelsFresh.
 
-Notation fresh_id := (fresh_seq domain).
+Notation fresh_id := (fresh_seq dom).
 
 Lemma lab_fresh : lab fresh_id = ThreadEnd.
 Proof.
@@ -168,8 +168,8 @@ End LabelsFresh.
 Lemma fpred_le e : fpred e <= e.
 Proof. by case: es. Qed.
 
-Lemma fpred_domain e :
-  e \notin domain -> fpred e = e.
+Lemma fpred_dom e :
+  e \notin dom -> fpred e = e.
 Proof.
   move=> ndom; rewrite /fpred fsfun_dflt //; move: ndom.
   by apply/contra/lprf_dom.
@@ -190,8 +190,8 @@ Proof. by case/andP: (frf_cond r). Qed.
 Lemma frf_lt {e1 e2} : e1 < e2 -> frf e1 < e2.
 Proof. by apply/le_lt_trans/frf_le. Qed.
 
-Lemma frf_domain e :
-  e \notin domain -> frf e = e.
+Lemma frf_dom e :
+  e \notin dom -> frf e = e.
 Proof.
   move=> ndom; rewrite /frf fsfun_dflt //; move: ndom.
   by apply/contra/lprf_dom.
@@ -199,9 +199,9 @@ Qed.
 
 Definition fica e := [:: frf e; fpred e].
 
-Lemma fica_domain e :
-  e \notin domain -> fica e = [:: e; e].
-Proof. by move=> nI; rewrite /fica frf_domain // fpred_domain. Qed.
+Lemma fica_dom e :
+  e \notin dom -> fica e = [:: e; e].
+Proof. by move=> nI; rewrite /fica frf_dom // fpred_dom. Qed.
 
 Lemma fica_le e1 e2: e1 \in fica e2 -> e1 <= e2.
 Proof. rewrite ?inE=> /orP[]/eqP->; by rewrite (frf_le, fpred_le). Qed.
@@ -230,10 +230,10 @@ Lemma ica_fpred {e}: ica (fpred e) e.
 Proof. by rewrite /ica !inE eqxx. Qed.
 
 Lemma ica_notdom e1 e2:
-  e2 \notin domain ->
+  e2 \notin dom ->
   ica e1 e2 ->
   e1 == e2.
-Proof. by move=> Ndom2; rewrite /ica fica_domain // !inE orbb. Qed.
+Proof. by move=> Ndom2; rewrite /ica fica_dom // !inE orbb. Qed.
 
 Lemma ca_refl {e} : ca e e.
 Proof. exact: rt_closure_refl. Qed.
@@ -268,7 +268,7 @@ Lemma ca_fpredr e1 e2 : ca e1 (fpred e2) -> ca e1 e2.
 Proof. by move/ca_trans/(_ ca_fpredl). Qed.
 
 Lemma ca_notdom e1 e2:
-  ca e1 e2 -> e2 \notin domain ->
+  ca e1 e2 -> e2 \notin dom ->
   e1 == e2.
 Proof.
   move/closureP; elim=> // {}e2 e3 + _ + N3.
@@ -283,13 +283,13 @@ Proof. by []. Qed.
 (***** Causality and Freshness *****)
 Section CausalityFresh.
 
-Notation fresh_id := (fresh_seq domain).
+Notation fresh_id := (fresh_seq dom).
 
 Lemma ica_fresh e: ica fresh_id e -> e = fresh_id.
 Proof.
   move/[dup]/ica_ca/ca_notdom/[swap]/fica_le.
   rewrite /ica ?inE.
-  case I: (e \in domain); last by move=> ?/(_ erefl)/eqP->.
+  case I: (e \in dom); last by move=> ?/(_ erefl)/eqP->.
   by move/lt_geF: (fresh_seq_lt (dom_sorted es) I)=>->.
 Qed.
 
@@ -306,7 +306,7 @@ Proof. by move=> nfr2 /ca_fresh2/contra_neq->. Qed.
 
 End CausalityFresh.
 
-(*Lemma ca_dom e1 e2: ca e1 e2 -> (e1 \in domain) = false ->
+(*Lemma ca_dom e1 e2: ca e1 e2 -> (e1 \in dom) = false ->
   e1 = e2.
 Proof.
   move/closureP; elim=> // x y I /closureP ? IH /[dup]/IH.
@@ -419,15 +419,15 @@ Qed.
 (*     Reads-From Consistency                                                *)
 (* ************************************************************************* *)
 
-Definition dom_consistency :=  all (fun e => ~~ (e # (frf e))) domain.
+Definition dom_consistency :=  all (fun e => ~~ (e # (frf e))) dom.
 
 Hypothesis Consistent : dom_consistency.
 
 Lemma rff_consist e : e # (frf e) = false.
 Proof.
-  apply/negbTE/negP; case: (boolP (e \in domain)) => [D|nD].
+  apply/negbTE/negP; case: (boolP (e \in dom)) => [D|nD].
   - by move/allP/(_ _ D)/negP: Consistent.
-  rewrite frf_domain // => /cfP[e1 [e2 [[]]]]; do 2 move/ca_notdom/(_ nD)/eqP->.
+  rewrite frf_dom // => /cfP[e1 [e2 [[]]]]; do 2 move/ca_notdom/(_ nD)/eqP->.
   by rewrite icfxx.
 Qed.
 
