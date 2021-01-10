@@ -347,6 +347,8 @@ Definition icf (e1 e2 : E) : bool :=
 Lemma icfxx x : icf x x = false.
 Proof. by apply/and6P; case; rewrite eq_refl. Qed.
 
+Definition icf_irrefl : irreflexive icf := icfxx.
+
 Hint Resolve icfxx : core.
 
 Lemma icf_sym : symmetric icf.
