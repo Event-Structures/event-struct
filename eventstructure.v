@@ -102,7 +102,7 @@ Definition write_read_from (w r : label) :=
 
 Notation "w << r" := (write_read_from w r) (at level 0).
 
-Lemma rf_thdend w : w << ThreadEnd = false.
+Lemma rf_thrdend w : w << ThreadEnd = false.
 Proof. by case: w. Qed.
 
 
