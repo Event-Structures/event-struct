@@ -24,19 +24,19 @@ From event_struct Require Import utilities.
 (* the same type of events for both the event structure and its               *)
 (* configurations (i.e. pomsets).                                             *)
 (*                                                                            *)
-(*       eventStruct E == the type of pomset (event structures).              *)
-(*                        Pomset consists of the domain (set of events        *)
-(*                        encoded as decidable predicate), and                *)
-(*                        a causality relation <= (a partial order),          *)
-(*                        such as `a < b` is false for all `a` and `b`        *)
-(*                        outside of the domain.                              *)
-(*                        We use the name `eventStruct` to denote the         *)
-(*                        pomset structure itself (as opposed to              *)
-(*                        `eventType`) and for uniformity with the            *)
-(*                        theory of (prime and stable) event                  *)
-(*                        structures.                                         *)
-(*       eventType d   == a type of events, i.e. a type equipped with         *)
-(*                        pomset structure instance.                          *)
+(*       Pomset.eventStruct E == the type of pomset (event structures).       *)
+(*                               Pomset consists of the domain (set of events *)
+(*                               encoded as decidable predicate), and         *)
+(*                               a causality relation <= (a partial order),   *)
+(*                               such as `a < b` is false for all `a` and `b` *)
+(*                               outside of the domain.                       *)
+(*                               We use the name `eventStruct` to denote the  *)
+(*                               pomset structure itself (as opposed to       *)
+(*                               `eventType`) and for uniformity with the     *)
+(*                               theory of (prime and stable) event           *)
+(*                               structures.                                  *)
+(*       Pomset.eventType d   == a type of events, i.e. a type equipped with  *)
+(*                               pomset structure instance.                   *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -91,7 +91,7 @@ Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_t
 Declare Scope pomset.
 Local Open Scope pomset.
 
-Module Pomset.
+Module Pomset_.
 Section ClassDef. 
 
 Record mixin_of (E0 : Type) (* (L0 : Type) *)
@@ -144,58 +144,49 @@ Coercion porderType : type >-> Order.POrder.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Notation eventType := type.
-Notation eventStruct := class_of.
 End Exports.
 
-End Pomset.
+Notation eventType := type.
+Notation eventStruct := class_of.
 
-Export Pomset.Exports.
+End Pomset_.
+
+Export Pomset_.Exports.
 
 Section PomsetDef.
 
-Variable (disp : unit) (E : eventType disp).
+Variable (disp : unit) (E : Pomset_.type disp).
 
-Definition dom : pred E := Pomset.dom (Pomset.class E).
-
-(* causality relation *)
-Definition ca : rel E := POrder.le (Pomset.class E).
-
-(* strict causality relation *)
-Definition sca : rel E := POrder.lt (Pomset.class E).
+Definition dom : pred E := Pomset_.dom (Pomset_.class E).
 
 End PomsetDef.
 
-Prenex Implicits dom ca sca.
+Prenex Implicits dom.
 
 Module Import PomsetSyntax.
-
-Notation "<=%P" := ca : fun_scope.
-Notation "<%P" := sca : fun_scope.
 
 End PomsetSyntax.
 
 Module Import PomsetTheory.
 Section PomsetTheory.
 
-Context {disp : unit} {E : eventType disp}.
+Context {disp : unit} {E : Pomset_.type disp}.
 
-Lemma ca_lt : (sca : rel E) = lt.
-Proof. by []. Qed.
+Lemma lt_dom : (<%O : rel E) ≦ dom × dom.
+Proof. exact: Pomset_.bounded. Qed.
 
-Lemma ca_le : (ca : rel E) = le.
-Proof. by []. Qed.
-
-Lemma sca_dom : (<%P : rel E) ≦ dom × dom.
-Proof. exact: Pomset.bounded. Qed.
-
-Lemma ca_dom : (<=%P : rel E) ≦ (dom × dom)^?.
+Lemma le_dom : (<=%O : rel E) ≦ (dom × dom)^?.
 Proof.
-  move=> x y //=. rewrite /le_bool /rtc ca_le le_eqVlt.
+  move=> x y //=. rewrite /le_bool /rtc le_eqVlt.
   move=> /orP [eq | lt]; apply /orP.
   - by left.
-  by right; apply: sca_dom. 
+  by right; apply: lt_dom. 
 Qed.
 
 End PomsetTheory.
 End PomsetTheory.
+
+Module Pomset.
+Notation eventType := Pomset_.eventType.
+Notation eventStruct := Pomset_.eventStruct.
+End Pomset.

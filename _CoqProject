@@ -14,6 +14,8 @@ inhtype.v
 wftype.v
 relations.v
 ident.v
+pomset.v
+prime_eventstruct.v
 rfsfun.v
 eventstructure.v
 transitionsystem.v
