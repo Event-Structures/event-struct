@@ -106,10 +106,6 @@ Variable (disp : unit) (E : PrimeEventStruct.eventType disp).
 
 Definition cf : rel E := PrimeEventStruct.cf (PrimeEventStruct.class E).
 
-Definition ca_closed (X : pred E) : Prop :=
-  (* ca · [X] ≦ [X] · ca; *)
-  forall x y (_ : X y), x <= y -> X x.
-
 Definition cf_free (X : pred E) : Prop := 
   cf ⊓ (X × X) ≦ bot.
 
@@ -121,13 +117,13 @@ End PrimeEventStructDef.
 
 Prenex Implicits cf.
 
-Module Import PrimeEventStructSyntax.
+Module Export PrimeEventStructSyntax.
 
 Notation "x # y" := (cf x y) : prime_eventstruct_scope.
 
 End PrimeEventStructSyntax.
 
-Module Import PrimeEventStructTheory.
+Module Export PrimeEventStructTheory.
 Section PrimeEventStructTheory.
 
 Context {disp : unit} {E : PrimeEventStruct.eventType disp}.
@@ -140,9 +136,6 @@ Proof. by case E => ? [? []]. Qed.
 
 Lemma cf_hered : hereditary (<=%O) (cf : rel E).
 Proof. by case E => ? [? []]. Qed.
-
-Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
-Proof. move=> e1 e2 /[swap] //=. exact: le_trans. Qed.
 
 Lemma prefix_cf_free (e : E) : cf_free (<= e).
 Proof. 
