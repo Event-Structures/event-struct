@@ -1,6 +1,7 @@
 From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
+From RelationAlgebra Require Import lattice boolean.
 
 (* ************************************************************************** *)
 (*     Some automation with hints and tactics                                 *)
@@ -198,6 +199,48 @@ Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
 
 End SeqIn.
 
+(* ************************************************************************** *)
+(*     Cartesian product for lattice-valued functions                         *)
+(* ************************************************************************** *)
+
+Section CartesianProd.
+
+Context {T : Type} {L : lattice.ops}.
+
+Definition cart_prod (p q : T -> L) : T -> T -> L :=
+  fun x y => p x ⊓ q y.
+
+End CartesianProd.
+
+Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
+
+(* ************************************************************************** *)
+(*     Reflexive closure for decidable relations                              *)
+(* ************************************************************************** *)
+
+(* TODO: a quick workaround to obtain "^?" notation for boolean-valued relations. 
+ * A better solution would be to define in terms of kleene algebras.
+ * However, the problem is that boolean-valued relations do not form KA
+ * (due to lack of kleene-star, i.e. transitive closure).
+ * However, to define the reflexive closure, we do not need that. 
+ * Given the design of relation-algebra (see levels), it seems it would be possible 
+ * in future to give a more general definition for "^?".
+ *)
+
+Section ReflexiveClosure.
+
+Variable (T : eqType).
+
+Definition rtc (r : rel T) : rel T := 
+  fun x y => (x == y) || r x y.
+
+End ReflexiveClosure.
+
+Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_terms.
+
+(* ************************************************************************** *)
+(*     Reflexive closure for decidable relations                              *)
+(* ************************************************************************** *)
 
 Lemma exists_equiv {T} {A B : T -> Prop} :
   (forall x, A x <-> B x) -> (exists x, A x) <-> exists x, B x.
