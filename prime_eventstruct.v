@@ -6,15 +6,21 @@ From event_struct Require Import utilities pomset.
 
 (******************************************************************************)
 (* This file provides a theory of prime event structures.                     *)
+(* Prime event structure inherits partial causality order from pomset and     *)
+(* also has binary conflict relation (symmetric and irreflexive).             *)
+(*                                                                            *)
 (*       Prime.eventStruct E == the type of prime event structures.           *)
 (*                              A prime event structure consists of           *)
-(*                              set of events E (we require events to         *)
-(*                              be equipped with decidable equality),         *)
 (*                              a causality relation <= (a partial order),    *)
 (*                              and a binary conflict relation # (irreflexive *)
 (*                              and symmetric).                               *)
 (*       Prime.eventType d   == a type of events, i.e. a type equipped with   *)
 (*                              prime event structure instance.               *)
+(*       Prime.cfg d es x    == a predicate asserting that subset x (given    *)
+(*                              as decidable predicate) forms a configuration *)
+(*                              of the event structure es.                    *)
+(*                              Configuration is a causally-closed and        *)
+(*                              conflict-free subset of events.               *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -24,6 +30,15 @@ Unset Printing Implicit Defensive.
 Import Order.LTheory.
 Local Open Scope order_scope.
 
+(* a hack to bypass a shadowing problem caused by relation-algebra import *)
+Local Notation symmetric  := Coq.ssr.ssrbool.symmetric.
+Local Notation transitive := Coq.ssr.ssrbool.transitive.
+
+Definition hereditary {T : Type} (ca cf : rel T) := 
+  forall x y z : T, cf x y -> ca y z -> cf x z.
+
+Module Prime.
+
 Declare Scope prime_eventstruct_scope.
 Delimit Scope prime_eventstruct_scope with prime_es.
 
@@ -31,18 +46,11 @@ Local Open Scope prime_eventstruct_scope.
 
 Reserved Notation "x # y" (at level 75, no associativity).
 
-(* a hack to bypass a problem caused by relation-algebra import *)
-Local Notation symmetric  := Coq.ssr.ssrbool.symmetric.
-Local Notation transitive := Coq.ssr.ssrbool.transitive.
-
-Definition hereditary {T : Type} (ca cf : rel T) := 
-  forall x y z : T, cf x y -> ca y z -> cf x z.
-
 Module PrimeEventStruct.
 Section ClassDef. 
 
-Record mixin_of (T0 : Type) (b : Pomset_.class_of T0)
-                (T := Pomset_.Pack tt b) := Mixin {
+Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
+                (T := Pomset.Pomset.Pack tt b) := Mixin {
   cf : rel T; 
 
   _  : irreflexive cf;
@@ -52,12 +60,12 @@ Record mixin_of (T0 : Type) (b : Pomset_.class_of T0)
 
 Set Primitive Projections.
 Record class_of (T : Type) := Class {
-  base  : Pomset_.class_of T;
+  base  : Pomset.Pomset.class_of T;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Pomset_.class_of.
+Local Coercion base : class_of >-> Pomset.Pomset.class_of.
 
 Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
 
@@ -76,43 +84,41 @@ Definition pack :=
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack disp cT class.
-Definition pomsetEventType := @Pomset_.Pack disp cT class.
+Definition pomsetEventType := @Pomset.Pomset.Pack disp cT class.
 End ClassDef.
 
 Module Exports.
-Coercion base : class_of >-> Pomset_.class_of.
+Coercion base : class_of >-> Pomset.Pomset.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
-Coercion pomsetEventType : type >-> Pomset_.eventType.
+Coercion pomsetEventType : type >-> Pomset.eventType.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
 Canonical pomsetEventType.
 End Exports.
 
-Notation eventType := type.
-Notation eventStruct := class_of.
-
 End PrimeEventStruct.
 
-Export PrimeEventStruct.Exports.
+Import PrimeEventStruct.Exports.
 
+Notation eventType := PrimeEventStruct.type.
+Notation eventStruct := PrimeEventStruct.class_of.
+
+Module Import PrimeEventStructDef.
 Section PrimeEventStructDef.
 
-Variable (disp : unit) (E : PrimeEventStruct.eventType disp).
+Variable (disp : unit) (E : eventType disp).
 
 Definition cf : rel E := PrimeEventStruct.cf (PrimeEventStruct.class E).
 
 Definition cf_free (X : pred E) : Prop := 
   cf ⊓ (X × X) ≦ bot.
 
-(* configuration *)
-Definition cfg (X : pred E) := 
-  ca_closed X /\ cf_free X.
-
+End PrimeEventStructDef.
 End PrimeEventStructDef.
 
 Prenex Implicits cf.
@@ -123,10 +129,10 @@ Notation "x # y" := (cf x y) : prime_eventstruct_scope.
 
 End PrimeEventStructSyntax.
 
-Module Export PrimeEventStructTheory.
+Module Import PrimeEventStructTheory.
 Section PrimeEventStructTheory.
 
-Context {disp : unit} {E : PrimeEventStruct.eventType disp}.
+Context {disp : unit} {E : eventType disp}.
 
 Lemma cf_irrefl : irreflexive (cf : rel E).
 Proof. by case E => ? [? []]. Qed.
@@ -150,8 +156,34 @@ Proof.
   done.
 Qed.
 
+End PrimeEventStructTheory.
+End PrimeEventStructTheory.
+
+Section Config.
+
+Context {disp : unit} {E : eventType disp}.
+
+(* configuration *)
+Definition cfg (x : pred E) := 
+  ca_closed x /\ cf_free x.
+
+End Config.
+
+Module Import ConfigTheory.
+Section ConfigTheory.
+
+Context {disp : unit} {E : eventType disp}.
+
 Lemma prefix_cfg (e : E) : cfg (<= e).
 Proof. split. exact: prefix_ca_closed. exact: prefix_cf_free. Qed.
 
-End PrimeEventStructTheory.
-End PrimeEventStructTheory.
+End ConfigTheory.
+End ConfigTheory.
+
+End Prime.
+
+Export Prime.PrimeEventStruct.Exports.
+Export Prime.PrimeEventStructDef.
+Export Prime.PrimeEventStructTheory.
+Export Prime.ConfigTheory.
+

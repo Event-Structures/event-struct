@@ -9,27 +9,15 @@ From event_struct Require Import utilities.
 (* Originally, the term pomset is an abbreviation for partially ordered       *)
 (* multiset. Since then the term has been widely used in the theory of        *)
 (* concurrency semantics. Here we use it following this tradition.            *)
-(* That is, our pomsets are not actually multisets, but rather usual sets,    *)
-(* encoded as decidable predicates.                                           *)
+(* That is, our pomsets are not actually multisets, but rather usual sets.    *)
 (*                                                                            *)
-(* We inheret most of the theory from mathcomp porderType. However, in        *)
-(* the pomset we additionally keep the domain on which the order is defined   *)
-(* as the decidable predicate (that is, `a < b` is true iff `a` and `b`       *)
-(* belong to the the domain). This simplifies the reasoning about             *) 
-(* several pomset instances defined on the same type of events. For example,  *) 
-(* it allows us to define combinators on pomsets (such as sum, product,       *)
-(* restriction, etc) easily, keeping the same type of events for operands     *)
-(* and the result of operation. It also helps us to connect the theory of     *)
-(* pomsets with the theory of event structures. There we again can reuse      *)
-(* the same type of events for both the event structure and its               *)
-(* configurations (i.e. pomsets).                                             *)
+(* We inheret most of the theory from mathcomp porderType.                    *)
+(* We add an axiom of finite cause, that is each event has only finite prefix *)
+(* of events on which it causally depends.                                    *)
 (*                                                                            *)
 (*       Pomset.eventStruct E == the type of pomset (event structures).       *)
-(*                               Pomset consists of the domain (set of events *)
-(*                               encoded as decidable predicate), and         *)
-(*                               a causality relation <= (a partial order),   *)
-(*                               such as `a < b` is false for all `a` and `b` *)
-(*                               outside of the domain.                       *)
+(*                               Pomset consists partial causality order (<=) *)
+(*                               which satisfies the axiom of finite cause.   *)
 (*                               We use the name `eventStruct` to denote the  *)
 (*                               pomset structure itself (as opposed to       *)
 (*                               `eventType`) and for uniformity with the     *)
@@ -49,15 +37,17 @@ Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
 
+Definition fin_cause {T : eqType} (ca : rel T) :=
+  forall e, is_finite (ca^~ e).
+
+Module Pomset.
+
 Declare Scope pomset_scope.
 Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Definition fin_cause {T : eqType} (ca : rel T) :=
-  forall e, is_finite (ca^~ e).
-
-Module Pomset_.
+Module Pomset.
 Section ClassDef. 
 
 Record mixin_of (T0 : Type) (b : Order.POrder.class_of T0)
@@ -106,16 +96,17 @@ Canonical choiceType.
 Canonical porderType.
 End Exports.
 
-Notation eventType := type.
-Notation eventStruct := class_of.
+End Pomset.
 
-End Pomset_.
+Notation eventType := Pomset.type.
+Notation eventStruct := Pomset.class_of.
 
-Export Pomset_.Exports.
+Import Pomset.Exports.
 
+Module Import PomsetDef.
 Section PomsetDef.
 
-Variable (disp : unit) (E : Pomset_.type disp).
+Variable (disp : unit) (E : eventType disp).
 
 (* causality alias *)
 Definition ca : rel E := le.
@@ -128,6 +119,7 @@ Definition ca_closed (X : pred E) : Prop :=
   forall x y, x <= y -> X y -> X x.  
 
 End PomsetDef.
+End PomsetDef.
 
 Prenex Implicits ca.
 
@@ -138,10 +130,10 @@ Prenex Implicits ca.
 Module Export PomsetTheory.
 Section PomsetTheory.
 
-Context {disp : unit} {E : Pomset_.eventType disp}.
+Context {disp : unit} {E : eventType disp}.
 
 Lemma prefix_fin (e : E) : is_finite (<= e).
-Proof. apply: Pomset_.prefix_fin. by case E => ? [? []]. Qed.
+Proof. apply: Pomset.prefix_fin. by case E => ? [? []]. Qed.
 
 Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
 Proof. move=> e1 e2 //=. exact: le_trans. Qed.
@@ -149,7 +141,8 @@ Proof. move=> e1 e2 //=. exact: le_trans. Qed.
 End PomsetTheory.
 End PomsetTheory.
 
-Module Pomset.
-Notation eventType := Pomset_.eventType.
-Notation eventStruct := Pomset_.eventStruct.
 End Pomset.
+
+Export Pomset.Pomset.Exports.
+Export Pomset.PomsetDef.
+Export Pomset.PomsetTheory.
