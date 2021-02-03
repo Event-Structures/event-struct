@@ -52,8 +52,7 @@ Section ClassDef.
 
 Record mixin_of (T0 : Type) (b : Order.POrder.class_of T0)
                 (T := Order.POrder.Pack tt b) := Mixin {
-  #[canonical(false)]
-  prefix_fin : fin_cause (<=%O : rel T)
+  _ : fin_cause (<=%O : rel T)
 }.
 
 Set Primitive Projections.
@@ -123,20 +122,16 @@ End PomsetDef.
 
 Prenex Implicits ca.
 
-(* Module Export PomsetSyntax. *)
-
-(* End PomsetSyntax. *)
-
 Module Export PomsetTheory.
 Section PomsetTheory.
 
 Context {disp : unit} {E : eventType disp}.
 
 Lemma prefix_fin (e : E) : is_finite (<= e).
-Proof. apply: Pomset.prefix_fin. by case E => ? [? []]. Qed.
+Proof. by move: e; case: E => ? [? []]. Qed.
 
 Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
-Proof. move=> e1 e2 //=. exact: le_trans. Qed.
+Proof. move=> e1 e2 /=; exact: le_trans. Qed.
 
 End PomsetTheory.
 End PomsetTheory.

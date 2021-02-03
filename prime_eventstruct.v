@@ -135,25 +135,20 @@ Section PrimeEventStructTheory.
 Context {disp : unit} {E : eventType disp}.
 
 Lemma cf_irrefl : irreflexive (cf : rel E).
-Proof. by case E => ? [? []]. Qed.
+Proof. by case: E => ? [? []]. Qed.
 
 Lemma cf_sym : symmetric (cf : rel E).
-Proof. by case E => ? [? []]. Qed.
+Proof. by case: E => ? [? []]. Qed.
 
 Lemma cf_hered : hereditary (<=%O) (cf : rel E).
-Proof. by case E => ? [? []]. Qed.
+Proof. by case: E => ? [? []]. Qed.
 
 Lemma prefix_cf_free (e : E) : cf_free (<= e).
 Proof. 
-  move=> e1 e2 //=. rewrite /le_bool.
-  move=> /andP [cf /andP [leq1 leq2]].
-  rewrite -(cf_irrefl e).
-  apply: cf_hered; last first. 
-  - exact leq1.
-  rewrite cf_sym.
-  apply: cf_hered; last first. 
-  - exact leq2.
-  done.
+  move=> e1 e2 /=; rewrite /le_bool.
+  case/andP=> /cf_hered cf /andP[+ {}/cf].
+  rewrite cf_sym; move/cf_hered/[apply].
+  by rewrite cf_irrefl.
 Qed.
 
 End PrimeEventStructTheory.
@@ -175,7 +170,10 @@ Section ConfigTheory.
 Context {disp : unit} {E : eventType disp}.
 
 Lemma prefix_cfg (e : E) : cfg (<= e).
-Proof. split. exact: prefix_ca_closed. exact: prefix_cf_free. Qed.
+Proof.
+  split; first by apply: prefix_ca_closed.
+  exact: prefix_cf_free.
+Qed.
 
 End ConfigTheory.
 End ConfigTheory.
@@ -186,4 +184,3 @@ Export Prime.PrimeEventStruct.Exports.
 Export Prime.PrimeEventStructDef.
 Export Prime.PrimeEventStructTheory.
 Export Prime.ConfigTheory.
-
