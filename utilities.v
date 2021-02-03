@@ -4,6 +4,12 @@ From mathcomp Require Import seq path fingraph fintype.
 From RelationAlgebra Require Import lattice boolean.
 
 (* ************************************************************************** *)
+(*     Missing notations for Relation Algebra                                 *)
+(* ************************************************************************** *)
+
+Notation "x \ y" := (x ⊓ !y) (right associativity, at level 30): ra_terms.
+
+(* ************************************************************************** *)
 (*     Some automation with hints and tactics                                 *)
 (* ************************************************************************** *)
 
