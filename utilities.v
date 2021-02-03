@@ -186,22 +186,51 @@ Section SeqIn.
 
 Context {T : eqType}.
 Implicit Type s : seq T.
-
+  
 Fixpoint seq_in_sub s s' (sub : subseq s' s) : seq {x in s} :=
   (if s' is h :: t then
-     fun sub => exist _ h (mem_subseq sub (mem_head h t)) ::
+     fun sub => 
+       exist _ h (mem_subseq sub (mem_head h t)) ::
        seq_in_sub s t (subseq_trans (subseq_cons t h) sub)
-   else fun=> [::]) sub.
+   else fun => [::]
+  ) sub.
 
-Definition seq_in s : seq {x in s} := seq_in_sub s s (subseq_refl s).
+Definition seq_in s : seq {x in s} := seq_in_sub s s (subseq_refl s).    
 
-Lemma sval_seq_in_sub s s' sub :
-  map sval (seq_in_sub s s' sub) = s'.
+Lemma val_seq_in_sub s s' sub :
+  map val (seq_in_sub s s' sub) = s'.
 Proof. by elim: s'=> //= ?? IHs in sub *; rewrite IHs. Qed.
 
-Lemma seq_in_subE s s' sub:
+Lemma sval_seq_in s :
+  map sval (seq_in s) = s.
+Proof. by rewrite /seq_in val_seq_in_sub. Qed.
+
+Lemma seq_in_subE s s' sub :
   seq_in_sub s s' sub = pmap insub s'.
-Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
+Proof. by rewrite -[in RHS](val_seq_in_sub s s') map_pK //; apply: valK. Qed.
+
+Lemma seq_inE s :
+  seq_in s = pmap insub s.
+Proof. by rewrite /seq_in seq_in_subE. Qed.
+
+Lemma seq_in_mem s x : 
+  x \in seq_in s -> val x \in s.
+Proof. move=> _. exact: (valP x). Qed.
+
+Lemma seq_in_mem_exist s x :
+  x \in s -> { y | x = val y & y \in seq_in s }.
+Proof.  
+  elim: s=> [|h t IH] //=. 
+  rewrite in_cons. case H: (x == h)=> //=.
+  { move=> _; apply /exist2; first last.
+    { by rewrite /seq_in /seq_in_sub in_cons; apply /orP; left. }
+    by apply: eqP. }
+  move=> /IH=> [[y yval] yin]. rewrite yval.
+  have p: val y \in h :: t.
+  { rewrite in_cons. apply /orP; right. by apply seq_in_mem. }
+  refine (exist2 _ _ (exist _ (val y) p) _ _); first done.  
+  rewrite seq_inE mem_pmap_sub; exact: p. 
+Qed. 
 
 End SeqIn.
 
@@ -244,18 +273,41 @@ End ReflexiveClosure.
 
 Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_terms.
 
-(* ************************************************************************** *)
-(*     Reflexive closure for decidable relations                              *)
-(* ************************************************************************** *)
-
 Lemma exists_equiv {T} {A B : T -> Prop} :
   (forall x, A x <-> B x) -> (exists x, A x) <-> exists x, B x.
 Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
 
-Lemma clos_reflE {T} {R : relation T} a b :
-  clos_refl T R a b <-> (a = b) \/ R a b.
+(* missing lemmas about relations' closures *)
+Section RelAux.
+
+Context {T : Type}.
+
+Lemma clos_reflE (R : relation T) x y :
+  clos_refl T R x y <-> (x = y) \/ R x y.
 Proof.
-  split.
-  { case; first by right. by left. }
-  case=> [->|]; first exact: r_refl. exact: r_step.
+  split; first by case; [right | left].
+  case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
+
+Lemma clos_t_clos_rt (R : relation T) x y :
+  clos_trans T R x y -> clos_refl_trans T R x y.
+Proof.
+  elim=> [|???? H ??]; first by constructor.
+  by apply /rt_trans; first exact: H. 
+Qed.
+
+Lemma clos_refl_transE (R : relation T) x y :
+  clos_refl_trans T R x y <-> clos_refl T (clos_trans T R) x y.
+Proof.
+  split; first (elim; clear x y). 
+  { by move=> x y ?; apply /r_step /t_step. }
+  { by apply /r_refl. }
+  { move=> x y z ? /clos_reflE[->|] //=. 
+    move=> xy ? /clos_reflE[<-|] //=. 
+    { by apply /r_step. }
+    by move=> yz; apply /r_step /t_trans; first by exact: xy. }
+  move=> /clos_reflE[<-|]; first by apply rt_refl. 
+  by apply clos_t_clos_rt.
+Qed.
+
+End RelAux.
