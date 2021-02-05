@@ -76,18 +76,6 @@ Definition t_closure : rel T :=
 Definition rt_closure : rel T := 
   fun x y => y \in wsuffix x. 
 
-Lemma clos_trans_1n_lt : 
-  clos_trans_1n T (sfrel f) ≦ (>%O : rel T).
-Proof.
-  move=> ??. rewrite/sfrel //=. 
-  elim=> [y z /descend | x y z /descend ] //=.
-  move=> /[swap] _ /[swap]. exact: lt_trans.
-Qed.
-
-Lemma clos_trans_lt : 
-  clos_trans T (sfrel f) ≦ (>%O : rel T).
-Proof. by move=> x y ct //=; apply /clos_trans_1n_lt /clos_trans_t1n. Qed.
-
 (* Transitive closure reflection lemma *)
 Lemma t_closure_1nP x y : 
   reflect (clos_trans_1n T (sfrel f) x y) (t_closure x y).
@@ -101,7 +89,7 @@ Proof.
   move=> H; case: H; clear y. 
   { by move=> y ?; apply /orP; left. }
   move=> y z yin /X Hz; apply /orP; right; apply /flatten_mapP. 
-  case: (seq_in_mem_xx _ _ yin)=> y' yval' yin'.
+  case: (seq_in_mem_exist _ _ yin)=> y' yval' yin'.
   eexists; first by exact yin'.
   by rewrite -yval'; apply /Hz /descend.
 Qed.
@@ -113,12 +101,20 @@ Proof.
   apply /t_closure_1nP; exact: clos_trans_t1n.
 Qed.
 
-Lemma t_closure_lt : t_closure ≦ (>%O : rel T).
-Proof. by move=> x y /t_closureP /clos_trans_lt. Qed.
+Lemma clos_trans_gt : 
+  clos_trans T (sfrel f) ≦ (>%O : rel T).
+Proof. 
+  move=> ??. rewrite/sfrel //=. 
+  elim=> [y z /descend | x y z _ ] //=.
+  move=> /[swap] _ /[swap]; exact: lt_trans.
+Qed.
+
+Lemma t_closure_gt : t_closure ≦ (>%O : rel T).
+Proof. by move=> x y /t_closureP /clos_trans_gt. Qed.
 
 Lemma t_closure_antisym : antisymmetric t_closure.
 Proof.
-  move=> x y /andP[] /t_closure_lt ? /t_closure_lt ?. 
+  move=> x y /andP[] /t_closure_gt ? /t_closure_gt ?. 
   by apply /eqP; rewrite eq_le !ltW.
 Qed.
 
@@ -145,11 +141,11 @@ Proof.
   by rewrite /wsuffix in_cons eq_sym.
 Qed.
 
-Lemma rt_closure_lt : rt_closure ≦ (>=%O : rel T).
+Lemma rt_closure_ge : rt_closure ≦ (>=%O : rel T).
 Proof.
   rewrite rt_closureE.
   move=> x y /orP[/eqP[<-]|] //=.
-  move=> /t_closure_lt; exact: ltW.
+  move=> /t_closure_gt; exact: ltW.
 Qed.
 
 Lemma rt_closure_refl x : rt_closure x x.
@@ -158,7 +154,7 @@ Proof. exact: mem_head. Qed.
 Lemma rt_closure_antisym : antisymmetric rt_closure.
 Proof.
   move=> x y /andP[]. 
-  move=> /rt_closure_lt /= xy /rt_closure_lt /= yx. 
+  move=> /rt_closure_ge /= xy /rt_closure_ge /= yx. 
   by apply /eqP; rewrite eq_le xy yx.
 Qed.
 
