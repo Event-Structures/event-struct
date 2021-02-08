@@ -1,7 +1,7 @@
 From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
-From RelationAlgebra Require Import lattice boolean.
+From RelationAlgebra Require Import lattice monoid boolean rel kat_tac.
 
 (* ************************************************************************** *)
 (*     Missing notations for Relation Algebra                                 *)
@@ -281,25 +281,26 @@ Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
 Section RelAux.
 
 Context {T : Type}.
+Implicit Types (R : relation T).
 
-Lemma clos_reflE (R : relation T) x y :
-  clos_refl T R x y <-> (x = y) \/ R x y.
+Lemma clos_reflE R :
+  clos_refl T R ≡ 1 ⊔ (R : hrel T T).
 Proof.
   split; first by case; [right | left].
   case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
 
-Lemma clos_t_clos_rt (R : relation T) x y :
+Lemma clos_t_clos_rt R x y :
   clos_trans T R x y -> clos_refl_trans T R x y.
 Proof.
   elim=> [|???? H ??]; first by constructor.
   by apply /rt_trans; first exact: H. 
 Qed.
 
-Lemma clos_refl_transE (R : relation T) x y :
-  clos_refl_trans T R x y <-> clos_refl T (clos_trans T R) x y.
+Lemma clos_refl_transE R :
+  clos_refl_trans T R ≡ clos_refl T (clos_trans T R).
 Proof.
-  split; first (elim; clear x y). 
+  move=> x y; split; first (elim; clear x y). 
   { by move=> x y ?; apply /r_step /t_step. }
   { by apply /r_refl. }
   { move=> x y z ? /clos_reflE[->|] //=. 
@@ -309,5 +310,32 @@ Proof.
   move=> /clos_reflE[<-|]; first by apply rt_refl. 
   by apply clos_t_clos_rt.
 Qed.
+
+(* integration with relation-algebra theory & tactics *)
+
+Lemma clos_trans_1n_hrel_itr R : 
+  clos_trans_1n _ R ≡ (R : hrel T T)^+. 
+Proof.
+  move=> x y; split; first (elim; clear x y). 
+  { by move=> x y; exists y; first done; exists O. }
+  { move=> x z y H ? [z' H' [n it]]; exists z; first done.  
+    by exists n.+1; exists z'; first done. }
+  case=> z H [n]; move: x y z H; elim: n=> [x y z H | n IH x y z H] /=. 
+  { by move=> [<-]; apply: t1n_step. }
+  move=> [z' H' ?]; apply: Relation_Operators.t1n_trans.
+  { exact: H. }
+  by apply: IH; first exact H'.
+Qed.
+
+Lemma clos_trans_hrel_itr R :
+  clos_trans _ R ≡ (R : hrel T T)^+.
+Proof.
+  move=> x y; rewrite clos_trans_t1n_iff. 
+  apply clos_trans_1n_hrel_itr.
+Qed.
+
+Lemma clos_refl_trans_hrel_str R : 
+  clos_refl_trans _ R ≡ (R : hrel T T)^*. 
+Proof. by rewrite str_itr clos_refl_transE clos_reflE clos_trans_hrel_itr. Qed.
 
 End RelAux.
