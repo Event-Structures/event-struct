@@ -16,6 +16,17 @@ Local Open Scope order_scope.
 Local Notation antisymmetric  := Coq.ssr.ssrbool.antisymmetric.
 Local Notation transitive := Coq.ssr.ssrbool.transitive.
 
+Declare Scope rel_scope.
+Delimit Scope rel_scope with REL.
+
+Local Open Scope rel_scope.
+
+(* For uniformity, for the converse operation 
+ * we use the same notation as the relation-algebra  
+ * (but at different interpretation scope) 
+ *)
+Reserved Notation "r °" (at level 5, left associativity, format "r °").
+
 Section SeqFunRel.
 
 Context {T : eqType}.
@@ -37,6 +48,49 @@ Lemma strictify_leq (f : T -> seq T) :
 Proof. by rewrite strictify_weq; lattice. Qed.
 
 End SeqFunRel.
+
+Section ConverseDef.
+
+Context {T : Type}.
+
+(* Converse (a.k.a inverse, transposition) of the decidable relation.
+ * We define it from scratch here so that later 
+ * we can use it as unary operation on relations  
+ * (as opposed to simply use `^~` notation from mathcomp), 
+ * and also to build a theory around it. 
+ * We also cannot use the relation-algebra here, 
+ * because there the `cnv` operation is coupled into 
+ * the same structure as `dot` (composition),  
+ * and the relational composition cannot be defined 
+ * for decidable relations in general 
+ * (although it could be defined for some particular cases, 
+ *  like finite decidable relations).
+ *)
+Definition rel_cnv (r : rel T) : rel T := 
+  fun x y => r y x.
+
+End ConverseDef. 
+
+Notation "r °" := (rel_cnv r) : rel_scope.
+
+Section ConverseTheory.
+
+Context {T : Type}.
+Implicit Type (R : relation T) (r : rel T).
+
+Lemma rel_cnvE r y : 
+  rel_cnv r y = r^~ y.
+Proof. by rewrite /cnv. Qed.
+
+Lemma rel_cnvP R r : 
+  (forall x y, reflect (R x y) (r x y)) -> 
+  forall x y, reflect ((R : hrel _ _)°%ra x y) (r° x y).
+Proof.
+  move=> H x y; move: (H y x)=> /rwP [f g] /=. 
+  by apply: Bool.iff_reflect. 
+Qed.
+
+End ConverseTheory.
 
 Section DescendRTClos.
 
@@ -101,6 +155,18 @@ Proof.
   apply /t_closure_1nP; exact: clos_trans_t1n.
 Qed.
 
+Lemma t_closure_cnvP x y :
+  reflect (clos_trans T (sfrel f)° x y) (t_closure° x y).
+Proof.
+  apply /equivP; first by apply /rel_cnvP /t_closureP.
+  apply: iff_trans; first by apply clos_trans_hrel_itr.
+  apply: iff_trans; last by symmetry; apply clos_trans_hrel_itr.
+  (* a bunch of hacks... *)
+  set (r := ((fun x y : T => (sfrel f x y)) : hrel T T)).
+  have ->: (r^+ y x = r^+°%ra x y); first done.
+  by rewrite kleene.cnvitr. 
+Qed.
+
 Lemma clos_trans_gt : 
   clos_trans T (sfrel f) ≦ (>%O : rel T).
 Proof. 
@@ -133,6 +199,18 @@ Proof.
     apply rwP; exact: t_closureP. }
   rewrite /t_closure /rt_closure /wsuffix in_cons eq_sym.
   by apply predU1P.
+Qed.
+
+Lemma rt_closure_cnvP x y :
+  reflect (clos_refl_trans T (sfrel f)° x y) (rt_closure° x y).
+Proof.
+  apply /equivP; first by apply /rel_cnvP /rt_closureP.
+  apply: iff_trans; first by apply clos_refl_trans_hrel_str.
+  apply: iff_trans; last by symmetry; apply clos_refl_trans_hrel_str.
+  (* a bunch of hacks... *)
+  set (r := ((fun x y : T => (sfrel f x y)) : hrel T T)).
+  have ->: (r^* y x = r^*°%ra x y); first done.
+  by rewrite kleene.cnvstr. 
 Qed.
 
 Lemma rt_closureE : rt_closure ≡ eq_op ⊔ t_closure.
