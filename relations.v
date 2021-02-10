@@ -1,6 +1,6 @@
 From Coq Require Import Relations Relation_Operators.
 From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order.
-From RelationAlgebra Require Import lattice rel.
+From RelationAlgebra Require Import lattice monoid rel.
 From Equations Require Import Equations.
 From event_struct Require Import utilities wftype.
 
@@ -80,11 +80,11 @@ Implicit Type (R : relation T) (r : rel T).
 
 Lemma rel_cnvE r y : 
   rel_cnv r y = r^~ y.
-Proof. by rewrite /cnv. Qed.
+Proof. by rewrite /rel_cnv. Qed.
 
 Lemma rel_cnvP R r : 
   (forall x y, reflect (R x y) (r x y)) -> 
-  forall x y, reflect ((R : hrel _ _)°%ra x y) (r° x y).
+  forall x y, reflect ((R : hrel T T)°%ra x y) (r° x y).
 Proof.
   move=> H x y; move: (H y x)=> /rwP [f g] /=. 
   by apply: Bool.iff_reflect. 

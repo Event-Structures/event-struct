@@ -4,12 +4,6 @@ From mathcomp Require Import seq path fingraph fintype.
 From RelationAlgebra Require Import lattice monoid boolean rel kat_tac.
 
 (* ************************************************************************** *)
-(*     Missing notations for Relation Algebra                                 *)
-(* ************************************************************************** *)
-
-Notation "x \ y" := (x ⊓ !y) (right associativity, at level 30): ra_terms.
-
-(* ************************************************************************** *)
 (*     Some automation with hints and tactics                                 *)
 (* ************************************************************************** *)
 
@@ -235,19 +229,8 @@ Qed.
 End SeqIn.
 
 (* ************************************************************************** *)
-(*     Cartesian product for lattice-valued functions                         *)
+(*     Missing definition, notations and lemmas for Relation Algebra          *)
 (* ************************************************************************** *)
-
-Section CartesianProd.
-
-Context {T : Type} {L : lattice.ops}.
-
-Definition cart_prod (p q : T -> L) : T -> T -> L :=
-  fun x y => p x ⊓ q y.
-
-End CartesianProd.
-
-Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
 
 (* ************************************************************************** *)
 (*     Reflexive closure for decidable relations                              *)
@@ -273,6 +256,49 @@ End ReflexiveClosure.
 
 Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_terms.
 
+(* ************************************************************************** *)
+(*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
+(* ************************************************************************** *)
+
+Notation "x \ y" := (x ⊓ !y) (right associativity, at level 30): ra_terms.
+
+Section SubtractionTheory.
+
+Context `{monoid.laws} (n : ob X).
+Implicit Types (x : X n n). 
+
+(* TODO: introduce a class of lattices/kleene-algebras 
+ *   with decidable equality? *)
+Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
+
+(* TODO: reformulate in terms of reflexive closure once 
+ *   we'll generalize it to arbitary lattices with identity.
+ *)
+Lemma cup_sub_one `{CUP+CAP+TOP ≪ l} :
+  forall x, 1 ⊔ x \ 1 ≡ 1 ⊔ x.
+Proof. 
+  move=> x; apply weq_spec; split; first by lattice.
+  have {1}->: x ≡ x ⊓ top by symmetry; apply: capxt.
+  by rewrite -eq_dec capcup; lattice.
+Qed.
+
+End SubtractionTheory. 
+
+(* ************************************************************************** *)
+(*     Cartesian product for lattice-valued functions                         *)
+(* ************************************************************************** *)
+
+Section CartesianProd.
+
+Context {T : Type} {L : lattice.ops}.
+
+Definition cart_prod (p q : T -> L) : T -> T -> L :=
+  fun x y => p x ⊓ q y.
+
+End CartesianProd.
+
+Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
+
 Lemma exists_equiv {T} {A B : T -> Prop} :
   (forall x, A x <-> B x) -> (exists x, A x) <-> exists x, B x.
 Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
@@ -290,6 +316,9 @@ Proof.
   case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
 
+(* TODO: consider to reformulate it in terms of relation-algebra 
+ * (or try to just use kat tactics inplace) 
+ *)
 Lemma clos_t_clos_rt R x y :
   clos_trans T R x y -> clos_refl_trans T R x y.
 Proof.
@@ -297,6 +326,7 @@ Proof.
   by apply /rt_trans; first exact: H. 
 Qed.
 
+(* TODO: consider to replace it to `str_itr` *)
 Lemma clos_refl_transE R :
   clos_refl_trans T R ≡ clos_refl T (clos_trans T R).
 Proof.
