@@ -201,14 +201,6 @@ Arguments clos_rt1n_rt {_ _ _ _}.
 (* Causality relation *)
 Definition ca : rel E := (rt_closure fica_gt)°.
 
-Lemma helper2 {T : eqType} (r : rel T) :
-  (r \ eq_op : hrel T T) ≡ (r : hrel T T) \ eq.
-Proof. 
-  move=> x y /=; symmetry. 
-  rewrite andbC and_comm. 
-  by apply (rwP predD1P).
-Qed.
-
 Lemma closureP {e1 e2} :
   reflect (clos_refl_trans _ ica e1 e2) (ca e1 e2).
 Proof.

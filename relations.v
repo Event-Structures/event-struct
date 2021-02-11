@@ -44,97 +44,9 @@ Proof.
   by rewrite /=mem_filter andbC eq_sym.
 Qed.
 
-(* Lemma strictify_weq_ f : *)
-(*   (sfrel (strictify f) : hrel T T) ≡ (sfrel f \ eq_op). *)
-(* Proof. move=> x y. by rewrite strictify_weq. Qed. *)
-
 Lemma strictify_leq f : 
   sfrel (strictify f) ≦ sfrel f.
 Proof. by rewrite strictify_weq; lattice. Qed.
-
-(* Lemma helper `{lattice.laws} `{NEG+CUP+CAP+TOP ≪ l} :  *)
-(*   forall x y, x ⊔ y \ x ≡ y. *)
-(* Proof.  *)
-(*   move=> x y. *)
-
-(*   move=> x y; apply /weq_spec; split. *)
-(*   { apply /cup_spec; split; last by lattice. *)
-(*     admit. } *)
-(*   have: (x ≡ x ⊓ y). *)
-(*   { symmetry. apply leq_iff_cap. admit. } *)
-(*   move=> tmp. rewrite -> tmp at 1. *)
-(*   rewrite capC. *)
-(*   have HH: (y ≡ y ⊓ top). *)
-(*   { admit. }  *)
-(*   rewrite -> HH at 1. *)
-(*   rewrite <- cupneg. *)
-(*   rewrite -> capcup_. *)
-(*   done. *)
-(* Qed   *)
-(*   rewrite leq_iff_cap. *)
-(*   have HH: (y ≡ y ⊓ top). *)
-(*   { admit. }  *)
-(*   rewrite -> HH at 1. *)
-(*   (* symmetry. apply: capxt. *) *)
-(*   rewrite <- cupneg. *)
-(*   rewrite -> capcup_. *)
-  
-(*   apply /leq_Transitive /leq_cup_r.  *)
-(*   apply /leq_Transitive; last first.  *)
-
-(*   apply: leq_cap_l. *)
-(*   rewrite leq_cup_r. *)
-(*   lattice. *)
-(*     move=> H. *)
-(*     red. simpl.    *)
-
-(* move=> x y  *)
-
-
-(* Lemma helper {L : lattice.ops} {l : level} `{NEG+CUP+CAP ≪ l} {LAWS : lattice.laws l L} :  *)
-(*   forall x y, x ⊔ y \ x ≡ y. *)
-(* Proof. move=> x y. apply /weq_spec. split. *)
-
-(* Lemma rc_strictify f : *)
-(*   clos_refl T (sfrel (strictify f)) ≡ clos_refl T (sfrel f). *)
-
-(* TODO: reformulate in terms of reflexive closure once 
- *   we'll generalize it to arbitary lattices with identity.
- * TODO: just use the lemma `cup_sub_one` once we'll resolve techinical 
- *   issues around ka instance for `rel T` (decidable relations).
- *)
-Lemma clos_refl_strictify f : 
-  eq_op ⊔ sfrel (strictify f) ≡ eq_op ⊔ sfrel f. 
-Proof. 
-  rewrite strictify_weq. 
-  apply weq_spec; split; first by lattice.
-  have {1}->: (sfrel f) ≡ (sfrel f) ⊓ top by symmetry; apply: capxt.
-  have -> : top ≡ eq_op ⊔ !eq_op.
-  { by move=> t x y /=; case: (x == y). }
-  by rewrite capcup; lattice.
-Qed.
-
-Lemma helper (r1 r2 : rel T) :
-  r1 ≡ r2 <-> (r1 : hrel T T) ≡ (r2 : hrel T T).
-Proof. 
-  split; move=> H x y; move: (H x y)=> /=.  
-  { by move=> <-. }
-  apply eq_bool_iff.
-Qed.
-
-Lemma clos_refl_trans_strictify f : 
-  (sfrel (strictify f) : hrel T T)^* ≡ (sfrel f : hrel T T)^*. 
-Proof. 
-  apply: kleene.str_weq1.
-  (* TODO: get rid of these dirty hacks *)
-  have ->: 1 + (sfrel (strictify f) : hrel T T) ≡ eq_op ⊔ sfrel (strictify f).
-  { move=> x y /=. 
-    apply: Bool.reflect_iff predU1P. }
-  have ->: 1 + (sfrel f : hrel T T) ≡ eq_op ⊔ sfrel f.
-  { move=> x y /=. 
-    apply: Bool.reflect_iff predU1P. }
-  by apply /helper /clos_refl_strictify.
-Qed.
 
 End SeqFunRel.
 
