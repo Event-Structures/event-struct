@@ -1,6 +1,8 @@
+From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrfun ssrbool seq eqtype order finmap.
+From RelationAlgebra Require Import monoid kat_tac.
 From event_struct Require Import utilities ident rfsfun.
-From event_struct Require Import eventstructure.
+From event_struct Require Import relations eventstructure.
 
 (******************************************************************************)
 (* Here we want to make function that by event and event structure creates a  *)
@@ -159,7 +161,7 @@ Lemma ica_add_eventE e1 e2:
     (pred == e1) || (write == e1)
   else ica es e1 e2.
 Proof.
-  rewrite /ica /fica frf_add_eventE fpred_add_eventE.
+  rewrite /ica /rel_cnv /fica /sfrel /= frf_add_eventE fpred_add_eventE.
   by case: ifP=> ?; rewrite ?(andTb, andFb) ?orbF // ?inE eq_sym orbC eq_sym.
 Qed.
 
@@ -172,7 +174,11 @@ Proof.
 Qed.
 
 Lemma ca_fresh e: ca es fresh_id e -> e = fresh_id.
-Proof. by move/closureP; elim=> // ?? /[swap] ? /[swap]-> /ica_fresh. Qed.
+Proof.
+  move=> /closureP /clos_refl_trans_hrel_str [n]. 
+  elim n=> //= m IH [y] /ica_fresh.
+  by move: IH=> /[swap] <-.
+Qed.
 
 Lemma ca_fresh2 e1 e2 :
   ca es e1 e2 -> e1 = fresh_id -> e2 = fresh_id.
@@ -184,16 +190,26 @@ Proof. by move/ca_fresh2; apply: contra_neq. Qed.
 
 Lemma ca_add_eventE e1 e2: e2 != fresh_id -> ca es e1 e2 = ca add_event e1 e2.
 Proof.
-  move=> N.
-  apply/closureP/closureP; move: N=> /[swap]; elim; try constructor.
-  all: move=> y ? I ? H /negbTE Z; apply (rtn1_trans _ _ _ y)=> //.
-  2,4: apply/H/negP; move: I.
-  - by rewrite ica_add_eventE Z.
-  - move/[swap]/eqP=>->/ica_fresh Ez.
-    by move/eqP: Z Ez.
-  - rewrite ica_add_eventE Z=> /[swap]/eqP->/ica_fresh.
-    by move/eqP: Z.
-  move: I; by rewrite ica_add_eventE Z.
+  move=> H; apply /closureP /closureP; move: H=> /[swap]. 
+  elim=> //=; clear e1 e2=> x y; try by apply rt_refl. 
+  { move=> H neq; apply /clos_rtn1_rt /rtn1_trans; last by apply rtn1_refl. 
+    by rewrite ica_add_eventE (negbTE neq). }
+  { move=> z ? IH AA H neq. 
+    move: (H neq); apply rt_trans.
+    apply: IH; apply: ca_fresh_contra; last exact neq.
+    by apply /closureP. }
+  move=> H. move: (clos_rt_rtn1 _ _ _ _ H).
+  elim; first by constructor. 
+  clear H; move=> y z H ? IH neq.
+  move: H; rewrite ica_add_eventE (negbTE neq)=> H.
+  apply /clos_rtn1_rt /rtn1_trans; first exact H.
+  move: H.
+  case H': (y == fresh_id); move: H'.
+  { by move=> /eqP -> /ica_fresh; move: neq=> /[swap] -> /eqP. }
+  move=> H; eapply contraFneq in H; last first.
+  { move=> X; apply /eqP; exact X. }
+  move: IH H=> /[apply] H ?.
+  by apply clos_rt_rtn1.
 Qed.
 
 Lemma icf_add_eventE e1 e2 :
@@ -223,14 +239,14 @@ Proof.
   rewrite -cf_add_eventE //.
   apply/negP=> /eqP Ef.
   have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
-  by rewrite /ica ?inE -Ef eq_refl.
+  by rewrite /ica /rel_cnv /sfrel /fica /frf //= ?inE -Ef eq_refl. 
 Qed.
 
 End AddEvent.
 
 Definition tr_add_event es1 es2 := exists al, es2 = @add_event es1 al.
 
-Notation "es1 '-->' es2" := (tr_add_event es1 es2) (at level 0).
+Notation "es1 '--->' es2" := (tr_add_event es1 es2) (at level 0).
 
 Definition ltr_add_event es1 al es2 := es2 = @add_event es1 al.
 

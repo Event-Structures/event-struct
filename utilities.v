@@ -307,7 +307,7 @@ Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
 Section RelAux.
 
 Context {T : Type}.
-Implicit Types (R : relation T).
+Implicit Types (R : relation T) (r : rel T).
 
 Lemma clos_reflE R :
   clos_refl T R ≡ 1 ⊔ (R : hrel T T).
