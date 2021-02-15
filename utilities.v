@@ -200,6 +200,11 @@ Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
 End SeqIn.
 
 (* ************************************************************************** *)
+(*     Missing definition, notations and lemmas for Relation Algebra          *)
+(* ************************************************************************** *)
+
+
+(* ************************************************************************** *)
 (*     Cartesian product for lattice-valued functions                         *)
 (* ************************************************************************** *)
 
@@ -239,8 +244,33 @@ End ReflexiveClosure.
 Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_terms.
 
 (* ************************************************************************** *)
-(*     Reflexive closure for decidable relations                              *)
+(*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
 (* ************************************************************************** *)
+
+Notation "x \ y" := (x ⊓ !y) (right associativity, at level 30): ra_terms.
+
+Section SubtractionTheory.
+
+Context `{monoid.laws} (n : ob X).
+Implicit Types (x : X n n). 
+
+(* TODO: introduce a class of lattices/kleene-algebras 
+ *   with decidable equality? *)
+Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
+
+(* TODO: reformulate in terms of reflexive closure once 
+ *   we'll generalize it to arbitary lattices with identity.
+ *)
+Lemma cup_sub_one `{CUP+CAP+TOP ≪ l} :
+  forall x, 1 ⊔ x \ 1 ≡ 1 ⊔ x.
+Proof. 
+  move=> x; apply weq_spec; split; first by lattice.
+  have {1}->: x ≡ x ⊓ top by symmetry; apply: capxt.
+  by rewrite -eq_dec capcup; lattice.
+Qed.
+
+End SubtractionTheory. 
+
 
 Lemma exists_equiv {T} {A B : T -> Prop} :
   (forall x, A x <-> B x) -> (exists x, A x) <-> exists x, B x.
