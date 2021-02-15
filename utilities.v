@@ -195,8 +195,8 @@ Lemma val_seq_in_sub s s' sub :
   map val (seq_in_sub s s' sub) = s'.
 Proof. by elim: s'=> //= ?? IHs in sub *; rewrite IHs. Qed.
 
-Lemma sval_seq_in s :
-  map sval (seq_in s) = s.
+Lemma val_seq_in s :
+  map val (seq_in s) = s.
 Proof. by rewrite /seq_in val_seq_in_sub. Qed.
 
 Lemma seq_in_subE s s' sub :
