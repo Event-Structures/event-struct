@@ -200,7 +200,7 @@ Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
 End SeqIn.
 
 (* ************************************************************************** *)
-(*     Missing definition, notations and lemmas for Relation Algebra          *)
+(*     Missing definitions, notations and lemmas for Relation Algebra          *)
 (* ************************************************************************** *)
 
 
