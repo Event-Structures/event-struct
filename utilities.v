@@ -1,7 +1,7 @@
 From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
-From RelationAlgebra Require Import lattice boolean.
+From RelationAlgebra Require Import lattice monoid boolean rel kat_tac.
 
 (* ************************************************************************** *)
 (*     Some automation with hints and tactics                                 *)
