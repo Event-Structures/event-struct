@@ -180,22 +180,40 @@ Section SeqIn.
 
 Context {T : eqType}.
 Implicit Type s : seq T.
-
+  
 Fixpoint seq_in_sub s s' (sub : subseq s' s) : seq {x in s} :=
   (if s' is h :: t then
-     fun sub => exist _ h (mem_subseq sub (mem_head h t)) ::
+     fun sub => 
+       exist _ h (mem_subseq sub (mem_head h t)) ::
        seq_in_sub s t (subseq_trans (subseq_cons t h) sub)
-   else fun=> [::]) sub.
+   else fun => [::]
+  ) sub.
 
-Definition seq_in s : seq {x in s} := seq_in_sub s s (subseq_refl s).
+Definition seq_in s : seq {x in s} := seq_in_sub s s (subseq_refl s).    
 
-Lemma sval_seq_in_sub s s' sub :
-  map sval (seq_in_sub s s' sub) = s'.
+Lemma val_seq_in_sub s s' sub :
+  map val (seq_in_sub s s' sub) = s'.
 Proof. by elim: s'=> //= ?? IHs in sub *; rewrite IHs. Qed.
 
-Lemma seq_in_subE s s' sub:
+Lemma sval_seq_in s :
+  map sval (seq_in s) = s.
+Proof. by rewrite /seq_in val_seq_in_sub. Qed.
+
+Lemma seq_in_subE s s' sub :
   seq_in_sub s s' sub = pmap insub s'.
-Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
+Proof. by rewrite -[in RHS](val_seq_in_sub s s') map_pK //; apply: valK. Qed.
+
+Lemma seq_inE s :
+  seq_in s = pmap insub s.
+Proof. by rewrite /seq_in seq_in_subE. Qed.
+
+Lemma seq_in_mem s x : 
+  x \in seq_in s -> val x \in s.
+Proof. move=> _. exact: (valP x). Qed.
+
+Lemma seq_in_mem_exist s x (p : x \in s) :
+  exist _ x p \in seq_in s.
+Proof. by rewrite seq_inE /seq_in mem_pmap_sub //=. Qed.
 
 End SeqIn.
 
