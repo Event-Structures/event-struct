@@ -1,7 +1,7 @@
 From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
-From RelationAlgebra Require Import lattice boolean.
+From RelationAlgebra Require Import lattice monoid boolean rel kat_tac.
 
 (* ************************************************************************** *)
 (*     Some automation with hints and tactics                                 *)
@@ -239,17 +239,76 @@ End ReflexiveClosure.
 Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_terms.
 
 (* ************************************************************************** *)
-(*     Reflexive closure for decidable relations                              *)
+(*     Reconciling relation-algebra relation closures with vanilla Coq        *)
 (* ************************************************************************** *)
 
-Lemma exists_equiv {T} {A B : T -> Prop} :
-  (forall x, A x <-> B x) -> (exists x, A x) <-> exists x, B x.
-Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
+Section RelAux.
 
-Lemma clos_reflE {T} {R : relation T} a b :
-  clos_refl T R a b <-> (a = b) \/ R a b.
+Context {T : Type}.
+Implicit Types (R : relation T) (r : rel T).
+
+(* TODO: refactor and rename once we'll have 
+ * reflexive closure in relation-algebra 
+ *)
+Lemma clos_reflE R :
+  clos_refl T R ≡ 1 ⊔ (R : hrel T T).
 Proof.
-  split.
-  { case; first by right. by left. }
-  case=> [->|]; first exact: r_refl. exact: r_step.
+  split; first by case; [right | left].
+  case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
+
+(* TODO: consider to reformulate it in terms of relation-algebra 
+ * (or try to just use kat tactics inplace) 
+ *)
+Lemma clos_t_clos_rt R x y :
+  clos_trans T R x y -> clos_refl_trans T R x y.
+Proof.
+  elim=> [|???? H ??]; first by constructor.
+  by apply /rt_trans; first exact: H.
+Qed.
+
+(* TODO: consider to replace it to `str_itr` *)
+Lemma clos_refl_transE R :
+  clos_refl_trans T R ≡ clos_refl T (clos_trans T R).
+Proof.
+  move=> x y; split; first (elim; clear x y). 
+  { by move=> x y ?; apply /r_step /t_step. }
+  { by apply /r_refl. }
+  { move=> x y z ? /clos_reflE[->|] //=. 
+    move=> xy ? /clos_reflE[<-|] //=. 
+    { by apply /r_step. }
+    by move=> yz; apply /r_step /t_trans; first by exact: xy. }
+  move=> /clos_reflE[<-|]; first by apply rt_refl. 
+  by apply clos_t_clos_rt.
+Qed.
+
+Lemma clos_trans_1n_hrel_itr R : 
+  clos_trans_1n _ R ≡ (R : hrel T T)^+. 
+Proof.
+  move=> x y; split; first (elim; clear x y). 
+  { by move=> x y; exists y; first done; exists O. }
+  { move=> x z y H ? [z' H' [n it]]; exists z; first done.  
+    by exists n.+1; exists z'; first done. }
+  case=> z H [n]; move: x y z H; elim: n=> [x y z H | n IH x y z H] /=. 
+  { by move=> [<-]; apply: t1n_step. }
+  move=> [z' H' ?]; apply: Relation_Operators.t1n_trans.
+  { exact: H. }
+  by apply: IH; first exact H'.
+Qed.
+
+Lemma clos_trans_hrel_itr R :
+  clos_trans _ R ≡ (R : hrel T T)^+.
+Proof.
+  move=> x y; rewrite clos_trans_t1n_iff. 
+  apply clos_trans_1n_hrel_itr.
+Qed.
+
+Lemma clos_refl_trans_hrel_str R : 
+  clos_refl_trans _ R ≡ (R : hrel T T)^*. 
+Proof. by rewrite str_itr clos_refl_transE clos_reflE clos_trans_hrel_itr. Qed.
+
+End RelAux.
+
+Lemma exists_equiv {T} {A B : T -> Prop} :
+  (forall x, A x <-> B x) -> (exists x, A x) <-> (exists x, B x).
+Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
