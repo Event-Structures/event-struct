@@ -110,20 +110,41 @@ Proof. by case: w. Qed.
 (*     Exec Event Structure                                                  *)
 (* ************************************************************************* *)
 
-Structure fin_exec_event_struct {disp} (E : identType disp) := Pack {
+Section ExecEventStructureDef.
+
+Context {disp : unit} (E : identType disp).
+
+(* lprf stands for label, predecessor, reads-from *)
+Record lab_pred_rfrom := Lprf {lab_prj : label; fpred_prj : E; frf_prj : E}.
+
+Definition prod_of_lprf lprf :=
+  let: Lprf l p rf := lprf in (l, p, rf).
+
+Definition lprf_of_prod p :=
+  let: (l, p, rf) := p in Lprf l p rf.
+
+Lemma prod_of_lprfK : cancel prod_of_lprf lprf_of_prod. Proof. by case. Qed.
+
+Definition lprf_eqMixin := CanEqMixin prod_of_lprfK.
+
+Canonical lprf_eqType := Eval hnf in EqType lab_pred_rfrom lprf_eqMixin.
+
+Structure fin_exec_event_struct := Pack {
   dom        : seq E;
   dom_sorted : sorted (>%O) dom;
-  (* lprf stands for label, predecessor, reads-from *)
-  lprf       : {fsfun for fun e => (ThreadEnd, e, e)};
-  lab e      := (lprf e).1.1;  (* lab is 1st projection *)
-  fpred e    := (lprf e).1.2;  (* fpred is 2nd projection *)
-  frf e      := (lprf e).2;    (* frf is 3d projection *)
+  lprf       : { fsfun for fun e =>
+                   {| lab_prj := ThreadEnd; fpred_prj := e; frf_prj := e |} };
   _          : {subset (finsupp lprf) <= dom};
+  lab e      := lab_prj (lprf e);
+  fpred e    := fpred_prj (lprf e);
+  frf e      := frf_prj (lprf e);
   _          : forall e : E, fpred e <= e;
   _          : forall r : E, let w := frf r in
                  (w <= r) &&
                  (((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r)));
 }.
+End ExecEventStructureDef.
+
 
 Section ExecEventStructure.
 
@@ -135,13 +156,13 @@ Notation lab := (lab es).
 Notation fpred := (fpred es).
 Notation frf := (frf es).
 
-Lemma labE e : lab e = (lprf e).1.1.
+Lemma labE e : lab e = lab_prj (lprf e).
 Proof. by []. Qed.
 
-Lemma fpredE e : fpred e = (lprf e).1.2.
+Lemma fpredE e : fpred e = fpred_prj (lprf e).
 Proof. by []. Qed.
 
-Lemma frfE e : frf e = (lprf e).2.
+Lemma frfE e : frf e = frf_prj (lprf e).
 Proof. by []. Qed.
 
 

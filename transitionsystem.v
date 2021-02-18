@@ -102,11 +102,12 @@ Notation pred := (add_pred al).
 Notation write := (add_write al).
 
 Definition add_lprf :=
-  [fsfun lprf with fresh_id |-> (lb, pred, write)].
+  [ fsfun lprf with fresh_id |->
+                    {| lab_prj := lb; fpred_prj := pred; frf_prj := write |} ].
 
-Definition add_lab := fun e : E => (add_lprf e).1.1.
-Definition add_fpred := fun e : E => (add_lprf e).1.2.
-Definition add_frf := fun e : E => (add_lprf e).2.
+Definition add_lab := fun e : E => lab_prj (add_lprf e).
+Definition add_fpred := fun e : E => fpred_prj (add_lprf e).
+Definition add_frf := fun e : E => frf_prj (add_lprf e).
 
 Fact add_lprf_finsupp : {subset finsupp add_lprf <= fresh_id :: dom}.
 Proof.
