@@ -242,6 +242,8 @@ Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_t
 (*     Reconciling relation-algebra relation closures with vanilla Coq        *)
 (* ************************************************************************** *)
 
+Hint Resolve r_refl rt_refl : core.
+
 Section RelAux.
 
 Context {T : Type}.
@@ -264,43 +266,45 @@ Lemma clos_t_clos_rt R x y :
   clos_trans T R x y -> clos_refl_trans T R x y.
 Proof.
   elim=> [|???? H ??]; first by constructor.
-  by apply /rt_trans; first exact: H.
+  by apply/rt_trans; first exact: H.
+Qed.
+
+Lemma clos_r_t_is_preorder R : preorder T (clos_refl T (clos_trans T R)).
+Proof.
+  apply: Build_preorder=> //.
+  move=> x y z; rewrite clos_reflE /=.
+  case=> [-> //|xy]; case=> [<-|yz]; right=> //.
+  apply: t_trans xy yz.
 Qed.
 
 (* TODO: consider to replace it to `str_itr` *)
 Lemma clos_refl_transE R :
   clos_refl_trans T R ≡ clos_refl T (clos_trans T R).
 Proof.
-  move=> x y; split; first (elim; clear x y). 
-  { by move=> x y ?; apply /r_step /t_step. }
-  { by apply /r_refl. }
-  { move=> x y z ? /clos_reflE[->|] //=. 
-    move=> xy ? /clos_reflE[<-|] //=. 
-    { by apply /r_step. }
-    by move=> yz; apply /r_step /t_trans; first by exact: xy. }
-  move=> /clos_reflE[<-|]; first by apply rt_refl. 
-  by apply clos_t_clos_rt.
+  move=> x y; split.
+  - elim=> [{}x {}y Rxy | {}x //| {}x {}y z _ xy _ yz].
+    - by apply/r_step/t_step.
+    by apply: preord_trans xy yz; apply: clos_r_t_is_preorder.
+  by case=> // ? /clos_t_clos_rt.
 Qed.
 
-Lemma clos_trans_1n_hrel_itr R : 
-  clos_trans_1n _ R ≡ (R : hrel T T)^+. 
+Lemma clos_trans_1n_hrel_itr R :
+  clos_trans_1n _ R ≡ (R : hrel T T)^+.
 Proof.
-  move=> x y; split; first (elim; clear x y). 
-  { by move=> x y; exists y; first done; exists O. }
-  { move=> x z y H ? [z' H' [n it]]; exists z; first done.  
-    by exists n.+1; exists z'; first done. }
-  case=> z H [n]; move: x y z H; elim: n=> [x y z H | n IH x y z H] /=. 
-  { by move=> [<-]; apply: t1n_step. }
-  move=> [z' H' ?]; apply: Relation_Operators.t1n_trans.
-  { exact: H. }
-  by apply: IH; first exact H'.
+  move=> x y; split.
+  - elim=> {x y} [x y | x z y] Rxy; first by exists y=> //; exists O.
+    by move=> ? [z' H' [n it]]; exists z=> //; exists n.+1, z'.
+  case=> z xz [n]; elim: n x z xz => [x z xz <-| n IHn x z xz /=].
+  - by apply/t1n_step.
+  case=> w zw /IHn - /(_ z zw) ct_zy.
+  by apply: Relation_Operators.t1n_trans xz ct_zy.
 Qed.
 
 Lemma clos_trans_hrel_itr R :
   clos_trans _ R ≡ (R : hrel T T)^+.
 Proof.
-  move=> x y; rewrite clos_trans_t1n_iff. 
-  apply clos_trans_1n_hrel_itr.
+  move=> x y; rewrite clos_trans_t1n_iff.
+  by apply: clos_trans_1n_hrel_itr.
 Qed.
 
 Lemma clos_refl_trans_hrel_str R : 
