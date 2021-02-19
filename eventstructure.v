@@ -123,7 +123,8 @@ Definition prod_of_lprf lprf :=
 Definition lprf_of_prod p :=
   let: (l, p, rf) := p in Lprf l p rf.
 
-Lemma prod_of_lprfK : cancel prod_of_lprf lprf_of_prod. Proof. by case. Qed.
+Lemma prod_of_lprfK : cancel prod_of_lprf lprf_of_prod. 
+Proof. by case. Qed.
 
 Definition lprf_eqMixin := CanEqMixin prod_of_lprfK.
 
