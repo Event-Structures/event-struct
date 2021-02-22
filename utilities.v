@@ -207,11 +207,7 @@ Lemma seq_inE s :
   seq_in s = pmap insub s.
 Proof. by rewrite /seq_in seq_in_subE. Qed.
 
-Lemma seq_in_mem s x : 
-  x \in seq_in s -> val x \in s.
-Proof. move=> _. exact: (valP x). Qed.
-
-Lemma seq_in_mem_exist s x (p : x \in s) :
+Lemma seq_in_mem s x (p : x \in s) :
   exist _ x p \in seq_in s.
 Proof. by rewrite seq_inE mem_pmap_sub. Qed.
 
