@@ -247,7 +247,7 @@ Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_t
 (*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
 (* ************************************************************************** *)
 
-Notation "x \ y" := (x ⊓ !y) (right associativity, at level 30): ra_terms.
+Notation "x \ y" := (x ⊓ !y) (left associativity, at level 45): ra_terms.
 
 Section SubtractionTheory.
 
