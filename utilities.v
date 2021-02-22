@@ -266,7 +266,7 @@ Lemma clos_t_clos_rt R x y :
   clos_trans T R x y -> clos_refl_trans T R x y.
 Proof.
   elim=> [|???? H ??]; first by constructor.
-  by apply/rt_trans; first exact: H.
+  by apply: rt_trans H _.
 Qed.
 
 Lemma clos_r_t_is_preorder R : preorder T (clos_refl T (clos_trans T R)).
