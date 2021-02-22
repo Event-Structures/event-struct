@@ -316,3 +316,21 @@ End RelAux.
 Lemma exists_equiv {T} {A B : T -> Prop} :
   (forall x, A x <-> B x) -> (exists x, A x) <-> (exists x, B x).
 Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
+
+Inductive and6 (P1 P2 P3 P4 P5 P6 : Prop) : Prop :=
+  And6 of P1 & P2 & P3 & P4 & P5 & P6.
+
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 & P6 ]" :=
+  (and6 P1 P2 P3 P4 P5 P6) : type_scope.
+
+Section ReflectConnectives.
+
+Variable b1 b2 b3 b4 b5 b6 : bool.
+
+Lemma and6P : reflect [/\ b1, b2, b3, b4, b5 & b6] [&& b1, b2, b3, b4, b5 & b6].
+Proof.
+  by case: b1; case: b2; case: b3; case: b4; case: b5; case: b6;
+    constructor; try by case.
+Qed.
+
+End ReflectConnectives.

@@ -112,8 +112,11 @@ Proof.
   exact/rev_trans/lt_trans.
 Qed.
 
-Lemma fresh_seq_le x: x \in (fresh_seq s :: s) -> x <= fresh_seq s.
+Lemma fresh_seq_le x : x \in (fresh_seq s :: s) -> x <= fresh_seq s.
 Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed.
+
+Lemma fresh_seq_notin : fresh_seq s \notin s.
+Proof. by apply/memPn => x /fresh_seq_lt; rewrite lt_neqAle=> /andP[]. Qed.
 
 End Add_Sorted.
 
