@@ -264,9 +264,8 @@ Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
 Lemma cup_sub_one `{CUP+CAP+TOP ≪ l} :
   forall x, 1 ⊔ x \ 1 ≡ 1 ⊔ x.
 Proof. 
-  move=> x; apply weq_spec; split; first by lattice.
-  have {1}->: x ≡ x ⊓ top by symmetry; apply: capxt.
-  by rewrite -eq_dec capcup; lattice.
+  move=> x; apply/weq_spec; split; first by lattice.
+  by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
 Qed.
 
 End SubtractionTheory. 
