@@ -135,14 +135,18 @@ Structure fin_exec_event_struct := Pack {
   dom_sorted : sorted (>%O) dom;
   lprf       : { fsfun for fun e =>
                    {| lab_prj := ThreadEnd; fpred_prj := e; frf_prj := e |} };
-  _          : {subset (finsupp lprf) <= dom};
+  _          : all (fun x => x \in dom) (finsupp lprf);
   lab e      := lab_prj (lprf e);
   fpred e    := fpred_prj (lprf e);
   frf e      := frf_prj (lprf e);
-  _          : forall e : E, fpred e <= e;
-  _          : forall r : E, let w := frf r in
-                 (w <= r) &&
-                 (((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r)));
+  _          : all (fun e => fpred e <= e) dom;
+  _          : all 
+                  (
+                    fun r => let w := frf r in
+                    (w <= r) &&
+                    (((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r)))
+                  ) 
+                 dom;
 }.
 End ExecEventStructureDef.
 
@@ -168,7 +172,7 @@ Proof. by []. Qed.
 
 
 Lemma lprf_dom : {subset (finsupp lprf) <= dom}.
-Proof. by case: es. Qed.
+Proof. by case: es=> /= ??? /allP . Qed.
 
 (***** Labels and Freshness *****)
 Section LabelsFresh.
@@ -187,9 +191,6 @@ End LabelsFresh.
 (*     Predecessor                                                           *)
 (* ************************************************************************* *)
 
-Lemma fpred_le e : fpred e <= e.
-Proof. by case: es. Qed.
-
 Lemma fpred_dom e :
   e \notin dom -> fpred e = e.
 Proof.
@@ -197,20 +198,15 @@ Proof.
   by apply/contra/lprf_dom.
 Qed.
 
+Lemma fpred_le e : fpred e <= e.
+Proof.
+  case: (boolP (e \in dom))=> [|/fpred_dom->//]; rewrite /dom.
+  by case: es=> ??????? /= /[dup] /allP H ?? /H.
+Qed.
+
 (* ************************************************************************* *)
 (*     Reads-From                                                            *)
 (* ************************************************************************* *)
-
-Lemma frf_cond r : let w := frf r in
-  (w <= r) &&
-  (((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r))).
-Proof. by case: es. Qed.
-
-Lemma frf_le r : frf r <= r.
-Proof. by case/andP: (frf_cond r). Qed.
-
-Lemma frf_lt {e1 e2} : e1 < e2 -> frf e1 < e2.
-Proof. by apply/le_lt_trans/frf_le. Qed.
 
 Lemma frf_dom e :
   e \notin dom -> frf e = e.
@@ -218,6 +214,22 @@ Proof.
   move=> ndom; rewrite /frf fsfun_dflt //; move: ndom.
   by apply/contra/lprf_dom.
 Qed.
+
+Lemma frf_cond r : let w := frf r in
+  (w <= r) &&
+  (((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r))).
+Proof.
+  case: (boolP (r \in dom))=> [|/[dup] ndom /frf_dom->//]; rewrite /dom.
+  - by case: es=> ???????? /= /[dup] /allP H ? /H //.
+  rewrite eq_refl lexx /= /lab fsfun_dflt //; move: ndom.
+  exact/contra/lprf_dom.
+Qed.
+
+Lemma frf_le r : frf r <= r.
+Proof. by case/andP: (frf_cond r). Qed.
+
+Lemma frf_lt {e1 e2} : e1 < e2 -> frf e1 < e2.
+Proof. by apply/le_lt_trans/frf_le. Qed.
 
 Definition fica e := [:: frf e; fpred e].
 

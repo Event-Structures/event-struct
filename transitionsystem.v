@@ -109,24 +109,29 @@ Definition add_lab := fun e : E => lab_prj (add_lprf e).
 Definition add_fpred := fun e : E => fpred_prj (add_lprf e).
 Definition add_frf := fun e : E => frf_prj (add_lprf e).
 
-Fact add_lprf_finsupp : {subset finsupp add_lprf <= fresh_id :: dom}.
+Fact add_lprf_finsupp : all (fun e => e \in fresh_id :: dom) (finsupp add_lprf).
 Proof.
+  apply/allP.
   move=> e; rewrite /add_lprf finsupp_with inE.
   case: ifP=> _; first by rewrite in_fsetD1; case/andP=> _ /lprf_dom ->.
   by case/fset1UP=> [->|/lprf_dom->//]; rewrite eqxx.
 Qed.
 
-Fact add_fpred_le e : add_fpred e <= e.
+Fact add_fpred_le : all (fun e => add_fpred e <= e) (fresh_id :: dom).
 Proof.
+  apply/allP=> e ?.
   rewrite /add_fpred /add_lprf fsfun_withE.
   case: (eqVneq e fresh_id)=> /= [->|]; last by rewrite fpred_le.
   by rewrite fresh_seq_le ?dom_sorted // (add_pred_in_dom al).
 Qed.
 
-Lemma add_frf_prop r :
-  let w := add_frf r in
-  (w <= r) && ((w == r) && ~~ is_read (add_lab r) || (add_lab w) << (add_lab r)).
+Fact add_frf_prop :
+  all (fun r =>
+    let w := add_frf r in
+    (w <= r) && ((w == r) && ~~ is_read (add_lab r) || (add_lab w) << (add_lab r))
+  )  (fresh_id :: dom).
 Proof.
+  apply/allP=> r ?.
   rewrite /add_frf /add_lab /add_lprf !fsfun_withE /=.
   case: (eqVneq r fresh_id)=> /= [->|_].
   - move: (add_write_consist al); rewrite /add_wr.
