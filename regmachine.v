@@ -30,6 +30,9 @@ From event_struct Require Import transitionsystem ident.
 (*        es_seq == takes event structure `es`, location `x`, predsessor event*)
 (*          `pr` and returns sequence of `es + Read x v`, where v runs on all *)
 (*           values  `v` that we can read in location `x`                     *)
+(*   ces_seq_aux == all dom_consistent exec_eventstructures from es_seq       *)
+(*       ces_seq == ces_seq_aux mapped by Consist (doing so we are otaining   *)
+(*           cexec_eventstructures form consistent exec_eventstructures)      *)
 (*      add_hole == takes `es`, label with hole `l` (look thrd_sem),          *)
 (*    predsessor event `pr` and return seq `es + l` where l runs on all labels*)
 (*     that can be obtained by filling the hole in `l`                        *)
@@ -109,7 +112,7 @@ Canonical thrd_state_eqType :=
 Definition init_state : thrd_state := {| ip := 0; regmap := [fsfun with inh] |}.
 
 Record config := Config {
-  evstr    : exec_event_struct;
+  evstr    : cexec_event_struct;
   trhdmap  :> {fsfun E -> thrd_state with init_state}
 }.
 
@@ -143,7 +146,7 @@ Definition ltr_thrd_sem (l : option (@label V V)) st1 st2 : bool :=
   | _, _                                     => false
   end.
 
-Variable (es : exec_event_struct).
+Variable (es : cexec_event_struct).
 Notation dom      := (dom es).
 Notation lab      := (lab es).
 Notation ffpred   := (fpred es).
@@ -175,7 +178,7 @@ Qed.
 
 (* TODO: filter by consistentcy *)
 Definition es_seq x {pr} (pr_mem : pr \in fresh_id :: dom) :
- (seq (exec_event_struct * V)) :=
+ (seq (exec_event_struct * E)) :=
   [seq
     let: wr       := sval w in
     let: w_in     := valP w in
@@ -186,17 +189,41 @@ Definition es_seq x {pr} (pr_mem : pr \in fresh_id :: dom) :
            add_pred_in_dom   := pr_mem;
            add_write_in_dom  := ws_mem   w_in;
            add_write_consist := ws_wpred w_in; |},
-      wval (lab (eqtype.val w))
+      wr
     ) | w <- (seq_in (writes_seq x))].
+
+Definition ces_seq_aux x pr pr_mem := 
+  [seq estr_w <- @es_seq x pr pr_mem | 
+    let: (estr, w) := estr_w in
+   ~~ (cf estr fresh_id w)].
+
+Lemma mem_ces_seq_aux x pr pr_mem ces: 
+  ces \in (@ces_seq_aux x pr pr_mem) -> dom_consistency ces.1.
+Proof.
+  case: ces => ces w; rewrite mem_filter /= => /andP[?].
+  rewrite /es_seq=> /mapP[?? [/[dup] C -> ws]].
+  apply/consist_add_event=> /=; first by case: es.
+  by rewrite -C -ws.
+Qed.
+
+Definition ces_seq x {pr} pr_mem := 
+  [seq 
+    let: ces_w    := sval ces_w_mem in
+    let: (ces, w) := ces_w in
+    let: ces_mem  := valP ces_w_mem in 
+    (Consist (mem_ces_seq_aux ces_mem), wval (lab w)) | 
+    ces_w_mem <- seq_in (@ces_seq_aux x pr pr_mem)].
+
+Arguments consist_Nread {_ _ _}.
 
 Definition add_hole
   (l : @label unit V) {pr} (pr_mem : pr \in fresh_id :: dom) :
-  seq (exec_event_struct * V) :=
+  seq (cexec_event_struct * V) :=
   match l with
-  | Write x v =>
-    [:: (add_event (add_label_of_Nread (Write x v) pr_mem erefl), v)]
-  | Read x __ => es_seq x pr_mem
-  | _ => [::]
+  | Write x v => 
+    [:: (Consist (consist_Nread es pr (Write x v) erefl pr_mem), v)]  
+  | Read x __ => @ces_seq x pr pr_mem
+  | _         => [::]
   end.
 
 Definition eval_step (c : config) {pr} (pr_mem : pr \in fresh_id :: dom)
