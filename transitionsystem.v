@@ -212,8 +212,8 @@ Qed.
 Lemma consist_add_event: dom_consistency add_event.
 Proof.
   rewrite /dom_consistency; apply /allP=> e1.
-  rewrite /add_event /frf /= fsfun_withE ?inE.
-  case: ifP=> /= [/eqP->|/negbT N /(allP consist)] //.
+  rewrite /frf /= fsfun_withE ?inE.
+  case: ifP=> /= [/eqP-> _|/negbT N /(allP consist)] //; first exact/implyP.
   rewrite -cf_add_eventE //.
   apply/negP=> /eqP Ef.
   have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
