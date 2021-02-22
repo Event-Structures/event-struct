@@ -213,7 +213,7 @@ Proof. move=> _. exact: (valP x). Qed.
 
 Lemma seq_in_mem_exist s x (p : x \in s) :
   exist _ x p \in seq_in s.
-Proof. by rewrite seq_inE /seq_in mem_pmap_sub //=. Qed.
+Proof. by rewrite seq_inE mem_pmap_sub. Qed.
 
 End SeqIn.
 
