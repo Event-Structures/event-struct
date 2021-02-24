@@ -214,6 +214,11 @@ Proof. by rewrite seq_inE mem_pmap_sub. Qed.
 End SeqIn.
 
 (* ************************************************************************** *)
+(*     Missing definitions, notations and lemmas for Relation Algebra          *)
+(* ************************************************************************** *)
+
+
+(* ************************************************************************** *)
 (*     Cartesian product for lattice-valued functions                         *)
 (* ************************************************************************** *)
 
@@ -251,6 +256,33 @@ Definition rtc (r : rel T) : rel T :=
 End ReflexiveClosure.
 
 Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_terms.
+
+(* ************************************************************************** *)
+(*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
+(* ************************************************************************** *)
+
+Notation "x \ y" := (x ⊓ !y) (left associativity, at level 45): ra_terms.
+
+Section SubtractionTheory.
+
+Context `{monoid.laws} (n : ob X).
+Implicit Types (x : X n n). 
+
+(* TODO: introduce a class of lattices/kleene-algebras 
+ *   with decidable equality? *)
+Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
+
+(* TODO: reformulate in terms of reflexive closure once 
+ *   we'll generalize it to arbitary lattices with identity.
+ *)
+Lemma cup_sub_one `{CUP+CAP+TOP ≪ l} :
+  forall x, 1 ⊔ x \ 1 ≡ 1 ⊔ x.
+Proof. 
+  move=> x; apply/weq_spec; split; first by lattice.
+  by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
+Qed.
+
+End SubtractionTheory. 
 
 (* ************************************************************************** *)
 (*     Reconciling relation-algebra relation closures with vanilla Coq        *)
