@@ -59,13 +59,12 @@ Proof.
 move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
 case: x=> d1 ds1 l1 s1 lab1; rewrite {}/lab1 => pc1 rc1.
 case: y=> d2 ds2 l2 s2 lab2; rewrite {}/lab2 => pc2 rc2.
-rewrite /eq_es /= => /andP[/eqP E1 /eqP E2].
+case/andP=> /= /eqP E1 /eqP E2.
 move: E1 E2 ds1 s1 pc1 rc1 ds2 s2 pc2 rc2; (do 2 case: _ /).
 move=> ds1 s1 pc1 rc1 ds2 s2 pc2 rc2.
-have->: ds1 = ds2 by exact: eq_irrelevance.
-have->: s1 = s2 by exact: eq_irrelevance.
-have->: pc1 = pc2 by exact: eq_irrelevance.
-by have->: rc1 = rc2  by exact: eq_irrelevance.
+suff Eqs: (((ds1 = ds2) * (s1 = s2)) * ((pc1 = pc2) * (rc1 = rc2)))%type.
+- by rewrite ?Eqs.
+do ? split; exact: eq_irrelevance.
 Qed.
 
 Canonical es_eqMixin := EqMixin eqesP.
