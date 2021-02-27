@@ -1,6 +1,7 @@
 From Coq Require Import Relations Relation_Operators.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap.
+From deriving Require Import deriving.
 From event_struct Require Import utilities relations wftype ident.
 
 (******************************************************************************)
@@ -62,23 +63,12 @@ Local Notation label := (@label V V).
 
 Implicit Type l : label.
 
-Definition eq_label l l' :=
-  match l, l' with
-  | Read a x,  Read b y      => [&& a == b & x == y]
-  | Write a x, Write b y     => [&& a == b & x == y]
-  | ThreadEnd, ThreadEnd     => true
-  | ThreadStart, ThreadStart => true
-  | _, _                     => false
-  end.
+Definition label_indDef R W := [indDef for @label_rect R W].
+Canonical label_indType :=
+  Eval hnf in IndType label (label_indDef V V).
 
-Lemma eqlabelP : Equality.axiom eq_label.
-Proof.
-  case=> [v x [] * /=|v x []* /=|[]|[]]; try constructor=>//;
-  by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
-Qed.
-
-Canonical label_eqMixin := EqMixin eqlabelP.
-Canonical label_eqType := Eval hnf in EqType label label_eqMixin.
+Definition label_eqMixin := [derive eqMixin for label].
+Canonical label_eqType := EqType label label_eqMixin.
 
 (* label location *)
 Definition lloc (l : label) :=
@@ -115,20 +105,17 @@ Section ExecEventStructureDef.
 Context {disp : unit} (E : identType disp).
 
 (* lprf stands for label, predecessor, reads-from *)
+Set Nonrecursive Elimination Schemes.
 Record lab_pred_rfrom := Lprf {lab_prj : label; fpred_prj : E; frf_prj : E}.
+Unset Nonrecursive Elimination Schemes.
 
-Definition prod_of_lprf lprf :=
-  let: Lprf l p rf := lprf in (l, p, rf).
+Definition lab_pred_rfrom_indDef := [indDef for @lab_pred_rfrom_rect].
+Canonical lab_pred_rfrom_indType :=
+  Eval hnf in IndType lab_pred_rfrom lab_pred_rfrom_indDef.
 
-Definition lprf_of_prod p :=
-  let: (l, p, rf) := p in Lprf l p rf.
-
-Lemma prod_of_lprfK : cancel prod_of_lprf lprf_of_prod. 
-Proof. by case. Qed.
-
-Definition lprf_eqMixin := CanEqMixin prod_of_lprfK.
-
-Canonical lprf_eqType := Eval hnf in EqType lab_pred_rfrom lprf_eqMixin.
+Definition lab_pred_rfrom_eqMixin := [derive eqMixin for lab_pred_rfrom].
+Canonical lab_pred_rfrom_eqType :=
+  Eval hnf in EqType lab_pred_rfrom lab_pred_rfrom_eqMixin.
 
 Structure fin_exec_event_struct := Pack {
   dom        : seq E;

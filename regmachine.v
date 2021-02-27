@@ -1,5 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice finfun finmap.
+From deriving Require Import deriving.
 From event_struct Require Import utilities eventstructure inhtype.
 From event_struct Require Import transitionsystem ident.
 
@@ -67,20 +68,18 @@ Definition seqprog := seq instr.
 
 Definition parprog := seq seqprog.
 
+Set Nonrecursive Elimination Schemes.
 Record thrd_state := Thrd_state {
   ip     : nat;
   regmap : {fsfun reg -> V with inh}
 }.
+Unset Nonrecursive Elimination Schemes.
 
-Definition eq_thrd_state st st' :=
-  (ip st == ip st') && (regmap st == regmap st').
+Definition thrd_state_indDef := [indDef for @thrd_state_rect].
+Canonical thrd_state_indType :=
+  Eval hnf in IndType thrd_state thrd_state_indDef.
 
-Lemma eqthrd_stateP : Equality.axiom eq_thrd_state.
-Proof.
-  by move=> [??] [??]; apply: (iffP andP)=> /= [[/eqP + /eqP]|[]] => <-<-.
-Qed.
-
-Canonical thrd_state_eqMixin := EqMixin eqthrd_stateP.
+Definition thrd_state_eqMixin := [derive eqMixin for thrd_state].
 Canonical thrd_state_eqType :=
   Eval hnf in EqType thrd_state thrd_state_eqMixin.
 
