@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice seq path.
-From mathcomp Require Import order finmap.
-From event_struct Require Import utilities ident eventstructure.
+From mathcomp Require Import order finmap fintype.
+From event_struct Require Import utilities eventstructure ident.
 
 (******************************************************************************)
 (* Here we want to make function that by event and event structure creates a  *)
@@ -33,6 +33,7 @@ Unset Printing Implicit Defensive.
 
 Import Order.LTheory.
 Open Scope order_scope.
+Open Scope fset_scope.
 
 Definition add_wr {E V : eqType} e1 e2 (lab : E -> @label V V) l :=
   (e1 == e2) && (~~ is_read l) || ((lab e1) << l).
@@ -109,37 +110,46 @@ Definition add_lab := fun e : E => lab_prj (add_lprf e).
 Definition add_fpred := fun e : E => fpred_prj (add_lprf e).
 Definition add_frf := fun e : E => frf_prj (add_lprf e).
 
-Fact add_lprf_finsupp : all (fun e => e \in fresh_id :: dom) (finsupp add_lprf).
+Fact add_lprf_finsupp : finsupp add_lprf `<=` seq_fset tt (fresh_id :: dom).
 Proof.
-  apply/allP.
-  move=> e; rewrite /add_lprf finsupp_with inE.
+  apply/fsubsetP=> e; rewrite (@seq_fsetE tt).
+  rewrite /add_lprf finsupp_with inE.
   case: ifP=> _; first by rewrite in_fsetD1; case/andP=> _ /lprf_dom ->.
   by case/fset1UP=> [->|/lprf_dom->//]; rewrite eqxx.
 Qed.
 
-Fact add_fpred_le : all (fun e => add_fpred e <= e) (fresh_id :: dom).
+Fact add_fpred_le : 
+  [forall e : finsupp add_lprf, add_fpred (val e) <= val e].
 Proof.
-  apply/allP=> e ?.
+  apply/forallP=> [[/=]] e ?.
   rewrite /add_fpred /add_lprf fsfun_withE.
   case: (eqVneq e fresh_id)=> /= [->|]; last by rewrite fpred_le.
   by rewrite fresh_seq_le ?dom_sorted // (add_pred_in_dom al).
 Qed.
 
-Fact add_frf_prop :
-  all (fun r =>
-    let w := add_frf r in
-    (w <= r) && ((w == r) && ~~ is_read (add_lab r) || (add_lab w) << (add_lab r))
-  )  (fresh_id :: dom).
+Fact add_frf_le : 
+  [forall e : finsupp add_lprf, add_frf (val e) <= val e].
 Proof.
-  apply/allP=> r ?.
+  apply/forallP=> [[/=]] e ?.
+  rewrite /add_frf /add_lprf fsfun_withE.
+  case: (eqVneq e fresh_id)=> /= [->|]; last by rewrite frf_le.
+  by rewrite fresh_seq_le ?dom_sorted // (add_write_in_dom al).
+Qed.
+
+Fact add_frf_prop :
+  [forall rs : seq_fset tt (fresh_id :: dom),
+    let r := val rs in
+    let w := add_frf r in
+    (w == r) && ~~ is_read (add_lab r) || (add_lab w) << (add_lab r)].
+Proof.
+  apply/forallP=> [[r /=]]; rewrite (@seq_fsetE tt)=> ?.
   rewrite /add_frf /add_lab /add_lprf !fsfun_withE /=.
   case: (eqVneq r fresh_id)=> /= [->|_].
   - move: (add_write_consist al); rewrite /add_wr.
     case: (eqVneq write fresh_id)=> /= [|+]->.
-    - by rewrite lab_fresh orbF lexx=>->.
-    by rewrite fresh_seq_le ?dom_sorted // (add_write_in_dom al).
-  rewrite -?(labE,fpredE,frfE) frf_le /=.
-  case/andP: (frf_cond es r)=> _; case/orP=> [->//|].
+    - by rewrite lab_fresh orbF=>->.
+    by rewrite ?dom_sorted // (add_write_in_dom al).
+  rewrite -?(labE,fpredE,frfE) /=; move: (frf_cond es r); case/orP=> [->//|].
   by case: (eqVneq (ffrf r) fresh_id)=> [|_]->//; rewrite lab_fresh.
 Qed.
 
@@ -150,6 +160,7 @@ Definition add_event :=
         add_lprf
         add_lprf_finsupp
         add_fpred_le
+        add_frf_le
         add_frf_prop.
 
 Hypothesis consist : dom_consistency es.

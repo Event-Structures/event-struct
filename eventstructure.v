@@ -1,6 +1,6 @@
 From Coq Require Import Relations Relation_Operators.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
-From mathcomp Require Import eqtype choice order finmap.
+From mathcomp Require Import eqtype choice order finmap fintype.
 From event_struct Require Import utilities relations wftype ident.
 
 (******************************************************************************)
@@ -130,33 +130,51 @@ Definition lprf_eqMixin := CanEqMixin prod_of_lprfK.
 
 Canonical lprf_eqType := Eval hnf in EqType lab_pred_rfrom lprf_eqMixin.
 
+Open Scope fset_scope.
+
 Structure fin_exec_event_struct := Pack {
   dom        : seq E;
   dom_sorted : sorted (>%O) dom;
   lprf       : { fsfun for fun e =>
                    {| lab_prj := ThreadEnd; fpred_prj := e; frf_prj := e |} };
-  _          : all (fun x => x \in dom) (finsupp lprf);
+  _          : finsupp lprf `<=` seq_fset tt dom;
   lab e      := lab_prj (lprf e);
   fpred e    := fpred_prj (lprf e);
   frf e      := frf_prj (lprf e);
-  _          : all (fun e => fpred e <= e) dom;
-  _          : all 
-                  (
-                    fun r => let w := frf r in
-                    (w <= r) &&
-                    (((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r)))
-                  ) 
-                 dom;
+  _          : [forall e : finsupp lprf, fpred (val e) <= val e];
+  _          : [forall e : finsupp lprf, frf (val e) <= val e];
+  _          : [forall rs : seq_fset tt dom, 
+                  let r := val rs in
+                  let w := frf r  in
+                  ((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r))];
 }.
-End ExecEventStructureDef.
 
+End ExecEventStructureDef.
 
 Section ExecEventStructure.
 
+Open Scope fset_scope.
+
 Context {disp} {E : identType disp} (es : fin_exec_event_struct E).
 
-Notation dom := (dom es).
+Definition eq_es (es es' : fin_exec_event_struct E) : bool :=
+  [&& dom es == dom es' & lprf es == lprf es'].
+Lemma eqesP : Equality.axiom eq_es.
+Proof.
+  move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
+  case: x=> d1 ds1 l1 s1 lab1; rewrite {}/lab1 => pc1 rc1 rc1'.
+  case: y=> d2 ds2 l2 s2 lab2; rewrite {}/lab2 => pc2 rc2 rc2'.
+  case/andP=> /= /eqP E1 /eqP E2.
+  move: E1 E2 ds1 s1 pc1 rc1 rc1' ds2 s2 pc2 rc2 rc2'; (do 2 case: _ /).
+  move=> ds1 s1 pc1 rc1 rc1' ds2 s2 pc2 rc2 rc2'.
+  suff Eqs: (((ds1 = ds2) * (s1 = s2)) * ((pc1 = pc2) * (rc1 = rc2))
+            * (rc1' = rc2'))%type.
+  - by rewrite ?Eqs.
+  do ? split; exact: eq_irrelevance.
+Qed.
+
 Notation lprf := (lprf es).
+Notation dom := (dom es).
 Notation lab := (lab es).
 Notation fpred := (fpred es).
 Notation frf := (frf es).
@@ -172,7 +190,9 @@ Proof. by []. Qed.
 
 
 Lemma lprf_dom : {subset (finsupp lprf) <= dom}.
-Proof. by case: es=> /= ??? /allP . Qed.
+Proof. 
+  case: es=> /= ??? /fsubsetP /= L ???? /L; by rewrite (@seq_fsetE tt).
+Qed.
 
 (***** Labels and Freshness *****)
 Section LabelsFresh.
@@ -200,8 +220,9 @@ Qed.
 
 Lemma fpred_le e : fpred e <= e.
 Proof.
-  case: (boolP (e \in dom))=> [|/fpred_dom->//]; rewrite /dom.
-  by case: es=> ??????? /= /[dup] /allP H ?? /H.
+  rewrite /fpred; case (boolP (e \in finsupp lprf)).
+  - case: es=> ??????? /= /forallP L ?? I; rewrite -[e]/(fsval [` I]); exact/L.
+  by move=> ndom; rewrite /fpred fsfun_dflt.
 Qed.
 
 (* ************************************************************************* *)
@@ -216,17 +237,21 @@ Proof.
 Qed.
 
 Lemma frf_cond r : let w := frf r in
-  (w <= r) &&
-  (((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r))).
+  ((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r)).
 Proof.
-  case: (boolP (r \in dom))=> [|/[dup] ndom /frf_dom->//]; rewrite /dom.
-  - by case: es=> ???????? /= /[dup] /allP H ? /H //.
-  rewrite eq_refl lexx /= /lab fsfun_dflt //; move: ndom.
+  case: (boolP (r \in dom))=> [|/[dup] ndom /frf_dom->//]; rewrite /dom/frf/lab.
+  - case: es => ????????? /= /forallP L; rewrite -(@seq_fsetE tt)=> I.
+    rewrite -[r]/(fsval [` I]); exact: L.
+  rewrite eq_refl /= /lab fsfun_dflt //; move: ndom.
   exact/contra/lprf_dom.
 Qed.
 
 Lemma frf_le r : frf r <= r.
-Proof. by case/andP: (frf_cond r). Qed.
+Proof.   
+  rewrite /frf; case (boolP (r \in finsupp lprf)).
+  - case: es=> ???????? /= /forallP L ? I; rewrite -[r]/(fsval [` I]); exact/L.
+  by move=> ndom; rewrite /fpred fsfun_dflt.
+Qed.
 
 Lemma frf_lt {e1 e2} : e1 < e2 -> frf e1 < e2.
 Proof. by apply/le_lt_trans/frf_le. Qed.
@@ -479,6 +504,10 @@ Proof.
 Qed.
 
 End ExecEventStructure.
+
+Canonical es_eqMixin disp E := EqMixin (@eqesP disp E).
+Canonical es_eqType disp E := 
+  Eval hnf in EqType (@fin_exec_event_struct disp E) (es_eqMixin E).
 
 Section Consistency.
 
