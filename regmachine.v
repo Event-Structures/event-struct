@@ -51,29 +51,6 @@ Context {V : inhType} {disp} {E : identType disp}.
 Notation exec_event_struct := (@fin_exec_event_struct V _ E).
 Notation cexec_event_struct := (@cexec_event_struct V _ E).
 
-<<<<<<< HEAD
-=======
-Definition eq_es (es es' : exec_event_struct) : bool :=
-  [&& dom es == dom es' & lprf es == lprf es'].
-
-Lemma eqesP : Equality.axiom eq_es.
-Proof.
-move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
-case: x=> d1 ds1 l1 s1 lab1; rewrite {}/lab1 => pc1 rc1.
-case: y=> d2 ds2 l2 s2 lab2; rewrite {}/lab2 => pc2 rc2.
-case/andP=> /= /eqP E1 /eqP E2.
-move: E1 E2 ds1 s1 pc1 rc1 ds2 s2 pc2 rc2; (do 2 case: _ /).
-move=> ds1 s1 pc1 rc1 ds2 s2 pc2 rc2.
-suff Eqs: (((ds1 = ds2) * (s1 = s2)) * ((pc1 = pc2) * (rc1 = rc2)))%type.
-- by rewrite ?Eqs.
-do ? split; exact: eq_irrelevance.
-Qed.
-
-Canonical es_eqMixin := EqMixin eqesP.
-Canonical es_eqType := Eval hnf in EqType exec_event_struct es_eqMixin.
-
-
->>>>>>> 4410f272ba3bc98c533f019a3183a783c3245c47
 (*Notation lab := (@lab val).*)
 Notation __ := (tt).
 
