@@ -3,7 +3,7 @@ From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order choice.
 From mathcomp Require Import finmap fingraph fintype finfun ssrnat path.
 From Equations Require Import Equations.
-From event_struct Require Import utilities wftype.
+From event_struct Require Import utilities wftype monads.
 
 (******************************************************************************)
 (* Auxiliary definitions and lemmas about binary decidable relations.         *)
