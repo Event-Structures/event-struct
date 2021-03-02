@@ -73,7 +73,7 @@ Inductive instr :=
 
 Definition seqprog := seq instr.
 
-Definition parprog n := n.-tuple seqprog.
+Definition parprog := seq seqprog.
 
 Record thrd_state := Thrd_state {
   ip     : nat;
