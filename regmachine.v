@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice finfun finmap.
+From mathcomp Require Import eqtype choice finfun finmap tuple.
 From event_struct Require Import utilities eventstructure inhtype.
 From event_struct Require Import transitionsystem ident.
 
@@ -30,9 +30,13 @@ From event_struct Require Import transitionsystem ident.
 (*        es_seq == takes event structure `es`, location `x`, predsessor event*)
 (*          `pr` and returns sequence of `es + Read x v`, where v runs on all *)
 (*           values  `v` that we can read in location `x`                     *)
-(*   ces_seq_aux == all dom_consistent exec_eventstructures from es_seq       *)
-(*       ces_seq == ces_seq_aux mapped by Consist (doing so we are otaining   *)
-(*           cexec_eventstructures form consistent exec_eventstructures)      *)
+(*   ces_seq_aux == all dom_consistent exec_eventstructures from es_seq. In   *)
+(*           other words if `es_seq` returns all event structures that we can *)
+(*           obtain adding new element to our old event structure, then       *)
+(*           `ces_seq_aux` is the sequence of only `dom_consistent` event     *)
+(*           structures from `es_seq`                                         *)
+(*       ces_seq == ces_seq_aux mapped by Consist (doing so we are obtaining  *)
+(*           cexec_eventstructures form consistentent exec_eventstructures)   *)
 (*      add_hole == takes `es`, label with hole `l` (look thrd_sem),          *)
 (*    predsessor event `pr` and return seq `es + l` where l runs on all labels*)
 (*     that can be obtained by filling the hole in `l`                        *)
@@ -54,27 +58,6 @@ Context {V : inhType} {disp} {E : identType disp}.
 Notation exec_event_struct := (@fin_exec_event_struct V _ E).
 Notation cexec_event_struct := (@cexec_event_struct V _ E).
 
-Definition eq_es (es es' : exec_event_struct) : bool :=
-  [&& dom es == dom es' & lprf es == lprf es'].
-
-Lemma eqesP : Equality.axiom eq_es.
-Proof.
-move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
-case: x=> d1 ds1 l1 s1 lab1; rewrite {}/lab1 => pc1 rc1.
-case: y=> d2 ds2 l2 s2 lab2; rewrite {}/lab2 => pc2 rc2.
-rewrite /eq_es /= => /andP[/eqP E1 /eqP E2].
-move: E1 E2 ds1 s1 pc1 rc1 ds2 s2 pc2 rc2; (do 2 case: _ /).
-move=> ds1 s1 pc1 rc1 ds2 s2 pc2 rc2.
-have->: ds1 = ds2 by exact: eq_irrelevance.
-have->: s1 = s2 by exact: eq_irrelevance.
-have->: pc1 = pc2 by exact: eq_irrelevance.
-by have->: rc1 = rc2  by exact: eq_irrelevance.
-Qed.
-
-Canonical es_eqMixin := EqMixin eqesP.
-Canonical es_eqType := Eval hnf in EqType exec_event_struct es_eqMixin.
-
-
 (*Notation lab := (@lab val).*)
 Notation __ := (tt).
 
@@ -90,7 +73,7 @@ Inductive instr :=
 
 Definition seqprog := seq instr.
 
-Definition parprog := seq seqprog.
+Definition parprog n := n.-tuple seqprog.
 
 Record thrd_state := Thrd_state {
   ip     : nat;
@@ -177,62 +160,66 @@ Proof.
 Qed.
 
 (* TODO: filter by consistentcy *)
-Definition es_seq x {pr} (pr_mem : pr \in fresh_id :: dom) :
- (seq (exec_event_struct * E)) :=
-  [seq
-    let: wr       := sval w in
-    let: w_in     := valP w in
-    let: read_lab := Read x (wval (lab wr)) in
-    (
-      add_event
-        {| add_lb            := read_lab;
-           add_pred_in_dom   := pr_mem;
-           add_write_in_dom  := ws_mem   w_in;
-           add_write_consist := ws_wpred w_in; |},
-      wr
-    ) | w <- (seq_in (writes_seq x))].
+Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
+  if pr \in fresh_id :: dom =P true is ReflectT pr_mem then
+    [seq
+      let: wr       := sval w in
+      let: w_in     := valP w in
+      let: read_lab := Read x (wval (lab wr)) in
+      (
+        add_event
+          {| add_lb            := read_lab;
+            add_pred_in_dom   := pr_mem;
+            add_write_in_dom  := ws_mem   w_in;
+            add_write_consist := ws_wpred w_in; |},
+        wr
+      ) | w <- (seq_in (writes_seq x))]
+  else [::].
 
-Definition ces_seq_aux x pr pr_mem := 
-  [seq estr_w <- @es_seq x pr pr_mem | 
+
+Definition ces_seq_aux x pr := 
+  [seq estr_w <- @es_seq x pr | 
     let: (estr, w) := estr_w in
    ~~ (cf estr fresh_id w)].
 
-Lemma mem_ces_seq_aux x pr pr_mem ces: 
-  ces \in (@ces_seq_aux x pr pr_mem) -> dom_consistency ces.1.
+Lemma mem_ces_seq_aux x pr ces: 
+  ces \in (@ces_seq_aux x pr) -> dom_consistency ces.1.
 Proof.
-  case: ces => ces w; rewrite mem_filter /= => /andP[?].
-  rewrite /es_seq=> /mapP[?? [/[dup] C -> ws]].
+  case: ces => ces w; rewrite mem_filter /= /es_seq => /andP[?].
+  case: eqP=> // ? /mapP[?? [/[dup] C -> ws]].
   apply/consist_add_event=> /=; first by case: es.
   by rewrite -C -ws.
 Qed.
 
-Definition ces_seq x {pr} pr_mem := 
+Definition ces_seq x {pr} := 
   [seq 
     let: ces_w    := sval ces_w_mem in
     let: (ces, w) := ces_w in
     let: ces_mem  := valP ces_w_mem in 
     (Consist (mem_ces_seq_aux ces_mem), wval (lab w)) | 
-    ces_w_mem <- seq_in (@ces_seq_aux x pr pr_mem)].
+    ces_w_mem <- seq_in (@ces_seq_aux x pr)].
 
 Arguments consist_Nread {_ _ _}.
 
 Definition add_hole
-  (l : @label unit V) {pr} (pr_mem : pr \in fresh_id :: dom) :
+  (l : @label unit V) pr :
   seq (cexec_event_struct * V) :=
-  match l with
-  | Write x v => 
-    [:: (Consist (consist_Nread es pr (Write x v) erefl pr_mem), v)]  
-  | Read x __ => @ces_seq x pr pr_mem
-  | _         => [::]
-  end.
+  if pr \in fresh_id :: dom =P true is ReflectT pr_mem then
+    match l with
+    | Write x v => 
+      [:: (Consist (consist_Nread es pr (Write x v) erefl pr_mem), v)]  
+    | Read x __ => @ces_seq x pr
+    | _         => [::]
+    end
+  else [::].
 
-Definition eval_step (c : config) {pr} (pr_mem : pr \in fresh_id :: dom)
+Definition eval_step (c : config) {pr : E}
   : seq config :=
   let: (l, cont_st) := thrd_sem (c pr) in
   if l is Some l then
     [seq let: (e, v) := x in
           (Config e [fsfun c with fresh_id |-> cont_st v]) |
-          x <- (add_hole l pr_mem)]
+          x <- add_hole l pr]
   else
     [:: Config (evstr c) [fsfun c with pr |-> cont_st inh]].
 

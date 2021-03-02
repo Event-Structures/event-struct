@@ -1,7 +1,7 @@
 From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
-From RelationAlgebra Require Import lattice boolean.
+From RelationAlgebra Require Import lattice monoid boolean rel kat_tac.
 
 (* ************************************************************************** *)
 (*     Some automation with hints and tactics                                 *)
@@ -180,24 +180,43 @@ Section SeqIn.
 
 Context {T : eqType}.
 Implicit Type s : seq T.
-
+  
 Fixpoint seq_in_sub s s' (sub : subseq s' s) : seq {x in s} :=
   (if s' is h :: t then
-     fun sub => exist _ h (mem_subseq sub (mem_head h t)) ::
+     fun sub => 
+       exist _ h (mem_subseq sub (mem_head h t)) ::
        seq_in_sub s t (subseq_trans (subseq_cons t h) sub)
-   else fun=> [::]) sub.
+   else fun => [::]
+  ) sub.
 
-Definition seq_in s : seq {x in s} := seq_in_sub s s (subseq_refl s).
+Definition seq_in s : seq {x in s} := seq_in_sub s s (subseq_refl s).    
 
-Lemma sval_seq_in_sub s s' sub :
-  map sval (seq_in_sub s s' sub) = s'.
+Lemma val_seq_in_sub s s' sub :
+  map val (seq_in_sub s s' sub) = s'.
 Proof. by elim: s'=> //= ?? IHs in sub *; rewrite IHs. Qed.
 
-Lemma seq_in_subE s s' sub:
+Lemma val_seq_in s :
+  map val (seq_in s) = s.
+Proof. by rewrite /seq_in val_seq_in_sub. Qed.
+
+Lemma seq_in_subE s s' sub :
   seq_in_sub s s' sub = pmap insub s'.
-Proof. by rewrite -[in RHS](sval_seq_in_sub s s') map_pK //; apply: valK. Qed.
+Proof. by rewrite -[in RHS](val_seq_in_sub s s') map_pK //; apply: valK. Qed.
+
+Lemma seq_inE s :
+  seq_in s = pmap insub s.
+Proof. by rewrite /seq_in seq_in_subE. Qed.
+
+Lemma seq_in_mem s x (p : x \in s) :
+  exist _ x p \in seq_in s.
+Proof. by rewrite seq_inE mem_pmap_sub. Qed.
 
 End SeqIn.
+
+(* ************************************************************************** *)
+(*     Missing definitions, notations and lemmas for Relation Algebra          *)
+(* ************************************************************************** *)
+
 
 (* ************************************************************************** *)
 (*     Cartesian product for lattice-valued functions                         *)
@@ -239,21 +258,110 @@ End ReflexiveClosure.
 Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_terms.
 
 (* ************************************************************************** *)
-(*     Reflexive closure for decidable relations                              *)
+(*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
 (* ************************************************************************** *)
 
-Lemma exists_equiv {T} {A B : T -> Prop} :
-  (forall x, A x <-> B x) -> (exists x, A x) <-> exists x, B x.
-Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
+Notation "x \ y" := (x ⊓ !y) (left associativity, at level 45): ra_terms.
 
-Lemma clos_reflE {T} {R : relation T} a b :
-  clos_refl T R a b <-> (a = b) \/ R a b.
-Proof.
-  split.
-  { case; first by right. by left. }
-  case=> [->|]; first exact: r_refl. exact: r_step.
+Section SubtractionTheory.
+
+Context `{monoid.laws} (n : ob X).
+Implicit Types (x : X n n). 
+
+(* TODO: introduce a class of lattices/kleene-algebras 
+ *   with decidable equality? *)
+Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
+
+(* TODO: reformulate in terms of reflexive closure once 
+ *   we'll generalize it to arbitary lattices with identity.
+ *)
+Lemma cup_sub_one `{CUP+CAP+TOP ≪ l} :
+  forall x, 1 ⊔ x \ 1 ≡ 1 ⊔ x.
+Proof. 
+  move=> x; apply/weq_spec; split; first by lattice.
+  by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
 Qed.
 
+End SubtractionTheory. 
+
+(* ************************************************************************** *)
+(*     Reconciling relation-algebra relation closures with vanilla Coq        *)
+(* ************************************************************************** *)
+
+Hint Resolve r_refl rt_refl : core.
+
+Section RelAux.
+
+Context {T : Type}.
+Implicit Types (R : relation T) (r : rel T).
+
+(* TODO: refactor and rename once we'll have 
+ * reflexive closure in relation-algebra 
+ *)
+Lemma clos_reflE R :
+  clos_refl T R ≡ 1 ⊔ (R : hrel T T).
+Proof.
+  split; first by case; [right | left].
+  case=> [->|]; first exact: r_refl; exact: r_step.
+Qed.
+
+(* TODO: consider to reformulate it in terms of relation-algebra 
+ * (or try to just use kat tactics inplace) 
+ *)
+Lemma clos_t_clos_rt R x y :
+  clos_trans T R x y -> clos_refl_trans T R x y.
+Proof.
+  elim=> [|???? H ??]; first by constructor.
+  by apply: rt_trans H _.
+Qed.
+
+Lemma clos_r_t_is_preorder R : preorder T (clos_refl T (clos_trans T R)).
+Proof.
+  apply: Build_preorder=> //.
+  move=> x y z; rewrite clos_reflE /=.
+  case=> [-> //|xy]; case=> [<-|yz]; right=> //.
+  apply: t_trans xy yz.
+Qed.
+
+(* TODO: consider to replace it to `str_itr` *)
+Lemma clos_refl_transE R :
+  clos_refl_trans T R ≡ clos_refl T (clos_trans T R).
+Proof.
+  move=> x y; split.
+  - elim=> [{}x {}y Rxy | {}x //| {}x {}y z _ xy _ yz].
+    - by apply/r_step/t_step.
+    by apply: preord_trans xy yz; apply: clos_r_t_is_preorder.
+  by case=> // ? /clos_t_clos_rt.
+Qed.
+
+Lemma clos_trans_1n_hrel_itr R :
+  clos_trans_1n _ R ≡ (R : hrel T T)^+.
+Proof.
+  move=> x y; split.
+  - elim=> {x y} [x y | x z y] Rxy; first by exists y=> //; exists O.
+    by move=> ? [z' H' [n it]]; exists z=> //; exists n.+1, z'.
+  case=> z xz [n]; elim: n x z xz => [x z xz <-| n IHn x z xz /=].
+  - by apply/t1n_step.
+  case=> w zw /IHn - /(_ z zw) ct_zy.
+  by apply: Relation_Operators.t1n_trans xz ct_zy.
+Qed.
+
+Lemma clos_trans_hrel_itr R :
+  clos_trans _ R ≡ (R : hrel T T)^+.
+Proof.
+  move=> x y; rewrite clos_trans_t1n_iff.
+  by apply: clos_trans_1n_hrel_itr.
+Qed.
+
+Lemma clos_refl_trans_hrel_str R : 
+  clos_refl_trans _ R ≡ (R : hrel T T)^*. 
+Proof. by rewrite str_itr clos_refl_transE clos_reflE clos_trans_hrel_itr. Qed.
+
+End RelAux.
+
+Lemma exists_equiv {T} {A B : T -> Prop} :
+  (forall x, A x <-> B x) -> (exists x, A x) <-> (exists x, B x).
+Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
 
 Inductive and6 (P1 P2 P3 P4 P5 P6 : Prop) : Prop :=
   And6 of P1 & P2 & P3 & P4 & P5 & P6.
