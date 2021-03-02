@@ -1,6 +1,6 @@
 From Coq Require Import Relations Relation_Operators.
-From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
+From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order.
 From Equations Require Import Equations.
 From event_struct Require Import utilities wftype.
 
@@ -37,13 +37,13 @@ Context {T : eqType}.
 Implicit Type (f : T -> seq T).
 
 Definition strictify f : T -> seq T :=
-  fun x => filter^~ (f x) (fun y => x != y).
+  fun x => filter^~ (f x) (fun y => y != x).
 
 Lemma strictify_weq f :
   sfrel (strictify f) ≡ (sfrel f \ eq_op).
 Proof. 
-  move=> x y. rewrite /sfrel /strictify //=.
-  by rewrite /=mem_filter andbC eq_sym.
+  move=> x y; rewrite /sfrel /strictify /=.
+  by rewrite mem_filter andbC eq_sym.
 Qed.
 
 Lemma strictify_leq f : 
@@ -66,7 +66,7 @@ Proof. by rewrite mem_filter lt_neqAle eq_sym=> /andP[] -> /descend ->. Qed.
 Hint Resolve strict_lt : core.
 
 Lemma rel_sublt a b : (sfrel (strictify f)) a b -> a < b.
-Proof. rewrite/sfrel /=. exact: strict_lt. Qed.
+Proof. exact: strict_lt. Qed.
 
 Definition s_up_set_aux n (g : forall x : T, x < n -> seq T) := 
   let ys := strictify f n in 
@@ -167,8 +167,8 @@ Lemma filter_clos_sub a b :
   clos_trans_n1 (sfrel (strictify f)) a b -> clos_trans_n1 (sfrel f) a b.
 Proof.
   elim=> [c sfac | c d sfcd ctacn ctac].
-  { apply /tn1_step; move: sfac; exact: strictify_leq. }
-  apply /tn1_trans; last exact: ctac; move: sfcd; exact: strictify_leq.
+  { apply/tn1_step; exact: strictify_leq. }
+  by apply: tn1_trans ctac; apply: strictify_leq.
 Qed.
 
 Lemma refl_trans_refl_rt a b :
