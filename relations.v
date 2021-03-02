@@ -8,10 +8,6 @@ Set Implicit Arguments.
 Unset Printing Implicit Defensive.
 Set Equations Transparent.
 
-(* a hack to bypass a shadowing problem caused by relation-algebra import *)
-Local Notation antisymmetric  := Coq.ssr.ssrbool.antisymmetric.
-Local Notation transitive := Coq.ssr.ssrbool.transitive.
-
 Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
@@ -43,7 +39,7 @@ Lemma strictify_weq f :
   sfrel (strictify f) ≡ (sfrel f \ eq_op).
 Proof. 
   move=> x y; rewrite /sfrel /strictify /=.
-  by rewrite mem_filter andbC eq_sym.
+  by rewrite mem_filter andbC.
 Qed.
 
 Lemma strictify_leq f : 
@@ -61,7 +57,7 @@ Variable (f : T -> seq T).
 Hypothesis descend : forall x n, x \in f n -> x <= n.
 
 Lemma strict_lt n k : k \in (strictify f) n -> k < n.
-Proof. by rewrite mem_filter lt_neqAle eq_sym=> /andP[] -> /descend ->. Qed.
+Proof. by rewrite mem_filter lt_neqAle=> /andP[] -> /descend ->. Qed.
 
 Hint Resolve strict_lt : core.
 
