@@ -49,6 +49,7 @@ Context {V : inhType} {disp} {E : identType disp}.
 
 (*Notation n := (@n val).*)
 Notation exec_event_struct := (@fin_exec_event_struct V _ E).
+Notation cexec_event_struct := (@cexec_event_struct V _ E).
 
 (*Notation lab := (@lab val).*)
 Notation __ := (tt).
@@ -152,7 +153,7 @@ Proof.
 Qed.
 
 (* TODO: filter by consistentcy *)
-Definition es_seq x {pr} (pr_mem : pr \in fresh_id :: dom) :
+Definition es_seq x {pr} (pr_mem : pr \in fresh_id :: dom) : (* -- proof *)
  (seq (exec_event_struct * V)) :=
   [seq
     let: wr       := sval w in
