@@ -149,7 +149,7 @@ Proof.
     case: (eqVneq write fresh_id)=> /= [|+]->.
     - by rewrite lab_fresh orbF=>->.
     by rewrite ?dom_sorted // (add_write_in_dom al).
-  rewrite -?(labE,fpredE,frfE) /=; move: (frf_cond es r); case/orP=> [->//|].
+  rewrite -?(labE,fpredE,frfE); move: (frf_cond es r); case/orP=> [->//|].
   by case: (eqVneq (ffrf r) fresh_id)=> [|_]->//; rewrite lab_fresh.
 Qed.
 
