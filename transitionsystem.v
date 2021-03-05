@@ -25,6 +25,8 @@ From event_struct Require Import utilities eventstructure ident.
 (*         ltr_add_event e1 al e2 == we can add al to e1 and obtain e2        *)
 (*         add_label_of_Nread == takes non-read label and predcessor and      *)
 (*                    returns corresponding add_label structure               *)
+(*         consist_Nread == lemma that ensures consistency of event structures*)
+(*                    obtained by add_label_of_Nread                          *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -223,8 +225,8 @@ Qed.
 Lemma consist_add_event: dom_consistency add_event.
 Proof.
   rewrite /dom_consistency; apply /allP=> e1.
-  rewrite /add_event /frf /= fsfun_withE ?inE.
-  case: ifP=> /= [/eqP->|/negbT N /(allP consist)] //.
+  rewrite /frf /= fsfun_withE ?inE.
+  case: ifP=> /= [/eqP-> _|/negbT N /(allP consist)] //; first exact/implyP.
   rewrite -cf_add_eventE //.
   apply/negP=> /eqP Ef.
   have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
@@ -232,6 +234,34 @@ Proof.
 Qed.
 
 End AddEvent.
+
+Section Nread_Consist.
+
+Context (ces : cexec_event_struct) (pr : E) (l : label).
+
+Notation domain := (dom ces).
+Notation fresh_id := (fresh_seq domain).
+
+Hypothesis nr     : ~~ is_read l.
+Hypothesis pr_mem : pr \in fresh_id :: domain.
+
+Lemma consist_Nread:
+   dom_consistency (add_event (add_label_of_Nread pr_mem nr)).
+Proof.
+  apply/consist_add_event=> //; first by case: ces.
+  set ae := add_event (add_label_of_Nread pr_mem nr).
+  rewrite cf_irrelf // /dom_consistency /=.
+  apply/andP; split; first by rewrite frf_add_eventE /= ?eq_refl.
+  apply/allP => x I; suff N: x != fresh_id.
+  rewrite -cf_add_eventE // frf_add_eventE (negbTE N).
+  - by case: ces I=> /= ? /allP /[apply].
+  - move/(le_lt_trans (frf_le ces x)): (fresh_seq_lt (dom_sorted ces) I).
+    apply/contraL=> /eqP->; by rewrite ltxx.
+  move: (fresh_seq_lt (dom_sorted ces) I); apply/contraL=> /eqP->.
+  by rewrite ltxx.
+Qed.
+
+End Nread_Consist.
 
 Definition tr_add_event es1 es2 := exists al, es2 = @add_event es1 al.
 
@@ -242,3 +272,4 @@ Definition ltr_add_event es1 al es2 := es2 = @add_event es1 al.
 Notation "es1 '--' al '-->' es2" := (ltr_add_event es1 al es2) (at level 0).
 
 End TransitionSystem.
+
