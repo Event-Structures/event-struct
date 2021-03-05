@@ -31,7 +31,7 @@ Delimit Scope monoid_scope with monoid.
 Local Open Scope monoid_scope.
 
 Reserved Notation "x \+ y" (at level 40, left associativity).
-Reserved Notation "x ⊥ y" (at level 20, no associativity).
+Reserved Notation "x ⟂ y" (at level 20, no associativity).
 
 Module Monoid.
 
@@ -103,7 +103,7 @@ Context {disp : unit} {M : mType disp}.
 
 Lemma opA (x y z : M) : 
   x \+ y \+ z = x \+ (y \+ z). 
-Proof. by move: x y z; case: M=> ? [[]]. Qed.
+Proof. by case: M x y z => ? [[]]. Qed.
 
 Lemma idL (x : M) : 
   id \+ x = x. 
@@ -123,9 +123,9 @@ Record mixin_of (T0 : Type) (b : Monoid.class_of T0)
                 (T := Monoid.Pack tt b) := Mixin {
   orth : rel T;
   _    : orth id id;
-  _    : forall x, orth x id <-> orth id x;
-  _    : forall x y, orth x y -> orth x id;
-  _    : forall x y z, orth x y -> orth (op x y) z -> orth y z && orth x (op y z);
+  _    : forall x, orth x id = orth id x;
+  _    : forall x y, orth x y -> orth x id && orth y id;
+  _    : forall x y z, orth (op x y) z = orth x (op y z);
 }.
 
 Set Primitive Projections.
