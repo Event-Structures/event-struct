@@ -30,6 +30,7 @@ Delimit Scope monoid_scope with monoid.
 
 Local Open Scope monoid_scope.
 
+Reserved Notation "\0" (at level 0).
 Reserved Notation "x \+ y" (at level 40, left associativity).
 Reserved Notation "x ⟂ y" (at level 20, no associativity).
 
@@ -39,11 +40,11 @@ Module Monoid.
 Section ClassDef. 
 
 Record mixin_of (T : Type) := Mixin {
-  id : T;
-  op : T -> T -> T;
-  _  : associative op;
-  _  : left_id id op;
-  _  : right_id id op;
+  zero : T;
+  plus : T -> T -> T;
+  _    : associative plus;
+  _    : left_id zero plus;
+  _    : right_id zero plus;
 }.
 
 Set Primitive Projections.
@@ -84,16 +85,17 @@ Section MonoidDef.
 
 Context {disp : unit} {M : mType disp}.
 
-Definition id : M := Monoid.id (Monoid.class M).
-Definition op : M -> M -> M := Monoid.op (Monoid.class M).
+Definition zero : M := Monoid.zero (Monoid.class M).
+Definition plus : M -> M -> M := Monoid.plus (Monoid.class M).
 
 End MonoidDef.
 End MonoidDef.
 
-Prenex Implicits op id.
+Prenex Implicits zero plus.
 
 Module Export MonoidSyntax.
-Notation "x \+ y" := (op x y) : monoid_scope.
+Notation "\0" := (zero) : monoid_scope.
+Notation "x \+ y" := (plus x y) : monoid_scope.
 End MonoidSyntax.
 
 Module Export MonoidTheory.
@@ -101,16 +103,16 @@ Section MonoidTheory.
 
 Context {disp : unit} {M : mType disp}.
 
-Lemma opA (x y z : M) : 
+Lemma plusAA (x y z : M) : 
   x \+ y \+ z = x \+ (y \+ z). 
 Proof. by case: M x y z => ? [[]]. Qed.
 
-Lemma idL (x : M) : 
-  id \+ x = x. 
+Lemma plus0m (x : M) : 
+  \0 \+ x = x. 
 Proof. by move: x; case: M=> ? [[]]. Qed.
 
-Lemma idR (x : M) : 
-  x \+ id = x. 
+Lemma plusm0 (x : M) : 
+  x \+ \0 = x. 
 Proof. by move: x; case: M=> ? [[]]. Qed.
 
 End MonoidTheory.
@@ -122,10 +124,10 @@ Section ClassDef.
 Record mixin_of (T0 : Type) (b : Monoid.class_of T0)
                 (T := Monoid.Pack tt b) := Mixin {
   orth : rel T;
-  _    : orth id id;
-  _    : forall x, orth x id = orth id x;
-  _    : forall x y, orth x y -> orth x id && orth y id;
-  _    : forall x y z, orth (op x y) z = orth x (op y z);
+  _    : orth zero zero;
+  _    : forall x, orth x zero = orth zero x;
+  _    : forall x y, orth x y -> orth x zero && orth y zero;
+  _    : forall x y z, orth (plus x y) z = orth x (plus y z);
 }.
 
 Set Primitive Projections.
@@ -174,7 +176,7 @@ Context {disp : unit} {M : pmType disp}.
 
 Definition orth : rel M := PartialMonoid.orth (PartialMonoid.class M).
 
-Definition valid : pred M := fun x => orth x id.
+Definition valid : pred M := fun x => orth x zero.
 
 End PartialMonoidDef.
 End PartialMonoidDef.
@@ -182,7 +184,7 @@ End PartialMonoidDef.
 Prenex Implicits orth valid.
 
 Module Export PartialMonoidSyntax.
-Notation "x ⊥ y" := (orth x y) : monoid_scope.
+Notation "x ⟂ y" := (orth x y) : monoid_scope.
 End PartialMonoidSyntax.
 
 Module Export PartialMonoidTheory.
@@ -190,41 +192,29 @@ Section PartialMonoidTheory.
 
 Context {disp : unit} {M : pmType disp}.
 
-Lemma orth_id : 
-  orth id (id : M). 
+Lemma orth0 : 
+  orth \0 (\0 : M). 
 Proof. by case: M=> ? [? []]. Qed.
 
-Lemma valid_id : 
-  valid (id : M). 
+Lemma valid0 : 
+  valid (\0 : M). 
 Proof. by case: M=> ? [? []]. Qed.
 
-Lemma orth_id_sym (x : M) :
-  x ⊥ id <-> id ⊥ x.
+Lemma orth_sym0 (x : M) :
+  x ⟂ \0 = \0 ⟂ x.
 Proof. by move: x; case: M=> ? [? []]. Qed.
 
+Lemma orth_valid (x y : M) : 
+  x ⟂ y -> valid x * valid y. 
+Proof. by move: x y; case: M=> ? [? [??? H ???]] /H /andP [? ?]. Qed.
+
 Lemma orthA (x y z : M) : 
-  x ⊥ y -> (x \+ y) ⊥ z -> y ⊥ z && x ⊥ (y \+ z).
+  (x \+ y) ⟂ z = x ⟂ (y \+ z).
 Proof. by move: x y z; case: M=> ? [? []]. Qed.
 
-Lemma orth_validL (x y : M) : 
-  x ⊥ y -> valid x. 
-Proof. by move: x y; case: M=> ? [? []]. Qed.
-
-Lemma orth_validR (x y : M) :
-  x ⊥ y -> valid y.
-Proof. 
-  move=> /[dup] /orth_validL. 
-  rewrite -{2}[x]idR=> /orthA /[apply].
-  by move=> /andP [/orth_id_sym ?]. 
-Qed.
-
-Lemma orth_valid_op (x y : M) : 
-  x ⊥ y -> valid (x \+ y). 
-Proof.
-  move=> /[dup] /orth_validL /orth_id_sym.
-  rewrite -{2}[x]idL=> /orthA /[apply].
-  by move=> /andP [? /orth_id_sym]. 
-Qed.
+Lemma orth_valid_plus (x y : M) : 
+  x ⟂ y = valid (x \+ y). 
+Proof. by rewrite /valid -[y in LHS]plusm0 orthA. Qed.
 
 End PartialMonoidTheory.
 End PartialMonoidTheory.
