@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice finfun finmap tuple.
+From mathcomp Require Import eqtype choice finfun finmap.
 From event_struct Require Import utilities eventstructure inhtype.
 From event_struct Require Import transitionsystem ident.
 
