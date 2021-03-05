@@ -96,14 +96,15 @@ Definition init_state : thrd_state := {| ip := 0; regmap := [fsfun with inh] |}.
 
 Record config := Config {
   evstr    : cexec_event_struct;
-  trhdmap  :> {fsfun E -> thrd_state with init_state}
+  trhdmap  :> {fsfun E -> (thrd_state * option nat)%type with (init_state, None)}
 }.
 
-Variable pgm : seqprog.
+Variable prog : parprog.
 
 Notation inth := (nth (CJmp 0 0)).
+Notation nth_tid := (nth [::]).
 
-Definition thrd_sem (st : thrd_state) :
+Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
   (option (@label unit V) * (V -> thrd_state))%type :=
   let: {| ip := ip; regmap := rmap |} := st in
   match inth pgm ip with
@@ -121,8 +122,8 @@ Definition thrd_sem (st : thrd_state) :
                                  regmap := rmap |} )
   end.
 
-Definition ltr_thrd_sem (l : option (@label V V)) st1 st2 : bool :=
-  match thrd_sem st1, l with
+Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
+  match thrd_sem pgm st1, l with
   | (Some (Write x v), st), Some (Write y u) => [&& x == y, v == u & st inh == st2]
   | (Some (Read  x _), st), Some (Read  y u) => (x == y) && (st u == st2)
   | (None            , st), None             => st inh == st2
@@ -130,11 +131,11 @@ Definition ltr_thrd_sem (l : option (@label V V)) st1 st2 : bool :=
   end.
 
 Variable (es : cexec_event_struct).
-Notation dom      := (dom es).
+Notation domain      := (dom es).
 Notation lab      := (lab es).
 Notation ffpred   := (fpred es).
 Notation ffrf     := (frf es).
-Notation fresh_id := (fresh_seq dom).
+Notation fresh_id := (fresh_seq domain).
 
 Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 
@@ -146,9 +147,9 @@ Definition wpred (x : loc) (w : E) :=
 
 Arguments wpred /.
 
-Definition writes_seq x := [seq y <- dom | wpred x y].
+Definition writes_seq x := [seq y <- domain | wpred x y].
 
-Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: dom .
+Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: domain .
 Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
 Lemma ws_wpred x w :
@@ -161,7 +162,7 @@ Qed.
 
 (* TODO: filter by consistentcy *)
 Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
-  if pr \in fresh_id :: dom =P true is ReflectT pr_mem then
+  if pr \in fresh_id :: domain =P true is ReflectT pr_mem then
     [seq
       let: wr       := sval w in
       let: w_in     := valP w in
@@ -204,7 +205,7 @@ Arguments consist_Nread {_ _ _}.
 Definition add_hole
   (l : @label unit V) pr :
   seq (cexec_event_struct * V) :=
-  if pr \in fresh_id :: dom =P true is ReflectT pr_mem then
+  if pr \in fresh_id :: domain =P true is ReflectT pr_mem then
     match l with
     | Write x v => 
       [:: (Consist (consist_Nread es pr (Write x v) erefl pr_mem), v)]  
@@ -215,12 +216,20 @@ Definition add_hole
 
 Definition eval_step (c : config) {pr : E}
   : seq config :=
-  let: (l, cont_st) := thrd_sem (c pr) in
-  if l is Some l then
-    [seq let: (e, v) := x in
-          (Config e [fsfun c with fresh_id |-> cont_st v]) |
-          x <- add_hole l pr]
-  else
-    [:: Config (evstr c) [fsfun c with pr |-> cont_st inh]].
+  let: Config es tmap := c in
+  let: (conf, otid)    := tmap pr in
+    flatten [seq
+      let: (l, cont_st) := thrd_sem (nth_tid prog t) conf in
+        if l is Some l then
+          [seq let: (e, v) := x in
+                (Config e [fsfun c with fresh_id |-> (cont_st v, Some t)]) |
+                x <- add_hole l pr]
+        else
+          [:: Config es [fsfun c with pr |-> (cont_st inh, Some t)]] 
+      | t <- 
+        if otid is Some tid then
+          [:: tid]
+        else iota 0 (size prog)
+    ].
 
 End RegMachine.
