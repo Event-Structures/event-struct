@@ -498,37 +498,48 @@ Proof. by move=> I; apply/cfP; exists e1, e2; rewrite !ca_refl I. Qed.
 
 Notation cf_step e1 e2 :=
   [|| icf e1 e2,
-      has (cf e1) (fica e2) |
-      has (cf e2) (fica e1)].
+      has (cf e1) (filter (fun x => e2 != x) (fica e2)) |
+      has (cf e2) (filter (fun x => e1 != x) (fica e1))].
 
 Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
 Proof.
-  case/or3P=> [/icf_cf //||] /hasP[e /ica_ca]; first by apply: cf_consistr.
+  case/or3P=> [/icf_cf //||] /hasP[e]; rewrite mem_filter => /andP[_ /ica_ca].
+  - by apply: cf_consistr.
   by move=> /cf_consistr /[apply]; rewrite cf_sym.
 Qed.
 
+
+(* TODO: refactor proof *)
 Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
 Proof.
   apply/idP/idP; last by apply: cf_step_cf.
-  case/cfP=> e1' [e2' [[/closure_n1P]]].
-  elim=> [/closure_n1P |?? /[swap] _ I /[apply]/[apply]/cf_step_cf].
-  - elim=> [-> //| ?? I _ /[apply] /cf_step_cf].
-    by move: I; rewrite /ica !inE=> /pred2P[]-> /= ->; rewrite orbT.
-  by move: I; rewrite cf_sym /ica ?inE=> /pred2P[]-> /= ->.
+  case/cfP=> e1' [e2' [[]]].
+  case: (boolP (e1' == e1))=> [/eqP-> _|].
+  - case: (boolP (e2' == e2))=> [/eqP->_->|]; first (apply/orP; by left).
+    move/ca_step_last/[apply] => [[x /and3P[/cf_consistr H N + /icf_cf/H]]].
+    rewrite lt_neqAle=> /andP[] *.
+    have-> //: has (cf e1) [seq x0 <- fica e2 | e2 != x0].
+    apply/hasP; exists x=> //; rewrite mem_filter; apply/andP; split=> //.
+    by rewrite eq_sym.
+  move/ca_step_last/[apply] => [[x /and3P[++++ /icf_cf/cf_consist2 H]]].
+  rewrite lt_neqAle eq_sym; move/H => C ? /andP[? _] /C ?.
+  have-> //: has (cf e2) [seq x0 <- fica e1 | e1 != x0].
+  apply/hasP; exists x=> //; rewrite ?mem_filter 1?cf_sym //; exact/andP. 
 Qed.
 
 (* ************************************************************************* *)
 (*     Reads-From Consistency                                                *)
 (* ************************************************************************* *)
 
-Definition dom_consistency :=  all (fun e => ~~ (e # (frf e))) dom.
+Definition dom_consistency := 
+  all (fun e => (frf e != e) ==> ~~ (e # (frf e))) dom.
 
 Hypothesis Consistent : dom_consistency.
 
-Lemma rff_consist e : e # (frf e) = false.
+Lemma rff_consist e : (frf e) != e -> e # (frf e) = false.
 Proof.
-  apply/negbTE/negP; case: (boolP (e \in dom)) => [D|nD].
-  - by move/allP/(_ _ D)/negP: Consistent.
+  move=> N. apply/negbTE/negP; case: (boolP (e \in dom)) => [D|nD].
+  - move/allP/(_ _ D)/negP: Consistent; rewrite N; by apply/contra_not=>->.
   rewrite frf_dom // => /cfP[e1 [e2 [[]]]]; do 2 move/ca_notdom/(_ nD)/eqP->.
   by rewrite icfxx.
 Qed.
@@ -536,13 +547,19 @@ Qed.
 Lemma cf_irrelf : irreflexive cf.
 Proof.
   move=> m; apply/negbTE/negP; elim/(@wfb_ind disp E): m=> m IHm.
-  suff C: ~ m # (fpred m) by rewrite cfE icfxx orbb /= rff_consist /= orbF.
+  suff C: ~ m # (fpred m).
+  case: (boolP (frf m == m))=> [/eqP fE|?].
+  - rewrite cfE => /orP; rewrite orbb icfxx => [[]] //=.
+  rewrite fE; case: ifP=> [/eqP//|_]; case: ifP=>//= _; by rewrite orbF => /C.
+  rewrite cfE icfxx orbb=> /hasP[? /(mem_subseq (filter_subseq _ _))] /=.
+  by rewrite ?inE=> /orP[/eqP->|/eqP->/C]//; rewrite rff_consist.
   move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _|].
   - by move=> /ca_le L /and6P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
   move/ca_step_last=> /[apply] [[z /and3P[/[swap]]]].
-  rewrite /ica !inE=> /pred2P[]-> Cx ?.
+  rewrite /ica !inE=> /pred2P[]-> Cx L.
   - move=> /ca_fpredr Cy /icf_cf/cf_consist2/(_ Cx Cy).
-    by rewrite cf_sym rff_consist.
+    rewrite cf_sym rff_consist //=. 
+    apply/eqP=> fE; by rewrite fE ltxx in L.
   by move=> Cy /icf_cf/cf_consist2/(_ Cx Cy); exact/IHm.
 Qed.
 
@@ -574,5 +591,5 @@ End Consistency.
 End PrimeEventStructure.
 
 (*Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 10).*)
-Notation "a # b" := (cf _ a b) (at level 10).
+Notation "e '|-' a # b" := (cf e a b) (at level 10).
 Notation "w << r" := (write_read_from w r) (at level 0).
