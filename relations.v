@@ -110,13 +110,11 @@ Proof.
   rewrite /t_closure. funelim (suffix y)=> /=. 
   apply /(iffP idP); rewrite mem_cat /sfrel /=.
   { move=> /orP[|/flatten_mapP[z]] //; first exact: tn1_step.
-    have zin: (val z \in f x) by exact: (valP z).
-    move=> S /X H; apply: tn1_trans; first by exact: zin.
-    by apply: H=> //=; apply: descend; exact: zin. }
+    move=> S /X H; apply: tn1_trans (valP z) _.
+    by apply: H=> //=; apply: descend (valP z). }
   move: X=> /[swap] [[?->//|y ? /[dup] ? L /[swap]]].
   move=> /[apply] H; apply/orP; right; apply/flatten_mapP.
-  case: (seq_in_mem _ _ L)=> y'. 
-  eexists; first by exact: y'. 
+  eexists; first by apply: seq_in_mem L.
   by apply /H=> //=; apply: descend.
 Qed.
 
@@ -130,7 +128,7 @@ Qed.
 Lemma clos_trans_lt : 
   clos_trans T (sfrel f) ≦ (<%O : rel T).
 Proof. 
-  move=> ??; rewrite/sfrel //=. 
+  move=> ??; rewrite/sfrel /=.
   elim=> [y z /descend | x y z _ ] //=.
   move=> /[swap] _; exact: lt_trans.
 Qed.
@@ -170,7 +168,7 @@ Qed.
 Lemma rt_closure_le : rt_closure ≦ (<=%O : rel T).
 Proof.
   rewrite rt_closureE.
-  move=> x y /orP[/eqP[<-]|] //=.
+  move=> x y /orP[/eqP<-//|].
   move=> /t_closure_lt; exact: ltW.
 Qed.
 
@@ -187,7 +185,7 @@ Qed.
 Lemma rt_closure_trans : transitive rt_closure.
 Proof.
   move=> y x z /rt_closureP xy /rt_closureP ?.
-  by apply/rt_closureP /rt_trans; first exact: xy. 
+  by apply/rt_closureP; apply: rt_trans xy _.
 Qed.
 
 End WfRTClosure.
