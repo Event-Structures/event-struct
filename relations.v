@@ -4,6 +4,32 @@ From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order.
 From Equations Require Import Equations.
 From event_struct Require Import utilities wftype.
 
+(******************************************************************************)
+(* Auxiliary definitions and lemmas about binary decidable relations.         *)
+(*                                                                            *)
+(*   sfrel f      == a relation corresponding to non-deterministic function   *)
+(*                   (i.e. list-valued function). A generalization of frel.   *)
+(*                   Given a function f, sfrel denotes a relation consisting  *)
+(*                   of pairs <x, y>, s.t. x \in f y                          *)
+(*                   TODO: currently, the direction of the relation is        *)
+(*                   reversed compared to frel, we'll fix that later.         *)
+(*   strictify f  == given a non-deterministic function, removes all the      *)
+(*                   elements equal to the argument of the function.          *)
+(*                   It can be used to obtain a strict (i.e. irreflexive)     *)
+(*                   relation corresponding to f.                             *)
+(*   suffix f     == given a well-founded function f and an element x,        *)
+(*                   returns a strict suffix of x, i.e. a set { y | x R y }   *)
+(*                   where R ::= sfrel f.                                     *)
+(*   wsuffix f    == a weak (reflexive) suffix, i.e. a set { y | x R? y }     *)
+(*   t_closure f  == given a well-founded function f returns its              *)
+(*                   transitive closure as a decidable relation.              *)
+(*                   t_closure f ≡ (sfrel f)^+                                *)
+(*   rt_closure f == given a well-founded function f returns its              *)       
+(*                   reflexive-transitive closure as a decidable relation,    *)
+(*                   t_closure f ≡ (sfrel f)^*                                *)
+(******************************************************************************)
+
+
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
 Set Equations Transparent.
@@ -58,11 +84,11 @@ Definition suffix_aux (x : T) (rec : forall y : T, y < x -> seq T) :=
   )) 
   in ys ++ ps.
 
-(* strict suffix of an element `x`, i.e. a set { y | x < y } *)
+(* strict suffix of an element `x`, i.e. a set { y | x R y } *)
 Equations suffix (x : T) : seq T by wf x (<%O : rel T) := 
   suffix x := suffix_aux x suffix.
 
-(* weak suffix of an element `x`, i.e. a set { y | x <= y } *)
+(* weak suffix of an element `x`, i.e. a set { y | x R? y } *)
 Definition wsuffix (x : T) : seq T :=
   x :: suffix x.
 
