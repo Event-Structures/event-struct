@@ -131,11 +131,11 @@ Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
   end.
 
 Variable (es : cexec_event_struct).
-Notation domain      := (dom es).
+Notation dom      := (dom es).
 Notation lab      := (lab es).
 Notation ffpred   := (fpred es).
 Notation ffrf     := (frf es).
-Notation fresh_id := (fresh_seq domain).
+Notation fresh_id := (fresh_seq dom).
 
 Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 
@@ -147,9 +147,9 @@ Definition wpred (x : loc) (w : E) :=
 
 Arguments wpred /.
 
-Definition writes_seq x := [seq y <- domain | wpred x y].
+Definition writes_seq x := [seq y <- dom | wpred x y].
 
-Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: domain .
+Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: dom .
 Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
 Lemma ws_wpred x w :
@@ -162,7 +162,7 @@ Qed.
 
 (* TODO: filter by consistentcy *)
 Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
-  if pr \in fresh_id :: domain =P true is ReflectT pr_mem then
+  if pr \in fresh_id :: dom =P true is ReflectT pr_mem then
     [seq
       let: wr       := sval w in
       let: w_in     := valP w in
@@ -192,7 +192,7 @@ Proof.
   by rewrite -C -ws.
 Qed.
 
-Definition ces_seq x {pr} := 
+Definition ces_seq x pr := 
   [seq 
     let: ces_w    := sval ces_w_mem in
     let: (ces, w) := ces_w in
@@ -205,16 +205,16 @@ Arguments consist_Nread {_ _ _}.
 Definition add_hole
   (l : @label unit V) pr :
   seq (cexec_event_struct * V) :=
-  if pr \in fresh_id :: domain =P true is ReflectT pr_mem then
+  if pr \in fresh_id :: dom =P true is ReflectT pr_mem then
     match l with
     | Write x v => 
       [:: (Consist (consist_Nread es pr (Write x v) erefl pr_mem), v)]  
-    | Read x __ => @ces_seq x pr
+    | Read x __ => ces_seq x pr
     | _         => [::]
     end
   else [::].
 
-Definition eval_step (c : config) {pr : E}
+Definition eval_step (c : config) pr
   : seq config :=
   let: Config es tmap := c in
   let: (conf, otid)    := tmap pr in
