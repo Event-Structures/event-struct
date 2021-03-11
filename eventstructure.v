@@ -398,13 +398,11 @@ Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 0).*)
 Definition icf (e1 e2 : E) : bool :=
   [&& e1 != e2,
       fpred e1 == fpred e2,
-      fpred e1 < e1,
-      fpred e2 < e2,
-      ~~ is_thdstart (lab e1) &
-      ~~ is_thdstart (lab e2)].
+      fpred e1 < e1 &
+      fpred e2 < e2].
 
 Lemma icfxx x : icf x x = false.
-Proof. by apply/and6P; case; rewrite eq_refl. Qed.
+Proof. by apply/and4P; case; rewrite eq_refl. Qed.
 
 Definition icf_irrefl : irreflexive icf := icfxx.
 
@@ -412,7 +410,7 @@ Hint Resolve icfxx : core.
 
 Lemma icf_sym : symmetric icf.
 Proof.
-  by move=> e1 e2; apply/and6P/and6P; case=>*; split=> //; rewrite 1?eq_sym.
+  by move=> e1 e2; apply/and4P/and4P; case=>*; split=> //; rewrite 1?eq_sym.
 Qed.
 
 (* Conflict relation *)
@@ -511,7 +509,7 @@ Proof.
   rewrite cfE icfxx orbb=> /hasP[? /(mem_subseq (filter_subseq _ _))] /=.
   by rewrite ?inE=> /orP[/eqP->|/eqP->/C]//; rewrite rff_consist.
   move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _|].
-  - by move=> /ca_le L /and6P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
+  - by move=> /ca_le L /and4P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
   move/ca_step_last=> /[apply] [[z /and3P[/[swap]]]].
   rewrite /ica !inE=> /pred2P[]-> Cx L.
   - move=> /ca_fpredr Cy /icf_cf/cf_consist2/(_ Cx Cy).

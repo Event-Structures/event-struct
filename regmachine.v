@@ -40,6 +40,8 @@ From event_struct Require Import transitionsystem ident.
 (*      add_hole == takes `es`, label with hole `l` (look thrd_sem),          *)
 (*    predsessor event `pr` and return seq `es + l` where l runs on all labels*)
 (*     that can be obtained by filling the hole in `l`                        *)
+(*     fresh_tid == returns smallest number of thread that wasn't started in  *)
+(*         the current configuration                                          *)
 (*     eval_step == takes config `c`, event `pr` and retunrs seq of           *)
 (*        configurations `c'` that can be reach form `c` making a step        *)
 (*        in thread state corresponding to `pr` in `c`                        *)
@@ -73,11 +75,13 @@ Inductive instr :=
 
 Definition seqprog := seq instr.
 
+Definition empty_prog : seqprog := [::].
+
 Definition parprog := seq seqprog.
 
 Record thrd_state := Thrd_state {
   ip     : nat;
-  regmap : {fsfun reg -> V with inh}
+  regmap :> {fsfun reg -> V with inh}
 }.
 
 Definition eq_thrd_state st st' :=
@@ -96,31 +100,31 @@ Definition init_state : thrd_state := {| ip := 0; regmap := [fsfun with inh] |}.
 
 Record config := Config {
   evstr    : cexec_event_struct;
-  trhdmap  :> {fsfun E -> (thrd_state * option nat)%type with (init_state, None)}
+  trhdmap  :> {fsfun E -> (thrd_state * nat)%type with (init_state, 0)}
 }.
 
-Variable prog : parprog.
-
 Notation inth := (nth (CJmp 0 0)).
-Notation nth_tid := (nth [::]).
 
 Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
   (option (@label unit V) * (V -> thrd_state))%type :=
   let: {| ip := ip; regmap := rmap |} := st in
-  match inth pgm ip with
-  | WriteReg v r => (None,
-                     fun _ => {| ip     := ip.+1;
-                                 regmap := [fsfun rmap with r |-> v] |})
-  | ReadLoc  r x => (Some (Read x __),
-                     fun v => {| ip     := ip.+1;
-                                 regmap := [fsfun rmap with r |-> v] |})
-  | WriteLoc v x => (Some (Write x v),
-                     fun _ => {| ip     := ip.+1;
-                                 regmap := rmap |})
-  | CJmp     r n => (None,
-                     fun _ => {| ip     := if rmap r != inh then n else ip.+1;
-                                 regmap := rmap |} )
-  end.
+  if ip == 0 then
+    (Some ThreadStart, fun=> {| ip := 1; regmap := rmap |})
+  else
+    match inth pgm ip.-1 with
+    | WriteReg v r => (None,
+                      fun _ => {| ip     := ip.+1;
+                                  regmap := [fsfun rmap with r |-> v] |})
+    | ReadLoc  r x => (Some (Read x __),
+                      fun v => {| ip     := ip.+1;
+                                  regmap := [fsfun rmap with r |-> v] |})
+    | WriteLoc v x => (Some (Write x v),
+                      fun _ => {| ip     := ip.+1;
+                                  regmap := rmap |})
+    | CJmp     r n => (None,
+                      fun _ => {| ip     := if rmap r != inh then n.+1 else ip.+1;
+                                  regmap := rmap |} )
+    end.
 
 Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
   match thrd_sem pgm st1, l with
@@ -131,11 +135,9 @@ Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
   end.
 
 Variable (es : cexec_event_struct).
-Notation dom      := (dom es).
-Notation lab      := (lab es).
 Notation ffpred   := (fpred es).
 Notation ffrf     := (frf es).
-Notation fresh_id := (fresh_seq dom).
+Notation fresh_id := (fresh_seq (dom es)).
 
 Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 
@@ -143,30 +145,30 @@ Definition wval (l : @label V V) : V :=
   if l is Write _ v then v else inh.
 
 Definition wpred (x : loc) (w : E) :=
-   (lloc (lab w) == Some x) && (is_write (lab w)).
+   (lloc (lab es w) == Some x) && (is_write (lab es w)).
 
 Arguments wpred /.
 
-Definition writes_seq x := [seq y <- dom | wpred x y].
+Definition writes_seq x := [seq y <- dom es | wpred x y].
 
-Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: dom .
+Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: (dom es).
 Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
 Lemma ws_wpred x w :
   w \in writes_seq x ->
-  add_wr w fresh_id lab (Read x (wval (lab w))).
+  add_wr w fresh_id (lab es) (Read x (wval (lab es w))).
 Proof.
   rewrite mem_filter=> /andP[] /=.
-  case: (lab w)=> //= [?? /andP[]|?? /andP[/eqP[->]]] //; by rewrite ?eq_refl.
+  case: (lab es w)=> //= [?? /andP[]|?? /andP[/eqP[->]]] //; by rewrite ?eq_refl.
 Qed.
 
 (* TODO: filter by consistentcy *)
 Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
-  if pr \in fresh_id :: dom =P true is ReflectT pr_mem then
+  if pr \in fresh_id :: dom es =P true is ReflectT pr_mem then
     [seq
       let: wr       := sval w in
       let: w_in     := valP w in
-      let: read_lab := Read x (wval (lab wr)) in
+      let: read_lab := Read x (wval (lab es wr)) in
       (
         add_event
           {| add_lb            := read_lab;
@@ -197,7 +199,7 @@ Definition ces_seq x pr :=
     let: ces_w    := sval ces_w_mem in
     let: (ces, w) := ces_w in
     let: ces_mem  := valP ces_w_mem in 
-    (Consist (mem_ces_seq_aux ces_mem), wval (lab w)) | 
+    (Consist (mem_ces_seq_aux ces_mem), wval (lab es w)) | 
     ces_w_mem <- seq_in (@ces_seq_aux x pr)].
 
 Arguments consist_Nread {_ _ _}.
@@ -205,31 +207,34 @@ Arguments consist_Nread {_ _ _}.
 Definition add_hole
   (l : @label unit V) pr :
   seq (cexec_event_struct * V) :=
-  if pr \in fresh_id :: dom =P true is ReflectT pr_mem then
+  if pr \in fresh_id :: dom es =P true is ReflectT pr_mem then
     match l with
     | Write x v => 
       [:: (Consist (consist_Nread es pr (Write x v) erefl pr_mem), v)]  
+    | ThreadStart =>
+      [:: (Consist (consist_Nread es pr ThreadStart erefl pr_mem), inh)]
     | Read x __ => ces_seq x pr
     | _         => [::]
     end
   else [::].
 
-Definition eval_step (c : config) pr
-  : seq config :=
+Variable prog : parprog.
+
+Definition fresh_tid (c : config) : nat := 
   let: Config es tmap := c in
-  let: (conf, otid)    := tmap pr in
-    flatten [seq
-      let: (l, cont_st) := thrd_sem (nth_tid prog t) conf in
-        if l is Some l then
-          [seq let: (e, v) := x in
-                (Config e [fsfun c with fresh_id |-> (cont_st v, Some t)]) |
-                x <- add_hole l pr]
-        else
-          [:: Config es [fsfun c with pr |-> (cont_st inh, Some t)]] 
-      | t <- 
-        if otid is Some tid then
-          [:: tid]
-        else iota 0 (size prog)
-    ].
+    (foldr maxn 0 
+      [seq (snd (tmap e)).+1 | e <- dom es & (lab es e == ThreadStart)]).
+
+Definition eval_step (c : config) pr : seq config := 
+  let: Config es tmap := c in
+  let: (conf, tid)    := tmap pr in
+  let: tid            := if pr \in dom es then tid else fresh_tid c in
+  let: (l, cont_st)   := thrd_sem (nth empty_prog prog tid) conf in
+    if l is Some l then do 
+      (e, v) <- add_hole l pr;
+      [:: Config e  [fsfun c with fresh_id |-> (cont_st v, tid)]]
+    else
+      [:: Config es [fsfun c with pr |-> (cont_st inh, tid)]].
 
 End RegMachine.
+

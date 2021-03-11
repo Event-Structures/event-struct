@@ -206,9 +206,7 @@ Qed.
 Lemma icf_add_eventE e1 e2 :
   e1 != fresh_id -> e2 != fresh_id ->
   icf es e1 e2 = icf add_event e1 e2.
-Proof.
-  by rewrite /icf !labE !fpred_add_eventE !fsfun_withE=> /negbTE->/negbTE->.
-Qed.
+Proof. by rewrite /icf !fpred_add_eventE=> /negbTE->/negbTE->. Qed.
 
 Lemma cf_add_eventE e1 e2:
   e1 != fresh_id -> e2 != fresh_id ->
