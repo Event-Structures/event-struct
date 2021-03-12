@@ -4,6 +4,32 @@ From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order.
 From Equations Require Import Equations.
 From event_struct Require Import utilities wftype.
 
+(******************************************************************************)
+(* Auxiliary definitions and lemmas about binary decidable relations.         *)
+(*                                                                            *)
+(*   sfrel f      == a relation corresponding to non-deterministic function   *)
+(*                   (i.e. list-valued function). A generalization of frel.   *)
+(*                   Given a function f, sfrel denotes a relation consisting  *)
+(*                   of pairs <x, y>, s.t. x \in f y                          *)
+(*                   TODO: currently, the direction of the relation is        *)
+(*                   reversed compared to frel, we'll fix that later.         *)
+(*   strictify f  == given a non-deterministic function, removes all the      *)
+(*                   elements equal to the argument of the function.          *)
+(*                   It can be used to obtain a strict (i.e. irreflexive)     *)
+(*                   relation corresponding to f.                             *)
+(*   suffix f     == given a well-founded function f and an element x,        *)
+(*                   returns a strict suffix of x, i.e. a set { y | x R y }   *)
+(*                   where R ::= sfrel f.                                     *)
+(*   wsuffix f    == a weak (reflexive) suffix, i.e. a set { y | x R? y }     *)
+(*   t_closure f  == given a well-founded function f returns its              *)
+(*                   transitive closure as a decidable relation.              *)
+(*                   t_closure f ≡ (sfrel f)^+                                *)
+(*   rt_closure f == given a well-founded function f returns its              *)       
+(*                   reflexive-transitive closure as a decidable relation,    *)
+(*                   t_closure f ≡ (sfrel f)^*                                *)
+(******************************************************************************)
+
+
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
 Set Equations Transparent.
@@ -11,18 +37,6 @@ Set Equations Transparent.
 Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
-
-Arguments clos_rtn1_rt {_ _ _ _}.
-Arguments clos_rt_rt1n {_ _ _ _}.
-Arguments clos_rt_rtn1 {_ _ _ _}.
-Arguments clos_rt1n_rt {_ _ _ _}.
-Arguments clos_refl {_}.
-Arguments clos_refl_trans_n1 {_}.
-Arguments clos_trans {_}.
-Arguments clos_trans_n1 {_}.
-Arguments reflexive {_}.
-Arguments rtn1_trans {_ _ _ _ _}.
-Arguments rtn1_refl {_ _ _}.
 
 Definition sfrel {T : eqType} (f : T -> seq T) : rel T :=
   [rel a b | a \in f b].
@@ -48,185 +62,130 @@ Proof. by rewrite strictify_weq; lattice. Qed.
 
 End Strictify. 
 
-Section well_founded.
+Section WfRTClosure.
 
 Context {disp : unit} {T : wfType disp}.
 
 Variable (f : T -> seq T).
 
-Hypothesis descend : forall x n, x \in f n -> x <= n.
+(* Hypothesis descend : forall x y, y \in f x -> y < x. *)
+Hypothesis descend : sfrel f ≦ (<%O).
 
-Lemma strict_lt n k : k \in (strictify f) n -> k < n.
-Proof. by rewrite mem_filter lt_neqAle=> /andP[] -> /descend ->. Qed.
-
-Hint Resolve strict_lt : core.
-
-Lemma rel_sublt a b : (sfrel (strictify f)) a b -> a < b.
-Proof. exact: strict_lt. Qed.
-
-Definition s_up_set_aux n (g : forall x : T, x < n -> seq T) := 
-  let ys := strictify f n in 
-  let ps := flatten (map^~ ys (fun x => 
-  if x \in ys =P true is ReflectT pf then
-    g x (strict_lt _ _ pf)
-  else
-    [::]
-)) in ys ++ ps.
-
-Arguments s_up_set_aux /.
-
-(* Computation of the strict upward set of a given element
- * w.r.t relation R derived from function `f`,
- * i.e. s_up_set(x) = { y | x R y } 
+(* A hack to get around a bug in Equations 
+ * (see https://github.com/mattam82/Coq-Equations/issues/241).
+ * In short, we cannot express this function directly in Equations' syntax
+ * (we can do it by adding `noind` specifier, but then we cannot use `funelim`).
+ * Thus we have to "tie a recursive knot" manually. 
  *)
-Equations s_up_set (n : T) : seq T by wf n (<%O : rel T) :=
-  s_up_set n := s_up_set_aux n s_up_set.
+Definition suffix_aux (x : T) (rec : forall y : T, y < x -> seq T) := 
+  let ys := f x in 
+  let ps := flatten (map^~ (seq_in ys) (fun y => 
+    rec (val y) (descend _ _ (valP y))
+  )) 
+  in ys ++ ps.
 
-Definition t_closure (a b : T) : bool := a \in s_up_set b.
+(* strict suffix of an element `x`, i.e. a set { y | x R y } *)
+Equations suffix (x : T) : seq T by wf x (<%O : rel T) := 
+  suffix x := suffix_aux x suffix.
 
-Lemma clos_trans_n1_lt a b : clos_trans_n1 (sfrel (strictify f)) a b -> a < b.
+(* weak suffix of an element `x`, i.e. a set { y | x R? y } *)
+Definition wsuffix (x : T) : seq T :=
+  x :: suffix x.
+
+(* decidable transitive closure *)
+Definition t_closure : rel T := 
+  fun x y => x \in suffix y.
+
+(* decidable reflexive-transitive closure *)
+Definition rt_closure : rel T := 
+  fun x y => x \in wsuffix y. 
+
+(* ************************************************************************** *)
+(*       THEORY                                                               *)
+(* ************************************************************************** *)
+
+Lemma t_closure_n1P x y : 
+  reflect (clos_trans_n1 T (sfrel f) x y) (t_closure x y).
 Proof.
-  rewrite/sfrel //=.
-  elim=> [x| x y xfy acx ax]. auto.
-  apply: lt_trans; first exact: ax. auto.
-Qed.
-
-Lemma clos_trans_lt a b : clos_trans (sfrel (strictify f)) a b -> a < b.
-Proof. move=> cab. by apply /clos_trans_n1_lt /clos_trans_tn1. Qed.
-
-(* Transitive closure reflection lemma *)
-Lemma t_closure_n1P a b : 
-  reflect (clos_trans_n1 (sfrel (strictify f)) a b) (t_closure a b).
-Proof.
-  rewrite /t_closure. funelim (s_up_set b)=> /=. 
+  rewrite /t_closure. funelim (suffix y)=> /=. 
   apply /(iffP idP); rewrite mem_cat /sfrel /=.
-  { move=> /orP[|/flatten_mapP[x]] //; first exact: tn1_step.
-    case: eqP=> // S /strict_lt/X/(_ a x erefl) /[apply]. exact: tn1_trans. }
+  { move=> /orP[|/flatten_mapP[z]] //; first exact: tn1_step.
+    move=> S /X H; apply: tn1_trans (valP z) _.
+    by apply: H=> //=; apply: descend (valP z). }
   move: X=> /[swap] [[?->//|y ? /[dup] ? L /[swap]]].
-  move=> /[apply] ?; apply/orP; right; apply/flatten_mapP.
-  exists y=> //. case: eqP; auto.
+  move=> /[apply] H; apply/orP; right; apply/flatten_mapP.
+  eexists; first by apply: seq_in_mem L.
+  by apply /H=> //=; apply: descend.
 Qed.
 
-Lemma t_closureP a b :
-  reflect (clos_trans (sfrel (strictify f)) a b) (t_closure a b).
+Lemma t_closureP x y :
+  reflect (clos_trans T (sfrel f) x y) (t_closure x y).
 Proof.
-  apply /(iffP idP) => [/t_closure_n1P| cab]; first exact: clos_tn1_trans.
-  apply /t_closure_n1P. exact: clos_trans_tn1.
+  apply /(equivP (t_closure_n1P x y)).
+  symmetry; exact: clos_trans_tn1_iff.
 Qed.
 
-Lemma t_closure_lt a b : t_closure a b -> a < b.
-Proof. by move=> /t_closureP /clos_trans_lt. Qed.
-
-Lemma t_closure_trans : transitive t_closure.
-Proof.
-  move=> b a c /t_closureP ab /t_closureP bc.
-  apply /t_closureP /t_trans; first exact: ab. exact: bc.
+Lemma clos_trans_lt : 
+  clos_trans T (sfrel f) ≦ (<%O : rel T).
+Proof. 
+  move=> ??; rewrite/sfrel /=.
+  elim=> [y z /descend | x y z _ ] //=.
+  move=> /[swap] _; exact: lt_trans.
 Qed.
+
+Lemma t_closure_lt : t_closure ≦ (<%O : rel T).
+Proof. by move=> x y /t_closureP /clos_trans_lt. Qed.
 
 Lemma t_closure_antisym : antisymmetric t_closure.
 Proof.
-  move=> a b /andP[] /t_closure_lt ab /t_closure_lt ba. apply /eqP.
-  by rewrite eq_le !ltW.
+  move=> x y /andP[] /t_closure_lt ? /t_closure_lt ?. 
+  by apply /eqP; rewrite eq_le !ltW.
 Qed.
 
-(* Computation of the (non-strict) upward set of a given element
- * w.r.t relation R derived from function `f`,
- * i.e. up_set(x) = { y | x = y \/ x R y } 
- *)
-Definition up_set a := a :: s_up_set a.
-
-Definition rt_closure a b := a \in up_set b. 
-
-Lemma rt_closure_reflP a b :
-  reflect (clos_refl t_closure a b) (rt_closure a b).
+Lemma t_closure_trans : transitive t_closure.
 Proof.
-  rewrite /rt_closure /up_set. funelim (s_up_set b).
-  apply /(iffP idP).
-  { rewrite -cat_cons mem_cat in_cons => /orP[/orP[/eqP ->|]|].
-    { exact: r_refl. }
-    { constructor. rewrite /t_closure. funelim (s_up_set n).
-      by rewrite mem_cat b. }
-    constructor. rewrite /t_closure. funelim (s_up_set n).
-    by rewrite mem_cat b. }
-  case=> [b |]; last exact: mem_head.
-  rewrite /t_closure in_cons. by funelim (s_up_set b) => ->.
+  move=> y x z /t_closureP ? /t_closureP ?.
+  apply /t_closureP /t_trans; eauto. 
 Qed.
 
-Lemma clos_t_clos_rt {R : rel T} a b :
-  clos_trans R a b -> clos_refl_trans T R a b.
+Lemma rt_closureP x y :
+  reflect (clos_refl_trans T (sfrel f) x y) (rt_closure x y).
 Proof.
-  elim=> [|c d e ctcd crtcd ctde crtce]; first by constructor.
-  apply /rt_trans; first exact: crtcd. exact: crtce.
+  apply /equivP; last first.
+  { rewrite clos_refl_transE clos_reflE. 
+    apply or_iff_compat_l; symmetry.
+    apply rwP; exact: t_closureP. }
+  rewrite /t_closure /rt_closure /wsuffix in_cons.
+  by apply predU1P.
 Qed.
 
-Lemma filter_clos_sub a b :
-  clos_trans_n1 (sfrel (strictify f)) a b -> clos_trans_n1 (sfrel f) a b.
+Lemma rt_closureE : rt_closure ≡ eq_op ⊔ t_closure.
+Proof. 
+  move=> x y /=; rewrite /rt_closure /t_closure. 
+  by rewrite /wsuffix in_cons eq_sym.
+Qed.
+
+Lemma rt_closure_le : rt_closure ≦ (<=%O : rel T).
 Proof.
-  elim=> [c sfac | c d sfcd ctacn ctac].
-  { apply/tn1_step; exact: strictify_leq. }
-  by apply: tn1_trans ctac; apply: strictify_leq.
+  rewrite rt_closureE.
+  move=> x y /orP[/eqP<-//|].
+  move=> /t_closure_lt; exact: ltW.
 Qed.
 
-Lemma refl_trans_refl_rt a b :
-  clos_refl_trans_n1 (sfrel f) a b -> clos_refl t_closure a b.
-Proof.
-  rewrite /sfrel /=. 
-  elim=> [|c d sfcd crtac /rt_closure_reflP rtac]; first exact: r_refl.
-  case: (c =P d) => [<-| /eqP neq].
-  { apply /rt_closure_reflP. 
-    case: (rt_closure_reflP a c rtac) => [e|]; last exact: mem_head.
-    by rewrite /rt_closure /up_set /t_closure in_cons => ->. }
-  constructor. apply /t_closureP. elim: crtac => //.
-  case: (a =P c) => [->|nac].
-  { by constructor; rewrite strictify_weq /=; apply/andP. }
-  apply /t_trans.
-  { move: (rt_closure_reflP a c rtac) => /clos_reflE. case; first by [].
-  exact: t_closureP. }
-  by constructor; rewrite strictify_weq /=; apply/andP. 
-Qed.
-
-Lemma rt_closure_refl a : rt_closure a a.
+Lemma rt_closure_refl x : rt_closure x x.
 Proof. exact: mem_head. Qed.
 
-(* Reflexive-transitive closure reflection lemma *)
-Lemma rt_closure_n1P a b :
-  reflect (clos_refl_trans_n1 (sfrel f) a b) (rt_closure a b).
+Lemma rt_closure_antisym : antisymmetric rt_closure.
 Proof.
-  apply /(iffP idP).
-  { move=> /rt_closure_reflP. case => [c /t_closure_n1P cac|]; last by constructor.
-    by apply /clos_rt_rtn1 /clos_t_clos_rt /clos_tn1_trans /filter_clos_sub. }
-  by move=> /refl_trans_refl_rt /rt_closure_reflP.
-Qed.
-
-Lemma rt_closureP a b :
-  reflect (clos_refl_trans T (sfrel f) a b) (rt_closure a b).
-Proof.
-  apply /(iffP idP).
-  { move=> /rt_closure_n1P. exact: clos_rtn1_rt. }
-  move=> rtab. apply /rt_closure_n1P. exact: clos_rt_rtn1.
+  move=> x y /andP[]. 
+  move=> /rt_closure_le /= xy /rt_closure_le /= yx. 
+  by apply /eqP; rewrite eq_le xy yx. 
 Qed.
 
 Lemma rt_closure_trans : transitive rt_closure.
 Proof.
-  move=> b a c /rt_closureP ab /rt_closureP bc.
-  apply/rt_closureP /rt_trans; first exact: ab. done.
+  move=> y x z /rt_closureP xy /rt_closureP ?.
+  by apply/rt_closureP; apply: rt_trans xy _.
 Qed.
 
-Lemma rt_closure_le a b : rt_closure a b -> a <= b.
-Proof.
-  rewrite /rt_closure /up_set in_cons => /orP[/eqP -> //|] asb.
-  rewrite le_eqVlt. apply /orP. right. by apply /t_closure_lt.
-Qed.
-
-Lemma rt_closure_antisym : antisymmetric rt_closure.
-Proof.
-  move=> a b /andP[] /rt_closure_le ab /rt_closure_le ba. apply /eqP.
-  by rewrite eq_le ab ba.
-Qed.
-
-Lemma rt_closure_subrel : subrel (sfrel f) rt_closure.
-Proof. move=> a b sfrel; exact/rt_closure_n1P/(rtn1_trans sfrel rtn1_refl). Qed.
-
-End well_founded.
-
-Arguments rt_closure_n1P {disp T f descend a b}.
+End WfRTClosure.

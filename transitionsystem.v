@@ -192,7 +192,7 @@ Lemma ca_add_eventE e1 e2 :
   e2 != fresh_id -> ca es e1 e2 = ca add_event e1 e2.
 Proof.
   move=> N.
-  apply/closureP/closureP; move: N=> /[swap]; elim; try constructor.
+  apply/closure_n1P/closure_n1P; move: N=> /[swap]; elim; try constructor.
   all: move=> y ? I ? H /negbTE Z; apply: (@rtn1_trans _ _ _ y).
   2,4: apply/H/negP; move: I.
   - by rewrite ica_add_eventE Z.
