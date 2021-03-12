@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice finfun finmap.
+From mathcomp Require Import eqtype choice finfun finmap tuple.
 From event_struct Require Import utilities eventstructure inhtype.
 From event_struct Require Import transitionsystem ident.
 
@@ -220,10 +220,10 @@ Definition add_hole
 
 Variable prog : parprog.
 
-Definition fresh_tid (c : config) : nat := 
-  let: Config es tmap := c in
-    (foldr maxn 0 
-      [seq (snd (tmap e)).+1 | e <- dom es & (lab es e == ThreadStart)]).
+Print fgraph.
+
+Definition fresh_tid (c : config) := 
+  foldr maxn 0 [seq (snd x).+1 | x <- fgraph (fmap_of_fsfun c)].
 
 Definition eval_step (c : config) pr : seq config := 
   let: Config es tmap := c in
