@@ -103,7 +103,7 @@ Section MonoidTheory.
 
 Context {disp : unit} {M : mType disp}.
 
-Lemma plusAA (x y z : M) : 
+Lemma plusA (x y z : M) : 
   x \+ y \+ z = x \+ (y \+ z). 
 Proof. by case: M x y z => ? [[]]. Qed.
 
