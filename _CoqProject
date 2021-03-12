@@ -10,6 +10,7 @@
 -arg -w -arg -ambiguous-paths
 
 utilities.v
+monoid.v
 inhtype.v
 wftype.v
 relations.v
