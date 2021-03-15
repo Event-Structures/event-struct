@@ -13,3 +13,11 @@ CoqMakefile.conf
 #*#
 dependency_graph.dot
 dependency_graph.png
+
+# tex/papers
+
+*.pdf
+*.log
+*.out
+*.fls
+*.*latexmk
