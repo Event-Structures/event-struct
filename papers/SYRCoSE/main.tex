@@ -301,7 +301,6 @@
 
 
 
-
 % *** PDF, URL AND HYPERLINK PACKAGES ***
 %
 %\usepackage{url}
@@ -323,12 +322,23 @@
 \usetikzlibrary{fit,backgrounds,positioning,calc,patterns,snakes} % <- added
 
 \input{defs.tex}
-
-
+\usepackage{amssymb}
+\usepackage{hyperref}% http://ctan.org/pkg/hyperref
+\usepackage{cleveref}% http://ctan.org/pkg/cleveref
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
 
+\definecolor{grn}{rgb}{0, 0.5, 0}
+\definecolor{gr}{rgb}{0.3, 0.3, 0.3}
+
 \newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\crefname{lemma}{Lemma}{Lemmas}
+\newcommand{\ffun}[1]{\mathtt{#1}}
+\newcommand{\frf}{\ffun{\textcolor{grn}{frf}}}
+\newcommand{\fpred}{\ffun{\textcolor{gr}{fpred}}}
+\newcommand{\lb}{\ffun{label}}
+
 
 \begin{document}
 
@@ -393,9 +403,9 @@ In this article, we mechanized general the theory of prime event structures with
     \node (wxo) at (-3,0.2) {$\wlab{x}{1}$};
     \node (wxt) at (-1,0.2) {$\wlab{x}{2}$};
     \node (rxo) at (-3, -2.2) {$\rlab{x}{1}$};
-    \draw[ca] (wxo)  -- node{$\le\qquad$}  (ts1);
-    \draw[ca] (wxt)  -- node{$\le\qquad$}  (ts2);
-    \draw[ca] (rxo)  -- node{$\le\qquad$}  (wxo);
+    \draw[ca] (wxo)  -- node{$\leqslant\qquad$}  (ts1);
+    \draw[ca] (wxt)  -- node{$\leqslant\qquad$}  (ts2);
+    \draw[ca] (rxo)  -- node{$\leqslant\qquad$}  (wxo);
 \end{tikzpicture}
 
 % В этой диаграмме мы следим за тем, что происходит с переменной x. Тут есть несколько типов событий:
@@ -410,10 +420,10 @@ In this article, we mechanized general the theory of prime event structures with
     \node (wxo) at (-3,0.2) {$\wlab{x}{1}$};
     \node (wxt) at (-1,0.2) {$\wlab{x}{2}$};
     \node (rxt) at (-3, -2.2) {$\rlab{x}{2}$};
-    \draw[ca] (wxo)  -- node{$\le\qquad$}  (ts1);
-    \draw[ca] (wxt)  -- node{$\le\qquad$}  (ts2);
-    \draw[ca] (rxt)  -- node{$\le\qquad$}  (wxo);
-    \draw[ca] (rxt)  -- node{$\le\qquad$}  (wxt);
+    \draw[ca] (wxo)  -- node{$\leqslant\qquad$}  (ts1);
+    \draw[ca] (wxt)  -- node{$\leqslant\qquad$}  (ts2);
+    \draw[ca] (rxt)  -- node{$\leqslant\qquad$}  (wxo);
+    \draw[ca] (rxt)  -- node{$\leqslant\qquad$}  (wxt);
 \end{tikzpicture}
 % Заметим что, то тут образовалась новая стрелка из W(x,2) в R(x,2), так как чтение из x 2 не могло бы произойти еслиб мы туда 2 не записывали. Однако стрелка из W(x,1) тоже не исчезла, потому что, $x := 1$ в программе стоит перед $r := x$, а значит мы не можем выполнить $r := x$ не выполнив перед этим $x := 1$.
 %  Тут мы видим, что при чтении их x мы столкнулись с некоторой недетерменнированностью, которая отразилось в том, что у нас появилось целое множество графоф, соотвествующих разным исполнения программы
@@ -428,11 +438,11 @@ In this article, we mechanized general the theory of prime event structures with
     \node (wxt) at (-1,0.2) {$\wlab{x}{2}$};
     \node (rxt) at (-2, -2.2) {$\rlab{x}{2}$};
     \node (rxo) at (-4, -2.2) {$\rlab{x}{1}$};
-    \draw[ca] (wxo)  -- node{$\le\qquad$}  (ts1);
-    \draw[ca] (wxt)  -- node{$\le\qquad$}  (ts2);
-    \draw[ca] (rxt)  -- node{$\le\qquad$}  (wxo);
-    \draw[ca] (rxt)  -- node{$\le\qquad$}  (wxt);
-    \draw[ca] (rxo)  -- node{$\le\qquad$}  (wxo);
+    \draw[ca] (wxo)  -- node{$\leqslant\qquad$}  (ts1);
+    \draw[ca] (wxt)  -- node{$\leqslant\qquad$}  (ts2);
+    \draw[ca] (rxt)  -- node{$\leqslant\qquad$}  (wxo);
+    \draw[ca] (rxt)  -- node{$\leqslant\qquad$}  (wxt);
+    \draw[ca] (rxo)  -- node{$\leqslant\qquad$}  (wxo);
     \draw[cf] (rxo)  -- node[above]{$\#$}  (rxt);
 \end{tikzpicture}
 
@@ -471,7 +481,7 @@ A set $X \subseteq E$ is a configuration of event structure $(E, Con, \vdash)$ i
     \item it is consistent, i.e. every finite subset of $X$ is consistent:
     $$Y \subseteq_{finite} X \Longrightarrow Y \in Con$$
     \item it is secured, i.e. every event in $X$ can be enabled by a sequence of some events in $X$:
-    $$\forall e \in X \ \exists \ e_0, e_1, \ldots e_n = e \in X \ \text{s.t.}$$
+   % $$\forall e \in X \ \exists \ e_0, e_1, \ldots e_n = e \in X \ \text{s.t.}$$
     $$\forall 1 \leq i \leq n \ \{ e_0, e_1, \ldots e_{i - 1} \} \vdash e_i.$$
 \end{itemize}
 \end{definition}
@@ -489,6 +499,178 @@ A set $X \subseteq E$ is a configuration of event structure $(E, Con, \vdash)$ i
 \section{Implementation}
 
 \subsection{How we encode Event Structures}
+% Как мы видели ранее в Step-by-step example наша стуркура событий содержит такие функции как frf fpred. Сами события это элементы некоторого множества E (множества итендификаторов), которое должно удволетворять следущим свойствам:
+\begin{definition}[identifier set]
+  $E$ is an identifier set if:
+  \begin{itemize}
+    \item There is some $ident_0 \in E$ ~--- first identifier
+    \item $E$ has well-founded partitial order $\leqslant_E$
+    \item There is some function, that takes some identifier $e$ and returns next fresh identifier. Formally: $fresh : E \to E$, satisfies $$\forall e \in E, \ e <_E fresh(e)$$
+  \end{itemize}
+\end{definition}
+% Так же у нас есть функция которая каждому итендификатору сопоставляет его метку
+  $$\ffun{lab} : E \rightharpoonup \lb $$
+% где label -- множество всех меток (таких как W(x, 5), R(y, 6), ThreadStart, ThreadEnd etc)
+% Мы будем говорить что е это "read"-event c локацией х и значением i если lab(e) = R(x,i), аналогично "write"-event
+% В итоге формально мы строим четверку
+\begin{definition}[Execution Event Structure]
+  $$exec\_event\_structure \ \triangleq \ \langle E, \ \ffun{lab}, \ \fpred, \ \frf \rangle$$
+  where
+  \begin{itemize}
+    \item $E$ ~--- identifiers set
+    \item $\fpred$ ~--- function that returns a predsessor (w.r.t. the program order) of event
+    \item $\frf$ ~--- function that takes "read"-event $e$ and returns a "write"-event from witch $e$ reads
+    \item $\ffun{lab}$ ~--- function that returns event's label
+  \end{itemize}
+  Also we require
+  \begin{itemize}
+    \item $\forall e \in E, \ \fpred(e) \leqslant_E e$ and $\frf(e) \leqslant_E e$
+    \item $\forall e_1 \ e_2 \in E, \ e_2 = \frf(e_1) \ \Leftrightarrow \ e_1$ is a "read"-event and $e_2$ is a "write"-event with the same location and value
+  \end{itemize}
+\end{definition}
+  
+% Далее для простоты будем отождествлять иденфикаторы с их метками, а Execution Event Structure с их множеством итендификаторов
+
+% Теперь наша задача: определить в этих терминах простые структуры событий. Для этого надо определить частичный порядок <= и отношение конфликта #
+% Начнем с отношения causality. В нашей статье мы будем считать, что событие e1 влечет событие e2 если 
+\begin{itemize}
+  \item Programm instruction, that corresponds to event $e_1$ states before the programm instruction, that corresponds to $e_2$
+  \item Or $\ e_2$ is the "read"-event and it reads from "write"-event $e_1$
+\end{itemize}
+% Или формально:
+\begin{itemize}
+  \item $\fpred(e_1) \ =\ e_2$
+  \item Or $\ \frf(e_1) \ =\ e_2$
+\end{itemize}
+% Любую функцию f можно считать отношением
+  $$ a \ f \ b \ \triangleq\ f(a) \ = \ b$$
+% Имея ввиду обозначение выше определим
+\begin{definition}[causality relation]
+  $$\leqslant \ \triangleq \ (\fpred \cup \frf)^* $$
+\end{definition}
+% Заметим, что в множестве E уже есть тотальный порядок $\leqslant_E$. Нетрудно видеть что полученнле отношение casuality является его предпорядком [смотри Well-foundedness and monads]
+\begin{lemma}
+  If $\leqslant$ is a casuality order of $E$ then $\leqslant \ \subset \ \leqslant_E$
+\end{lemma}
+% Теперь давайте определим отношение конфликта. Посмотрев на отношение конфликта в определении СС [ссылка], мы можем установить следущий факт
+\begin{lemma}\label{lma_confl}
+  If $\ e_1 \leqslant e_2, \ e_3 \leqslant e_4$ and $e_1 \# e_3$ holds then $e_2 \# e_4$
+\end{lemma} 
+% То есть отношение конфликта должно "протаскиваться" через отношение <=. Наша интуиция будет заключаться в том, что мы определим "минимальное" отношение конфликта, замкнув, котрое по свойству консистентности [ссылка] мы получим полное отношение #. 
+% И так откуда берутся конфликты? [тут должен был заход через Step-by-step example]. 
+% И так мы видим, что если у событий есть общий предок (относительно отношения fpred) то эти события происходят в двух разных выполнениях программы и, соответвенно находятся в отношении конфликта
+\begin{definition}[immediate conflict relation]
+  $$ e_1 \, \ffun{icf} \, e_2 \ \triangleq\ \exists e, \, e = \fpred(e_1) = \fpred(e_2)  $$
+\end{definition}
+% Далее можно определить отношение конфликта как консистентное замыкание icf
+\begin{definition}[conflict relation]
+  $$ e_1 \, \# \, e_2 \ \triangleq\ \exists e_3\, e_4, e_3 \, \ffun{icf} \, e_4 \ and \ e_3 \leqslant e_1, \, e_4 \leqslant e_2 $$
+\end{definition}
+% Однако с этим определением возникает одна проблема. Понятно что отношение определенное таким образом получается симметричным и консистентным. Будет ли оно иррефлексивность? Оказывается, что в общем случае нет. Рассмотрим следущую программу:
+\begin{tikzpicture}
+
+  \node (iwy) %[left of = mid, node distance = 1.1cm] 
+  at (-1.3, 2.5)
+  {$x:=1;$};
+
+  \node (irx) [above = -0.5cm of iwy.west, anchor = west] 
+  {$r:=x;$};
+
+  \node (iwx) %[right of = mid, node distance = 0.8cm] 
+   at (0.5, 2.5)
+  {$x:=2;$};
+
+  \node (iwz) %[right of = mid, node distance = 0.8cm] 
+  at (-1.3, 1.55)
+ {$y:=r;$};
+
+ \node (iww) %[right of = mid, node distance = 0.8cm] 
+  at (-1.3, 1.2)
+ {$r':=y;$};
+
+  \draw ($ (iwy.south east) + (0.1,-1.3) $) -- ($ (iwy.south east) + (0.1,0.6) $);
+  \draw ($ (iwx.south west) + (-0.15,-1.3) $) -- ($ (iwx.south west) - (0.15,-0.6) $);
+\end{tikzpicture}
+% Давайте как в Step-by-step example построим по шагам фрагмент соответвующей этой программе exec_event_structure до чтения из y
+\begin{tikzpicture}
+  \node (ts1) at (-3,1.2) {ThreadStart};
+  \node (ts2) at (-1, 1.2) {ThreadStart};
+  \node (wxo) at (-3,0.2) {$\wlab{x}{1}$};
+  \node (wxt) at (-1,0.2) {$\wlab{x}{2}$};
+  \node (rxt) at (-2, -1.2) {$\rlab{x}{2}$};
+  \node (rxo) at (-4, -1.2) {$\rlab{x}{1}$};
+  \node (wyo) at (-4, -2.2) {$\wlab{y}{1}$};
+  \node (wyt) at (-2, -2.2) {$\wlab{y}{2}$};
+  \draw[po] (wxo)  --  (ts1);
+  \draw[po] (wxt)  --  (ts2);
+  \draw[po] (rxt)  --  (wxo);
+  \draw[rf] (rxt)  --  (wxt);
+  \draw[po] (rxo)  --  (wxo);
+  \draw[rf] (rxo)  edge[bend left] (wxo);
+  \draw[cf] (rxo)  -- node[above]{$\#$}  (rxt);
+  \draw[po] (wyo) -- (rxo);
+  \draw[po] (wyt) -- (rxt);
+\end{tikzpicture}
+% Видно что наша программа в первом потоку разделилась на два независимых выполнения: выполнение в котором мы прочитали из x 1 (обозначим за выболнение (а)) и выполненние в котором прочитали из х 2 (выполнение (b))
+%Теперь мы хотим добавить в нашу структуру событий чтение в y. посмотрим что будет если прочитать при выполнении (а) в у 2 (то есть запись из (b))
+\begin{tikzpicture}
+  \node (ts1) at (-3,1.2) {ThreadStart};
+  \node (ts2) at (-1, 1.2) {ThreadStart};
+  \node (wxo) at (-3,0.2) {$\wlab{x}{1}$};
+  \node (wxt) at (-1,0.2) {$\wlab{x}{2}$};
+  \node (rxt) at (-2, -1.2) {$\rlab{x}{2}$};
+  \node (rxo) at (-4, -1.2) {$\rlab{x}{1}$};
+  \node (wyo) at (-4, -2.2) {$\wlab{y}{1}$};
+  \node (wyt) at (-2, -2.2) {$\wlab{y}{2}$};
+  \node (ryt) at (-4, -3.2) {$\rlab{y}{2}$};
+  \draw[po] (wxo)  --  (ts1);
+  \draw[po] (wxt)  --  (ts2);
+  \draw[po] (rxt)  --  (wxo);
+  \draw[rf] (rxt)  --  (wxt);
+  \draw[po] (rxo)  --  (wxo);
+  \draw[rf] (rxo)  edge[bend left] (wxo);
+  \draw[cf] (rxo)  -- node[above]{$\#$}  (rxt);
+  \draw[po] (wyo) -- (rxo);
+  \draw[po] (wyt) -- (rxt);
+  \draw[po] (ryt) -- (wyo);
+  \draw[rf] (ryt) -- (wyt);
+\end{tikzpicture} \\
+We have $\rlab{x}{1} \leqslant \rlab{y}{2}$, $ \rlab{x}{2} \leqslant \rlab{y}{2}$ and $\rlab{x}{1} \ \# \ \rlab{x}{2}$. Thus $\rlab{y}{2} \ \# \ \rlab{y}{2}$ holds (see~\cref{lma_confl})
+% Но отношение конфликта должно быть иррефлексивным. Заметим, однако, что (a) и (b) не могут произойти при одном исполнении программы, а значит и чтения R(y,2) из W(y,2) тут быть не должно, полная структура событий тут должна выглядеть так:
+\begin{tikzpicture}
+  \node (ts1) at (-3,1.2) {ThreadStart};
+  \node (ts2) at (-1, 1.2) {ThreadStart};
+  \node (wxo) at (-3,0.2) {$\wlab{x}{1}$};
+  \node (wxt) at (-1,0.2) {$\wlab{x}{2}$};
+  \node (rxt) at (-2, -1.2) {$\rlab{x}{2}$};
+  \node (rxo) at (-4, -1.2) {$\rlab{x}{1}$};
+  \node (wyo) at (-4, -2.2) {$\wlab{y}{1}$};
+  \node (wyt) at (-2, -2.2) {$\wlab{y}{2}$};
+  \node (ryo) at (-4, -3.2) {$\rlab{y}{1}$};
+  \node (ryt) at (-2, -3.2) {$\rlab{y}{2}$};
+  \draw[po] (wxo)  --  (ts1);
+  \draw[po] (wxt)  --  (ts2);
+  \draw[po] (rxt)  --  (wxo);
+  \draw[rf] (rxt)  --  (wxt);
+  \draw[po] (rxo)  --  (wxo);
+  \draw[rf] (rxo)  edge[bend left] (wxo);
+  \draw[cf] (rxo)  -- node[above]{$\#$}  (rxt);
+  \draw[po] (wyo) -- (rxo);
+  \draw[po] (wyt) -- (rxt);
+  \draw[po] (ryo) -- (wyo);
+  \draw[rf] (ryo) edge[bend left] (wyo);
+  \draw[po] (ryt) -- (wyt);
+  \draw[rf] (ryt) edge[bend right] (wyt);
+\end{tikzpicture} \\
+% Будем говорить, что сткуктура собырий консистентна если там нет чтений из конфликтующийх с ними записей. Формально
+\begin{definition}[consistent Execution Event Structure]
+  $$consitent\langle E, \ffun{lab}, \fpred, \frf \rangle \ \triangleq \ \forall e \in E, \ \neg (e \ \# \ \frf e)$$
+\end{definition}
+% Оказывается этого достатчно чтоб отношение конфликта было иррефлексивным
+\begin{lemma}
+  Let $E$ be a consistent Execution Event Structure (denote as $cexec\_event\_structure$). Then it's conflict relation $\#$ is irreflexive
+\end{lemma}
+% Получается что из консистентной exevstr можно получить ПCC
 
 \subsection{Well-foundedness and monads}
 
@@ -498,9 +680,6 @@ A set $X \subseteq E$ is a configuration of event structure $(E, Con, \vdash)$ i
 \section{Future work}
 
 
-\begin{thebibliography}{1}
-
-\end{thebibliography}
 
 
 \end{document}
