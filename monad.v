@@ -14,8 +14,9 @@ Record mixin_of (M N : monad) (η : M ~> N) := Mixin {
 Structure type (M N : monad) (η : M ~> N) := Pack
   { cpmm : M ~> N ; class : mixin_of M _ cpmm }.
 Module Exports.
+Notation monmorph := type.
 Coercion cpmm : type >-> Natural.type.
-Notation "h ~M> g" := (type h g) (at level 1).
+Notation "f ~M> g" := (monmorph f g) (at level 1) : monae_scope.
 Notation MMorphism p := (Pack (Mixin p)).
 End Exports.
 End MonadMorphism.
