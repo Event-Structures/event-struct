@@ -200,7 +200,7 @@
 \colorlet{colorDEV}{magenta}
 \colorlet{colorINCL}{magenta!70!black}
 \colorlet{colorOBS}{green!40!black}
-\colorlet{colorCA}{teal}
+\colorlet{colorCA}{gray!60!black}
 \colorlet{colorDEPS}{violet!60!black}
 \colorlet{colorDETOUR}{teal}
 \colorlet{colorBOB}{gray!80!black}
@@ -312,7 +312,7 @@
    ppo/.style={->,color=colorPPO,,shorten >=-0.5mm,shorten <=-0.5mm},
    cf/.style={-,snake=zigzag,segment amplitude=1pt,segment length=3pt,colorCF},
    rmw/.style={->,color=colorRMW,,shorten >=-0.5mm,shorten <=-0.5mm},
-   ca/.style={<-,color=colorPO,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   ca/.style={->,color=colorPO,thick,shorten >=-0.5mm,shorten <=-0.5mm},
    rf/.style={->,color=colorRF,dashed,,shorten >=-0.5mm,shorten <=-0.5mm},
    rfs/.style={->,color=colorRF,thick,dashed,,shorten >=-0.5mm,shorten <=-0.5mm},
    rb/.style={->,color=colorRB,thick,shorten >=-0.5mm,shorten <=-0.5mm},
@@ -325,6 +325,11 @@
    deps/.style={->,color=colorDEPS,dotted,thick,shorten >=-0.5mm,shorten <=-0.5mm},
    wgr/.style={fill=colorWGR, opacity=0.1}
 }
+
+% arrows
+
+\newcommand{\arrowCA}{{\color{colorCA}\rightarrow}}
+\newcommand{\arrowCF}{{\color{colorCF}\leftrightsquigarrow}}
 
 %% parallel threads listings
 
@@ -345,8 +350,8 @@
 \newcommand{\valueRead}[1]{{// #1}}
 
 \newcommand{\fenceInst}{\kw{fence}}
-\newcommand{\readInst}[2]{#1\;:=\;[#2]}
-\newcommand{\writeInst}[2]{[#1]\;:=\;#2}
+\newcommand{\readInst}[2]{#1\;:=\;#2}
+\newcommand{\writeInst}[2]{#1\;:=\;#2}
 \newcommand{\incInst}[3]{#1 \;{:=}\;\kw{FADD}({#2},{#3})}
 
 \newcommand{\fenceInstMod}[1]{\kw{fence}_{#1}}
@@ -373,8 +378,9 @@
 
 % \newcommand{\warning}[1]{{\color{colorWARNING}\texttt{WARNING}}: #1}
 % \newcommand{\app}[1]{{\color{blue}\textbf{ANTON: #1}}}
-% \newcommand{\note}[1]{{\color{cyan}\textbf{EVG: #1}}}
-% \newcommand{\todo}[1]{{\color{red}\textbf{TODO: #1}}}
+
+\newcommand{\eupp}[1]{{\color{blue}\textbf{Evgenii: #1}}}
+\newcommand{\todo}[1]{{\color{red}\textbf{TODO: #1}}}
 
 \colorlet{colorISS}{blue!80!black}
 

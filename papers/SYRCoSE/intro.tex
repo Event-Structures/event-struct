@@ -1,5 +1,52 @@
 \section{Introduction}
 
+Event structures is a mathematical formalism introduced 
+by Winskel~\cite{Winskel:86} as a semantic domain of concurrent programs.
+In recent years there is a renewed interest in event structures, 
+with the applications of the theory ranging from relaxed memory models%
+~\cite{Jeffrey-Riely:LICS16, PichonPharabod-Sewell:POPL16, Chakraborty-Vafeiadis:POPL19}
+to model-based mutation testing~\cite{Fellner-al:VMCAI2020}.
+\eupp{perhaps, we could add more citations once the related work is ready.}
+
+The main advantage of the event structures 
+compared to traditional interleaving semantics 
+is that they give a more compact and consice 
+representation of progams' behavior.
+For example, consider the following code snippet. 
+
+\input{fig/intro-prog.tex}
+
+Under the interleaving semantics 
+it has $3! = 6$ traces with each trace consisting of $4$ events,
+as depicted on \cref{fig:intro-traces}.
+Event themselves represent atomic side-effects 
+of instructions' execution. In our case 
+it is either a write of a value to a shared variable $\wlab{x}{a}$,
+or a read of a particular value from a shared variable $\rlab{x}{a}$.  
+
+\input{fig/intro-traces.tex}
+
+The same information can be encoded in a single 
+event structure containing $6$ events in total
+(see \cref{fig:intro-es}). 
+In the event structure there are two types of edges 
+between the events. The gray arrows $e_1 \arrowCA e_2$ 
+represent the \emph{causality relation}, a 
+partial order reflecting the causal relationship
+between the atomic events of computation.
+The red edges $e_1 \arrowCF e_2$ represent 
+the \emph{conflict relation} which is 
+a symmetric and irreflexive relation 
+encoding mutually exclusive events.
+Each particular trace can be extracted from the event structure
+as a linearisation of some \emph{configuration}, 
+that is a causally-closed and conflict-free 
+subset of events. 
+
+\input{fig/intro-es.tex}
+
+\eupp{Continue from here...}
+
 \subsection{Motivation}
 
 % Терия структур событий (СС) была придумана Винскелем в 19?? году [статья]. С тех пор она активно развивалась, в различных статьях рассматривалось как различные подходы к этой теории: в [этих статьях] рассмотриваласть категорная семантика, в [этих статьях] [какая-то другая], так и применение СС можно в различных проложениях.

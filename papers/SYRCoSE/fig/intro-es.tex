@@ -1,0 +1,21 @@
+\begin{figure}[h]
+\begin{center}
+\begin{tikzpicture}[xscale=2]
+    \node (wxa) at (0,1) {$\wlab{x}{1}$};
+    \node (wxb) at (1,1) {$\wlab{x}{2}$};
+    \node (wxc) at (2,1) {$\wlab{x}{3}$};
+
+    \node (rxa) at (0,0) {$\rlab{x}{1}$};
+    \node (rxb) at (1,0) {$\rlab{x}{2}$};
+    \node (rxc) at (2,0) {$\rlab{x}{3}$};
+
+    \draw[ca] (wxa) -- (rxa);
+    \draw[ca] (wxb) -- (rxb);
+    \draw[ca] (wxc) -- (rxc);
+
+    \draw[cf] (rxa) -- (rxb) -- (rxc);
+\end{tikzpicture}
+\caption{}
+\label{fig:intro-es}
+\end{center}
+\end{figure}
