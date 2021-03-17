@@ -13,6 +13,7 @@ utilities.v
 monoid.v
 inhtype.v
 wftype.v
+monad.v
 relations.v
 ident.v
 pomset.v
@@ -20,4 +21,3 @@ prime_eventstruct.v
 eventstructure.v
 transitionsystem.v
 regmachine.v
-monad.v

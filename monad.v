@@ -7,11 +7,11 @@ Local Open Scope monae_scope.
 Module MonadMorphism.
 
 Record mixin_of (M N : monad) (η : M ~> N) := Mixin {
-  _ : forall A, η A \o Ret = Ret;
+  _ : forall a, η a \o Ret = Ret;
   _ : forall a b c (f : a -> M b) (g : b -> M c),
         η c \o (f >=> g) =  (η b \o f) >=> (η c \o g)
 }.
-Structure type (M N : monad) (η : M ~> N) := Pack
+Structure type (M N : monad) := Pack
   { cpmm : M ~> N ; class : mixin_of M _ cpmm }.
 Module Exports.
 Notation monmorph := type.
