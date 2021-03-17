@@ -377,28 +377,57 @@ In this article, we mechanized general the theory of prime event structures with
 
 \subsection{Gentle introduction to Event Structures}
 
-Generally, event structures can model a process of computation. More precisely, they represent that process by a set of events and relations between them: 
+Generally, event structures can model a process of computation. 
+There are many modifications of events structures from elementary to general, 
+and we are using prime event structures, since it is enough for us to model 
+concurrent programs. More precisely, they represent that process by a set of events 
+and relations between them: 
 \begin{definition}
-An event structure (ES) is a triple $(E, Con, \vdash)$, where
+A prime event structure (PES) is a triple $(E, \leq, \#)$, where
 \begin{itemize}
-    \item E is a set of events
-    \item Consistency predicate $Con$ is a set of finite subsets of $E$ such that 
-        $$ X \in Con \land Y \subseteq X \Longrightarrow Y \in Con $$
-    \item Enabling relation $\vdash$ is a subset of $Cons \times E$ such that
-        $$X \vdash e \land X \subseteq Y \in Cons \Longrightarrow Y \vdash e.$$
+  \item E is a set of events
+  \item $\leq$ is a causality relation on E such that 
+  \begin{itemize}
+    \item $ (E, \leq) $ is a partial order
+    \item $\lceil e \rceil := \{ e' : e' < e \}$ is finite for every $e \in E$, 
+    i.e. every event is caused by a finite set of events
+  \end{itemize}
+  \item $\#$ is a conflict relation on $E$ such that
+  \begin{itemize}
+    \item $\#$ is irreflexive and symmetric
+    \item it satisfies a consistency predicate:
+    $$\forall e_1, e_2, e_3 \in E \ e_1 \# e_2 \land e_2 \leq e_3 \Rightarrow e_1 \# e_3.$$
+  \end{itemize}
 \end{itemize}
 \end{definition}
 
+Conflict relation is used to model conflicting events like two \texttt{write}'s 
+of different values to the same location.
+Consistency ensures that if some events are in conflict, then events 
+following these events are also in conflict.
+
 \begin{definition}
-A set $X \subseteq E$ is a configuration of event structure $(E, Con, \vdash)$ if
+A configuration of PES $(E, \leq, \#)$ is a subset $X \subseteq E$ such that
 \begin{itemize}
-    \item it is consistent, i.e. every finite subset of $X$ is consistent:
-    $$Y \subseteq_{finite} X \Longrightarrow Y \in Con$$
-    \item it is secured, i.e. every event in $X$ can be enabled by a sequence of some events in $X$:
-   % $$\forall e \in X \ \exists \ e_0, e_1, \ldots e_n = e \in X \ \text{s.t.}$$
-    $$\forall 1 \leq i \leq n \ \{ e_0, e_1, \ldots e_{i - 1} \} \vdash e_i.$$
+  \item it is conflict-free
+  \item it is left-closed, i.e. $$\forall e_1, e_2 \in E \ e_2 \in X \land e_1 \leq e_2 \Rightarrow e_1 \in E.$$
 \end{itemize}
 \end{definition}
+
+Configurations are used to model a history of computation up to a certain 
+execution point.
+
+We formally proved the following simple facts about prime event structures:
+
+\begin{lemma}
+  A set $\lceil e \rceil$ is conflict-free for any $e \in E$.
+\end{lemma}
+
+And a more general one:
+
+\begin{lemma}
+  A set $\lceil e \rceil$ is a configuration for any $e \in E$.
+\end{lemma}
 
 \subsection{Release-Acquire consistency}
 
