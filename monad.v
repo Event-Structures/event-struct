@@ -17,7 +17,7 @@ Module Exports.
 Notation monmorph := type.
 Coercion cpmm : type >-> Natural.type.
 Notation "f ~M> g" := (monmorph f g) (at level 1) : monae_scope.
-Notation MMorphism p := (Pack (Mixin p)).
+Notation MonadMorphism p := (Pack (Mixin p)).
 End Exports.
 End MonadMorphism.
 Export MonadMorphism.Exports.
