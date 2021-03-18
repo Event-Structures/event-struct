@@ -21,3 +21,6 @@ dependency_graph.png
 *.out
 *.fls
 *.*latexmk
+*.bbl
+*.blg
+*.*.gz
