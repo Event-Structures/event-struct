@@ -380,3 +380,6 @@ Proof.
 Qed.
 
 End ReflectConnectives.
+
+Notation "'do' i <- s ; E" := (flatten (map (fun i => E) s)) (at level 10, i pattern).
+
