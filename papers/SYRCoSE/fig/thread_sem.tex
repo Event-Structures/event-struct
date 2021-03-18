@@ -1,0 +1,39 @@
+\begin{center}
+  \begin{figure}[h]
+      \begin{prooftree}
+        \AXC{$p[\ffun{ip}] =\ r:= i$}
+        \AXC{$l$ = \_}
+        \RightLabel{\texttt{WriteReg}}
+        \BIC{$\langle \ffun{ip}, \regmap \ra, p \xRightarrow{l} \langle \ip + 1, \ \regmap [r \leftarrow i] \rangle$}
+      \end{prooftree}
+    \begin{prooftree}
+      \AXC{$p[\ffun{ip}] = \ x := i$}
+      \AXC{$l = \wlab{x}{i}$}
+      \RightLabel{\texttt{WriteLoc}}
+      \BIC{$\langle \ffun{ip}, \regmap \ra, p \xRightarrow{l}
+      \la \ip + 1, \regmap \ra$}
+    \end{prooftree}
+    \begin{prooftree}
+      \AXC{$p[\ip] = \texttt{CJmp} \ r \ i$}
+      \AXC{$l = \_$}
+      \AXC{$\regmap(r) = 0$}
+      \RightLabel{$\texttt{CJump}_z$}
+      \TIC{$\la \ip, \regmap \ra, p \xRightarrow{l} \la \ip + 1, \regmap \ra$}
+    \end{prooftree}
+    \begin{prooftree}
+      \AXC{$p[\ip] = \texttt{CJmp} \ r \ i$}
+      \AXC{$l = \_$}
+      \AXC{$\regmap(r) \neq 0$}
+      \RightLabel{$\texttt{CJump}_{nz}$}
+      \TIC{$\la \ip, \regmap \ra, p \xRightarrow{l} \la i, \regmap \ra$}
+    \end{prooftree}
+    \begin{prooftree}
+      \AXC{$p[\ip] = r := x$}
+      \AXC{$l=\rlab{x}{\_}$}
+      \RightLabel{$\texttt{ReadLoc}$}
+      \BIC{$\la \ip, \regmap \ra, p \xRightarrow{l} \lambda i, \ \la \ip + 1, \regmap[r \leftarrow i] \ra$}
+    \end{prooftree}
+    \caption{single-thread program semantics}
+    \label{fig:thread_sem}
+  \end{figure}
+  \end{center}

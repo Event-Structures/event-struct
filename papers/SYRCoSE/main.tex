@@ -324,6 +324,10 @@
 \input{defs.tex}
 \usepackage{amssymb}
 \usepackage{hyperref}% http://ctan.org/pkg/hyperref
+\usepackage{array}
+\usepackage{bussproofs}
+\usepackage{amsmath}
+\usepackage{mathtools}
 \usepackage{cleveref}% http://ctan.org/pkg/cleveref
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
@@ -341,6 +345,7 @@
 
 
 \begin{document}
+\EnableBpAbbreviations
 
 \title{Mechanized Theory of Event Structures}
 
@@ -412,6 +417,8 @@ A set $X \subseteq E$ is a configuration of event structure $(E, Con, \vdash)$ i
 \input{encode_evstr.tex}
 
 \subsection{Well-foundedness and monads}
+
+\input{regmachine.tex}
 
 \subsection{Construction small-step semantics}
 
