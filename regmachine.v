@@ -162,7 +162,6 @@ Proof.
   case: (lab es w)=> //= [?? /andP[]|?? /andP[/eqP[->]]] //; by rewrite ?eq_refl.
 Qed.
 
-(* TODO: filter by consistentcy *)
 Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
   if pr \in fresh_id :: dom es =P true is ReflectT pr_mem then
     [seq
@@ -219,8 +218,6 @@ Definition add_hole
   else [::].
 
 Variable prog : parprog.
-
-Print fgraph.
 
 Definition fresh_tid (c : config) := 
   foldr maxn 0 [seq (snd x).+1 | x <- fgraph (fmap_of_fsfun c)].
