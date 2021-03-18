@@ -130,6 +130,7 @@ Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
   match thrd_sem pgm st1, l with
   | (Some (Write x v), st), Some (Write y u) => [&& x == y, v == u & st inh == st2]
   | (Some (Read  x _), st), Some (Read  y u) => (x == y) && (st u == st2)
+  | (Some ThreadStart, st), Some ThreadStart => st inh == st2
   | (None            , st), None             => st inh == st2
   | _, _                                     => false
   end.
