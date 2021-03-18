@@ -1,0 +1,49 @@
+\subsection{Register Machine and thread semantics}
+Now we are going to define language of simple register machine with shared memory.
+\newcommand{\ip}{\ffun{ip}}
+\newcommand{\regmap}{\ffun{regmap}}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\[
+\begin{array}{rcll}
+  \texttt{P} &::=& \texttt{ST}^* \\
+  \texttt{ST} & ::= & \texttt{I}^* \\
+  \texttt{I} & ::= & \texttt{Reg := Val} \\
+                 & | & \texttt{Loc := Val} \\
+                 & | & \texttt{Reg := Loc} \\
+                 & | & \texttt{CJmp Reg $\mathbb{N}$} \\
+  \texttt{Reg}            & ::= & r \, | \, r' \, | ... \\ 
+  \texttt{Loc}            & ::= & x \, | \,y \,| ... \\ 
+\end{array}
+\] where
+\begin{itemize}
+  \item \texttt{P} -- program is a sequence of single thread progams
+  \item \texttt{ST} -- single thread program is a sequence of instructions
+  \item \texttt{I} -- instruction can be either write to some register of some value or location value, either write to some location or conditional jump
+\end{itemize}
+Here \texttt{Reg} are registers (denoted as $r,r',...$) ~--- variables that should be different for different single thread progams. In contrast \texttt{Loc} are local variables (denoted as $x,y,...$) ~--- this is our shared (between different threads) memory. Also \texttt{Val} is the type of values (denoted as $i,j,...$) in our program, for simplicity let it be $\mathbb{N}$ or $\mathbb{Z}$. \\
+We are interested at looking after shared memory, so in our event structures we have events that represent actions only at local variables. \\
+Next we define semantics of single thread program. Let's consider some single-thread program (\texttt{ST} in our notation) and define thread state:
+\begin{definition}[Thread State]
+  $$thread\_state \ \triangleq \ \langle \ffun{ip}, \ffun{regmap} \rangle,$$ where
+  \begin{itemize}
+    \item $\ffun{ip}$ ~--- our place in program (ie. line number) 
+    \item $\ffun{regmap}$ ~--- map from registers to values
+  \end{itemize}
+\end{definition}
+If we have some $p : \texttt{ST}$, and some line number $\ffun{ip}$ we will denote by $p[\ffun{ip}]$ -- $\ffun{ip}$'s instuction of $p$. \\
+Then we define one-step semantics relation $st, p \xRightarrow{l} cont\_st$, where
+\begin{itemize}
+  \item $st$ ~--- thread state
+  \item $p$ ~--- our single-thead programm
+  \item $l$ ~--- label that denotes action on shared memory (can be with hole)
+  \item $cont\_st$ ~--- continuation of thread state (ie. function from \texttt{Val} to $thread\_state$). We clarify why we need continuation here a bit later
+\end{itemize}
+If we have some thread state $st$, we can identify $\lambda\, x,\, st$ (ie. constant continuation) with $st$ itself. Also by $f[r \leftarrow i]$ we will denote function that sends $r$ to $i$ and $r'$ to $f(r')$, for all $r' \neq r$
+
+\input{fig/thread_sem.tex}
+
+Every rule in \cref{fig:thread_sem} should be clear (see [TODO]), except the last one. Consider we want to read some local variable $x$ in some thread. Another threads can write something to this $x$ too, and it is possible to read from some of these writes. While building semantics of our whole programm we will have enough information to decide from wich write we can read. But for now let us consider that our side-effect is the label with the hole, and our result will be a continuation of a thread state (ie. some function $cont\_st : \texttt{Val} \to thread\_state$). 
+
+
+
