@@ -1,9 +1,5 @@
 \subsection{Register Machine and thread semantics}
 Now we are going to define language of simple register machine with shared memory.
-\newcommand{\ip}{\ffun{ip}}
-\newcommand{\regmap}{\ffun{regmap}}
-\newcommand{\la}{\langle}
-\newcommand{\ra}{\rangle}
 \[
 \begin{array}{rcll}
   \texttt{P} &::=& \texttt{ST}^* \\
@@ -11,7 +7,7 @@ Now we are going to define language of simple register machine with shared memor
   \texttt{I} & ::= & \texttt{Reg := Val} \\
                  & | & \texttt{Loc := Val} \\
                  & | & \texttt{Reg := Loc} \\
-                 & | & \texttt{CJmp Reg $\mathbb{N}$} \\
+                 & | & \texttt{CJmp Reg $\mathbb{N} \backslash \{0\}$} \\
   \texttt{Reg}            & ::= & r \, | \, r' \, | ... \\ 
   \texttt{Loc}            & ::= & x \, | \,y \,| ... \\ 
 \end{array}
@@ -25,13 +21,13 @@ Here \texttt{Reg} are registers (denoted as $r,r',...$) ~--- variables that shou
 We are interested at looking after shared memory, so in our event structures we have events that represent actions only at local variables. \\
 Next we define semantics of single thread program. Let's consider some single-thread program (\texttt{ST} in our notation) and define thread state:
 \begin{definition}[Thread State]
-  $$thread\_state \ \triangleq \ \langle \ffun{ip}, \ffun{regmap} \rangle,$$ where
+  $$thread\_state \ \triangleq \ \langle \ffun{ip}, \regmap \rangle,$$ where
   \begin{itemize}
     \item $\ffun{ip}$ ~--- our place in program (ie. line number) 
-    \item $\ffun{regmap}$ ~--- map from registers to values
+    \item $\regmap$ ~--- map from registers to values
   \end{itemize}
 \end{definition}
-If we have some $p : \texttt{ST}$, and some line number $\ffun{ip}$ we will denote by $p[\ffun{ip}]$ -- $\ffun{ip}$'s instuction of $p$. \\
+If we have some $p : \texttt{ST}$, and some line number $\ffun{ip}$ we will denote by $p[\ffun{ip}]$ -- $\ffun{ip}$'s instuction of $p$ (we start numeration from 1).  \\
 Then we define one-step semantics relation $st, p \xRightarrow{l} cont\_st$, where
 \begin{itemize}
   \item $st$ ~--- thread state

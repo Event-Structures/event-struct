@@ -1,6 +1,12 @@
 \begin{center}
   \begin{figure}[h]
       \begin{prooftree}
+        \AXC{$\ip = 0$}
+        \AXC{$l = \text{ThreadStart}$}
+        \RightLabel{\texttt{ThreadStart}}
+        \BIC{$ \la \ip, \regmap \ra \xRightarrow{\text{ThreadStart}} \la 1, \regmap \ra$}
+      \end{prooftree}
+      \begin{prooftree}
         \AXC{$p[\ffun{ip}] =\ r:= i$}
         \AXC{$l$ = \_}
         \RightLabel{\texttt{WriteReg}}

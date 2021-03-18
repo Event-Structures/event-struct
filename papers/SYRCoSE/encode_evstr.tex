@@ -3,14 +3,14 @@
 \subsection{How we encode Event Structures}
 % Как мы видели ранее в Step-by-step example наша стуркура событий содержит такие функции как frf fpred. Сами события это элементы некоторого множества E (множества итендификаторов), которое должно удволетворять следущим свойствам:
 \begin{definition}[identifier set]
-  $E$ is an identifier set if:
+  $\mathcal{E}$ is an identifier set if:
   \begin{itemize}
-    \item There is some $ident_0 \in E$ ~--- first identifier
-    \item $E$ has well-founded partitial order $\leqslant_E$
-    \item There is some function, that takes some identifier $e$ and returns next fresh identifier. Formally: $fresh : E \to E$, satisfies $$\forall e \in E, \ e <_E fresh(e)$$
+    \item There is some $ident_0 \in \mathcal{E}$ ~--- first identifier
+    \item $\mathcal{E}$ has well-founded partitial order $\leqslant_\mathcal{E}$
+    \item There is some function, that takes some finite identifies set $E \subset \mathcal{E}$ and returns a fresh identifier. Formally: $fresh : \mathcal{P}_{fin}(\mathcal{E}) \to \mathcal{E}$, satisfies $$\forall e \in E, \ e <_\mathcal{E} fresh(E)$$
   \end{itemize}
 \end{definition}
-% Так же у нас есть функция которая каждому итендификатору сопоставляет его метку
+% Пусть E это множества всех событий программы тогда у нас есть
   $$\ffun{lab} : E \rightharpoonup \lb $$
 % где label -- множество всех меток (таких как W(x, 5), R(y, 6), ThreadStart, ThreadEnd etc)
 % Мы будем говорить что е это "read"-event c локацией х и значением i если lab(e) = R(x,i), аналогично "write"-event
@@ -19,10 +19,10 @@
   $$exec\_event\_structure \ \triangleq \ \langle E, \ \ffun{lab}, \ \fpred, \ \frf \rangle$$
   where
   \begin{itemize}
-    \item $E$ ~--- identifiers set
+    \item $E$ ~--- finite subset of some identifiers set $\mathcal{E}$
     \item $\fpred$ ~--- function that returns a predsessor (w.r.t. the program order) of event
     \item $\frf$ ~--- function that takes "read"-event $e$ and returns a "write"-event from witch $e$ reads
-    \item $\ffun{lab}$ ~--- function that returns event's label
+    \item $\ffun{lab} : E \to \lb$ ~--- function that returns event's label
   \end{itemize}
   Also we require
   \begin{itemize}
