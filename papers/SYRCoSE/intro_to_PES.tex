@@ -1,0 +1,53 @@
+\subsection{Gentle introduction to Event Structures}
+
+Generally, event structures can model a process of computation. 
+There are many modifications of events structures from elementary to general, 
+and we are using prime event structures, since it is enough for us to model 
+concurrent programs. More precisely, they represent that process by a set of events 
+and relations between them: 
+\begin{definition}
+A prime event structure (PES) is a triple $(E, \leq, \#)$, where
+\begin{itemize}
+  \item E is a set of events
+  \item $\leq$ is a causality relation on E such that 
+  \begin{itemize}
+    \item $ (E, \leq) $ is a partial order
+    \item $\lceil e \rceil := \{ e' : e' < e \}$ is finite for every $e \in E$, 
+    i.e. every event is caused by a finite set of events
+  \end{itemize}
+  \item $\#$ is a conflict relation on $E$ such that
+  \begin{itemize}
+    \item $\#$ is irreflexive and symmetric
+    \item it satisfies a consistency predicate:
+    $$\forall e_1, e_2, e_3 \in E \ e_1 \# e_2 \land e_2 \leq e_3 \Rightarrow e_1 \# e_3.$$
+  \end{itemize}
+\end{itemize}
+\end{definition}
+
+Conflict relation is used to model conflicting events like two \texttt{write}'s 
+of different values to the same location.
+Consistency ensures that if some events are in conflict, then events 
+following these events are also in conflict.
+
+\begin{definition}
+A configuration of PES $(E, \leq, \#)$ is a subset $X \subseteq E$ such that
+\begin{itemize}
+  \item it is conflict-free
+  \item it is left-closed, i.e. $$\forall e_1, e_2 \in E \ e_2 \in X \land e_1 \leq e_2 \Rightarrow e_1 \in E.$$
+\end{itemize}
+\end{definition}
+
+Configurations are used to model a history of computation up to a certain 
+execution point.
+
+We formally proved the following simple facts about prime event structures:
+
+\begin{lemma}
+  A set $\lceil e \rceil$ is conflict-free for any $e \in E$.
+\end{lemma}
+
+And a more general one:
+
+\begin{lemma}
+  A set $\lceil e \rceil$ is a configuration for any $e \in E$.
+\end{lemma}
