@@ -1,0 +1,44 @@
+\subsection{Construction small-step semantics}
+Consider we have some Execution Event Structure $es = \la E, \ffun{lab}, \fpred, \frf \ra$, $pr \in E$ ~--- the $es$'s event and some fresh identifier $e = fresh(E)$. Let's define expansion $es$ with the event $e$ depending on its label:
+\begin{definition}[Add event]
+  \begin{itemize}
+    \item $es + \la \wlab{x}{i}, \ pr \ra \ \triangleq \vspace{1mm} \\ \ 
+    \la E \cup \{e\}, \
+        \ffun{lab}[e \leftarrow \wlab{x}{i}], \
+        \fpred[e \leftarrow pr], \
+        \frf \ra\ $
+        \vspace{1mm}
+    \item $es + \la \text{ThreadStart} \ra \ \triangleq \vspace{1mm} \\
+    \la E \cup \{e\}, \
+    \ffun{lab}[e \leftarrow \text{ThreadStart}], \
+    \fpred, \
+    \frf \ra\ $
+    \vspace{1mm}
+    \item $es + \la \rlab{x}{i}, \ pr, \ wr \ra \ \triangleq$
+    $$\la E \cup \{e\}, \
+    \ffun{lab}[e \leftarrow \rlab{x}{i}], \
+    \fpred[e \leftarrow pr], \
+    \frf[e \leftarrow wr] \ra\ $$
+  \end{itemize}
+\end{definition}
+Then we define programm configuration:
+\begin{definition}[configuration]
+  $$config \ \triangleq \ \la \es, \tmap \ra$$
+  where
+  \begin{itemize}
+    \item $\es$ ~--- our current consistent Execution Event Structure
+    \item $\tmap$ ~--- mapping from events in $\es$ to the pair of corresponding [TODO]
+  \end{itemize}
+\end{definition}
+
+By $\es.E$, $\es.\ffun{lab}$, $\es.fr$ we denote $E$, $\ffun{lab}$ and $fresh(E)$ respectively, where $\es = \la E, \ffun{lab}, \fpred, \frf \ra$. Also by $\es.tid$ we denote the smallest number of thread that wasn't started yet. \\
+If we have some $p : \texttt{P}$, and $t \in \mathbb{N}$ ~--- thread number, $p[t] :=$ $t$'s thread of programm $p$. 
+
+Also we will need 'can-read-from relation':
+\begin{definition}[Can-read-from relation]
+  If $l, l' \in \lb$ we can define
+  $$ l \ll l' \ \triangleq \ l = \rlab{x}{i} \ \text{and} \ l' = \wlab{x}{i}$$
+\end{definition}
+
+\input{fig/small_step.tex}
+[TODO: small step rules explanation]

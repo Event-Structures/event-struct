@@ -1,0 +1,36 @@
+\begin{figure}[h]
+  \begin{center}
+  \begin{prooftree}
+    \AXC{$\tmap(es.fr) = (st, t)$}
+    \AXC{$st, p[\es.tid] \xRightarrow{\text{ThreadStart}} st'$}
+    \BIC{$\la \es, \tmap \ra \rightarrow \la \es + \la \text{ThreadStart} \ra, \tmap[es.fr \leftarrow st'] \ra$}
+  \end{prooftree}
+  \begin{prooftree}
+    \AXC{$pr \in \es.E$}
+    \AXC{$\tmap(pr) = (st, t)$}
+    \AXC{$st, p[t] \xRightarrow{\_} st'$}
+    \TIC{$\la \es, \tmap \ra \rightarrow \la \es, \tmap[pr \leftarrow st'] \ra$}
+  \end{prooftree}
+  \begin{prooftree}
+    \AXC{$pr \in \es.E$}
+    \AXC{$\tmap(pr) = (st, t)$}
+    \AXC{$st, p[t] \xRightarrow{\wlab{x}{i}} st'$}
+    \TIC{$\la \es, \tmap \ra \rightarrow \la \es + \la \wlab{x}{i}, \ pr \ra, \tmap[\es.fr \leftarrow st] \ra$}
+  \end{prooftree}
+  \scriptsize
+  \begin{prooftree}
+    \AXC{$pr \in es.E \quad
+      \tmap(pr) = (st, t) \quad
+      st, p[t]\xRightarrow{\rlab{x}{\_}} st' \quad
+      \rlab{x}{i} \ll \es.\ffun{lab}(w)$}
+    \UIC{$\la \es, \tmap \ra \rightarrow \la \es + \la \rlab{x}{i}, \ pr, \ w \ra, \tmap[\es.fr \leftarrow st ]\ra$}
+  \end{prooftree}
+  \end{center}
+  where $w \in \es.E$ and $i \in \mathbb{N}$ \\
+  Finally
+  \begin{prooftree}
+    \AXC{$consistent (\es')$}
+    \AXC{$\la \es, \tmap \ra \to \la \es', \tmap' \ra$}
+    \BIC{$\la \es, \tmap \ra \Rightarrow \la \es', \tmap' \ra$}
+  \end{prooftree}
+  \end{figure}
