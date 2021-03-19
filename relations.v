@@ -1,6 +1,7 @@
 From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
-From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order.
+From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order choice.
+From mathcomp Require Import finmap fingraph fintype finfun ssrnat path.
 From Equations Require Import Equations.
 From event_struct Require Import utilities wftype.
 
@@ -189,3 +190,62 @@ Proof.
 Qed.
 
 End WfRTClosure.
+
+Section Acyclic.
+
+Open Scope fset_scope.
+
+Variables (T : choiceType) (f : {fsfun T -> seq T with [::]}).
+
+Notation F := (finsupp f `|` [fset t | k in finsupp f, t in f k]).
+Notation n := (#|`F|).
+
+Lemma memF {x y}: y \in f x -> y \in F.
+Proof.
+  case: (boolP (x \in finsupp f))=> [*|/fsfun_dflt->//].
+  rewrite in_fsetU; apply/orP; right; rewrite  -[y]/((fun=> id) x y).
+  exact/in_imfset2.
+Qed.
+
+Definition hack_f : F -> seq F := 
+  fun x => [seq [` memF (valP p)] | p <- seq_in (f (fsval x))].
+
+Fixpoint fdfs n v x :=
+  if x \in v then v else
+  if n is n'.+1 then foldl (fdfs n') (x :: v) (f x) else v.
+
+Lemma l (v : seq F) x: x \in v = (fsval x \in [seq fsval x | x <- v]).
+Proof.
+Admitted.
+
+Lemma fdfsE n v x: 
+  [seq fsval x | x <- dfs hack_f n v x] =i fdfs n [seq fsval x | x <- v] (fsval x).
+Proof.
+  elim n=> y //=; first by (do ?case: ifP).
+  (do ? case: ifP=> //)=> E; rewrite l ?E // => _.
+Admitted.
+
+Inductive fdfs_path x y : Prop :=
+  DfsPath p of path (sfrel f) x p & y = last x p.
+
+Lemma fdfsP x y: 
+  reflect (fdfs_path x y) (y \in fdfs #|`F| [::] x).
+Proof.
+  case L : (x \in F).
+  case L' : (y \in F).
+  - rewrite -[x]/(fsval [` L]) -[[::]]/([seq fsval x | x <- [::] : seq F]) -fdfsE.
+    - rewrite -[y]/(fsval [` L']) -l; apply/(equivP (dfs_pathP _ _ _ _))=> //.
+Admitted.
+
+Definition fsuffix x := fdfs (#|` F|) [::] x.
+
+Definition acyclic x := x \notin fsuffix x.
+
+Theorem acyclicP: 
+  reflect 
+  (forall x, ~ (clos_trans T (sfrel f) x x)) 
+  [forall x : F, acyclic (fsval x)].
+Admitted.
+
+End Acyclic.
+
