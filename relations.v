@@ -197,7 +197,7 @@ Open Scope fset_scope.
 
 Variables (T : choiceType) (f : {fsfun T -> seq T with [::]}).
 
-Notation F := (finsupp f `|` [fset t | k in finsupp f, t in f k]).
+Definition F := (finsupp f `|` [fset t | k in finsupp f, t in f k]).
 Notation n := (#|`F|).
 
 Lemma memF {x y}: y \in f x -> y \in F.
@@ -218,11 +218,14 @@ Lemma l (v : seq F) x: x \in v = (fsval x \in [seq fsval x | x <- v]).
 Proof.
 Admitted.
 
-Lemma fdfsE n v x: 
-  [seq fsval x | x <- dfs hack_f n v x] =i fdfs n [seq fsval x | x <- v] (fsval x).
+Lemma fdfsE n (v : seq F) (x : F) : 
+  [seq fsval x | x <- dfs hack_f n v x] =
+  fdfs n [seq fsval x | x <- v] (fsval x).
 Proof.
-  elim n=> y //=; first by (do ?case: ifP).
-  (do ? case: ifP=> //)=> E; rewrite l ?E // => _.
+  elim: n v x=> n IHn //=; first by (do ?case: ifP).
+  move=> v x.
+  (do ? case: ifP=> //)=> E; rewrite l ?E //.
+  Search foldr.
 Admitted.
 
 Inductive fdfs_path x y : Prop :=
