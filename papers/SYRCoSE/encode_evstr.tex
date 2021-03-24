@@ -103,9 +103,9 @@ We will say that the event structure is consistent if there are no reads from co
 \begin{definition}[consistent Execution Event Structure]
   $$consitent\langle E, \ffun{lab}, \fpred, \frf \rangle \ \triangleq \ \forall e \in E, \ \neg (e \ \# \ \frf e)$$
 \end{definition}
-It turns out that this is enough for the conflict relation to be irreflexive. (see \cref{fig:full})
+It turns out that this is enough for the conflict relation to be irreflexive. %(see \cref{fig:full})
 \begin{lemma}
   Let $E$ be a consistent Execution Event Structure (denote as $cexec\_event\_structure$). Then it's conflict relation $\#$ is irreflexive
 \end{lemma}
-\input{fig/encode_full.tex} 
+%\input{fig/encode_full.tex} 
 So, we see that from the consistent event structure one can get the Prime Event Structure
