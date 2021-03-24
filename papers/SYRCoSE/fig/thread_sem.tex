@@ -7,16 +7,16 @@
         \BIC{$ \la \ip, \regmap \ra \xRightarrow{\text{ThreadStart}} \la 1, \regmap \ra$}
       \end{prooftree}
       \begin{prooftree}
-        \AXC{$p[\ffun{ip}] =\ r:= i$}
+        \AXC{$p[\ip] =\ r:= i$}
         \AXC{$l$ = \_}
         \RightLabel{\texttt{WriteReg}}
-        \BIC{$\langle \ffun{ip}, \regmap \ra, p \xRightarrow{l} \langle \ip + 1, \ \regmap [r \leftarrow i] \rangle$}
+        \BIC{$\langle \ip, \regmap \ra, p \xRightarrow{l} \langle \ip + 1, \ \regmap [r \leftarrow i] \rangle$}
       \end{prooftree}
     \begin{prooftree}
-      \AXC{$p[\ffun{ip}] = \ x := i$}
+      \AXC{$p[\ip] = \ x := i$}
       \AXC{$l = \wlab{x}{i}$}
       \RightLabel{\texttt{WriteLoc}}
-      \BIC{$\langle \ffun{ip}, \regmap \ra, p \xRightarrow{l}
+      \BIC{$\langle \ip, \regmap \ra, p \xRightarrow{l}
       \la \ip + 1, \regmap \ra$}
     \end{prooftree}
     \begin{prooftree}

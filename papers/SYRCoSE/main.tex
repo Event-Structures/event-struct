@@ -273,7 +273,7 @@
 % http://www.ctan.org/pkg/fixltx2e
 
 
-%\usepackage{stfloats}
+\usepackage{stfloats}
 % stfloats.sty was written by Sigitas Tolusis. This package gives LaTeX2e
 % the ability to do double column floats at the bottom of the page as well
 % as the top. (e.g., "\begin{figure*}[!b]" is not normally possible in
@@ -329,11 +329,15 @@
 \usepackage{amsmath}
 \usepackage{mathtools}
 \usepackage{cleveref}% http://ctan.org/pkg/cleveref
+\usepackage{graphicx}% http://ctan.org/pkg/graphicx
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
 
 \definecolor{grn}{rgb}{0, 0.5, 0}
 \definecolor{gr}{rgb}{0.3, 0.3, 0.3}
+\definecolor{orange}{rgb}{0.9, 0.4, 0.4}
+\definecolor{bl}{rgb}{0, 0, 0.6}
+\definecolor{br}{rgb}{0.6, 0.3, 0.3}
 
 \newtheorem{definition}{Definition}
 \newtheorem{lemma}{Lemma}
@@ -342,12 +346,14 @@
 \newcommand{\frf}{\ffun{\textcolor{grn}{frf}}}
 \newcommand{\fpred}{\ffun{\textcolor{gr}{fpred}}}
 \newcommand{\lb}{\ffun{label}}
-\newcommand{\ip}{\ffun{ip}}
-\newcommand{\regmap}{\ffun{rmap}}
+\newcommand{\ip}{\ffun{\textcolor{gr}{ip}}}
+\newcommand{\regmap}{\ffun{\textcolor{bl}{rmap}}}
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
-\newcommand{\es}{\ffun{es}}
-\newcommand{\tmap}{\ffun{tmap}}
+\newcommand{\es}{\ffun{\textcolor{orange}{es}}}
+\newcommand{\tmap}{\ffun{\textcolor{bl}{tmap}}}
+\newcommand{\st}{\ffun{\textcolor{br}{st}}}
+\newcommand{\cst}{\ffun{\textcolor{br}{cont\_st}}}
 
 \begin{document}
 \EnableBpAbbreviations

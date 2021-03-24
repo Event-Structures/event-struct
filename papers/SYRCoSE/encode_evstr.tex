@@ -1,20 +1,24 @@
 \section{Implementation}
 
 \subsection{How we encode Event Structures}
-% Как мы видели ранее в Step-by-step example наша стуркура событий содержит такие функции как frf fpred. Сами события это элементы некоторого множества E (множества итендификаторов), которое должно удволетворять следущим свойствам:
+As we saw earlier in Step by Step Example, our event structure contains functions such as $\frf$ and $\fpred$. The events themselves are elements of some set $\mathcal{E}$ (set of identifiers), which must satisfy the following properties
 \begin{definition}[identifier set]
   $\mathcal{E}$ is an identifier set if:
   \begin{itemize}
     \item There is some $ident_0 \in \mathcal{E}$ ~--- first identifier
     \item $\mathcal{E}$ has well-founded partitial order $\leqslant_\mathcal{E}$
-    \item There is some function, that takes some finite identifies set $E \subset \mathcal{E}$ and returns a fresh identifier. Formally: $fresh : \mathcal{P}_{fin}(\mathcal{E}) \to \mathcal{E}$, satisfies $$\forall e \in E, \ e <_\mathcal{E} fresh(E)$$
+    \item There is a function, that takes some finite $E \subset \mathcal{E}$ and returns a fresh identifier. Formally: $fresh : \mathcal{P}_{fin}(\mathcal{E}) \to \mathcal{E}$, satisfies $$\forall e \in E, \ e <_\mathcal{E} fresh(E)$$
   \end{itemize}
 \end{definition}
-% Пусть E это множества всех событий программы тогда у нас есть
-  $$\ffun{lab} : E \rightharpoonup \lb $$
-% где label -- множество всех меток (таких как W(x, 5), R(y, 6), ThreadStart, ThreadEnd etc)
-% Мы будем говорить что е это "read"-event c локацией х и значением i если lab(e) = R(x,i), аналогично "write"-event
-% В итоге формально мы строим четверку
+We can fix any $\mathcal{E}$ (for example $\mathbb{N}$) and theat programm's events as a finite subset of $\mathcal{E}$
+
+Let $E$ be the set of all program events, then we have
+  $$\ffun{lab} : E \to \lb $$
+where $\lb$ is the label's set (such that $\wlab{x}{5}, \rlab{y}{6}$ ThreadStart, etc.)
+
+We will say that $e$ is a "read" -event with location x and value i if $\ffun{lab}(e) = \rlab{x}{i}$, similarly to "write" -event
+
+As a result, we formally build a four
 \begin{definition}[Execution Event Structure]
   $$exec\_event\_structure \ \triangleq \ \langle E, \ \ffun{lab}, \ \fpred, \ \frf \rangle$$
   where
@@ -30,60 +34,78 @@
     \item $\forall e_1 \ e_2 \in E, \ e_2 = \frf(e_1) \ \Leftrightarrow \ e_1$ is a "read"-event and $e_2$ is a "write"-event with the same location and value
   \end{itemize}
 \end{definition}
-  
-% Далее для простоты будем отождествлять иденфикаторы с их метками, а Execution Event Structure с их множеством итендификаторов
+Further, for simplicity, we will identify identifiers with their labels, and Execution Event Structure with their set of identifiers
 
-% Теперь наша задача: определить в этих терминах простые структуры событий. Для этого надо определить частичный порядок <= и отношение конфликта #
-% Начнем с отношения causality. В нашей статье мы будем считать, что событие e1 влечет событие e2 если 
+Now our goal is to define a prime event structures in these terms. To do this, one need to come up with a causality relation $\leqslant$ and a conflict relation $\#$
+
+Let's start with the causality. In our article, we will assume that the event $e_1$ entails the event $e_2$ if
 \begin{itemize}
   \item Programm instruction, that corresponds to event $e_1$ states before the programm instruction, that corresponds to $e_2$
   \item Or $\ e_2$ is the "read"-event and it reads from "write"-event $e_1$
 \end{itemize}
-% Или формально:
+Or formally:
 \begin{itemize}
-  \item $\fpred(e_1) \ =\ e_2$
-  \item Or $\ \frf(e_1) \ =\ e_2$
+  \item $\fpred(e_2) \ =\ e_1$
+  \item Or $\ \frf(e_2) \ =\ e_1$
 \end{itemize}
-% Любую функцию f можно считать отношением
-  $$ a \ f \ b \ \triangleq\ f(a) \ = \ b$$
-% Имея ввиду обозначение выше определим
+Any function $f$ can be treated as a relation
+  $$ a \ f \ b \ \triangleq\ f(b) \ = \ a$$
+With the notation above, we define
+
+\begin{center}
 \begin{definition}[causality relation]
   $$\leqslant \ \triangleq \ (\fpred \cup \frf)^* $$
 \end{definition}
-% Заметим, что в множестве E уже есть тотальный порядок $\leqslant_E$. Нетрудно видеть что полученнле отношение casuality является его предпорядком [смотри Well-foundedness and monads]
+\end{center}
+
+Note that the set $E \subset \mathcal{E}$ already contains the total order $ \leqslant_\mathcal{E} $. One can note that the resulting casuality relation is its suborder [TODO:see Well-foundedness and monads]
+
+\begin{center}
 \begin{lemma}
-  If $\leqslant$ is a casuality order of $E$ then $\leqslant \ \subset \ \leqslant_E$
+  If $\leqslant$ is a casuality order of $E \subset \mathcal{E}$ then $\leqslant \ \subset \ \leqslant_\mathcal{E}$
 \end{lemma}
-% Теперь давайте определим отношение конфликта. Посмотрев на отношение конфликта в определении СС [ссылка], мы можем установить следущий факт
+\end{center}
+
+Now let's define a conflict relation. Looking at the conflict relation in \cref{es_def}, we can establish the following fact:
+\begin{center}
 \begin{lemma}\label{lma_confl}
   If $\ e_1 \leqslant e_2, \ e_3 \leqslant e_4$ and $e_1 \# e_3$ holds then $e_2 \# e_4$
 \end{lemma} 
-% То есть отношение конфликта должно "протаскиваться" через отношение <=. Наша интуиция будет заключаться в том, что мы определим "минимальное" отношение конфликта, замкнув, котрое по свойству консистентности [ссылка] мы получим полное отношение #. 
-% И так откуда берутся конфликты? [тут должен был заход через Step-by-step example]. 
-% И так мы видим, что если у событий есть общий предок (относительно отношения fpred) то эти события происходят в двух разных выполнениях программы и, соответвенно находятся в отношении конфликта
+\end{center}
+That is, the conflict relation must be "dragged" through the $\leqslant$ relation. Our intuition will be as follows: we, first, define a "minimal" conflict relation, by closing which under the consistency property (\cref{lma_confl}), we finally get a full relation $\#$. 
+
+So where do conflicts come from?
+
+From the step-by-step example, we see that if events have a common predsessor (w.r.t. the $\fpred$ relation), then they occur in two different program executions and, accordingly, are conflicting
 \begin{definition}[immediate conflict relation]
   $$ e_1 \, \ffun{icf} \, e_2 \ \triangleq\ \exists e, \, e = \fpred(e_1) = \fpred(e_2)  $$
 \end{definition}
-% Далее можно определить отношение конфликта как консистентное замыкание icf
+Next, one can define the conflict relation as a consistent closure of $\ffun{icf}$
 \begin{definition}[conflict relation]
   $$ e_1 \, \# \, e_2 \ \triangleq\ \exists e_3\, e_4, e_3 \, \ffun{icf} \, e_4 \ and \ e_3 \leqslant e_1, \, e_4 \leqslant e_2 $$
 \end{definition}
-% Однако с этим определением возникает одна проблема. Понятно что отношение определенное таким образом получается симметричным и консистентным. Будет ли оно иррефлексивность? Оказывается, что в общем случае нет. Рассмотрим следущую программу:
+However, there is one problem with such definition. It is clear that the relation defined in this way turns out to be symmetric and consistent. Will it be irreflexive? It turns out that in the general case, no. Consider the following program:
 \input{fig/encode_prog.tex}
-% Давайте как в Step-by-step example построим по шагам фрагмент соответвующей этой программе exec_event_structure до чтения из y
+
+Let's build, as in the Step-by-step example, a fragment of $exec\_event\_structure$ corresponding to this program before reading from $y$
 \input{fig/encode_part.tex}
-% Видно что наша программа в первом потоку разделилась на два независимых выполнения: выполнение в котором мы прочитали из x 1 (обозначим за выболнение (а)) и выполненние в котором прочитали из х 2 (выполнение (b))
-%Теперь мы хотим добавить в нашу структуру событий чтение в y. посмотрим что будет если прочитать при выполнении (а) в у 2 (то есть запись из (b))
+
+One can observe, that our program in the first thread was divided into two independent executions: execution, in which we read from $x$ value 1 (denote by execution (a)) and execution, in which we read from $x$ 2 (execution (b)).
+
+Now we want to add a read-from-$y$ event to our event structure. Let's see what is going to happen if we will add "read"-event, reading from $\wlab{y}{2}$ (see \cref{fig:cf}).
 \input{fig/encode_cf.tex}
+
 We have $\rlab{x}{1} \leqslant \rlab{y}{2}$, $ \rlab{x}{2} \leqslant \rlab{y}{2}$ and $\rlab{x}{1} \ \# \ \rlab{x}{2}$. Thus $\rlab{y}{2} \ \# \ \rlab{y}{2}$ holds (see~\cref{lma_confl})
-% Но отношение конфликта должно быть иррефлексивным. Заметим, однако, что (a) и (b) не могут произойти при одном исполнении программы, а значит и чтения R(y,2) из W(y,2) тут быть не должно, полная структура событий тут должна выглядеть так:
-\input{fig/encode_full.tex} \\
-% Будем говорить, что сткуктура собырий консистентна если там нет чтений из конфликтующийх с ними записей. Формально
+
+To deal with this program, we need to impose a constraint on the event structure.
+
+We will say that the event structure is consistent if there are no reads from conflicting writes. Formally:
 \begin{definition}[consistent Execution Event Structure]
   $$consitent\langle E, \ffun{lab}, \fpred, \frf \rangle \ \triangleq \ \forall e \in E, \ \neg (e \ \# \ \frf e)$$
 \end{definition}
-% Оказывается этого достатчно чтоб отношение конфликта было иррефлексивным
+It turns out that this is enough for the conflict relation to be irreflexive. (see \cref{fig:full})
 \begin{lemma}
   Let $E$ be a consistent Execution Event Structure (denote as $cexec\_event\_structure$). Then it's conflict relation $\#$ is irreflexive
 \end{lemma}
-% Получается что из консистентной exevstr можно получить ПCC
+\input{fig/encode_full.tex} 
+So, we see that from the consistent event structure one can get the Prime Event Structure
