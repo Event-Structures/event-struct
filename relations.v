@@ -42,6 +42,8 @@ Local Open Scope ra_terms.
 Definition sfrel {T : eqType} (f : T -> seq T) : rel T :=
   [rel a b | a \in f b].
 
+
+
 Section Strictify.
 
 Context {T : eqType}.
@@ -62,6 +64,8 @@ Lemma strictify_leq f :
 Proof. by rewrite strictify_weq; lattice. Qed.
 
 End Strictify. 
+
+Module WfClosure.
 
 Section WfRTClosure.
 
@@ -320,15 +324,22 @@ Proof.
   exact/fdfsE.
 Qed.
 
-Definition fsuffix x := fdfs (#|` F|) [::] x.
+Definition wsuffix x := fdfs n [::] x.
 
-Definition acyclic x := x \notin fsuffix x.
+Definition rt_closure : rel T := 
+  fun x y => x \in wsuffix y.
 
-Theorem acyclicP: 
-  reflect 
-  (forall x, ~ (clos_trans T (sfrel f) x x)) 
-  [forall x : F, acyclic (fsval x)].
-Admitted.
+Lemma t_closure_n1P x y : 
+  reflect (clos_refl_trans_n1 T (sfrel f) x y) (rt_closure x y).
+Proof.
+  apply/(equivP (fdfsP y x)); split=> [[p]|].
+  - elim: p x y=> //= [>_->|]; first by constructor.
+    move=> a > IHp > /andP[? /IHp /[apply] ?]; exact/(rtn1_trans _ _ _ a).
+  elim=> [|z ??? [p *]]; first exact/(FDfsPath _ [::]).
+  apply/(FDfsPath _ (z :: p))=> //; exact/andP.
+Qed.
 
-End Acyclic.
+End FinRTClosure.
+
+End FinClosure.
 

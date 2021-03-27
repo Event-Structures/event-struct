@@ -38,7 +38,7 @@ From event_struct Require Import utilities relations wftype ident.
 
 Import Order.LTheory.
 Open Scope order_scope.
-
+Import WfClosure.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
