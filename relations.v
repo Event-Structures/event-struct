@@ -191,14 +191,18 @@ Qed.
 
 End WfRTClosure.
 
-Section Acyclic.
+End WfClosure.
+
+Module FinClosure.
+
+Section FinRTClosure.
 
 Open Scope fset_scope.
 
 Variables (T : choiceType) (f : {fsfun T -> seq T with [::]}).
 
 Definition F := (finsupp f `|` [fset t | k in finsupp f, t in f k]).
-Notation n := (#|`F|).
+Notation n := (#|`F|.+1).
 
 Lemma memF {x y}: y \in f x -> y \in F.
 Proof.
@@ -214,31 +218,107 @@ Fixpoint fdfs n v x :=
   if x \in v then v else
   if n is n'.+1 then foldl (fdfs n') (x :: v) (f x) else v.
 
-Lemma l (v : seq F) x: x \in v = (fsval x \in [seq fsval x | x <- v]).
-Proof.
-Admitted.
+Definition equiv (x : T) (y : F) := x == fsval y.
 
-Lemma fdfsE n (v : seq F) (x : F) : 
-  [seq fsval x | x <- dfs hack_f n v x] =
-  fdfs n [seq fsval x | x <- v] (fsval x).
+Definition equivs (xs : seq T) (ys : seq F) := 
+  all2 equiv xs ys.
+
+Lemma equivsP xs {ys} : 
+  reflect (xs = [seq fsval y | y <- ys]) (equivs xs ys).
 Proof.
-  elim: n v x=> n IHn //=; first by (do ?case: ifP).
-  move=> v x.
-  (do ? case: ifP=> //)=> E; rewrite l ?E //.
-  Search foldr.
-Admitted.
+  apply/(iffP idP)=> [|->]. 
+  - by elim: xs ys=> [[]//|?? IHxs []//= ?? /andP[/eqP -> /IHxs->]]. 
+  elim: ys=> //= ?? ->; by rewrite /equiv eq_refl.
+Qed.
+
+Lemma equivs_mem {v v' x}: equivs v v' -> (fsval x) \in v = (x \in v').
+Proof.
+  elim: v v'=> [[]//|?? IHv []//= ? l /andP[+ /IHv]].
+  rewrite ?inE=> /eqP->->; by rewrite val_eqE.
+Qed.
+
+Lemma equivs_hack_f x: equivs (f (fsval x)) (hack_f x).
+Proof.
+  by apply/equivsP; rewrite -map_comp -{1}(val_seq_in (f _)) -eq_in_map.
+Qed.
+
+Lemma path_memF {x p y}: 
+  path (fun x : T => (sfrel f)^~ x) x p ->
+  y \in p -> y \in F.
+Proof.
+  elim: p x=> //= ?? IHp ? /andP[/memF ? /IHp ?]. 
+  by rewrite inE=> /orP[/eqP->|].
+Qed.
+
+Lemma fdfsE {v v' n} {x : F} :
+  equivs v v' ->
+  equivs (fdfs n v (fsval x)) (dfs hack_f n v' x).
+Proof.
+  elim: n v v' x=> n IHn v v' //=; first by (do ?case: ifP).
+  move=> x E; rewrite (@equivs_mem v v') // /hack_f; case: ifP=> // ?.
+  apply/(rfoldl equivs equiv); first by rewrite /= /equiv eq_refl. 
+  - move=> ????? /eqP ->; exact/IHn.
+  exact/equivs_hack_f.
+Qed.
 
 Inductive fdfs_path x y : Prop :=
-  DfsPath p of path (sfrel f) x p & y = last x p.
+  FDfsPath p of path (fun x => sfrel f ^~ x) x p & y = last x p.
+
+Lemma fdfs_dom_Nmem x y n: x \notin F -> y \in F ->
+  y \notin fdfs n [::] x.
+Proof.
+  move=>/[dup] I + I'.
+  rewrite in_fsetU negb_or => /andP[/fsfun_dflt]; case: n=> //= ? ->/= _.
+  by rewrite ?inE; apply/negP=> /eqP E; rewrite E in I'; move/negbTE: I I'=>->.
+Qed.
+
+Lemma NmemF x: x \notin F ->
+  fdfs n [::] x = [:: x].
+Proof. by rewrite /= ?inE negb_or memNfinsupp=> /andP[/eqP->]. Qed.
+
+Lemma fdfs_codom_Nmem x y n: x \in F -> y \notin F ->
+  y \notin fdfs n [::] x.
+Proof.
+  move=> L; move/(_ erefl)/equivsP: (@fdfsE [::] [::] n [`L]).
+  rewrite -[x]/(fsval [` L])=> -> H; apply/negP=> /mapP=> [[[/=? I _ E]]].
+  by rewrite -E (negbTE H) in I.
+Qed.
 
 Lemma fdfsP x y: 
-  reflect (fdfs_path x y) (y \in fdfs #|`F| [::] x).
+  reflect (fdfs_path x y) (y \in fdfs n [::] x).
 Proof.
-  case L : (x \in F).
-  case L' : (y \in F).
-  - rewrite -[x]/(fsval [` L]) -[[::]]/([seq fsval x | x <- [::] : seq F]) -fdfsE.
-    - rewrite -[y]/(fsval [` L']) -l; apply/(equivP (dfs_pathP _ _ _ _))=> //.
-Admitted.
+  case L : (x \in F); first last.
+  - rewrite NmemF; last exact/negbT; rewrite ?inE.
+    apply/(equivP eqP); split=> [->|[[]//=]]; first exact/(FDfsPath _ [::]).
+    move=> ??; rewrite /sfrel /=; move/negbT: L.
+    rewrite in_fsetU negb_or=> /andP[/fsfun_dflt]->; by rewrite ?inE.
+  case L' : (y \in F); first last.
+  - rewrite (negbTE (fdfs_codom_Nmem _ _ _ _ _))//; last exact/negbT.
+    constructor=> [[]]; elim/last_ind=> //= [? E|]; first by rewrite E L in L'.
+    move=>> ?; rewrite last_rcons rcons_path=> /andP[_ /[swap]<-] /memF.
+    by rewrite L'.
+  rewrite -[y]/(fsval [`L']) (@equivs_mem _ (dfs hack_f n [::] [`L])).
+  apply/(equivP (dfs_pathP _ _ _ _))=> //=.
+  - by rewrite cardfE card0 add0n leqnSn.
+  - split=> [][] p P l.
+    - move=> _; apply/(FDfsPath _ [seq val x | x <- p]).
+      - rewrite (rpath equiv (grel hack_f) [`L] p) /equiv //= /sfrel /=.
+        - move=>> /eqP->/eqP->; exact/equivs_mem/equivs_hack_f.
+        exact/equivsP.
+      elim/last_ind: p P l=> //= [_ []|????]//.
+      by rewrite map_rcons ?last_rcons=> <-.
+    apply/(@DfsPath _ _ _ _ _ [seq [`path_memF P (valP z)] | z <- seq_in p]).
+    - rewrite -(rpath equiv _ _ _ (fun x=> (sfrel f)^~ x) p x)/equiv=> //.
+      - move=>>/eqP->/eqP->; exact/equivs_mem/equivs_hack_f.
+      by apply/equivsP; rewrite -map_comp -{1}(val_seq_in p) -eq_in_map.
+    - elim/last_ind: p l P=> //= [? _|]; first exact/val_inj.
+      move=> ? z? +*; rewrite seq_inE last_rcons -{12}cats1 pmap_cat map_cat.
+      move=> /=; case: insubP=> /=.
+      - move=> [??]; rewrite cats1 last_rcons /==> ? {1}<- *; exact/val_inj.
+      rewrite mem_rcons inE eq_refl //.
+    by rewrite disjoint_sym disjoint0.
+  exact/fdfsE.
+Qed.
 
 Definition fsuffix x := fdfs (#|` F|) [::] x.
 
