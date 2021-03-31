@@ -266,7 +266,7 @@ Proof.
 Qed.
 
 Inductive fdfs_path x y : Prop :=
-  FDfsPath p of path (fun x => sfrel f ^~ x) x p & y = last x p.
+  FDfsPath p of path (fun a => sfrel f ^~ a) x p & y = last x p.
 
 Lemma fdfs_dom_Nmem x y n: x \notin F -> y \in F ->
   y \notin fdfs n [::] x.
