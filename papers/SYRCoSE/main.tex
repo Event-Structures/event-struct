@@ -322,6 +322,7 @@
 \usetikzlibrary{fit,backgrounds,positioning,calc,patterns,snakes} % <- added
 
 \input{defs.tex}
+
 \usepackage{amssymb}
 \usepackage{hyperref}% http://ctan.org/pkg/hyperref
 \usepackage{array}
@@ -330,6 +331,9 @@
 \usepackage{mathtools}
 \usepackage{cleveref}% http://ctan.org/pkg/cleveref
 \usepackage{graphicx}% http://ctan.org/pkg/graphicx
+\usepackage{extarrows}
+% \usepackage{float}
+
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
 
@@ -346,8 +350,6 @@
 \newcommand{\frf}{\ffun{\textcolor{grn}{frf}}}
 \newcommand{\fpred}{\ffun{\textcolor{gr}{fpred}}}
 \newcommand{\lb}{\ffun{label}}
-\newcommand{\ip}{\ffun{\textcolor{gr}{ip}}}
-\newcommand{\regmap}{\ffun{\textcolor{bl}{rmap}}}
 \newcommand{\la}{\langle}
 \newcommand{\ra}{\rangle}
 \newcommand{\es}{\ffun{\textcolor{orange}{es}}}
@@ -402,13 +404,7 @@ In this article, we mechanized general the theory of prime event structures with
 
 \subsection{Filtration by Memory Model predicate}
 
-\input{encode_evstr.tex}
-
-\input{wellfounded.tex}
-
-\input{regmachine.tex}
-
-\input{small_step.tex}
+\input{casestudy.tex}
 
 \section{Future work}
 

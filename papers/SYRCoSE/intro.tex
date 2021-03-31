@@ -19,9 +19,8 @@ For example, consider the following code snippet.
 Under the interleaving semantics 
 it has $3! = 6$ traces with each trace consisting of $4$ events,
 as depicted on \cref{fig:intro-traces}.
-Event themselves represent atomic side-effects 
-of instructions' execution. In our case 
-it is either a write of a value to a shared variable $\wlab{x}{a}$,
+Event themselves represent atomic side-effects produced by the execution of instruction. 
+In our case it is either a write of a value to a shared variable $\wlab{x}{a}$,
 or a read of a particular value from a shared variable $\rlab{x}{a}$.  
 
 \input{fig/intro-traces.tex}

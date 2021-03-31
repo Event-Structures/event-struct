@@ -1,51 +1,79 @@
-\subsection{Register Machine and thread semantics}
-Now we are going to define language of simple register machine with shared memory.
+\subsection{Register Machine}
+
+For our case study we use a simple idealized model 
+of a register machine, which consists of a finite 
+sequence of instructions, an instruction pointer 
+and an infinite set of registers. 
+The syntax of the machine's language is 
+shown on~\cref{fig:regmachine-syntax}.
+
+\begin{figure}[h!]
 \[
-\begin{array}{rcll}
-  \texttt{P} &::=& \texttt{ST}^* \\
-  \texttt{ST} & ::= & \texttt{I}^* \\
-  \texttt{I} & ::= & \texttt{Reg := Val} \\
-                 & | & \texttt{Loc := Val} \\
-                 & | & \texttt{Reg := Loc} \\
-                 & | & \texttt{CJmp Reg $\mathbb{N} \backslash \{0\}$} \\
-  \texttt{Reg}            & ::= & r \, | \, r' \, | ... \\ 
-  \texttt{Loc}            & ::= & x \, | \,y \,| ... \\ 
+\begin{array}{rclclll}
+  P &\in& \Prog   &::=& i_1 \seq \dots \seq i_n           & \text{program}                 \\
+
+  I &\in& \Inst     &::=&                                 & \text{instruction}             \\
+              & &   & | & \assignInst{r}{v}               & \text{assign to register}      \\
+              & &   & | & \opInst{\otimes}{r_1}{r_2}{r_3}  & \text{apply binary operation}  \\
+              & &   & | & \jumpInst{r}{\ip{i}}            & \text{conditional jump}        \\
+              & &   & | & \readInst{r}{x}                 & \text{read from memory}        \\
+              & &   & | & \writeInst{x}{v}                & \text{write to memory}         \\
+
+  r      &\in& \Reg &   &                                & \text{thread-local register}   \\ 
+  x      &\in& \Loc &   &                                & \text{shared memory location}  \\ 
+  v      &\in& \Z   &   &                                & \text{value}                   \\
+  \ip{i} &\in& \N   &   &                                & \text{instruction label}       \\ 
+
 \end{array}
-\] where
-\begin{itemize}
-  \item \texttt{P} -- program is a sequence of single thread progams
-  \item \texttt{ST} -- single thread program is a sequence of instructions
-  \item \texttt{I} -- instruction can be 
-  \begin{itemize}
-    \item \texttt{Reg := Val} -- writing some value to the register
-    \item \texttt{Reg := Loc} -- reading a value from the shared-memory-location and writing it to the register
-    \item \texttt{Loc := Val} -- writing some value to the shared-memory-location
-    \item CJmp Reg $\mathbb{N} \backslash \{0\}$ -- conditional jump
-  \end{itemize}
-\end{itemize}
-Here \texttt{Reg} are registers (denoted as $r,r',...$) ~--- variables that should be different for different single thread progams. In contrast \texttt{Loc} are local variables (denoted as $x,y,...$) ~--- this is our shared (between different threads) memory. Also \texttt{Val} is the type of values (denoted as $i,j,...$) in our program, for simplicity let it be $\mathbb{N}$ or $\mathbb{Z}$. \\
-We are interested at looking after shared memory, so in our event structures we have events that represent actions only at local variables. \\
-Next we define the semantics of a single thread program. Let's consider some single-thread program (\texttt{ST} in our notation) and define a thread state:
-\begin{definition}[Thread State]
-  $$thread\_state \ \triangleq \ \langle \ip, \regmap \rangle,$$ where
-  \begin{itemize}
-    \item $\ip$ ~--- our place in program (ie. line number) 
-    \item $\regmap$ ~--- map from registers to values
-  \end{itemize}
-\end{definition}
-If we have some $p : \texttt{ST}$, and some line number $\ip$ we will denote by $p[\ip]$ -- $\ip$'s instuction of $p$ (we start numeration from 1).  \\
-Then we define one-step semantics relation $\st, p \xRightarrow{l} \cst$, where
-\begin{itemize}
-  \item $\st$ ~--- thread state
-  \item $p$ ~--- our single-thead programm
-  \item $l$ ~--- label that denotes action on shared memory (can be with hole)
-  \item $\cst$ ~--- continuation of thread state (ie. function from \texttt{Val} to $thread\_state$). We clarify why we need continuation here a bit later
-\end{itemize}
-If we have some thread state $\st$, we can identify $\lambda\, x,\, \st$ (ie. constant continuation) with $\st$ itself. Also by $f[r \leftarrow i]$ we will denote function that sends $r$ to $i$ and $r'$ to $f(r')$, for all $r' \neq r$
+\] 
+\caption{Syntax of the register machine}
+\label{fig:regmachine-syntax}
+\end{figure}
 
-\input{fig/thread_sem.tex}
+We first present the semantics of a single thread program.
+In this semantics memory access instructions 
+does not actually operate on shared memory,
+but rather produce a \emph{label}
+denoting the side-effect of the operation 
+(see \cref{fig:label-syntax}).
+This encoding allows us to decouple 
+the semantics of the register machine 
+from a \emph{memory model}~\cite{\todo{}}. 
 
-Every rule in \cref{fig:thread_sem} should be clear (see [TODO]), except maybe the last one. Consider we want to read some local variable $x$ in some thread. Another threads can write something to this $x$ too, and it is possible to read from some of these writes. While building semantics of our whole programm we will have enough information to decide from wich write we can read. But for now let us assume that our side-effect is the label with the hole, and our result is a continuation of a thread state (ie. some function $\cst : \texttt{Val} \to thread\_state$). 
+\begin{figure}[h!]
+\[
+\begin{array}{rclclll}
 
+  \ell &\in& \Lab  &::=&                                & \text{}             \\
+              & &  & | & \rlab{x}{v}                    & \text{read of value $v$ from location $x$}   \\
+              & &  & | & \wlab{x}{v}                    & \text{write of value $v$ to location $x$}    \\
 
+\end{array}
+\] 
+\caption{Syntax of Labels}
+\label{fig:label-syntax}
+\end{figure}
 
+The semantics is given in a form of 
+\emph{labeled transition system}~\cite{\todo{}}.
+State of the system consists of instruction pointer
+and a map from registers to their values, 
+as shown in \cref{fig:regmachine-thrdstate}. 
+The rules of the semantics are standard 
+(see \cref{fig:regmachine-thrdsem}).
+
+\begin{figure}[h!]
+\[
+\begin{array}{rclclll}
+
+  s          &\in& \ThrdState    &::=& \tup{\ip{i}, \regmap} &                         \\
+  \ip{i}     &\in& \N            &   &                    & \text{instruction pointer} \\
+  \regmap    &\in& \Reg \fun \Z  &   &                    & \text{registers mapping}   \\
+
+\end{array}
+\] 
+\caption{Thread state of register machine}
+\label{fig:regmachine-thrdstate}
+\end{figure}
+
+\input{fig/regmachine-thrdsem.tex}

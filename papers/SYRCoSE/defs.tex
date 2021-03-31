@@ -1,29 +1,6 @@
+%% for proof trees
 \newcommand{\rulehskip}{\hskip 1.5em}
 \newcommand{\rulevspace}{\vspace{1em}}
-
-\newcommand{\pvfill}{\pause\vfill}
-
-% \mathchardef\mhyphen="2D
-
-%\theoremstyle{definition}
-
-% \newtheorem{definition}{Definition}
-% \newtheorem{theorem}{Theorem}
-% \newtheorem{lemma}{Lemma}
-% \newtheorem{prop}{Proposition}
-
-%% \counterwithin{lemma}{section}
-
-\newcommand{\textdef}[1]{\textit{#1}}
-
-\newcommand{\Promising}{{\textrm{Promising}}~}
-\newcommand{\CMM}{{\textrm{C11}}~}
-\newcommand{\Wkmo}{{\textrm{Weakestmo}}~}
-\newcommand{\IMM}{{\textrm{IMM}}~}
-\newcommand{\IMMSC}{{\textrm{IMM$_{\textrm{SC}}$}}~}
-
-% inline code 
-\newcommand{\code}[1]{\texttt{#1}}
 
 % tuple with angle brackets
 \newcommand{\tup}[1]{\langle #1 \rangle}
@@ -40,26 +17,27 @@
 % partial function arrow
 \newcommand{\pfun}{\rightharpoonup}
 
+% sequential composition
+\newcommand{\seq}{;}
+
+% epsilon/empty 
+\newcommand{\eps}{\epsilon}
+
 % some math sets
 \newcommand{\N}{{\mathbb{N}}}
+\newcommand{\Z}{{\mathbb{Z}}}
 \newcommand{\Q}{{\mathbb{Q}}}
 
 % domain/codomain notation
 \newcommand{\dom}[1]{\textit{dom}{({#1})}}
 \newcommand{\codom}[1]{\textit{codom}{({#1})}}
 
-\newcommand{\lca}{\textit{lca}}
-
-% some logical notation
 %\newcommand{\implies}{{\Rightarrow}}
 %\newcommand{\iff}{{\Leftrightarrow}}
 
 % check-mark and cross-mark
-\colorlet{colorGood}{green!50!black}
-\colorlet{colorBad}{red!50!black}
-
-\newcommand{\cmark}{\text{\color{colorGood}\ding{51}}}
-\newcommand{\xmark}{\text{\color{colorBad}\ding{55}}}
+\newcommand{\cmark}{\text{\color{green!50!black}\ding{51}}}
+\newcommand{\xmark}{\text{\color{red!50!black}\ding{55}}}
 
 \newcommand{\instrvdist}{0.75cm}
 \newcommand{\instrhdist}{1.1cm}
@@ -67,18 +45,6 @@
 % event structure
 \newcommand{\lES}{S}
 % event structure's execution
-
-% execution graph
-\newcommand{\lG}{G}
-% covered/issued events
-\newcommand{\lC}{C}
-\newcommand{\lI}{I}
-% mapping between events
-\newcommand{\lM}{m}
-\newcommand{\lMC}{m_{c}}
-\newcommand{\lMI}{m_{i}}
-\newcommand{\f}{{\mathtt{f}}}
-\newcommand{\g}{{\mathtt{g}}}
 
 % event set
 \newcommand{\lE}{{\mathtt{E}}}
@@ -97,8 +63,11 @@
 \newcommand{\lWsqeq}[1]{{\lW^{\sqsupseteq#1}}}
 \newcommand{\lFsqeq}[1]{{\lF^{\sqsupseteq#1}}}
 
-% labeling of events
+% various common domains
+\newcommand{\Prog}{\mathsf{Prog}}
+\newcommand{\Inst}{\mathsf{Instr}}
 \newcommand{\Tid}{\mathsf{Tid}}
+\newcommand{\Reg}{\mathsf{Reg}}
 \newcommand{\Loc}{\mathsf{Loc}}
 \newcommand{\Val}{\mathsf{Val}}
 \newcommand{\Bool}{\mathsf{Bool}}
@@ -107,84 +76,36 @@
 \newcommand{\Cont}{\kappa}
 \newcommand{\Scp}{\mathsf{Scope}}
 \newcommand{\Path}{\pi}
-\newcommand{\Prog}{\mathsf{prog}}
-\newcommand{\Execs}[1]{\Psi_{#1}}
+\newcommand{\ThrdState}{\mathsf{ThrdState}}
 
+% labeling of events
 \newcommand{\lLAB}{{\mathtt{lab}}}
 \newcommand{\lTID}{{\mathtt{tid}}}
 \newcommand{\lTYP}{{\mathtt{typ}}}
 \newcommand{\lLOC}{{\mathtt{loc}}}
 \newcommand{\lMOD}{{\mathtt{mod}}}
-\newcommand{\lSCP}{{\mathtt{scp}}}
-\newcommand{\lCONT}{{\mathtt{K}}}
 \newcommand{\lVALR}{{\mathtt{val_r}}}
 \newcommand{\lVALW}{{\mathtt{val_w}}}
-\newcommand{\lINIT}{{\mathtt{init}}}
-\newcommand{\lSN}{{\mathtt{sn}}}
-\newcommand{\lPC}{{\mathtt{pc}}}
-\newcommand{\lPREV}{{\mathtt{prev}}}
-
-\newcommand{\lMASK}{{\mathtt{Mask}}}
-\newcommand{\lVIS}{{\mathtt{Vis}}}
-
-% simulation relation 
-\newcommand{\simR}{\mathcal{I}}
-\newcommand{\simRb}{\mathcal{I}_{base}}
-\newcommand{\simRw}{\mathcal{I}_{weak}}
-\newcommand{\simRc}{\mathcal{I}^{cert}}
-
-\newcommand{\nextset}{{\mathtt{Next}}}
-\newcommand{\coverable}{{\mathtt{Coverable}}}
-\newcommand{\issuable}{{\mathtt{Issuable}}}
-\newcommand{\front}{\phi}
-\newcommand{\forward}{{\mathtt{Forward}}}
-\newcommand{\cert}{{\mathtt{cert}}}
-\newcommand{\certify}{{\mathtt{Certify}}}
-
-%\newcommand{\lCERTIFY}{{\mathtt{Certify}}}
-
-\newcommand{\trstep}{\longrightarrow}
-\newcommand{\trstepstar}{\longrightarrow^*}
-\newcommand{\esbstep}[1]{\xLongrightarrow{#1}}
-\newcommand{\esstep}[1]{\xlongrightarrow{#1}}
-\newcommand{\esstepstar}{\longrightarrow^*}
-
-\newcommand{\ESle}{\preceq}
-\newcommand{\ESbasicstep}[1]{\xLongrightarrow{#1}}
-\newcommand{\ESstep}[1]{\xlongrightarrow{#1}}
-\newcommand{\ESstepstar}{\longrightarrow^*}
 
 \newcommand{\rlab}[2]{\lR({#1},{#2})}
 \newcommand{\wlab}[2]{\lW({#1},{#2})}
 \newcommand{\flab}{\lF}
 
-\newcommand{\rlabM}[3]{\lR_{#1}({#2},{#3})}
-\newcommand{\wlabM}[3]{\lW_{#1}({#2},{#3})}
-\newcommand{\flabM}[1]{\lF_{#1}}
+% maps
+\newcommand{\regmap}{\sigma}
+\newcommand{\appmap}[2]{#1(#2)}
+\newcommand{\updmap}[3]{#1[#2 \mapsto #3]}
 
-\newcommand{\Ex}{{\mathtt{ex}}}
-\newcommand{\NotEx}{{\mathtt{not \mhyphen ex}}}
-\newcommand{\rlabExExpl}[4]{\lR_{#4}^{#1}({#2},{#3})}
-\newcommand{\rlabEx}[3]{\rlabExExpl{#1}{#2}{#3}{\Ex}}
+% instruction pointer
+\newcommand{\ip}[1]{#1}
 
-%% \newcommand{\rlabS}[3]{\lR^{#3}({#1},{#2})}
-%% \newcommand{\wlabS}[3]{\lW^{#3}({#1},{#2})}
-%% \newcommand{\flabS}[1]{\lF^{#1}}
-
-\colorlet{ColorExecA}{green}
-\colorlet{ColorExecB}{orange}
-\colorlet{ColorExecC}{cyan}
-\colorlet{ColorExecD}{yellow}
+% small-step semantics
+\newcommand{\thrdstep}[1]{\xlongrightarrow{#1}}
 
 % some predefined relations
 \colorlet{colorPO}{gray!60!black}
-\colorlet{colorPPO}{magenta}
 \colorlet{colorRF}{green!60!black}
-\colorlet{colorJF}{blue!60!black}
-\colorlet{colorRMW}{olive!70!black}
 \colorlet{colorCF}{red!60!black}
-\colorlet{colorCC}{red!80!black}
-\colorlet{colorEW}{brown}
 \colorlet{colorMO}{orange!60!black}
 \colorlet{colorRB}{purple}
 \colorlet{colorECO}{red!80!black}
@@ -196,77 +117,41 @@
 \colorlet{colorPSC}{violet}
 \colorlet{colorFSC}{violet}
 \colorlet{colorSC}{violet}
-\colorlet{colorWGR}{magenta!40!black}
-\colorlet{colorDEV}{magenta}
-\colorlet{colorINCL}{magenta!70!black}
-\colorlet{colorOBS}{green!40!black}
 \colorlet{colorCA}{gray!60!black}
 \colorlet{colorDEPS}{violet!60!black}
-\colorlet{colorDETOUR}{teal}
-\colorlet{colorBOB}{gray!80!black}
 
 \newcommand{\lPO}{{\color{colorPO}\mathtt{po}}}
-\newcommand{\lPPO}{{\color{colorPPO}\mathtt{ppo}}}
 \newcommand{\lRF}{{\color{colorRF}\mathtt{rf}}}
-\newcommand{\lJF}{{\color{colorJF}\mathtt{jf}}}
-\newcommand{\lRMW}{{\color{colorRMW}\mathtt{rmw}}}
 \newcommand{\lCF}{{\color{colorCF}\mathtt{cf}}}
-\newcommand{\lCC}{{\color{colorCC}\mathtt{cc}}}
-\newcommand{\lEW}{{\color{colorEW}\mathtt{ew}}}
 \newcommand{\lMO}{{\color{colorMO}\mathtt{mo}}}
 \newcommand{\lRB}{{\color{colorRB}\mathtt{rb}}}
 \newcommand{\lECO}{{\color{colorECO}\mathtt{eco}}}
-
 \newcommand{\lRSEQ}{{\color{colorRSEQ}\mathtt{rseq}}}
 \newcommand{\lRELP}{{\color{colorRELP}\mathtt{relp}}}
 \newcommand{\lSW}{{\color{colorSW}\mathtt{sw}}}
 \newcommand{\lHB}{{\color{colorHB}\mathtt{hb}}}
-
-\newcommand{\ocl}{{\textrm OpenCL}}
-\newcommand{\ptx}{{\textrm PTX}}
-\newcommand{\cmm}{{\textrm C11}}
-
-\newcommand{\lSWocl}{{\color{colorSW}\mathtt{sw_\ocl}}}
-\newcommand{\lSWptx}{{\color{colorSW}\mathtt{sw_\ptx}}}
-
 \newcommand{\lSCB}{{\color{colorSCB} \mathtt{scb}}}
 \newcommand{\lPSCB}{\lPSC_{\rm base}}
 \newcommand{\lPSCF}{\lPSC_\lF}
 \newcommand{\lFSC}{{\color{colorFSC}\mathtt{fsc}}}
 \newcommand{\lPSC}{{\color{colorPSC}\mathtt{psc}}}
 \newcommand{\lSC}{{\color{colorSC}\mathtt{sc}}}
-
-\newcommand{\lWGR}{{\color{colorWGR}\mathtt{wgr}}}
-\newcommand{\lWGRi}[1]{{\color{colorWGR}\mathtt{wgr}_{#1}}}
-\newcommand{\lDEV}{{\color{colorDEV}\mathtt{dev}}}
-\newcommand{\lINCL}{{\color{colorINCL}\mathtt{incl}}}
-\newcommand{\lHBINCL}{\lHB_{\lINCL}}
-
-\newcommand{\lOBS}{{\color{colorOBS}\mathtt{obs}}}
 \newcommand{\lCA}{{\color{colorCA}\mathtt{ca}}}
-\newcommand{\lCAB}{\lCA_{\rm base}}
-
 \newcommand{\lCTRL}{{{\color{colorDEPS}\mathtt{ctrl}}}}
 \newcommand{\lDATA}{{{\color{colorDEPS}\mathtt{data}}}}
 \newcommand{\lADDR}{{{\color{colorDEPS}\mathtt{addr}}}}
 \newcommand{\lCASDEP}{{{\color{colorDEPS}\mathtt{casdep}}}}
 \newcommand{\lDEPS}{{\color{colorDEPS}\mathtt{dep}}}
 
-\newcommand{\lBOB}{{\color{colorBOB}\mathtt{bob}}}
-\newcommand{\lDETOUR}{{\color{colorDETOUR}\mathtt{detour}}}
-
 \newcommand{\lmakeE}[1]{#1\mathtt{e}}
-\newcommand{\lJFE}{\lmakeE{\lJF}}
 \newcommand{\lRFE}{\lmakeE{\lRF}}
-\newcommand{\lCOE}{\lmakeE{\lCO}}
-\newcommand{\lRBE}{\lmakeE{\lRB}}
 \newcommand{\lMOE}{\lmakeE{\lMO}}
+\newcommand{\lRBE}{\lmakeE{\lRB}}
 
 \newcommand{\lmakeI}[1]{#1\mathtt{i}}
-\newcommand{\lJFI}{\lmakeE{\lJF}}
 \newcommand{\lRFI}{\lmakeI{\lRF}}
-\newcommand{\lCOI}{\lmakeI{\lCO}}
-\newcommand{\lFRI}{\lmakeI{\lFR}}
+\newcommand{\lMOI}{\lmakeI{\lMO}}
+\newcommand{\lRBI}{\lmakeI{\lRB}}
 
 \newcommand{\lmakeLoc}[1]{#1_{|loc}}
 
@@ -281,29 +166,7 @@
 \newcommand{\relAcq}{\acqrel}
 \newcommand{\sco}{{\mathtt{sc}}}
 
-%% scopes
-\newcommand{\wgr}{\mathtt{wgr}}
-\newcommand{\dev}{\mathtt{dev}}
-\newcommand{\sys}{\mathtt{sys}}
-
-%% promising semantics notation
-
-\newcommand{\lPM}{\mathcal{P}}
-
-\newcommand{\TS}{\mathsf{TS}}
-\newcommand{\Msg}{\mathsf{Msg}}
-\newcommand{\Tmsp}{\mathsf{Tmsp}}
-\newcommand{\View}{\mathsf{View}}
-\newcommand{\Prm}{\mathsf{Prm}}
-\newcommand{\LState}{\mathsf{LState}}
-
-\newcommand{\lTS}{\mathcal{TS}}
-\newcommand{\lMSG}{{\mathtt{msg}}}
-\newcommand{\lVIEW}{{\mathtt{view}}}
-\newcommand{\lPRM}{{\mathtt{prm}}}
-
 %% tikz stuff
-
 \newcommand{\event}[3]{#1#2#3}
 \tikzset{
    every path/.style={>=stealth},
@@ -327,12 +190,10 @@
 }
 
 % arrows
-
 \newcommand{\arrowCA}{{\color{colorCA}\rightarrow}}
 \newcommand{\arrowCF}{{\color{colorCF}\leftrightsquigarrow}}
 
 %% parallel threads listings
-
 \newcommand{\inarr}[1]{\begin{array}{@{}l@{}}#1\end{array}}
 \newcommand{\inarrII}[2]{\begin{array}{@{}l@{~~}||@{~~}l@{}}\inarr{#1}&\inarr{#2}\end{array}}
 \newcommand{\inarrIII}[3]{\begin{array}{@{}l@{~~}||@{~~}l@{~~}||@{~~}l@{}}\inarr{#1}&\inarr{#2}&\inarr{#3}\end{array}}
@@ -340,27 +201,18 @@
 \newcommand{\inarrV}[5]{\begin{array}{@{}l@{~~}||@{~~}l@{~~}||@{~~}l@{~~}||@{~~}l@{~~}||@{~~}l@{}}\inarr{#1}&\inarr{#2}&\inarr{#3}&\inarr{#4}&\inarr{#5}\end{array}}
 
 %% instructions for listings
-
 \newcommand{\textcode}[1]{\texorpdfstring{\texttt{#1}}{#1}}
 \newcommand{\kw}[1]{\textbf{\textcode{#1}}}
 
-\newcommand{\ite}[3]{\kw{if}\;#1:\\  \quad\;#2\;\\ \kw{else}\;:\\ \quad\;#3}
-\newcommand{\iftnen}[2]{\kw{if}\;#1:\\ \quad\;{#2}}
+\newcommand{\assignInst}[2]{#1 := #2}
+\newcommand{\opInst}[4]{#2 := #3 #1 #4}
+\newcommand{\jumpInst}[2]{\kw{if}~ #1~ \kw{jump}~ #2}
 
-\newcommand{\valueRead}[1]{{// #1}}
-
+\newcommand{\readInst}[2]{#1 := #2}
+\newcommand{\writeInst}[2]{#1 := #2}
 \newcommand{\fenceInst}{\kw{fence}}
-\newcommand{\readInst}[2]{#1\;:=\;#2}
-\newcommand{\writeInst}[2]{#1\;:=\;#2}
-\newcommand{\incInst}[3]{#1 \;{:=}\;\kw{FADD}({#2},{#3})}
-
-\newcommand{\fenceInstMod}[1]{\kw{fence}_{#1}}
-\newcommand{\readInstMod}[3]{#2\;:=\;[#3]_{#1}}
-\newcommand{\writeInstMod}[3]{[#2]_{#1}\;:=\;#3}
-\newcommand{\incInstMod}[5]{#3 \;{:=}\;\kw{FADD}_{#1,#2}({#4},{#5})}
 
 %% axiom labels
-
 \newcounter{mylabelcounter}
 
 \makeatletter
@@ -372,22 +224,7 @@
 }
 \makeatother
 
-%% warning
-
-\colorlet{colorWARNING}{yellow!90!black}
-
-% \newcommand{\warning}[1]{{\color{colorWARNING}\texttt{WARNING}}: #1}
-% \newcommand{\app}[1]{{\color{blue}\textbf{ANTON: #1}}}
-
+%% comments
 \newcommand{\eupp}[1]{{\color{blue}\textbf{Evgenii: #1}}}
 \newcommand{\todo}[1]{{\color{red}\textbf{TODO: #1}}}
 
-\colorlet{colorISS}{blue!80!black}
-
-\tikzset{
-  cov/.style={rectangle},
-  iss/.style={rectangle,
-    rounded corners = 2mm, line width = 0mm, 
-    fill = colorISS, fill opacity = 0.2, text opacity = 1
-  },
-}
