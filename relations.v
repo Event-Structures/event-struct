@@ -221,6 +221,7 @@ Definition hack_f : F -> seq F :=
 Fixpoint fdfs n v x :=
   if x \in v then v else
   if n is n'.+1 then foldl (fdfs n') (x :: v) (f x) else v.
+  
 
 Definition equiv (x : T) (y : F) := x == fsval y.
 
@@ -318,10 +319,15 @@ Qed.
 
 Definition wsuffix x := fdfs n [::] x.
 
+Definition suffix x := flatten [seq f y | y <- wsuffix x].
+
 Definition rt_closure : rel T := 
   fun x y => x \in wsuffix y.
 
-Lemma t_closure_n1P x y : 
+Definition t_closure : rel T := 
+  fun x y => x \in suffix y.
+
+Lemma rt_closure_n1P x y : 
   reflect (clos_refl_trans_n1 T (sfrel f) x y) (rt_closure x y).
 Proof.
   apply/(equivP (fdfsP y x)); split=> [[p]|].
@@ -329,6 +335,26 @@ Proof.
     move=> a > IHp > /andP[? /IHp /[apply] ?]; exact/(rtn1_trans _ _ _ a).
   elim=> [|z ??? [p *]]; first by exists [::].
   exists (z :: p)=> //; exact/andP.
+Qed.
+
+Arguments clos_rtn1_rt {_ _ _ _}.
+Arguments clos_rt_rtn1 {_ _ _ _}.
+Arguments clos_trans_tn1 {_ _ _ _}.
+Arguments clos_trans_t1n {_ _ _ _}.
+Arguments clos_tn1_trans {_ _ _ _}.
+Arguments clos_t1n_trans {_ _ _ _}.
+Arguments clos_t_clos_rt {_ _ _ _}.
+Arguments t1n_trans _ {_ _ _ _}.
+
+Lemma t_closure_n1P x y: 
+  reflect (clos_trans_n1 T (sfrel f) x y) (t_closure x y).
+Proof.
+  apply: (iffP flatten_mapP)=> [[? /rt_closure_n1P /clos_rtn1_rt]|].
+  - rewrite clos_refl_transE=> [[? /clos_trans_t1n ? R|]]; last by constructor.
+    exact/clos_trans_tn1/clos_t1n_trans/(t1n_trans T R).
+  case/clos_tn1_trans/clos_trans_t1n=> [z ?|w ??].
+  - exists z=> //; apply/rt_closure_n1P; by constructor.
+  move/clos_t1n_trans/clos_t_clos_rt/clos_rt_rtn1/rt_closure_n1P; by exists w.
 Qed.
 
 End FinRTClosure.
