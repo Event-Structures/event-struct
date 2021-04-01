@@ -42,8 +42,6 @@ Local Open Scope ra_terms.
 Definition sfrel {T : eqType} (f : T -> seq T) : rel T :=
   [rel a b | a \in f b].
 
-
-
 Section Strictify.
 
 Context {T : eqType}.
@@ -360,4 +358,26 @@ Qed.
 End FinRTClosure.
 
 End FinClosure.
+
+Section Operations.
+
+Context {T : Type}.
+Variables (f g : T -> seq T) (p : pred T).
+
+Definition composition := 
+  fun x => do y <- g x; f y.
+
+Definition fun_of_pred := 
+  fun x => if p x then [:: x] else [::].
+
+Definition funion := 
+  fun x => f x ++ g x.
+
+End Operations.
+
+Notation "p 'ᶠ'" := (fun_of_pred p) (at level 10).
+Notation "f ∘ g" := (composition f g) (at level 100, right associativity).
+Notation "f ∪ g" := (funion f g) (at level 100).
+
+
 
