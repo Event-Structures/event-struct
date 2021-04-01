@@ -20,3 +20,4 @@ prime_eventstruct.v
 eventstructure.v
 transitionsystem.v
 regmachine.v
+memory_model.v
