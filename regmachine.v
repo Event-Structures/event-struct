@@ -135,6 +135,8 @@ Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
   | _, _                                     => false
   end.
 
+Section AddHole.
+
 Variable (es : cexec_event_struct).
 Notation ffpred   := (fpred es).
 Notation ffrf     := (frf es).
@@ -218,21 +220,23 @@ Definition add_hole
     end
   else [::].
 
+End AddHole.
+
 Variable prog : parprog.
 
 Definition fresh_tid (c : config) := 
   foldr maxn 0 [seq (snd x).+1 | x <- fgraph (fmap_of_fsfun c)].
 
 Definition eval_step (c : config) pr : seq config := 
-  let: Config es tmap := c in
-  let: (conf, tid)    := tmap pr in
-  let: tid            := if pr \in dom es then tid else fresh_tid c in
-  let: (l, cont_st)   := thrd_sem (nth empty_prog prog tid) conf in
+  let: Config ces tmap := c in
+  let: (conf, tid)     := tmap pr in
+  let: tid             := if pr \in dom ces then tid else fresh_tid c in
+  let: (l, cont_st)    := thrd_sem (nth empty_prog prog tid) conf in
     if l is Some l then do 
-      (e, v) <- add_hole l pr;
-      [:: Config e  [fsfun c with fresh_id |-> (cont_st v, tid)]]
+      (e, v) <- add_hole ces l pr;
+      [:: Config e  [fsfun c with (fresh_seq (dom ces)) |-> (cont_st v, tid)]]
     else
-      [:: Config es [fsfun c with pr |-> (cont_st inh, tid)]].
+      [:: Config ces [fsfun c with pr |-> (cont_st inh, tid)]].
 
 End RegMachine.
 
