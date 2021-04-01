@@ -70,6 +70,20 @@ a special initial event labeled by a distinguished
 
 $$ e_1 \primcfRel e_2 \iff e_1 \neq e_2 \wedge f_{\lPO}(e_1) = f_{\lPO}(e2) $$
 
+Finally, we need a way to reconcile the event structure
+with the states of machine's threads. 
+To do so we use a function $\thrdmap : \eventSet \fun \ThrdState$
+which maps event to a thread state obtained as a result of
+execution of event's side-effect.
+
+Let us consider an example. 
+\todo{}
+
+The rules of operational semantics constructing 
+the event structure are presented on~\cref{fig:eventstruct-sem}.
+
+\input{fig/eventstruct-sem.tex}
+
 \eupp{Continue from here}
 
 As we saw earlier in Step by Step Example, our event structure contains functions such as $\frf$ and $\fpred$. The events themselves are elements of some set $\mathcal{E}$ (set of identifiers), which must satisfy the following properties

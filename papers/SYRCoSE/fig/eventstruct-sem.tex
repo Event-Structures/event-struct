@@ -1,0 +1,54 @@
+\begin{figure*}[t]
+\begin{center}
+
+  % \AXC{$$}
+  % \RightLabel{Thread Start}
+  % \UIC{$\tup{e, \lLAB, \lfPO, \lfRF, \thrdmap} 
+  %       \esstep{\tslab{}} 
+  %       \tup{\updmap{\lLAB}{e'}{\tslab{}}, \lfPO, \lfRF, \updmap{\thrdmap}{e'}{\thrdsti}}$}
+  % \DisplayProof
+
+  \AXC{$e' = \fresh(e)$}
+  \AXC{$e_{\lPO} \identOrdRefl e$}
+  \AXC{$e_{\lRF} \identOrdRefl e$}
+  \RightLabel{Add Event}
+  \TIC{$\tup{e, \lLAB, \lfPO, \lfRF}
+        \esstep{\tup{\ell, e_{\lPO}, e_{\lRF}}}
+        \tup{e', \updmap{\lLAB}{e'}{\ell}, \updmap{\lfPO}{e'}{e_{\lPO}}, \updmap{\lfRF}{e'}{e_{\lRF}}}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$e' \identOrdRefl S.e$}
+  \AXC{$\thrdst = \appmap{\thrdmap}{e'}$}
+  \AXC{$\thrdst \thrdstep{\eps} \thrdst'$}
+  \RightLabel{Idle}
+  \TIC{$\tup{S, \thrdmap} \fullstep{\eps} \tup{S, \updmap{\thrdmap}{e'}{\thrdst'}}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$\thrdst = \appmap{\thrdmap}{e_{\lPO}}$}
+  \AXC{$\thrdst \thrdstep{\ell} \thrdst'$}
+  \AXC{$S \esstep{\tup{\ell, e_{\lPO}, \bot}} S'$}
+  \AXC{$l = \wlab{x}{v}$}
+  \RightLabel{Store}
+  \QIC{$\tup{S, \thrdmap} \fullstep{\tup{e', \ell, e_{\lPO}, e_{\lRF}}} \tup{S', \updmap{\thrdmap}{e'}{\thrdst'}}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$\thrdst = \appmap{\thrdmap}{e_{\lPO}}$}
+  \AXC{$\thrdst \thrdstep{\ell} \thrdst'$}
+  \AXC{$S \esstep{\tup{\ell, e_{\lPO}, e_{\lRF}}} S'$}
+  \AXC{$\appmap{\lLAB}{e_{\lRF}} = \wlab{x}{v}$}
+  \AXC{$l = \rlab{x}{v}$}
+  \RightLabel{Load}
+  \QuinaryInfC{$\tup{S, \thrdmap} \fullstep{\tup{e', \ell, e_{\lPO}, e_{\lRF}}} \tup{S', \updmap{\thrdmap}{e'}{\thrdst'}}$}
+  \DisplayProof
+  
+  \caption{Semantics of register machine event structure}
+  \label{fig:eventstruct-sem}
+
+\end{center}
+\end{figure*}

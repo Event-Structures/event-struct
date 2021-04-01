@@ -112,6 +112,7 @@
 
 % maps
 \newcommand{\regmap}{\sigma}
+\newcommand{\thrdmap}{\Sigma}
 \newcommand{\appmap}[2]{#1(#2)}
 \newcommand{\updmap}[3]{#1[#2 \mapsto #3]}
 
@@ -119,7 +120,11 @@
 \newcommand{\ip}[1]{#1}
 
 % small-step semantics
-\newcommand{\thrdstep}[1]{\xlongrightarrow{#1}}
+\newcommand{\thrdst}{s}
+\newcommand{\thrdsti}{s_{\mathsf{init}}}
+\newcommand{\thrdstep}[1]{\xrightarrow{#1}}
+\newcommand{\esstep}[1]{\xhookrightarrow{#1}}
+\newcommand{\fullstep}[1]{\xRightarrow{#1}}
 
 % some math notations for event structures
 \newcommand{\eventSet}{E}
@@ -127,6 +132,7 @@
 \newcommand{\cfRel}{\#}
 \newcommand{\primcfRel}{\sim_{\#}}
 \newcommand{\identOrd}{\prec}
+\newcommand{\identOrdRefl}{\preceq}
 \newcommand{\fresh}{\mathsf{fresh}}
 
 % some predefined relations
@@ -181,6 +187,10 @@
 \newcommand{\lRBI}{\lmakeI{\lRB}}
 
 \newcommand{\lmakeLoc}[1]{#1_{|loc}}
+
+%% functional versions of relations
+\newcommand{\lfPO}{f_{\lPO}}
+\newcommand{\lfRF}{f_{\lRF}}
 
 %% memory orders
 \newcommand{\na}{\mathtt{na}}
