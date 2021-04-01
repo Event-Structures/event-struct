@@ -106,6 +106,8 @@ Notation "w << r" := (write_read_from w r) (at level 0).
 Lemma rf_thrdend w : w << ThreadEnd = false.
 Proof. by case: w. Qed.
 
+Definition same_loc l l' := lloc l == lloc l'.
+
 
 (* ************************************************************************* *)
 (*     Exec Event Structure                                                  *)
@@ -512,7 +514,7 @@ Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
 Proof.
   apply/idP/idP; last by apply: cf_step_cf.
   case/cfP=> e1' [e2' [[]]].
-  case: (boolP (e1' == e1))=> [/eqP-> _|].
+  case: (boolP (e1' == e1))=> [/eqP-> _ |].
   - case: (boolP (e2' == e2))=> [/eqP->_->|]; first (apply/orP; by left).
     move/ca_step_last/[apply] => [[x /and3P[/cf_consistr H N + /icf_cf/H]]].
     rewrite lt_neqAle=> /andP[] *.
@@ -548,10 +550,10 @@ Proof.
   suff C: ~ m # (fpred m).
   case: (boolP (frf m == m))=> [/eqP fE|?].
   - rewrite cfE => /orP; rewrite orbb icfxx => [[]] //=.
-  rewrite fE; case: ifP=> [/eqP//|_]; case: ifP=>//= _; by rewrite orbF => /C.
+  rewrite fE; case: ifP=> [/eqP//| _]; case: ifP=>//= _; by rewrite orbF => /C.
   rewrite cfE icfxx orbb=> /hasP[? /(mem_subseq (filter_subseq _ _))] /=.
   by rewrite ?inE=> /orP[/eqP->|/eqP->/C]//; rewrite rff_consist.
-  move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _|].
+  move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _ |].
   - by move=> /ca_le L /and4P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
   move/ca_step_last=> /[apply] [[z /and3P[/[swap]]]].
   rewrite /ica !inE=> /pred2P[]-> Cx L.
@@ -560,6 +562,32 @@ Proof.
     apply/eqP=> fE; by rewrite fE ltxx in L.
   by move=> Cy /icf_cf/cf_consist2/(_ Cx Cy); exact/IHm.
 Qed.
+
+(* ************************************************************************* *)
+(*     Writes-Before relation                                                *)
+(* ************************************************************************* *)
+
+Definition sca_suffix : E -> seq E := suffix (fica_lt).
+
+Definition contr_loc f : E -> seq E := 
+  fun e => (f ∘ (same_loc (lab e) \o lab)ᶠ) e.
+
+Definition contr_wrire f : E -> seq E := 
+  (is_write \o lab)ᶠ ∘ f ∘ (is_write \o lab)ᶠ.
+
+Definition frf_inv : E -> seq E := 
+  fun e => [seq x <- dom | frf x == e].
+
+(* wb := [W] ; (po ∪ rf)⁺ |loc ; [W] ∪ [W]; (po ∪ rf)⁺ ; rf⁻ ; [W] \ id *)
+
+Definition fwb : {fsfun E -> seq E with [::]} := 
+  [fsfun x in (seq_fset tt dom) => 
+    (
+      contr_wrire (contr_loc sca_suffix) 
+      ∪
+      strictify (contr_wrire (frf_inv ∘ (contr_loc sca_suffix)))
+    ) x].
+
 
 End ExecEventStructure.
 
