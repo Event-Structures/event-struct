@@ -2,6 +2,9 @@
 \newcommand{\rulehskip}{\hskip 1.5em}
 \newcommand{\rulevspace}{\vspace{1em}}
 
+% set notation
+\newcommand{\set}[1]{\{ #1 \}}
+
 % tuple with angle brackets
 \newcommand{\tup}[1]{\langle #1 \rangle}
 
@@ -20,6 +23,12 @@
 % sequential composition
 \newcommand{\seq}{;}
 
+% power set
+\newcommand{\pwset}[1]{\mathcal{P}(#1)}
+
+% function-to-relation
+\newcommand{\frel}[1]{#1^\uparrow}
+
 % epsilon/empty 
 \newcommand{\eps}{\epsilon}
 
@@ -33,7 +42,7 @@
 \newcommand{\codom}[1]{\textit{codom}{({#1})}}
 
 %\newcommand{\implies}{{\Rightarrow}}
-%\newcommand{\iff}{{\Leftrightarrow}}
+\renewcommand{\iff}{{\Leftrightarrow}}
 
 % check-mark and cross-mark
 \newcommand{\cmark}{\text{\color{green!50!black}\ding{51}}}
@@ -42,9 +51,15 @@
 \newcommand{\instrvdist}{0.75cm}
 \newcommand{\instrhdist}{1.1cm}
 
-% event structure
-\newcommand{\lES}{S}
-% event structure's execution
+%% abbrevations
+
+\newcommand{\ie}{\emph{i.e.,} }
+\newcommand{\eg}{\emph{e.g.,} }
+\newcommand{\etc}{\emph{etc.} }
+\newcommand{\sth}{\emph{s.t.} }
+\newcommand{\etal}{\emph{et~al.} }
+\newcommand{\wrt}{\emph{w.r.t.} }
+\newcommand{\aka}{\emph{a.k.a.} }
 
 % event set
 \newcommand{\lE}{{\mathtt{E}}}
@@ -56,6 +71,8 @@
 \newcommand{\lR}{{\mathtt{R}}}
 \newcommand{\lW}{{\mathtt{W}}}
 \newcommand{\lF}{{\mathtt{F}}}
+\newcommand{\lTS}{{\mathtt{TS}}}
+
 \newcommand{\lX}{{\mathtt{X}}}
 
 \newcommand{\lEsqeq}[1]{{\lE^{\sqsupseteq#1}}}
@@ -91,6 +108,8 @@
 \newcommand{\wlab}[2]{\lW({#1},{#2})}
 \newcommand{\flab}{\lF}
 
+\newcommand{\tslab}[1]{\lTS{#1}}
+
 % maps
 \newcommand{\regmap}{\sigma}
 \newcommand{\appmap}[2]{#1(#2)}
@@ -101,6 +120,14 @@
 
 % small-step semantics
 \newcommand{\thrdstep}[1]{\xlongrightarrow{#1}}
+
+% some math notations for event structures
+\newcommand{\eventSet}{E}
+\newcommand{\caOrd}{\leqslant}
+\newcommand{\cfRel}{\#}
+\newcommand{\primcfRel}{\sim_{\#}}
+\newcommand{\identOrd}{\prec}
+\newcommand{\fresh}{\mathsf{fresh}}
 
 % some predefined relations
 \colorlet{colorPO}{gray!60!black}
