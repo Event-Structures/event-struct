@@ -128,11 +128,14 @@
 
 % some math notations for event structures
 \newcommand{\eventSet}{E}
+\newcommand{\eventSeq}{\mathcal{E}}
 \newcommand{\caOrd}{\leqslant}
 \newcommand{\cfRel}{\#}
 \newcommand{\primcfRel}{\sim_{\#}}
 \newcommand{\identOrd}{\prec}
 \newcommand{\identOrdRefl}{\preceq}
+
+\newcommand{\first}{\mathsf{first}}
 \newcommand{\fresh}{\mathsf{fresh}}
 
 % some predefined relations
@@ -230,6 +233,11 @@
 \newcommand{\arrowCA}{{\color{colorCA}\rightarrow}}
 \newcommand{\arrowCF}{{\color{colorCF}\leftrightsquigarrow}}
 
+% definitions/lemmas/theorems etc
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}[section]
+
 %% parallel threads listings
 \newcommand{\inarr}[1]{\begin{array}{@{}l@{}}#1\end{array}}
 \newcommand{\inarrII}[2]{\begin{array}{@{}l@{~~}||@{~~}l@{}}\inarr{#1}&\inarr{#2}\end{array}}
@@ -250,16 +258,21 @@
 \newcommand{\fenceInst}{\kw{fence}}
 
 %% axiom labels
-\newcounter{mylabelcounter}
+% \newcounter{mylabelcounter}
 
-\makeatletter
-\newcommand{\labelAxiom}[2]{%
-\hfill{\normalfont\textsc{(#1)}}\refstepcounter{mylabelcounter}
-\immediate\write\@auxout{%
-  \string\newlabel{#2}{{\unexpanded{\normalfont\textsc{#1}}}{\thepage}{{\unexpanded{\normalfont\textsc{#1}}}}{mylabelcounter.\number\value{mylabelcounter}}{}}
-}%
-}
-\makeatother
+% \makeatletter
+% \newcommand{\labelAxiom}[2]{%
+% \hfill{\normalfont\textsc{(#1)}}\refstepcounter{mylabelcounter}
+% \immediate\write\@auxout{%
+%   \string\newlabel{#2}{{\unexpanded{\normalfont\textsc{#1}}}{\thepage}{{\unexpanded{\normalfont\textsc{#1}}}}{mylabelcounter.\number\value{mylabelcounter}}{}}
+% }%
+% }
+% \makeatother
+
+%% proof assistants 
+\newcommand{\coq}{{\textsc{Coq}~}}
+\newcommand{\mathcomp}{{\textsc{MathComp}~}}
+\newcommand{\ssreflect}{{\textsc{SSReflect}~}}
 
 %% comments
 \newcommand{\eupp}[1]{{\color{blue}\textbf{Evgenii: #1}}}

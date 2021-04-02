@@ -1,46 +1,46 @@
 \begin{figure*}[t]
 
-  \AXC{$p[\ip{i}] =\ \assignInst{r}{v}$}
+  \AXC{$P[\ip{i}] =\ \assignInst{r}{v}$}
   \RightLabel{\texttt{Assign}}
-  \UIC{$\tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \updmap{\regmap}{r}{v}}$}
+  \UIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \updmap{\regmap}{r}{v}}$}
   \DisplayProof
   %
   \rulehskip
   %
-  \AXC{$p[\ip{i}] =\ \opInst{\otimes}{r_1}{r_2}{r_3}$}
+  \AXC{$P[\ip{i}] =\ \opInst{\otimes}{r_1}{r_2}{r_3}$}
   \AXC{$v = \appmap{\regmap}{r_2} \otimes \appmap{\regmap}{r_3}$}
   \RightLabel{\texttt{Binop}}
-  \BIC{$\tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \updmap{\regmap}{r_1}{v}}$}
+  \BIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \updmap{\regmap}{r_1}{v}}$}
   \DisplayProof
 
   \rulevspace
 
-  \AXC{$p[\ip{i}] =\ \jumpInst{r}{\ip{j}}$}
+  \AXC{$P[\ip{i}] =\ \jumpInst{r}{\ip{j}}$}
   \AXC{$\appmap{\regmap}{r} = 0$}
   \RightLabel{\texttt{CJump}$_z$}
-  \BIC{$\tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \regmap}$}
+  \BIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \regmap}$}
   \DisplayProof
   %
   \rulehskip
   %
-  \AXC{$p[\ip{i}] =\ \jumpInst{r}{\ip{j}}$}
+  \AXC{$P[\ip{i}] =\ \jumpInst{r}{\ip{j}}$}
   \AXC{$\appmap{\regmap}{r} \neq 0$}
   \RightLabel{\texttt{CJump}$_{nz}$}
-  \BIC{$\tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{j}, \regmap}$}
+  \BIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{j}, \regmap}$}
   \DisplayProof
 
   \rulevspace
 
-  \AXC{$p[\ip{i}] =\ \writeInst{x}{v}$}
+  \AXC{$P[\ip{i}] =\ \writeInst{x}{v}$}
   \RightLabel{\texttt{Store}}
-  \UIC{$\tup{\ip{i}, \regmap} \thrdstep{\wlab{x}{v}} \tup{\ip{i}+1, \regmap}$}
+  \UIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\wlab{x}{v}} \tup{\ip{i}+1, \regmap}$}
   \DisplayProof
   % 
   \rulehskip
   %
-  \AXC{$p[\ip{i}] =\ \readInst{r}{x}$}
+  \AXC{$P[\ip{i}] =\ \readInst{r}{x}$}
   \RightLabel{\texttt{Load}}
-  \UIC{$\tup{\ip{i}, \regmap} \thrdstep{\rlab{x}{v}} \tup{\ip{i+1}, \updmap{\regmap}{r}{v}}$}
+  \UIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\rlab{x}{v}} \tup{\ip{i+1}, \updmap{\regmap}{r}{v}}$}
   \DisplayProof
 
   \caption{Semantics of register machine}

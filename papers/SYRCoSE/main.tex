@@ -324,14 +324,21 @@
 \input{defs.tex}
 
 \usepackage{amssymb}
+\usepackage{amsmath}
 \usepackage{hyperref}% http://ctan.org/pkg/hyperref
+\usepackage{cleveref}% http://ctan.org/pkg/cleveref
 \usepackage{array}
 \usepackage{bussproofs}
-\usepackage{amsmath}
 \usepackage{mathtools}
-\usepackage{cleveref}% http://ctan.org/pkg/cleveref
 \usepackage{graphicx}% http://ctan.org/pkg/graphicx
-\usepackage{mathtools}
+
+% Because of some weird latex SHIT (!!!) I can't get this work.
+% Because of that we cannot use `proof` environment. 
+% Oh god, I hate TeX so much... 
+%% \usepackage{amsthm}
+%% \usepackage{thmtools}
+
+
 % \usepackage{float}
 
 % correct bad hyphenation here
@@ -343,9 +350,6 @@
 \definecolor{bl}{rgb}{0, 0, 0.6}
 \definecolor{br}{rgb}{0.6, 0.3, 0.3}
 
-\newtheorem{definition}{Definition}
-\newtheorem{lemma}{Lemma}
-\crefname{lemma}{Lemma}{Lemmas}
 \newcommand{\ffun}[1]{\mathtt{#1}}
 \newcommand{\frf}{\ffun{\textcolor{grn}{frf}}}
 \newcommand{\fpred}{\ffun{\textcolor{gr}{fpred}}}
@@ -387,27 +391,11 @@ In this article, we mechanized general the theory of prime event structures with
 \IEEEpeerreviewmaketitle
 
 \input{intro.tex}
-
-\section{Related Work}
-
-
-\section{Background}
-
-\input{intro_to_PES.tex}
-
-\subsection{Release-Acquire consistency}
-
-
-\section{Overview of our approach}
-
-\subsection{Step-by-step example}
-
-\subsection{Filtration by Memory Model predicate}
-
+\input{related.tex}
+\input{background.tex}
+\input{overview.tex}
 \input{casestudy.tex}
-
-\section{Future work}
-
+\input{future.tex}
 
 \bibliography{main} 
 \bibliographystyle{ieeetr}

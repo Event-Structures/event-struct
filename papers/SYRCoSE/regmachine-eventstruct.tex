@@ -9,7 +9,7 @@ in a step-by-step fashion by adding a single event
 on each step. In order to generate a new event 
 on each step we require that events behave as \emph{identifiers}.  
 
-\begin{definition}[Identifiers set]
+\begin{definition}
   We say that set $\eventSet$ together with strict partial order $\identOrd$
   form an identifier set if:
   \begin{itemize}
@@ -79,110 +79,38 @@ execution of event's side-effect.
 Let us consider an example. 
 \todo{}
 
-The rules of operational semantics constructing 
-the event structure are presented on~\cref{fig:eventstruct-sem}.
-
 \input{fig/eventstruct-sem.tex}
 
-\eupp{Continue from here}
+The rules of operational semantics constructing 
+the event structure are presented on~\cref{fig:eventstruct-sem}.
+The first auxiliary rule \ESAddEventRule adds a new event, sets its 
+label, $\lPO$ and $\lRF$ predecessors. 
+The \ESIdleRule handles the case when a thread of 
+the register machine performs an internal step 
+without any side effect. 
+It chooses an event $e$ together with 
+the thread state $s$ corresponding to it
+and performs one step reduction to new state $s'$.
+It then updates the mapping of events to thread states.   
+The last two rules \ESStoreRule and \ESLoadRule
+correspond to store and load perfromed by some thread.  
+Similarly to \ESIdleRule, an event $e_{\lPO}$ is selected
+and one reduction is performed from the corresponding thread state $s$.
+Unlike the \ESIdleRule case, however, a new event $e$ is also generated.
+In case of \ESLoadRule additionally an event $e_{\lRF}$ is selected,
+such that it has a write label matching the read label of the new event.    
 
-As we saw earlier in Step by Step Example, our event structure contains functions such as $\frf$ and $\fpred$. The events themselves are elements of some set $\mathcal{E}$ (set of identifiers), which must satisfy the following properties
-We can fix any $\mathcal{E}$ (for example $\mathbb{N}$) and theat programm's events as a finite subset of $\mathcal{E}$
+The following theorem asserts that the event structure built this way
+indeed satisfies the axioms of the prime confusion free event structure.  
 
-Let $E$ be the set of all program events, then we have
-  $$\ffun{lab} : E \to \lb $$
-where $\lb$ is the label's set (such that $\wlab{x}{5}, \rlab{y}{6}$ ThreadStart, etc.)
+\begin{theorem}
+  The tuple $\tup{E, \caOrd, \primcfRel}$, where $\caOrd$ and $\primcfRel$
+  are defined as described above, forms prime confusion-free event structure.
+\end{theorem}
 
-We will say that $e$ is a "read" -event with location x and value i if $\ffun{lab}(e) = \rlab{x}{i}$, similarly to "write" -event
+%% I can't use `proof` here, sorry.  
+% \begin{proof}
+% \end{proof}
 
-As a result, we formally build a four
-\begin{definition}[Execution Event Structure]
-  $$exec\_event\_structure \ \triangleq \ \langle E, \ \ffun{lab}, \ \fpred, \ \frf \rangle$$
-  where
-  \begin{itemize}
-    \item $E$ ~--- finite subset of some identifiers set $\mathcal{E}$
-    \item $\fpred$ ~--- function that returns a predsessor (w.r.t. the program order) of event
-    \item $\frf$ ~--- function that takes "read"-event $e$ and returns a "write"-event from witch $e$ reads
-    \item $\ffun{lab} : E \to \lb$ ~--- function that returns event's label
-  \end{itemize}
-  Also we require
-  \begin{itemize}
-    \item $\forall e \in E, \ \fpred(e) \leqslant_E e$ and $\frf(e) \leqslant_E e$
-    \item $\forall e_1 \ e_2 \in E, \ e_2 = \frf(e_1) \ \Leftrightarrow \ e_1$ is a "read"-event and $e_2$ is a "write"-event with the same location and value
-  \end{itemize}
-\end{definition}
-Further, for simplicity, we will identify identifiers with their labels, and Execution Event Structure with their set of identifiers
+\todo{Sketch the proof if we'll have space and time}
 
-Now our goal is to define a prime event structures in these terms. To do this, one need to come up with a causality relation $\leqslant$ and a conflict relation $\#$
-
-Let's start with the causality. In our article, we will assume that the event $e_1$ entails the event $e_2$ if
-\begin{itemize}
-  \item Programm instruction, that corresponds to event $e_1$ states before the programm instruction, that corresponds to $e_2$
-  \item Or $\ e_2$ is the "read"-event and it reads from "write"-event $e_1$
-\end{itemize}
-Or formally:
-\begin{itemize}
-  \item $\fpred(e_2) \ =\ e_1$
-  \item Or $\ \frf(e_2) \ =\ e_1$
-\end{itemize}
-Any function $f$ can be treated as a relation
-  $$ a \ f \ b \ \triangleq\ f(b) \ = \ a$$
-With the notation above, we define
-
-\begin{center}
-\begin{definition}[causality relation]
-  $$\leqslant \ \triangleq \ (\fpred \cup \frf)^* $$
-\end{definition}
-\end{center}
-
-Note that the set $E \subset \mathcal{E}$ already contains the total order $ \leqslant_\mathcal{E} $. One can note that the resulting casuality relation is its suborder [TODO:see Well-foundedness and monads]
-
-\begin{center}
-\begin{lemma}
-  If $\leqslant$ is a casuality order of $E \subset \mathcal{E}$ then $\leqslant \ \subset \ \leqslant_\mathcal{E}$
-\end{lemma}
-\end{center}
-
-Now let's define a conflict relation. Looking at the conflict relation in \cref{es_def}, we can establish the following fact:
-\begin{center}
-\begin{lemma}\label{lma_confl}
-  If $\ e_1 \leqslant e_2, \ e_3 \leqslant e_4$ and $e_1 \# e_3$ holds then $e_2 \# e_4$
-\end{lemma} 
-\end{center}
-That is, the conflict relation must be "dragged" through the $\leqslant$ relation. Our intuition will be as follows: we, first, define a "minimal" conflict relation, by closing which under the consistency property (\cref{lma_confl}), we finally get a full relation $\#$. 
-
-So where do conflicts come from?
-
-From the step-by-step example, we see that if events have a common predsessor (w.r.t. the $\fpred$ relation), then they occur in two different program executions and, accordingly, are conflicting
-\begin{definition}[immediate conflict relation]
-  $$ e_1 \, \ffun{icf} \, e_2 \ \triangleq\ \exists e, \, e = \fpred(e_1) = \fpred(e_2)  $$
-\end{definition}
-Next, one can define the conflict relation as a consistent closure of $\ffun{icf}$
-\begin{definition}[conflict relation]
-  $$ e_1 \, \# \, e_2 \ \triangleq\ \exists e_3\, e_4, e_3 \, \ffun{icf} \, e_4 \ and \ e_3 \leqslant e_1, \, e_4 \leqslant e_2 $$
-\end{definition}
-However, there is one problem with such definition. It is clear that the relation defined in this way turns out to be symmetric and consistent. Will it be irreflexive? It turns out that in the general case, no. Consider the following program:
-\input{fig/encode_prog.tex}
-
-Let's build, as in the Step-by-step example, a fragment of $exec\_event\_structure$ corresponding to this program before reading from $y$
-\input{fig/encode_part.tex}
-
-One can observe, that our program in the first thread was divided into two independent executions: execution, in which we read from $x$ value 1 (denote by execution (a)) and execution, in which we read from $x$ 2 (execution (b)).
-
-Now we want to add a read-from-$y$ event to our event structure. Let's see what is going to happen if we will add "read"-event, reading from $\wlab{y}{2}$ (see \cref{fig:cf}).
-\input{fig/encode_cf.tex}
-
-We have $\rlab{x}{1} \leqslant \rlab{y}{2}$, $ \rlab{x}{2} \leqslant \rlab{y}{2}$ and $\rlab{x}{1} \ \# \ \rlab{x}{2}$. Thus $\rlab{y}{2} \ \# \ \rlab{y}{2}$ holds (see~\cref{lma_confl})
-
-To deal with this program, we need to impose a constraint on the event structure.
-
-We will say that the event structure is consistent if there are no reads from conflicting writes. Formally:
-\begin{definition}[consistent Execution Event Structure]
-  $$consitent\langle E, \ffun{lab}, \fpred, \frf \rangle \ \triangleq \ \forall e \in E, \ \neg (e \ \# \ \frf e)$$
-\end{definition}
-It turns out that this is enough for the conflict relation to be irreflexive. %(see \cref{fig:full})
-\begin{lemma}
-  Let $E$ be a consistent Execution Event Structure (denote as $cexec\_event\_structure$). Then it's conflict relation $\#$ is irreflexive
-\end{lemma}
-%\input{fig/encode_full.tex} 
-So, we see that from the consistent event structure one can get the Prime Event Structure
