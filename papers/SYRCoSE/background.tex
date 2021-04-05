@@ -1,54 +1,88 @@
 \section{Background}
 
-Generally, event structures can model a process of computation. 
-There are many modifications of events structures from elementary to general, 
-and we are using prime event structures, since it is enough for us to model 
-concurrent programs. More precisely, they represent that process by a set of events 
-and relations between them: 
+% In this section we give some background on event structures. 
+There are several modifications of events structures, 
+in this work we focus on \emph{prime event structures}~\cite{Winskel:86}.
+
 \begin{definition} 
 \label{es_def}
-A prime event structure (PES) is a triple $(E, \leq, \#)$, where
+A prime event structure (PES) is a triple $(\eventSet, \caOrd, \cfRel)$, where
 \begin{itemize}
   \item E is a set of events
-  \item $\leq$ is a causality relation on E such that 
+  \item $\caOrd$ is a causality relation on E such that 
   \begin{itemize}
-    \item $ (E, \leq) $ is a partial order
-    \item $\lceil e \rceil := \{ e' : e' < e \}$ is finite for every $e \in E$, 
-    i.e. every event is caused by a finite set of events
+    \item $ (\eventSet, \caOrd) $ is a partial order;
+    \item for every $e \in \eventSet$ its causality prefix ${\lceil e \rceil := \{ e' : e' \caOrd e \}}$ 
+      is finite, \ie every event is caused by a finite set of events.
   \end{itemize}
-  \item $\#$ is a conflict relation on $E$ such that
+  \item $\#$ is a conflict relation on $E$ such that:
   \begin{itemize}
-    \item $\#$ is irreflexive and symmetric
-    \item it satisfies a consistency predicate:
-    $$\forall e_1, e_2, e_3 \in E \ e_1 \# e_2 \land e_2 \leq e_3 \Rightarrow e_1 \# e_3.$$
+    \item $\#$ is irreflexive and symmetric;
+    \item it satisfies a \emph{hereditary} condition:
+    $$ \forall e_1, e_2, e_3 \in E \ldotp \ e_1 \cfRel e_2 \land e_2 \caOrd e_3 \Rightarrow e_1 \cfRel e_3 $$
+      That is, if two events are in conflict, then all their causal successors 
+      are also have to be in confict. 
   \end{itemize}
 \end{itemize}
 \end{definition}
 
-Conflict relation is used to model conflicting events like two \texttt{write}'s 
-of different values to the same location.
-Consistency ensures that if some events are in conflict, then events 
-following these events are also in conflict.
+Prime event structure can encode multiple runs of a program.
+Each individual run can be extracted as \emph{configuration}. 
+In other words, configurations are used to model 
+a history of computation up to a certain point.
 
 \begin{definition}
-A configuration of PES $(E, \leq, \#)$ is a subset $X \subseteq E$ such that
+A configuration of PES $(E, \caOrd, \cfRel)$ is a set of events $X \subseteq E$ such that
 \begin{itemize}
-  \item it is conflict-free
-  \item it is left-closed, i.e. $$\forall e_1, e_2 \in E \ e_2 \in X \land e_1 \leq e_2 \Rightarrow e_1 \in E.$$
+  \item it is causally closed 
+    $$ \forall e_1, e_2 \in E \ldotp e_2 \in X \land e_1 \caOrd e_2 \Rightarrow e_1 \in X $$
+  \item and conflict-free 
+    $$ \forall e_1, e_2 \in X \ldotp \neg (e_1 \cfRel e_2) $$
 \end{itemize}
 \end{definition}
 
-Configurations are used to model a history of computation up to a certain 
-execution point.
+We will also need a subclass of prime event structures --- 
+\emph{confusion-free} event structures~\cite{Nielsen-al:1981}. 
+In confusion-free structure the conflict relation is generated from 
+a simpler \emph{primitive conflict} $\primcfRel$. 
+It denotes pairs of events at which the compuation
+diverges into two conflicting branches. 
 
-We formally proved the following simple facts about prime event structures:
+\begin{definition}
+Confusion-free event structures (CFES) is a triple $(E, \caOrd, \primcfRel)$, where
+\begin{itemize}
+  \item $\caOrd$ obeys the same laws as for prime event structure;
+  \item $\primcfRel$ is a primitive conflict relation, such that
+  \begin{itemize}
+    \item it is irreflexive, symmetric and transitive;
+    \item it does not violate hereditary condition:
+    $$ \forall e_1, e_2, e_3 \in E \ldotp 
+       e_1 \primcfRel e_2 \land e_2 \caOrd e_3 \Rightarrow \neg (e_1 \primcfRel e_3) $$
+    \item it is \emph{choice-local}
+  \end{itemize}
+    $$ \forall e_1, e_2, e_3 \in E \ldotp e_1 \caOrd e_2 \land e_2 \primcfRel e_3 \Rightarrow e_1 \caOrd e_3 $$
+\end{itemize}
+\end{definition}
 
-\begin{lemma}
-  A set $\lceil e \rceil$ is conflict-free for any $e \in E$.
-\end{lemma}
+From a confusion-free event structure one can construct a prime event structure
+by defining $\cfRel$ as follows:
 
-And a more general one:
+$$ e_1 \cfRel e_2 \iff 
+   \exists e'_1, e'_2 \ldotp e'_1 \primcfRel e'_2 \land
+   e'_1 \caOrd e_1 \land e'_2 \caOrd e_2 $$
 
-\begin{lemma}
-  A set $\lceil e \rceil$ is a configuration for any $e \in E$.
-\end{lemma}
+It can be shown that the conflict relation defined in this way 
+satisfies the axioms of prime event structure.
+
+% The following simple facts about prime event structures:
+
+% \begin{lemma}
+%   A set $\lceil e \rceil$ is conflict-free for any $e \in E$.
+% \end{lemma}
+
+% And a more general one:
+
+% \begin{lemma}
+%   A set $\lceil e \rceil$ is a configuration for any $e \in E$.
+% \end{lemma}
+
