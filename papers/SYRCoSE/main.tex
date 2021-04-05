@@ -382,10 +382,18 @@
 
 \begin{abstract}
 
+The true concurrency models, and event structures in particular, 
+has been introduced in the 1980s as an alternative to operational interleving 
+semantics of concurrency, and nowadays they are regaining popularity.   
+The event structures directly represent the causal dependence and 
+conflict between the individual atomic actions of the system, 
+this property leads to a more compact encoding of the semantics.
 
-Nowadays, theory of Event Structure (ES) is actively developing. It is rather general to reason about another different  concepts (eg. Weak Memory Models). Also this theory suits to be mechanized with modern poof-assistances. But, unfortunately in many articles either ES theory was used with a big loss of generality or results weren't formalized with any poof-assistances.
+In this report we present a theory of 
+event structures mechanized in the \coq proof assistant
+and demonstrate how it can be applied to define certified executable
+semantics of a simple parallel register machine with shared memory.   
 
-In this article, we mechanized general the theory of prime event structures with Coq proof assistant. Then to demonstrate the power of this theory we constructed small-step semantics for pseudo-assembly language and expressed Release/Acquire Memory Model in terms of our developed theory.
 \end{abstract}
 
 \IEEEpeerreviewmaketitle
