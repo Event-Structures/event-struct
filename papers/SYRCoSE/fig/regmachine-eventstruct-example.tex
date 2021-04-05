@@ -1,0 +1,106 @@
+\begin{center}
+    \begin{tikzpicture}
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\langle 1, \bot \rangle$};
+        \node (id2) at (3,4.5) {$\langle 2, \bot \rangle$};
+        \node (id3) at (6,4.5) {$\langle 3, \bot \rangle$};
+
+        \draw[then] (3,4) -- (3,3.5);
+    \end{tikzpicture}
+    \begin{tikzpicture}
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\langle 1, \bot \rangle$};
+        \node (id2) at (3,4.5) {$\langle 2, \bot \rangle$};
+        \node (id3) at (6,4.5) {$\langle 3, \bot \rangle$};
+
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3) { $\langle 4, \bot \rangle$};
+
+        \draw[ca] (wx1) -- (id1);
+
+        \draw[then] (3, 2.5) -- (3, 2);
+    \end{tikzpicture}
+    \begin{tikzpicture}
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\langle 1, \bot \rangle$};
+        \node (id2) at (3,4.5) {$\langle 2, \bot \rangle$};
+        \node (id3) at (6,4.5) {$\langle 3, \bot \rangle$};
+        
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3) {$\langle 4, \bot \rangle$};
+        
+        \draw[ca] (wx1) -- (id1);
+        
+        \node (wx2) at (6,3.5) {$\wlab{x}{2}$};
+        \node (id4) at (6,3) {$\langle 4, \bot \rangle$};
+
+        \draw[ca] (wx2) -- (id3);
+
+        \draw[then] (3, 2.5) -- (3, 2);
+    \end{tikzpicture}
+    \begin{tikzpicture}
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\langle 1, \bot \rangle$};
+        \node (id2) at (3,4.5) {$\langle 2, \bot \rangle$};
+        \node (id3) at (6,4.5) {$\langle 3, \bot \rangle$};
+        
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3) {$\langle 4, \bot \rangle$};
+
+        \draw[ca] (wx1) -- (id1);
+
+        \node (wx2) at (6,3.5) {$\wlab{x}{2}$};
+        \node (id4) at (6,3) {$\langle 4, \bot \rangle$};
+
+        \draw[ca] (wx2) -- (id3);
+
+        \node (rx1) at (1.8,3.5) {$\rlab{x}{1}$};
+        \node (id4) at (1.8,3) {$\langle 4, r \mapsto 1 \rangle$};
+        \draw[deps] (wx1) -- (rx1);
+        \draw[ca] (rx1) -- (id2);
+
+        \draw[then] (3, 2) -- (3, 1.5);
+    \end{tikzpicture}
+    \begin{tikzpicture}\node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\langle 1, \bot \rangle$};
+        \node (id2) at (3,4.5) {$\langle 2, \bot \rangle$};
+        \node (id3) at (6,4.5) {$\langle 3, \bot \rangle$};
+        
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3) {$\langle 4, \bot \rangle$};
+
+        \draw[ca] (wx1) -- (id1);
+
+        \node (wx2) at (6,3.5) {$\wlab{x}{2}$};
+        \node (id4) at (6,3) {$\langle 4, \bot \rangle$};
+
+        \draw[ca] (wx2) -- (id3);
+
+        \node (rx1) at (1.8,3.5) {$\rlab{x}{1}$};
+        \node (id4) at (1.8,3) {$\langle 4, r \mapsto 1 \rangle$};
+        \draw[deps] (wx1) -- (rx1);
+        \draw[ca] (rx1) -- (id2);
+
+        \node (rx2) at (4.2,3.5) {$\rlab{x}{2}$};
+        \node (id4) at (4.2,3) {$\langle 4, r \mapsto 2 \rangle$};
+        \draw[deps] (wx2) -- (rx2);
+        \draw[ca] (rx2) -- (id2);
+        
+    \end{tikzpicture}
+\end{center}
