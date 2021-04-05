@@ -227,7 +227,8 @@
    no/.style={->,dotted,thick,shorten >=-0.5mm,shorten <=-0.5mm},
    deps/.style={->,color=colorDEPS,dotted,thick,shorten >=-0.5mm,shorten <=-0.5mm},
    wgr/.style={fill=colorWGR, opacity=0.1},
-   then/.style={->,snake=zigzag,segment amplitude=1pt,segment length=3pt}
+   then/.style={->,snake=zigzag,segment amplitude=1pt,segment length=3pt},
+   esrect/.style={rectangle,dotted},
 }
 
 % arrows
@@ -253,6 +254,7 @@
 \newcommand{\assignInst}[2]{#1 := #2}
 \newcommand{\opInst}[4]{#2 := #3 #1 #4}
 \newcommand{\jumpInst}[2]{\kw{if}~ #1~ \kw{jump}~ #2}
+\newcommand{\exitInst}{\kw{exit}}
 
 \newcommand{\readInst}[2]{#1 := #2}
 \newcommand{\writeInst}[2]{#1 := #2}
