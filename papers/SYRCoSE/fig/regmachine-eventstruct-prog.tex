@@ -1,0 +1,21 @@
+\begin{center}
+    \begin{tikzpicture}
+          \node (wxa) %[left of = mid, node distance = 1.1cm] 
+            % at (0,1)
+            {$1: \ x:=1$};
+    
+          \node (wxb) [right of = wxa, node distance = 1.9cm] 
+            % at (1,1)
+            {$2: \ r:=x$};
+    
+          \node (wxc) [right of = wxb, node distance = 1.9cm] 
+            % at (2,1)
+            {$3: \ x:=2$};
+    
+          \draw ($(wxa.north east)$) -- ($(wxa.south east)$);
+          \draw ($(wxb.north west)$) -- ($(wxb.south west)$);
+          \draw ($(wxb.north east)$) -- ($(wxb.south east)$);
+          \draw ($(wxc.north west)$) -- ($(wxc.south west)$);
+    \end{tikzpicture}
+    \end{center}
+    
