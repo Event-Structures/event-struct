@@ -12,7 +12,7 @@ A prime event structure (PES) is a triple $(\eventSet, \caOrd, \cfRel)$, where
   \item $\caOrd$ is a causality relation on E such that 
   \begin{itemize}
     \item $ (\eventSet, \caOrd) $ is a partial order;
-    \item for every $e \in \eventSet$ its causality prefix ${\lceil e \rceil := \{ e' : e' \caOrd e \}}$ 
+    \item for every $e \in \eventSet$ its causality prefix ${\prefix{e} := \{ e' : e' \caOrd e \}}$ 
       is finite, \ie every event is caused by a finite set of events.
   \end{itemize}
   \item $\#$ is a conflict relation on $E$ such that:

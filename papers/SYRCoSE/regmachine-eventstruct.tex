@@ -79,7 +79,7 @@ For this definition to work properly, we also need
 to assume that in each thread has a special initial event 
 labeled by a distinguished \emph{thread start} label $\tslab{}$. 
 
-$$ e_1 \primcfRel e_2 \iff e_1 \neq e_2 \wedge f_{\lfPO}(e_1) = f_{\lfPO}(e2) $$
+$$ e_1 \primcfRel e_2 \iff e_1 \neq e_2 \wedge \lfPO(e_1) = \lfPO(e2) $$
 
 Finally, we need a way to reconcile the event structure
 with the states of machine's threads. 
@@ -146,9 +146,26 @@ indeed satisfies the axioms of the prime confusion free event structure.
   are defined as described above, forms prime confusion-free event structure.
 \end{theorem}
 
-%% I can't use `proof` here, sorry.  
-% \begin{proof}
-% \end{proof}
+We sketch the proof below. 
 
-\todo{Sketch the proof if we'll have space and time}
+First, we need to show that $\caOrd \ \defeq \ (\lPO \cup \lRF)^*$
+is a partial order. Reflexivity and transitivity follows immediately 
+from the definition of the reflexive-transitive closure. 
+To show antisymmetry note that $\lessdot_{\lPO} \subseteq \identOrd$
+and $\lessdot_{\lRF} \subseteq \identOrd$ by construction. 
+Therefore $\caOrd \subseteq \identOrd$. Since $\identOrd$ is
+partial order, it is antisymmetric, and thus $\caOrd$ should also be antisymmetric.
+The axiom of finite cause, \ie $\prefix{e}$ is finite for every event $e$, 
+follows from the fact that at each step of the construction 
+the set of possible predecessors of the new event 
+can be over-approximated by the finite sequence $\eventSeq$.
+
+Second, we need to show that the conflict relation defined as 
+$ e_1 \primcfRel e_2 \iff e_1 \neq e_2 \wedge \lfPO(e_1) = \lfPO(e2) $
+obeys the laws of primitive conflict relation. 
+Trivially, this relation is irreflexive, symmetric, and transitive.
+Also, it is easy to see that it satisfies choice-locality. 
+The side condition $\neg (e_{\lPO} \cfRel e_{\lRF})$ of the rule \ESLoadRule
+ensures that the primitive conflict relation would not violate 
+hereditary property. 
 
