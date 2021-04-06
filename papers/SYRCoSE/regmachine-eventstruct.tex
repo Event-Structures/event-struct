@@ -32,7 +32,7 @@ in which events are added to the structure.
 The second component is labeling function $\lLAB : \eventSet \fun \Lab$, 
 assigning a label to each event. 
 
-Next, following the theory of axiomatic weak memory models~\cite{\todo{}},
+Next, following the theory of axiomatic weak memory models~\cite{Lahav-al:PLDI17},
 we define the causality relation of the register machine's event structure
 as a transitive closure of two relations~---~\emph{program order} 
 and \emph{reads-from}, denoted as $\lPO$ and $\lRF$ correspondingly. 
@@ -42,7 +42,7 @@ $$ \caOrd \ \defeq \ (\lPO \cup \lRF)^* $$
 Program order tracks precedence of events within a single thread. 
 Reads-from relation captures the flow of values from 
 write events to read events, and ensures that values 
-do not appear out of thin-air~\cite{\todo{}}.  
+do not appear out of thin-air~\cite{Boehm-Demsky:MSPC14, Lahav-al:PLDI17}.  
 
 In order to construct $\lPO$ and $\lRF$ incrementally
 we represent them via their inverse covering functions $\lfPO$ and $\lfRF$. 
@@ -169,3 +169,17 @@ The side condition $\neg (e_{\lPO} \cfRel e_{\lRF})$ of the rule \ESLoadRule
 ensures that the primitive conflict relation would not violate 
 hereditary property. 
 
+On \cref{fig:eventstruct-example} one can see the prime event structure
+obtained as a result of incremental construction 
+depicted on \cref{fig:regmachine-eventstruct-example}.
+
+\input{fig/eventstruct-example.tex}
+
+Once the event structure is constructed, one can extract
+the configurations corresponding to the particular runs 
+of the parallel register machine, and 
+further filter them via \emph{consistency predicate}
+defining the \emph{memory consistency model}.
+Our construction of the event structures allows to encode 
+a wide class of so-called $\lPO\cup\lRF$ acyclic 
+relaxed memory models~\cite{Lahav-al:PLDI17}.
