@@ -230,11 +230,11 @@
 
 
 % *** SUBFIGURE PACKAGES ***
-%\ifCLASSOPTIONcompsoc
+% \ifCLASSOPTIONcompsoc
 %  \usepackage[caption=false,font=footnotesize,labelfont=sf,textfont=sf]{subfig}
-%\else
+% \else
 %  \usepackage[caption=false,font=footnotesize]{subfig}
-%\fi
+% \fi
 % subfig.sty, written by Steven Douglas Cochran, is the modern replacement
 % for subfigure.sty, the latter of which is no longer maintained and is
 % incompatible with some LaTeX packages including fixltx2e. However,
@@ -331,6 +331,8 @@
 \usepackage{bussproofs}
 \usepackage{mathtools}
 \usepackage{graphicx}% http://ctan.org/pkg/graphicx
+\usepackage{subcaption}
+
 
 % Because of some weird latex SHIT (!!!) I can't get this work.
 % Because of that we cannot use `proof` environment. 
@@ -368,9 +370,9 @@
 The true concurrency models, and event structures in particular, 
 has been introduced in the 1980s as an alternative to operational interleving 
 semantics of concurrency, and nowadays they are regaining popularity.   
-The event structures directly represent the causal dependence and 
-conflict between the individual atomic actions of the system, 
-this property leads to a more compact encoding of the semantics.
+Event structures represent the causal dependency and 
+conflict between the individual atomic actions of the system directly. 
+This property leads to a more compact and concise representation of semantics.
 
 In this report we present a theory of 
 event structures mechanized in the \coq proof assistant

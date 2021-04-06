@@ -16,13 +16,15 @@ shown on~\cref{fig:regmachine-syntax}.
               & &   & | & \assignInst{r}{v}               & \text{assign to register}      \\
               & &   & | & \opInst{\otimes}{r_1}{r_2}{r_3}  & \text{apply binary operation}  \\
               & &   & | & \jumpInst{r}{\ip{i}}            & \text{conditional jump}        \\
+              & &   & | & \exitInst                       & \text{exit}                    \\
               & &   & | & \readInst{r}{x}                 & \text{read from memory}        \\
               & &   & | & \writeInst{x}{v}                & \text{write to memory}         \\
 
-  r      &\in& \Reg &   &                                & \text{thread-local register}   \\ 
-  x      &\in& \Loc &   &                                & \text{shared memory location}  \\ 
-  v      &\in& \Z   &   &                                & \text{value}                   \\
-  \ip{i} &\in& \N   &   &                                & \text{instruction label}       \\ 
+  r      &\in& \Reg     &   &                    & \text{thread-local register}   \\ 
+  x      &\in& \Loc     &   &                    & \text{shared memory location}  \\ 
+  v      &\in& \Z       &   &                    & \text{value}                   \\
+  \otimes&\in& \BinOp   &   &                    & \text{binary operation}        \\
+  \ip{i} &\in& \N       &   &                    & \text{instruction label}       \\ 
 
 \end{array}
 \] 
@@ -38,7 +40,7 @@ denoting the side-effect of the operation
 (see \cref{fig:label-syntax}).
 This encoding allows us to decouple 
 the semantics of the register machine 
-from a \emph{memory model}~\cite{\todo{}}. 
+from a \emph{memory model}.
 
 \begin{figure}[h!]
 \[
@@ -55,7 +57,10 @@ from a \emph{memory model}~\cite{\todo{}}.
 \end{figure}
 
 The semantics is given in a form of 
-\emph{labeled transition system}~\cite{\todo{}}.
+\emph{labeled transition system}~%
+\footnote{As we have mentioned, in our \coq development we actually use 
+the monadic encoding of the operational semantics. 
+The labeled transition system can be deduced from this encoding.}
 State of the system consists of instruction pointer
 and a map from registers to their values, 
 as shown in \cref{fig:regmachine-thrdstate}. 

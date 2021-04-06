@@ -49,7 +49,7 @@ It denotes pairs of events at which the compuation
 diverges into two conflicting branches. 
 
 \begin{definition}
-Confusion-free event structures (CFES) is a triple $(E, \caOrd, \primcfRel)$, where
+Confusion-free event structures (CES) is a triple $(E, \caOrd, \primcfRel)$, where
 \begin{itemize}
   \item $\caOrd$ obeys the same laws as for prime event structure;
   \item $\primcfRel$ is a primitive conflict relation, such that
@@ -58,7 +58,7 @@ Confusion-free event structures (CFES) is a triple $(E, \caOrd, \primcfRel)$, wh
     \item it does not violate hereditary condition:
     $$ \forall e_1, e_2, e_3 \in E \ldotp 
        e_1 \primcfRel e_2 \land e_2 \caOrd e_3 \Rightarrow \neg (e_1 \primcfRel e_3) $$
-    \item it is \emph{choice-local}
+    \item it satisfies the axiom of \emph{choice locality}
   \end{itemize}
     $$ \forall e_1, e_2, e_3 \in E \ldotp e_1 \caOrd e_2 \land e_2 \primcfRel e_3 \Rightarrow e_1 \caOrd e_3 $$
 \end{itemize}
@@ -68,7 +68,7 @@ From a confusion-free event structure one can construct a prime event structure
 by defining $\cfRel$ as follows:
 
 $$ e_1 \cfRel e_2 \iff 
-   \exists e'_1, e'_2 \ldotp e'_1 \primcfRel e'_2 \land
+   \exists e'_1, e'_2 \in \eventSet \ldotp e'_1 \primcfRel e'_2 \land
    e'_1 \caOrd e_1 \land e'_2 \caOrd e_2 $$
 
 It can be shown that the conflict relation defined in this way 
