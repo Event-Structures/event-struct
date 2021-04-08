@@ -43,37 +43,37 @@ A configuration of PES $(E, \caOrd, \cfRel)$ is a set of events $X \subseteq E$ 
 \end{itemize}
 \end{definition}
 
-We will also need a subclass of prime event structures --- 
-\emph{confusion-free} event structures~\cite{Nielsen-al:1981}. 
-In a confusion-free structure the conflict relation is generated from 
-a simpler \emph{primitive conflict} relation $\primcfRel$,
-which denotes pairs of events at which the computation
-diverges into two conflicting branches. 
+% We will also need a subclass of prime event structures --- 
+% \emph{confusion-free} event structures~\cite{Nielsen-al:1981}. 
+% In a confusion-free structure the conflict relation is generated from 
+% a simpler \emph{primitive conflict} relation $\primcfRel$,
+% which denotes pairs of events at which the computation
+% diverges into two conflicting branches. 
 
-\begin{definition}
-Confusion-free event structures (CES) is a triple $(E, \caOrd, \primcfRel)$, where
-\begin{itemize}
-  \item $\caOrd$ obeys the same laws as for prime event structures;
-  \item $\primcfRel$ is a primitive conflict relation, such that
-  \begin{itemize}
-    \item it is irreflexive, symmetric and transitive;
-    \item it does not violate the hereditary condition:
-    $$ \forall e_1, e_2, e_3 \in E \ldotp 
-       e_1 \primcfRel e_2 \land e_2 \caOrd e_3 \Rightarrow \neg (e_1 \caOrd e_3) $$
-    \item it satisfies the axiom of \emph{choice locality}
-  \end{itemize}
-    $$ \forall e_1, e_2, e_3 \in E \ldotp e_1 \caOrd e_2 \land e_2 \primcfRel e_3 \Rightarrow e_1 \caOrd e_3 $$
-\end{itemize}
-\end{definition}
+% \begin{definition}
+% Confusion-free event structures (CES) is a triple $(E, \caOrd, \primcfRel)$, where
+% \begin{itemize}
+%   \item $\caOrd$ obeys the same laws as for prime event structures;
+%   \item $\primcfRel$ is a primitive conflict relation, such that
+%   \begin{itemize}
+%     \item it is irreflexive, symmetric and transitive;
+%     \item it does not violate the hereditary condition:
+%     $$ \forall e_1, e_2, e_3 \in E \ldotp 
+%        e_1 \primcfRel e_2 \land e_2 \caOrd e_3 \Rightarrow \neg (e_1 \caOrd e_3) $$
+%     \item it satisfies the axiom of \emph{choice locality}
+%   \end{itemize}
+%     $$ \forall e_1, e_2, e_3 \in E \ldotp e_1 \caOrd e_2 \land e_2 \primcfRel e_3 \Rightarrow e_1 \caOrd e_3 $$
+% \end{itemize}
+% \end{definition}
 
-From a confusion-free event structure one can construct a prime event structure
-by defining $\cfRel$ as follows:
-$$ e_1 \cfRel e_2 \iff 
-   \exists e'_1, e'_2 \in \eventSet \ldotp e'_1 \primcfRel e'_2 \land
-   e'_1 \caOrd e_1 \land e'_2 \caOrd e_2 $$
+% From a confusion-free event structure one can construct a prime event structure
+% by defining $\cfRel$ as follows:
+% $$ e_1 \cfRel e_2 \iff 
+%    \exists e'_1, e'_2 \in \eventSet \ldotp e'_1 \primcfRel e'_2 \land
+%    e'_1 \caOrd e_1 \land e'_2 \caOrd e_2 $$
 
-It can be shown that the conflict relation defined in this way 
-satisfies the axioms of prime event structure.
+% It can be shown that the conflict relation defined in this way 
+% satisfies the axioms of prime event structure.
 
 % The following simple facts about prime event structures:
 
