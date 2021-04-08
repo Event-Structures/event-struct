@@ -139,7 +139,7 @@ In case of \ESLoadRule additionally an event $e_{\lRF}$ is selected,
 such that it has a write label matching the read label of the new event.    
 
 The following theorem asserts that the event structure built this way
-indeed satisfies the axioms of the prime confusion free event structure.  
+indeed satisfies the axioms of the prime confusion-free event structure.  
 
 \begin{theorem}
   The tuple $\tup{E, \caOrd, \primcfRel}$, where $\caOrd$ and $\primcfRel$
@@ -154,7 +154,7 @@ from the definition of the reflexive-transitive closure.
 To show antisymmetry note that $\lessdot_{\lPO} \subseteq \identOrd$
 and $\lessdot_{\lRF} \subseteq \identOrd$ by construction. 
 Therefore $\caOrd \subseteq \identOrd$. Since $\identOrd$ is
-partial order, it is antisymmetric, and thus $\caOrd$ should also be antisymmetric.
+a partial order, it is antisymmetric, and thus $\caOrd$ should also be antisymmetric.
 The axiom of finite cause, \ie $\prefix{e}$ is finite for every event $e$, 
 follows from the fact that at each step of the construction 
 the set of possible predecessors of the new event 
@@ -167,10 +167,10 @@ Trivially, this relation is irreflexive, symmetric, and transitive.
 Also, it is easy to see that it satisfies choice-locality. 
 The side condition $\neg (e_{\lPO} \cfRel e_{\lRF})$ of the rule \ESLoadRule
 ensures that the primitive conflict relation would not violate 
-hereditary property. 
+the hereditary property. 
 
 In \cref{fig:eventstruct-example} one can see the prime event structure
-obtained as a result of incremental construction 
+obtained as a result of the incremental construction 
 depicted in \cref{fig:regmachine-eventstruct-example}.
 
 \input{fig/eventstruct-example.tex}
@@ -178,8 +178,8 @@ depicted in \cref{fig:regmachine-eventstruct-example}.
 Once the event structure is constructed, one can extract
 the configurations corresponding to the particular runs 
 of the parallel register machine, and 
-further filter them via \emph{consistency predicate}
+further filter them via the \emph{consistency predicate}
 defining the \emph{memory consistency model}.
-Our construction of the event structures allows to encode 
+Our construction of event structures allows to encode 
 a wide class of so-called $\lPO\cup\lRF$ acyclic 
 relaxed memory models~\cite{Lahav-al:PLDI17}.
