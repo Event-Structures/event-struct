@@ -2,25 +2,28 @@
 
 In this section we sketch the design principles of our library. 
 
-We build our mechanisation on top of \mathcomp~\cite{Mahboubi-Tassi:MATHCOMP17} library 
+We build our mechanisation on top of the \mathcomp~\cite{Mahboubi-Tassi:MATHCOMP17} library 
 using the \ssreflect~\cite{Gonthier-al:SSR2016} extension of the \coq system.
 We also use the \emph{small-scale reflection} 
 methodology~\cite{Gonthier-Assia:SSR2010, Gonthier-al:SSR2016}, 
 a key ingredient of the \ssreflect. 
 
 The small-scale reflection approach is based on 
-pervasive use of symbolic representation of the proof goal, 
-which \emph{reflects} the logical representation. 
+pervasive use of symbolic representations \emph{intermixed}
+with logical ones within the confines of the same proof goal,
+as opposed to large-scale reflection which does not allow such mixing.
+Symbolic representations are connected to the corresponding logical ones
+via user-defined \emph{reflect predicates}.
 The symbolic representation can be manipulated 
 by the computational engine of the language, 
 allowing the user to automate low-level routine 
 proof management by using various decision 
-and simplification procedures. 
+and simplification procedures.
 Whenever the user needs to guide the proof 
 it can switch to logical representation
 and perform some proof steps manually. 
 
-To achieve better automation one is recommended 
+To achieve better automation one is encouraged 
 to use \emph{decidable} and \emph{computable} procedures
 whenever possible.
 For example, in the context of our library, 
