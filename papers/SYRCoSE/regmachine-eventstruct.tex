@@ -11,7 +11,7 @@ on each step we require that events behave as \emph{identifiers}.
 
 \begin{definition}
   We say that a set $\eventSet$ together with strict partial order $\identOrd$
-  form an identifier set if:
+  form an \emph{identifier set} if:
   \begin{itemize}
     \item there exists a distinguished initial identifier $e_0 \in \eventSet$;
     \item there exists a function $\fresh : \eventSet \fun \eventSet$ which 
@@ -27,9 +27,9 @@ and how they form a prime event structure together.
 
 The first component $\eventSeq$ is a sequence of events 
 $e_1 \identOrdDual \dots \identOrdDual e_n$
-in the order reverse to the the one 
-in which events are added to the structure. 
-The second component is labelling function $\lLAB : \eventSet \fun \Lab$, 
+in reverse order w.r.t the order 
+in which events get added to the structure. 
+The second component is a labelling function $\lLAB : \eventSet \fun \Lab$, 
 assigning a label to each event. 
 
 Next, following the theory of axiomatic weak memory models~\cite{Lahav-al:PLDI17},
