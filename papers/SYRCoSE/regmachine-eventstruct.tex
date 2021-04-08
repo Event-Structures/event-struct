@@ -13,8 +13,8 @@ on each step we require that events behave as \emph{identifiers}.
   We say that set $\eventSet$ together with strict partial order $\identOrd$
   form an identifier set if:
   \begin{itemize}
-    \item there exist distinguished initial identifier $e_0 \in \eventSet$;
-    \item there exist function $\fresh : \eventSet \fun \eventSet$ which 
+    \item there exists a distinguished initial identifier $e_0 \in \eventSet$;
+    \item there exists a function $\fresh : \eventSet \fun \eventSet$ which 
       generates a new fresh identifier, \sth
       $$ \forall e \in \eventSet \ldotp e \identOrd \fresh(e) $$
   \end{itemize}
