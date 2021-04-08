@@ -28,8 +28,8 @@ A prime event structure (PES) is a triple $(\eventSet, \caOrd, \cfRel)$, where
 \end{itemize}
 \end{definition}
 
-Prime event structures can encode multiple runs of a program.
-Each individual run can be extracted as \emph{configuration}. 
+A single prime event structures can encode multiple runs of a program.
+Each individual run can be extracted as a \emph{configuration}. 
 In other words, configurations are used to model 
 a history of computation up to a certain point.
 
@@ -59,7 +59,7 @@ Confusion-free event structures (CES) is a triple $(E, \caOrd, \primcfRel)$, whe
     \item it is irreflexive, symmetric and transitive;
     \item it does not violate the hereditary condition:
     $$ \forall e_1, e_2, e_3 \in E \ldotp 
-       e_1 \primcfRel e_2 \land e_2 \caOrd e_3 \Rightarrow \neg (e_1 \primcfRel e_3) $$
+       e_1 \primcfRel e_2 \land e_2 \caOrd e_3 \Rightarrow \neg (e_1 \caOrd e_3) $$
     \item it satisfies the axiom of \emph{choice locality}
   \end{itemize}
     $$ \forall e_1, e_2, e_3 \in E \ldotp e_1 \caOrd e_2 \land e_2 \primcfRel e_3 \Rightarrow e_1 \caOrd e_3 $$
