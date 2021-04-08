@@ -39,8 +39,8 @@ and \emph{reads-from}, denoted as $\lPO$ and $\lRF$ correspondingly.
 
 $$ \caOrd \ \defeq \ (\lPO \cup \lRF)^* $$
 
-Program order tracks precedence of events within a single thread. 
-Reads-from relation captures the flow of values from 
+The program order relation tracks precedence of events within a single thread. 
+The reads-from relation captures the flow of values from 
 write events to read events, and ensures that values 
 do not appear out of thin-air~\cite{Boehm-Demsky:MSPC14, Lahav-al:PLDI17}.  
 
