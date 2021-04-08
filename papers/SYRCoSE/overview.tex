@@ -2,7 +2,7 @@
 
 In this section we sketch the design principles of our library. 
 
-We build our mechanization on top of \mathcomp~\cite{Mahboubi-Tassi:MATHCOMP17} library 
+We build our mechanisation on top of \mathcomp~\cite{Mahboubi-Tassi:MATHCOMP17} library 
 using the \ssreflect~\cite{Gonthier-al:SSR2016} extension of the \coq system.
 We also use the \emph{small-scale reflection} 
 methodology~\cite{Gonthier-Assia:SSR2010, Gonthier-al:SSR2016}, 
@@ -10,7 +10,7 @@ a key ingredient of the \ssreflect.
 
 The small-scale reflection approach is based on 
 pervasive use of symbolic representation of the proof goal, 
-which \emph{relfects} the logical representation. 
+which \emph{reflects} the logical representation. 
 The symbolic representation can be manipulated 
 by the computational engine of the language, 
 allowing the user to automate low-level routine 
@@ -30,8 +30,8 @@ as decidable \texttt{bool}-valued relations,
 as opposed to \emph{propositional} 
 relations of type $E \fun E \fun \texttt{Prop}$. 
 
-We also favor the computational encoding of semantics. 
-Similarly to the recent related works on mechanization 
+We also favour the computational encoding of semantics. 
+Similarly to the recent related works on mechanisation 
 of operational semantics~\cite{Xia-al:POPL2019, Letan-al:CPP2020, Affeldt-al:ICMPC2019}, 
 we encode the semantics as monadic interpreters.  
 This allows us to extract~\cite{Letouzey:CCE2008} 

@@ -10,8 +10,8 @@ to model-based mutation testing~\cite{Fellner-al:VMCAI2020}.
 
 The main advantage of the event structures 
 compared to traditional interleaving semantics 
-is that they give a more compact and consice 
-representation of progams' behavior.
+is that they give a more compact and concise 
+representation of programs' behaviour.
 For example, consider the following code snippet. 
 
 \input{fig/intro-prog.tex}
@@ -29,7 +29,7 @@ The same information can be encoded in a single
 event structure containing $6$ events in total
 (see \cref{fig:intro-es}). 
 In the event structure there are two types of edges 
-between the events. The gray arrows $e_1 \arrowCA e_2$ 
+between the events. The grey arrows $e_1 \arrowCA e_2$ 
 represent the \emph{causality relation}, a 
 partial order reflecting the causal relationship
 between the atomic events of computation.
@@ -46,22 +46,22 @@ subset of events.
 
 In the programming language and formal semantics research communities 
 it becomes the de-facto standard to complement the theoretical 
-studies with their mechanization in the \emph{proof assistants}
+studies with their mechanisation in the \emph{proof assistants}
 like Coq, Agda, Isabelle, Arend, and others,
 as this process increases the reliability and reproducibility 
 of the scientific results.
 Yet, as far as we know, there is a little work on 
-mechanization of event structures theory. 
+mechanisation of event structures theory. 
 
 Our work is aimed to close this gap. 
 Our goal is to develop a Coq library containing 
 a comprehensive set of common definitions, lemmas, 
 and tactics that would allow the researchers 
-to utilize the theory of event structures 
+to utilise the theory of event structures 
 for the needs of their domain. 
 
 In this work in progress report we sketch 
-the common design princples behind our library
+the common design principles behind our library
 and give a concrete example of its usage  
-by developing a formal mechanized semantics of simple 
+by developing a formal mechanised semantics of simple 
 register machine with shared memory. 

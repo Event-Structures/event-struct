@@ -1,6 +1,6 @@
 \subsection{Register Machine}
 
-For our case study we use a simple idealized model 
+For our case study we use a simple idealised model 
 of a register machine, which consists of a finite 
 sequence of instructions, an instruction pointer 
 and an infinite set of registers. 
@@ -57,10 +57,10 @@ from a \emph{memory model}.
 \end{figure}
 
 The semantics is given in a form of 
-\emph{labeled transition system}~%
+\emph{labelled transition system}~%
 \footnote{As we have mentioned, in our \coq development we actually use 
 the monadic encoding of the operational semantics. 
-The labeled transition system can be deduced from this encoding.}
+The labelled transition system can be deduced from this encoding.}
 State of the system consists of instruction pointer
 and a map from registers to their values, 
 as shown in \cref{fig:regmachine-thrdstate}. 
