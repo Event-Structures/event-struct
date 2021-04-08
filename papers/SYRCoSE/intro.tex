@@ -8,20 +8,21 @@ with the applications of the theory ranging from relaxed memory models%
 to model-based mutation testing~\cite{Fellner-al:VMCAI2020}.
 % \eupp{perhaps, we could add more citations once the related work is ready.}
 
-The main advantage of the event structures 
+The main advantage of event structures
 compared to traditional interleaving semantics 
 is that they give a more compact and concise 
-representation of programs' behaviour.
-For example, consider the following code snippet. 
+representation of programs' behaviours.
+For example, consider the following code snippet
+of a simple parallel program.
 
 \input{fig/intro-prog.tex}
 
 Under the interleaving semantics 
 it has $3! = 6$ traces with each trace consisting of $4$ events,
-as depicted on \cref{fig:intro-traces}.
-Event themselves represent atomic side-effects produced by the execution of instruction. 
-In our case it is either a write of a value to a shared variable $\wlab{x}{a}$,
-or a read of a particular value from a shared variable $\rlab{x}{a}$.  
+as depicted in \cref{fig:intro-traces}.
+Events themselves represent atomic side-effects produced by instruction executions.
+In our case an event is either a \emph{write} of a value $a$ to a shared variable $x$ denoted as $\wlab{x}{a}$,
+or a \emph{read} of a value $a$ from a shared variable $x$ denoted as $\rlab{x}{a}$.  
 
 \input{fig/intro-traces.tex}
 
@@ -44,24 +45,24 @@ subset of events.
 
 \input{fig/intro-es.tex}
 
-In the programming language and formal semantics research communities 
-it becomes the de-facto standard to complement the theoretical 
-studies with their mechanisation in the \emph{proof assistants}
+The programming languages theory and formal semantics research communities 
+are moving to increase the usage of \emph{proof assistants} 
 like Coq, Agda, Isabelle, Arend, and others,
+to complement theoretical studies with their mechanisation,
 as this process increases the reliability and reproducibility 
-of the scientific results.
-Yet, as far as we know, there is a little work on 
-mechanisation of event structures theory. 
+of scientific results.
+Yet, to the best of our knowledge, there is little work on 
+mechanisation of the theory of event structures.
+The present report aims to close the gap.
 
-Our work is aimed to close this gap. 
 Our goal is to develop a Coq library containing 
 a comprehensive set of common definitions, lemmas, 
-and tactics that would allow the researchers 
+and tactics that would allow researchers 
 to utilise the theory of event structures 
-for the needs of their domain. 
+for the needs of their domain.
 
 In this work in progress report we sketch 
 the common design principles behind our library
 and give a concrete example of its usage  
 by developing a formal mechanised semantics of simple 
-register machine with shared memory. 
+register machine with shared memory.
