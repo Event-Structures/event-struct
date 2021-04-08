@@ -34,7 +34,7 @@ assigning a label to each event.
 
 Next, following the theory of axiomatic weak memory models~\cite{Lahav-al:PLDI17},
 we define the causality relation of the register machine's event structure
-as the reflexive transitive closure of two relations~---~\emph{program order} 
+as the reflexive transitive closure of the union of two relations~---~\emph{program order} 
 and \emph{reads-from}, denoted as $\lPO$ and $\lRF$ correspondingly. 
 
 $$ \caOrd \ \defeq \ (\lPO \cup \lRF)^* $$
