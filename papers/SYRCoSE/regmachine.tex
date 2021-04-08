@@ -33,8 +33,8 @@ shown in~\cref{fig:regmachine-syntax}.
 \end{figure}
 
 We first present the semantics of a single thread program.
-In this semantics memory access instructions 
-does not actually operate on shared memory,
+Under this semantics, memory access instructions 
+do not operate on shared memory
 but rather produce a \emph{label}
 denoting the side-effect of the operation 
 (see \cref{fig:label-syntax}).
@@ -56,12 +56,12 @@ from a \emph{memory model}.
 \label{fig:label-syntax}
 \end{figure}
 
-The semantics is given in a form of 
+The semantics is given in the form of a
 \emph{labelled transition system}~%
 \footnote{As we have mentioned, in our \coq development we actually use 
 the monadic encoding of the operational semantics. 
-The labelled transition system can be deduced from this encoding.}
-State of the system consists of instruction pointer
+The labelled transition system can be derived from this encoding.}.
+The state of the system consists of an instruction pointer
 and a map from registers to their values, 
 as shown in \cref{fig:regmachine-thrdstate}. 
 The rules of the semantics are standard 
@@ -73,7 +73,7 @@ The rules of the semantics are standard
 
   s          &\in& \ThrdState    &::=& \tup{\ip{i}, \regmap} &                         \\
   \ip{i}     &\in& \N            &   &                    & \text{instruction pointer} \\
-  \regmap    &\in& \Reg \fun \Z  &   &                    & \text{registers mapping}   \\
+  \regmap    &\in& \Reg \fun \Z  &   &                    & \text{register mapping}   \\
 
 \end{array}
 \] 

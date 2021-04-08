@@ -10,8 +10,8 @@ on each step. In order to generate a new event
 on each step we require that events behave as \emph{identifiers}.  
 
 \begin{definition}
-  We say that set $\eventSet$ together with strict partial order $\identOrd$
-  form an identifier set if:
+  We say that a set $\eventSet$ together with strict partial order $\identOrd$
+  form an \emph{identifier set} if:
   \begin{itemize}
     \item there exists a distinguished initial identifier $e_0 \in \eventSet$;
     \item there exists a function $\fresh : \eventSet \fun \eventSet$ which 
@@ -21,28 +21,28 @@ on each step we require that events behave as \emph{identifiers}.
 \end{definition}
 
 We will encode the event structure as a tuple 
-$\tup{\eventSeq, \lLAB, \lfPO, \lfRF}$, 
-below we explain the meaning of each component, 
-and how they together form a prime event structure.
+$\tup{\eventSeq, \lLAB, \lfPO, \lfRF}$ and explain
+below the meaning of each component, 
+and how they form a prime event structure together.
 
 The first component $\eventSeq$ is a sequence of events 
 $e_1 \identOrdDual \dots \identOrdDual e_n$
-in the order reverse to the the one 
-in which events are added to the structure. 
-The second component is labelling function $\lLAB : \eventSet \fun \Lab$, 
+in reverse order w.r.t the order 
+in which events get added to the structure. 
+The second component is a labelling function $\lLAB : \eventSet \fun \Lab$, 
 assigning a label to each event. 
 
 Next, following the theory of axiomatic weak memory models~\cite{Lahav-al:PLDI17},
 we define the causality relation of the register machine's event structure
-as a transitive closure of two relations~---~\emph{program order} 
+as the reflexive transitive closure of the union of two relations~---~\emph{program order} 
 and \emph{reads-from}, denoted as $\lPO$ and $\lRF$ correspondingly. 
 
 $$ \caOrd \ \defeq \ (\lPO \cup \lRF)^* $$
 
-Program order tracks precedence of events within a single thread. 
-Reads-from relation captures the flow of values from 
+The program order relation tracks precedence of events within a single thread. 
+The reads-from relation captures the flow of values from 
 write events to read events, and ensures that values 
-do not appear out of thin-air~\cite{Boehm-Demsky:MSPC14, Lahav-al:PLDI17}.  
+do not appear out of thin air~\cite{Boehm-Demsky:MSPC14, Lahav-al:PLDI17}.  
 
 In order to construct $\lPO$ and $\lRF$ incrementally
 we represent them via their inverse covering functions $\lfPO$ and $\lfRF$. 
@@ -52,7 +52,7 @@ we represent them via their inverse covering functions $\lfPO$ and $\lfRF$.
   Then $\lessdot$ is covering relation \wrt $\leqslant$ whenever 
   $x \lessdot y$ is true if and only if $x < y$ and 
   there is no $z$ \sth $x < z$ and $z < y$.
-  A (non-deterministic) function $f : A \fun \pwset{A}$ is a covering function if
+  A (non-deterministic) function $f$ from $A$ to the set of finite subsets of $A$ is a covering function if
   its corresponding relation, \ie ${\frel{f} \defeq \set{\tup{x, y} ~|~ y \in f(x)}}$, 
   is a covering relation.
 \end{definition}
@@ -84,8 +84,8 @@ $$ e_1 \primcfRel e_2 \iff e_1 \neq e_2 \wedge \lfPO(e_1) = \lfPO(e2) $$
 Finally, we need a way to reconcile the event structure
 with the states of machine's threads. 
 To do so we use a function ${\thrdmap : \eventSet \fun \ThrdState}$
-which maps event to a thread state obtained as a result of
-execution of event's side-effect.
+which maps an event to a thread state obtained as the result of
+the execution of the event's side-effect.
 
 Let us consider an example. Given the program below, 
 our semantics builds the event structure as 
@@ -98,23 +98,23 @@ shown in \cref{fig:regmachine-eventstruct-example}.
 The construction starts from an initial event structure,
 containing for each thread an event labelled by $\tslab{}$.
 Below the label we depict the corresponding thread state.
-Initially, each event is mapped to an initial thread state, 
+Initially, each event is mapped to an initial thread state
 consisting of an instruction pointer pointing to the first 
-instruction to execute, and an initial mapping of registers,
+instruction to be executed and an initial mapping of registers
 denoted as $\bot$.
 The first step executes the store instruction from 
-the leftmost thread, and exits the program, 
+the leftmost thread and exits the program, 
 since the execution of this thread terminates
-(we omit $\exitInst$ instructions at the end of each thread for brevity).
-Next the store from the rightmost thread is executed and corresponding
-write event is added to the structure. 
+(we omit the $\exitInst$ instructions at the end of each thread for brevity).
+Next, the store from the rightmost thread is executed and corresponding
+write event gets added to the structure. 
 After that the load instruction from the middle thread is executed. 
 Since there are two matching write events in the event structure, 
 two conflicting reads are conjoined to the event structure. 
 Note that the events can be added non-deterministically in any order
-respecting the causality. We could have first execute the rightmost thread
-and add write $\wlab{x}{2}$ before $\wlab{x}{1}$, 
-or add the read with label $\rlab{x}{2}$ 
+respecting causality. We could have first executed the rightmost thread
+and added write $\wlab{x}{2}$ before $\wlab{x}{1}$, 
+or we could have added the read with label $\rlab{x}{2}$ 
 before another read $\rlab{x}{1}$.  
 
 \input{fig/eventstruct-sem.tex}
