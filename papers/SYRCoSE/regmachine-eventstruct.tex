@@ -42,7 +42,7 @@ $$ \caOrd \ \defeq \ (\lPO \cup \lRF)^* $$
 The program order relation tracks precedence of events within a single thread. 
 The reads-from relation captures the flow of values from 
 write events to read events, and ensures that values 
-do not appear out of thin-air~\cite{Boehm-Demsky:MSPC14, Lahav-al:PLDI17}.  
+do not appear out of thin air~\cite{Boehm-Demsky:MSPC14, Lahav-al:PLDI17}.  
 
 In order to construct $\lPO$ and $\lRF$ incrementally
 we represent them via their inverse covering functions $\lfPO$ and $\lfRF$. 
@@ -84,8 +84,8 @@ $$ e_1 \primcfRel e_2 \iff e_1 \neq e_2 \wedge \lfPO(e_1) = \lfPO(e2) $$
 Finally, we need a way to reconcile the event structure
 with the states of machine's threads. 
 To do so we use a function ${\thrdmap : \eventSet \fun \ThrdState}$
-which maps event to a thread state obtained as a result of
-execution of event's side-effect.
+which maps an event to a thread state obtained as the result of
+the execution of the event's side-effect.
 
 Let us consider an example. Given the program below, 
 our semantics builds the event structure as 
