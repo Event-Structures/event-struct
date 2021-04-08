@@ -98,23 +98,23 @@ shown in \cref{fig:regmachine-eventstruct-example}.
 The construction starts from an initial event structure,
 containing for each thread an event labelled by $\tslab{}$.
 Below the label we depict the corresponding thread state.
-Initially, each event is mapped to an initial thread state, 
+Initially, each event is mapped to an initial thread state
 consisting of an instruction pointer pointing to the first 
-instruction to execute, and an initial mapping of registers,
+instruction to be executed and an initial mapping of registers
 denoted as $\bot$.
 The first step executes the store instruction from 
-the leftmost thread, and exits the program, 
+the leftmost thread and exits the program, 
 since the execution of this thread terminates
-(we omit $\exitInst$ instructions at the end of each thread for brevity).
-Next the store from the rightmost thread is executed and corresponding
-write event is added to the structure. 
+(we omit the $\exitInst$ instructions at the end of each thread for brevity).
+Next, the store from the rightmost thread is executed and corresponding
+write event gets added to the structure. 
 After that the load instruction from the middle thread is executed. 
 Since there are two matching write events in the event structure, 
 two conflicting reads are conjoined to the event structure. 
 Note that the events can be added non-deterministically in any order
-respecting the causality. We could have first execute the rightmost thread
-and add write $\wlab{x}{2}$ before $\wlab{x}{1}$, 
-or add the read with label $\rlab{x}{2}$ 
+respecting causality. We could have first executed the rightmost thread
+and added write $\wlab{x}{2}$ before $\wlab{x}{1}$, 
+or we could have added the read with label $\rlab{x}{2}$ 
 before another read $\rlab{x}{1}$.  
 
 \input{fig/eventstruct-sem.tex}
