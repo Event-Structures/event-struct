@@ -6,7 +6,7 @@
 export SHELL := /bin/bash
 
 PAPERS=main.pdf
-SOURCES=main.tex
+SOURCES=*.tex *.bib *.cls
 
 all: $(PAPERS)
 
