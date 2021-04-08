@@ -10,7 +10,7 @@ on each step. In order to generate a new event
 on each step we require that events behave as \emph{identifiers}.  
 
 \begin{definition}
-  We say that set $\eventSet$ together with strict partial order $\identOrd$
+  We say that a set $\eventSet$ together with strict partial order $\identOrd$
   form an identifier set if:
   \begin{itemize}
     \item there exists a distinguished initial identifier $e_0 \in \eventSet$;
@@ -21,9 +21,9 @@ on each step we require that events behave as \emph{identifiers}.
 \end{definition}
 
 We will encode the event structure as a tuple 
-$\tup{\eventSeq, \lLAB, \lfPO, \lfRF}$, 
-below we explain the meaning of each component, 
-and how they together form a prime event structure.
+$\tup{\eventSeq, \lLAB, \lfPO, \lfRF}$ and explain
+below the meaning of each component, 
+and how they form a prime event structure together.
 
 The first component $\eventSeq$ is a sequence of events 
 $e_1 \identOrdDual \dots \identOrdDual e_n$
