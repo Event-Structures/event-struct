@@ -47,12 +47,9 @@ Lemma bind_morph (T : eqType) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> 
   η T (m >>= k) = (η T m) >>= (fun x => η T (k x)).
 Proof.
   rewrite /Bind join_morph.
-  have: (M # η T) ((M # k) m) = (M # (η T \o k)) m.
-  { by rewrite monad_lib.fmap_oE. }
-  move=> ->.
-  have: η (N T) ((M # (η T \o k)) m) = (η (N T) \o (M # (η T \o k))) m.
-  { done. }  
-  move=> ->. rewrite -natural. done.
+  rewrite <- monad_lib.fmap_oE.
+  fold (comp (η (N T)) (M # (η T \o k)) m).
+  by rewrite -natural. 
 Qed.
 
 End Theory.
