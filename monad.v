@@ -34,19 +34,19 @@ End Syntax.
 Module Import Theory.
 Section Theory.
 
-Lemma ret_mon (M N : monad) (η : M ≈> N) :
+Lemma ret_morph (M N : monad) (η : M ≈> N) :
   forall a, η a \o Ret = Ret.
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma join_mon (M N : monad) (η: M ≈> N) :
+Lemma join_morph (M N : monad) (η: M ≈> N) :
   forall a (m : M (M a)),
     η a (Join m) = Join (η (N a) ((M # (η a)) m)).
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma bind_mon (T : eqType) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> M T) :
+Lemma bind_morph (T : eqType) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> M T) :
   η T (m >>= k) = (η T m) >>= (fun x => η T (k x)).
 Proof.
-  rewrite /Bind join_mon.
+  rewrite /Bind join_morph.
   have: (M # η T) ((M # k) m) = (M # (η T \o k)) m.
   { by rewrite monad_lib.fmap_oE. }
   move=> ->.
@@ -86,11 +86,11 @@ End Syntax.
 Module Import Theory.
 Section Theory.
 
-Lemma fail_ndmon (M N : nondetMonad) (η: M ≈> N) :
+Lemma fail_morph (M N : nondetMonad) (η: M ≈> N) :
   forall a, η a Fail = Fail.
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma alt_ndmon (M N : nondetMonad) (η: M ≈> N) :
+Lemma alt_morph (M N : nondetMonad) (η: M ≈> N) :
   forall a m n, η a (Alt m n) = Alt (η a m) (η a n).
 Proof. case: η => cpmm; by case. Qed.
 
