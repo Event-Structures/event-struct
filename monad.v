@@ -1,7 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun eqtype.
 From monae Require Import hierarchy monad_lib.
 
-Import Monad.
 Local Open Scope monae_scope.
 
 Module MonadMorphism.
