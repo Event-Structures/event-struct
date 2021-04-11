@@ -23,7 +23,7 @@ depends: [
   "coq-mathcomp-ssreflect" {(>= "1.12" & < "1.13~") | (= "dev")}
   "coq-equations"
   "coq-relation-algebra" {(>= "1.7.4")}
-  "coq-monae" {(>= "0.2")}
+  "coq-monae" {(>= "0.2.2")}
 ]
 conflicts: [
   "coq-equations" {(= "dev+HoTT")}
