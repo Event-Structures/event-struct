@@ -381,8 +381,6 @@ Qed.
 
 End ReflectConnectives.
 
-Notation "'do' i <- s ; E" := (flatten (map (fun i => E) s)) (at level 10, i pattern).
-
 Section RelationOnSeq.
 
 Lemma rfoldl {A B C D} (r : A -> C -> bool) (r' : B -> D -> bool) 
