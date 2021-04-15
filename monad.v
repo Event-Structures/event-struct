@@ -42,7 +42,7 @@ Lemma join_morph (M N : monad) (η: M ≈> N) :
     η a (Join m) = Join (η (N a) ((M # (η a)) m)).
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma bind_morph (T : eqType) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> M T) :
+Lemma bind_morph (T : Type) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> M T) :
   η T (m >>= k) = (η T m) >>= (fun x => η T (k x)).
 Proof.
   rewrite /Bind join_morph.
