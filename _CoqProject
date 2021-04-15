@@ -13,6 +13,7 @@ utilities.v
 monoid.v
 inhtype.v
 wftype.v
+monad.v
 relations.v
 ident.v
 pomset.v
