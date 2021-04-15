@@ -34,6 +34,15 @@ as decidable \texttt{bool}-valued relations,
 as opposed to \emph{propositional} 
 relations of type $E \fun E \fun \texttt{Prop}$. 
 
+In fact, binary relations are omnipresent in our formalization.
+In order to further automate the reasoning about them, 
+we have chosen to use the \relationalgebra%
+\footnote{\url{https://github.com/damien-pous/relation-algebra}}~%
+\cite{Pous-ITP2013} package 
+which provides a number of tactics to solve goals using
+decision procedures for the theory of lattices  
+and \emph{Kleene Algebras with Tests}~\cite{Kozen:TOPLAS:1997}.
+
 We also favour the computational encoding of semantics. 
 Similarly to the recent related works on mechanisation 
 of operational semantics~\cite{Xia-al:POPL2019, Letan-al:CPP2020, Affeldt-al:ICMPC2019}, 
@@ -45,31 +54,22 @@ is a very useful feature, as it allows
 to debug the formal semantics
 and helps to develop better intuition about it.
 
-To encode the algebraic hierarchy of various classes of event structures
-we use yet another feature of \mathcomp~--- 
-\emph{packed classes}~\cite{Garillot-al:ICTPHOL2009},
-which is a design pattern providing multiple inheritance,
-maximal sharing of notations and theories,
-automated structure inference and it also deals with performance issues.
-
 To facilitate computable semantics, we define a subclass of
-finite execution event structures as a sorted sequence of events
-combined with finitely supported functions to enhance events with labels,
-event predecessors and a functional version of the reads-from relation.
-
+finitely supported event structures as a finite sequence of events
+combined with finitely supported function which enhance events with 
+additional information, such as their labels, causality predecessors, \etc 
 Encoding finitely supported functions is not a trivial endeavor in
-a proof assistant and for this use the \finmap~%
+a proof assistant and for this task we use the \finmap~%
 \footnote{\url{https://github.com/math-comp/finmap}}
 library which is an extension of \mathcomp~providing finite sets and
 finite maps on types with a choice opeartor (rather than on finite types).
 
-Since our formalization utilizes relations heavily, we have chosen
-to rely on the \relationalgebra~%
-\footnote{\url{https://github.com/damien-pous/relation-algebra}}
-package which provides a number of tactics to solve goals using
-decision procedures for various kinds of relation algebra and
-also lattice theory.
-
+Finally, to encode the algebraic hierarchy of various classes of event structures
+we use yet another feature of \mathcomp~--- 
+\emph{packed classes}~\cite{Garillot-al:ICTPHOL2009},
+which is a design pattern providing multiple inheritance,
+maximal sharing of notations and theories,
+and automated structure inference. % and it also deals with performance issues.
 
 % TODO
 % The relation-algebra package and lattice theory
