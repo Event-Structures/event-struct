@@ -2,6 +2,7 @@ From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype.
+From monae Require Import hierarchy monad_model.
 From event_struct Require Import utilities relations wftype ident.
 
 (******************************************************************************)
@@ -257,20 +258,21 @@ Qed.
 Lemma frf_lt {e1 e2} : e1 < e2 -> frf e1 < e2.
 Proof. by apply/le_lt_trans/frf_le. Qed.
 
-Definition fica e := [:: frf e; fpred e].
+Definition fica e : ModelNondet.list E := [:: frf e; fpred e].
 
 Lemma fica_dom e :
   e \notin dom -> fica e = [:: e; e].
 Proof. by move=> nI; rewrite /fica frf_dom // fpred_dom. Qed.
 
-Lemma fica_le : sfrel fica ≦ (<=%O : rel E).
+Lemma fica_le : (@sfrel _ FinClosure.id_ndmorph E) fica ≦ (<=%O : rel E).
 Proof. 
   move=> ?? /=; red; rewrite /sfrel /=.
   rewrite ?inE=> /orP[]/eqP->; [exact: frf_le | exact: fpred_le]. 
 Qed.
 
 (* TODO: consider to generalize this lemma and move to `relations.v` *)
-Lemma fica_lt : (sfrel (strictify fica)) ≦ (<%O : rel E).
+Lemma fica_lt :
+  (@sfrel _ FinClosure.id_ndmorph E (strictify E _ fica)) ≦ (<%O : rel E).
 Proof. 
   rewrite strictify_weq.
   (* TODO: can ssreflect rewrite do setoid rewrites? *)
@@ -460,10 +462,10 @@ Qed.
 Definition cf e1 e2 : bool :=
   has id [seq icf x y | x <- seqpred_ca e1, y <- seqpred_ca e2].
 
-Notation "a # b" := (cf a b) (at level 10).
+Notation "a \# b" := (cf a b) (at level 10).
 
 Lemma cfP {e1 e2} :
-  reflect (exists e1' e2', (ca e1' e1 * ca e2' e2 * icf e1' e2')%type) (e1 # e2).
+  reflect (exists e1' e2', (ca e1' e1 * ca e2' e2 * icf e1' e2')%type) (e1 \# e2).
 Proof.
   apply/(iffP hasP)=> [[? /allpairsPdep[x[y[]]]]|[x [y [[]]]]].
   - by rewrite 2!seqpred_ca_in=> ?? -> /= ?; exists x, y.
@@ -477,21 +479,21 @@ Proof.
 Qed.
 
 Lemma cf_consist2 e1 e2 e3 e4 :
-  e1 # e2 -> ca e1 e3 -> ca e2 e4 -> e3 # e4.
+  e1 \# e2 -> ca e1 e3 -> ca e2 e4 -> e3 \# e4.
 Proof.
   move=> /cfP[e1' [e2'] [[/ca_trans C1] /ca_trans C2 *]].
   by apply/cfP; exists e1', e2'; rewrite C1 // C2.
 Qed.
 
 Lemma cf_consistl e1 e2 e3 :
-  ca e1 e3 -> e1 # e2 -> e2 # e3.
+  ca e1 e3 -> e1 \# e2 -> e2 \# e3.
 Proof. by move=> C13 /cf_consist2 /(_ C13); rewrite cf_sym=>->. Qed.
 
 Lemma cf_consistr e1 e2 e3 :
-  ca e2 e3 -> e1 # e2 -> e1 # e3.
+  ca e2 e3 -> e1 \# e2 -> e1 \# e3.
 Proof. by rewrite cf_sym; apply: cf_consistl. Qed.
 
-Lemma icf_cf e1 e2: icf e1 e2 -> e1 # e2.
+Lemma icf_cf e1 e2: icf e1 e2 -> e1 \# e2.
 Proof. by move=> I; apply/cfP; exists e1, e2; rewrite !ca_refl I. Qed.
 
 Notation cf_step e1 e2 :=
@@ -499,7 +501,7 @@ Notation cf_step e1 e2 :=
       has (cf e1) (filter (fun x => e2 != x) (fica e2)) |
       has (cf e2) (filter (fun x => e1 != x) (fica e1))].
 
-Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 # e2.
+Lemma cf_step_cf e1 e2: cf_step e1 e2 -> e1 \# e2.
 Proof.
   case/or3P=> [/icf_cf //||] /hasP[e]; rewrite mem_filter => /andP[_ /ica_ca].
   - by apply: cf_consistr.
@@ -508,7 +510,7 @@ Qed.
 
 
 (* TODO: refactor proof *)
-Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
+Lemma cfE e1 e2: e1 \# e2 = cf_step e1 e2.
 Proof.
   apply/idP/idP; last by apply: cf_step_cf.
   case/cfP=> e1' [e2' [[]]].
@@ -530,11 +532,11 @@ Qed.
 (* ************************************************************************* *)
 
 Definition dom_consistency := 
-  all (fun e => (frf e != e) ==> ~~ (e # (frf e))) dom.
+  all (fun e => (frf e != e) ==> ~~ (e \# (frf e))) dom.
 
 Hypothesis Consistent : dom_consistency.
 
-Lemma rff_consist e : (frf e) != e -> e # (frf e) = false.
+Lemma rff_consist e : (frf e) != e -> e \# (frf e) = false.
 Proof.
   move=> N. apply/negbTE/negP; case: (boolP (e \in dom)) => [D|nD].
   - move/allP/(_ _ D)/negP: Consistent; rewrite N; by apply/contra_not=>->.
@@ -545,7 +547,7 @@ Qed.
 Lemma cf_irrelf : irreflexive cf.
 Proof.
   move=> m; apply/negbTE/negP; elim/(@wfb_ind disp E): m=> m IHm.
-  suff C: ~ m # (fpred m).
+  suff C: ~ m \# (fpred m).
   case: (boolP (frf m == m))=> [/eqP fE|?].
   - rewrite cfE => /orP; rewrite orbb icfxx => [[]] //=.
   rewrite fE; case: ifP=> [/eqP//|_]; case: ifP=>//= _; by rewrite orbF => /C.

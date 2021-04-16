@@ -27,22 +27,22 @@ End Exports.
  * for the required subclass of monads.  
  *)
 Module Import Syntax.
-Notation "f ≈> g" := (monmorph f g) (at level 51) : monae_scope.
+Notation "f ≈≈> g" := (monmorph f g) (at level 51) : monae_scope.
 End Syntax. 
 
 Module Import Theory.
 Section Theory.
 
-Lemma ret_morph (M N : monad) (η : M ≈> N) :
+Lemma ret_morph (M N : monad) (η : M ≈≈> N) :
   forall a, η a \o Ret = Ret.
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma join_morph (M N : monad) (η: M ≈> N) :
+Lemma join_morph (M N : monad) (η: M ≈≈> N) :
   forall a (m : M (M a)),
     η a (Join m) = Join (η (N a) ((M # (η a)) m)).
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma bind_morph (T : Type) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> M T) :
+Lemma bind_morph (T : Type) (M N : monad) (η : M ≈≈> N) (m : M T) (k : T -> M T) :
   η T (m >>= k) = (η T m) >>= (fun x => η T (k x)).
 Proof.
   rewrite /Bind join_morph.
@@ -58,6 +58,7 @@ End MonadMorphism.
 
 Export MonadMorphism.Exports.
 Export MonadMorphism.Theory.
+Export MonadMorphism.Syntax.
 
 Module NDMonadMorphism.
 
@@ -97,3 +98,4 @@ End NDMonadMorphism.
 
 Export NDMonadMorphism.Exports.
 Export NDMonadMorphism.Theory.
+Export NDMonadMorphism.Syntax.
