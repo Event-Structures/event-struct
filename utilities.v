@@ -1,7 +1,11 @@
 From Coq Require Import Lia Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
-From RelationAlgebra Require Import lattice monoid boolean rel kat_tac.
+From RelationAlgebra Require Import lattice monoid boolean rel fhrel kat_tac.
+
+Set Implicit Arguments.
+Unset Printing Implicit Defensive.
+Unset Strict Implicit.
 
 (* ************************************************************************** *)
 (*     Some automation with hints and tactics                                 *)
@@ -185,23 +189,23 @@ Fixpoint seq_in_sub s s' (sub : subseq s' s) : seq {x in s} :=
   (if s' is h :: t then
      fun sub => 
        exist _ h (mem_subseq sub (mem_head h t)) ::
-       seq_in_sub s t (subseq_trans (subseq_cons t h) sub)
+       seq_in_sub (subseq_trans (subseq_cons t h) sub)
    else fun => [::]
   ) sub.
 
-Definition seq_in s : seq {x in s} := seq_in_sub s s (subseq_refl s).    
+Definition seq_in s : seq {x in s} := seq_in_sub (subseq_refl s). 
 
-Lemma val_seq_in_sub s s' sub :
-  map val (seq_in_sub s s' sub) = s'.
+Lemma val_seq_in_sub s s' (sub : subseq s' s) :
+  map val (seq_in_sub sub) = s'.
 Proof. by elim: s'=> //= ?? IHs in sub *; rewrite IHs. Qed.
 
 Lemma val_seq_in s :
   map val (seq_in s) = s.
 Proof. by rewrite /seq_in val_seq_in_sub. Qed.
 
-Lemma seq_in_subE s s' sub :
-  seq_in_sub s s' sub = pmap insub s'.
-Proof. by rewrite -[in RHS](val_seq_in_sub s s') map_pK //; apply: valK. Qed.
+Lemma seq_in_subE s s' (sub : subseq s' s) :
+  seq_in_sub sub = pmap insub s'.
+Proof. by rewrite -[in RHS](@val_seq_in_sub s s') map_pK //; apply: valK. Qed.
 
 Lemma seq_inE s :
   seq_in s = pmap insub s.
@@ -386,28 +390,10 @@ End CartesianProd.
 Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
 
 (* ************************************************************************** *)
-(*     Reflexive closure for decidable relations                              *)
+(*     Reflexive closure                                                      *)
 (* ************************************************************************** *)
 
-(* TODO: a quick workaround to obtain "^?" notation for boolean-valued relations. 
- * A better solution would be to define in terms of kleene algebras.
- * However, the problem is that boolean-valued relations do not form KA
- * (due to lack of kleene-star, i.e. transitive closure).
- * However, to define the reflexive closure, we do not need that. 
- * Given the design of relation-algebra (see levels), it seems it would be possible 
- * in future to give a more general definition for "^?".
- *)
-
-Section ReflexiveClosure.
-
-Variable (T : eqType).
-
-Definition rtc (r : rel T) : rel T := 
-  fun x y => (x == y) || r x y.
-
-End ReflexiveClosure.
-
-Notation "r ^?" := (rtc r) (left associativity, at level 5, format "r ^?"): ra_terms.
+Notation "r ^?" := (1 ⊔ r) (left associativity, at level 5, format "r ^?"): ra_terms.
 
 (* ************************************************************************** *)
 (*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
@@ -427,14 +413,18 @@ Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
 (* TODO: reformulate in terms of reflexive closure once 
  *   we'll generalize it to arbitary lattices with identity.
  *)
-Lemma cup_sub_one `{CUP+CAP+TOP ≪ l} :
-  forall x, 1 ⊔ x \ 1 ≡ 1 ⊔ x.
+Lemma cup_sub_one `{CUP+CAP+TOP ≪ l} x :
+  (x \ 1)^? ≡ x^?.
 Proof. 
-  move=> x; apply/weq_spec; split; first by lattice.
+  apply/weq_spec; split; first by lattice.
   by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
 Qed.
 
 End SubtractionTheory. 
+
+Lemma itr_qmk `{laws} `{BKA ≪ l} n (x: X n n) :
+  x^+^? ≡ x^?^+.
+Proof. ka. Qed.
 
 (* ************************************************************************** *)
 (*     Reconciling relation-algebra relation closures with vanilla Coq        *)
@@ -445,17 +435,7 @@ Hint Resolve r_refl rt_refl : core.
 Section RelAux.
 
 Context {T : Type}.
-Implicit Types (R : relation T) (r : rel T).
-
-(* TODO: refactor and rename once we'll have 
- * reflexive closure in relation-algebra 
- *)
-Lemma clos_reflE R :
-  clos_refl T R ≡ 1 ⊔ (R : hrel T T).
-Proof.
-  split; first by case; [right | left].
-  case=> [->|]; first exact: r_refl; exact: r_step.
-Qed.
+Implicit Types (R : hrel T T) (r : rel T).
 
 (* TODO: consider to reformulate it in terms of relation-algebra 
  * (or try to just use kat tactics inplace) 
@@ -467,27 +447,35 @@ Proof.
   by apply: rt_trans H _.
 Qed.
 
-Lemma clos_r_t_is_preorder R : preorder T (clos_refl T (clos_trans T R)).
-Proof.
-  apply: Build_preorder=> //.
-  move=> x y z; rewrite clos_reflE /=.
-  case=> [-> //|xy]; case=> [<-|yz]; right=> //.
-  apply: t_trans xy yz.
-Qed.
+(* Lemma clos_r_t_is_preorder R : preorder T (clos_refl T (clos_trans T R)). *)
+(* Proof. *)
+(*   apply: Build_preorder=> //. *)
+(*   move=> x y z; rewrite clos_reflE /=. *)
+(*   case=> [-> //|xy]; case=> [<-|yz]; right=> //. *)
+(*   apply: t_trans xy yz. *)
+(* Qed. *)
 
-(* TODO: consider to replace it to `str_itr` *)
 Lemma clos_refl_transE R :
   clos_refl_trans T R ≡ clos_refl T (clos_trans T R).
 Proof.
   move=> x y; split.
-  - elim=> [{}x {}y Rxy | {}x //| {}x {}y z _ xy _ yz].
+  - elim=> [{}x {}y xy | {}x | {}x {}y z _ xy _ yz] //.
     - by apply/r_step/t_step.
-    by apply: preord_trans xy yz; apply: clos_r_t_is_preorder.
-  by case=> // ? /clos_t_clos_rt.
+    - case: xy yz=> [{}y xy [{}z yz|] |] //=; last by apply r_step.  
+      apply/r_step/t_trans; [exact: xy| exact: yz].
+  case=> // ?; elim=> [|???? H ??]; first by constructor. 
+  by apply: rt_trans H _.
+Qed.
+
+Lemma clos_refl_hrel_qmk R :
+  clos_refl T R ≡ R^?.
+Proof.
+  split; first by case; [right | left].
+  case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
 
 Lemma clos_trans_1n_hrel_itr R :
-  clos_trans_1n _ R ≡ (R : hrel T T)^+.
+  clos_trans_1n _ R ≡ R^+.
 Proof.
   move=> x y; split.
   - elim=> {x y} [x y | x z y] Rxy; first by exists y=> //; exists O.
@@ -499,15 +487,15 @@ Proof.
 Qed.
 
 Lemma clos_trans_hrel_itr R :
-  clos_trans _ R ≡ (R : hrel T T)^+.
+  clos_trans _ R ≡ R^+.
 Proof.
   move=> x y; rewrite clos_trans_t1n_iff.
   by apply: clos_trans_1n_hrel_itr.
 Qed.
 
 Lemma clos_refl_trans_hrel_str R : 
-  clos_refl_trans _ R ≡ (R : hrel T T)^*. 
-Proof. by rewrite str_itr clos_refl_transE clos_reflE clos_trans_hrel_itr. Qed.
+  clos_refl_trans _ R ≡ R^*. 
+Proof. by rewrite str_itr clos_refl_transE clos_refl_hrel_qmk clos_trans_hrel_itr. Qed.
 
 End RelAux.
 
