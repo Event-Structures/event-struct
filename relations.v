@@ -53,7 +53,7 @@ Local Notation List := ModelNondet.list.
 (* TODO: rename to `mrel` and move to `monad.v` ? *)
 Definition sfrel {M : nondetMonad} {η : M ≈> List}
   {T : eqType} (f : T -> M T) : rel T :=
-    [rel a b | a \in η T (f b)].
+    [rel a b | b \in η T (f a)].
 
 Section Strictify.
 
@@ -62,13 +62,13 @@ Variable  (M : nondetMonad) (η : M ≈> List).
 Implicit Type (f : T -> M T).
 
 Definition strictify f : T -> M T :=
-  fun x => mfilter M (f x) (fun y => y != x).
+  fun x => mfilter M (f x) (fun y => x != y).
 
 Lemma strictify_weq f :
   @sfrel M η T (strictify f) ≡ (@sfrel M η T f \ eq_op).
 Proof. 
   move=> x y; rewrite /sfrel /strictify /mfilter /=.
-  by rewrite mem_mfilter andbC.
+  by rewrite mem_mfilter andbC. 
 Qed.
 
 Lemma strictify_leq f : 
@@ -86,7 +86,7 @@ Context {disp : unit} {T : wfType disp}.
 Variable (M : nondetMonad) (η : M ≈> List) (f : T -> M T).
 
 (* Hypothesis descend : forall x y, y \in f x -> y < x. *)
-Hypothesis descend : @sfrel M η T f ≦ (<%O).
+Hypothesis descend : @sfrel M η T f ≦ (>%O).
 
 (* A hack to get around a bug in Equations 
  * (see https://github.com/mattam82/Coq-Equations/issues/241).
@@ -114,28 +114,26 @@ Definition wsuffix (x : T) : M T :=
 
 (* decidable transitive closure *)
 Definition t_closure : rel T := 
-  fun x y => x \in η T (suffix y).
+  fun x y => y \in η T (suffix x).
 
 (* decidable reflexive-transitive closure *)
 Definition rt_closure : rel T := 
-  fun x y => x \in η T (wsuffix y).
+  fun x y => y \in η T (wsuffix x).
   
 (* ************************************************************************** *)
 (*       THEORY                                                               *)
 (* ************************************************************************** *)
 
-Lemma strict_lt n k : k \in η T ((strictify T M f) n) -> k < n.
-Proof. by rewrite mem_mfilter lt_neqAle=> /andP[] -> /descend /ltW ->. Qed.
-
-Lemma t_closure_n1P x y : 
-  reflect (clos_trans_n1 T (@sfrel M η T f) x y) (t_closure x y).
+Lemma t_closure_1nP x y : 
+  reflect (clos_trans_1n T (@sfrel M η T f) x y) (t_closure x y).
 Proof.
-  rewrite /t_closure. funelim (suffix y)=> /=. 
+  rewrite /t_closure. funelim (suffix x)=> /=. 
   apply /(iffP idP); rewrite mem_alt /sfrel /=.
-  { move=> /orP[|/mem_bindP[y]]; first exact: tn1_step.
-    case: eqP=> // S /descend yx /X tr. move: (tr y yx erefl) => H.
-    apply: tn1_trans; first by exact: S. done. }
-  move: X=> /[swap] [[?-> //|y z L /[swap]]].
+  { move=> /orP[|/mem_bindP[z]] //; first exact: t1n_step.
+    case: eqP=> // S /descend yz /X tr. 
+    move: (tr yz) => H.
+    by apply: t1n_trans; first exact: S. }
+  move: X=> /[swap] [[?->//|{}y ? /[dup] ? L /[swap]]].
   move=> /[apply] H; apply/orP; right; apply/mem_bindP.
   exists y=> //. case: eqP => // /descend yz. exact: H.
 Qed.
@@ -143,24 +141,24 @@ Qed.
 Lemma t_closureP x y :
   reflect (clos_trans T (@sfrel M η T f) x y) (t_closure x y).
 Proof.
-  apply /(equivP (t_closure_n1P x y)).
-  symmetry; exact: clos_trans_tn1_iff.
+  apply /(equivP (t_closure_1nP x y)).
+  symmetry; exact: clos_trans_t1n_iff.
 Qed.
 
-Lemma clos_trans_lt : 
-  clos_trans T (@sfrel M η T f) ≦ (<%O : rel T).
+Lemma clos_trans_gt : 
+  clos_trans T (@sfrel M η T f) ≦ (>%O : rel T).
 Proof. 
   move=> ??; rewrite/sfrel /=.
   elim=> [y z /descend | x y z _ ] //=.
-  move=> /[swap] _; exact: lt_trans.
+  move=> /[swap] _ /[swap]; exact: lt_trans.
 Qed.
 
-Lemma t_closure_lt : t_closure ≦ (<%O : rel T).
-Proof. by move=> x y /t_closureP /clos_trans_lt. Qed.
+Lemma t_closure_gt : t_closure ≦ (>%O : rel T).
+Proof. by move=> x y /t_closureP /clos_trans_gt. Qed.
 
 Lemma t_closure_antisym : antisymmetric t_closure.
 Proof.
-  move=> x y /andP[] /t_closure_lt ? /t_closure_lt ?. 
+  move=> x y /andP[] /t_closure_gt ? /t_closure_gt ?. 
   by apply /eqP; rewrite eq_le !ltW.
 Qed.
 
@@ -174,27 +172,25 @@ Lemma rt_closureP x y :
   reflect (clos_refl_trans T (@sfrel M η T f) x y) (rt_closure x y).
 Proof.
   apply /equivP; last first.
-  { rewrite clos_refl_transE clos_reflE. 
+  { rewrite clos_refl_transE clos_refl_hrel_qmk. 
     apply or_iff_compat_l; symmetry.
     apply rwP; exact: t_closureP. }
-  rewrite /t_closure /rt_closure /wsuffix alt_morph.
-  rewrite /Alt /= /monae_lib.curry /= mem_cat.
-  rewrite mem_ret.
+  rewrite /t_closure /rt_closure /wsuffix mem_alt mem_ret eq_sym /=.
   by apply predU1P.
 Qed.
 
-Lemma rt_closureE : rt_closure ≡ eq_op ⊔ t_closure.
+Lemma rt_closureE : rt_closure ≡ (t_closure : {dhrel T & T})^?.
 Proof. 
-  move=> x y /=; rewrite /rt_closure /t_closure. 
-  rewrite /wsuffix alt_morph /Alt /= /monae_lib.curry /= mem_cat.
-  by rewrite mem_ret.
+  move=> x y /=; rewrite /rt_closure /t_closure /wsuffix. 
+  rewrite alt_morph /Alt /= /monae_lib.curry /= mem_cat /dhrel_one.
+  by rewrite mem_ret eq_sym.
 Qed.
 
-Lemma rt_closure_le : rt_closure ≦ (<=%O : rel T).
+Lemma rt_closure_ge : rt_closure ≦ (>=%O : rel T).
 Proof.
   rewrite rt_closureE.
-  move=> x y /orP[/eqP<-//|].
-  move=> /t_closure_lt; exact: ltW.
+  move=> x y /orP[/eqP<-//=|].
+  move=> /t_closure_gt; exact: ltW.
 Qed.
 
 Lemma rt_closure_refl x : rt_closure x x.
@@ -206,7 +202,7 @@ Qed.
 Lemma rt_closure_antisym : antisymmetric rt_closure.
 Proof.
   move=> x y /andP[]. 
-  move=> /rt_closure_le /= xy /rt_closure_le /= yx. 
+  move=> /rt_closure_ge /= xy /rt_closure_ge /= yx. 
   by apply /eqP; rewrite eq_le xy yx. 
 Qed.
 
@@ -271,7 +267,7 @@ Proof.
 Qed.
 
 Lemma path_memF {x p y}: 
-  path (fun x : T => (@sfrel ModelNondet.list id_ndmorph T f)^~ x) x p ->
+  path (fun x : T => (@sfrel ModelNondet.list id_ndmorph T f) x) x p ->
   y \in p -> y \in F.
 Proof.
   elim: p x=> //= ?? IHp ? /andP[]. rewrite /sfrel /= => /memF ? /IHp ?.
@@ -284,13 +280,14 @@ Lemma fdfsE {v v' n} {x : F} :
 Proof.
   elim: n v v' x=> n IHn v v' //=; first by (do ?case: ifP).
   move=> x E; rewrite (equivs_mem v' v) // /hack_f; case: ifP=> // ?.
-  apply/(rfoldl equivs equiv); first by rewrite /= /equiv eq_refl. 
+  apply (@rfoldl (seq T) T (seq F) F equivs equiv).
+  - by rewrite /= /equiv eq_refl. 
   - move=> ????? /eqP ->; exact/IHn.
   exact/equivs_hack_f.
 Qed.
 
 Definition fdfs_path x y : Prop :=
-  exists2 p, path (fun a => @sfrel _ id_ndmorph T f ^~ a) x p & y = last x p.
+  exists2 p, path (fun a => @sfrel _ id_ndmorph T f a) x p & y = last x p.
 
 Lemma NmemF x: x \notin F ->
   fdfs n [::] x = [:: x].
@@ -323,13 +320,13 @@ Proof.
   - by rewrite cardfE card0 add0n leqnSn.
   - split=> [][] p P l.
     - move=> _; exists [seq val x | x <- p].
-      - rewrite (rpath equiv (grel hack_f) [`L] p) /equiv //= /sfrel /=.
+      - rewrite (@rpath T F equiv (grel hack_f) [`L] p) /equiv //= /sfrel /=.
         - move=>> /eqP->/eqP->; exact/equivs_mem/equivs_hack_f.
         exact/equivsP.
       elim/last_ind: p P l=> //= [_ []|????]//.
       by rewrite map_rcons ?last_rcons=> <-.
     apply/(@DfsPath _ _ _ _ _ [seq [`path_memF P (valP z)] | z <- seq_in p]).
-    - rewrite -(rpath equiv _ _ _ (fun x=> (@sfrel _ id_ndmorph T f)^~ x) p x)/equiv=> //.
+    - rewrite -(@rpath T F equiv _ _ _ (fun x=> (@sfrel _ id_ndmorph T f) x) p x)/equiv=> //.
       - move=>>/eqP->/eqP->; exact/equivs_mem/equivs_hack_f.
       by apply/equivsP; rewrite -map_comp -{1}(val_seq_in p) -eq_in_map.
     - elim/last_ind: p l P=> //= [? _|]; first exact/val_inj.
@@ -345,19 +342,19 @@ Definition wsuffix x := fdfs n [::] x.
 Definition suffix x := flatten [seq f y | y <- wsuffix x].
 
 Definition rt_closure : rel T := 
-  fun x y => x \in wsuffix y.
+  fun x y => y \in wsuffix x.
 
 Definition t_closure : rel T := 
-  fun x y => x \in suffix y.
+  fun x y => y \in suffix x.
 
-Lemma rt_closure_n1P x y : 
-  reflect (clos_refl_trans_n1 T (@sfrel _ id_ndmorph T f) x y) (rt_closure x y).
+Lemma rt_closure_1nP x y : 
+  reflect (clos_refl_trans_1n T (@sfrel _ id_ndmorph T f) x y) (rt_closure x y).
 Proof.
-  apply/(equivP (fdfsP y x)); split=> [[p]|].
+  apply/(equivP (fdfsP x y)); split=> [[p]|].
   - elim: p x y=> //= [>_->|]; first by constructor.
-    move=> a > IHp > /andP[? /IHp /[apply] ?]; exact/(rtn1_trans _ _ _ a).
-  elim=> [|z ??? [p *]]; first by exists [::].
-  exists (z :: p)=> //; exact/andP.
+    move=> a > IHp > /andP[? /IHp /[apply] ?]; exact/(rt1n_trans _ _ _ a).
+  elim=> [|{}x {}y {}z ?? [p *]]; first by exists [::]. 
+  exists (y :: p)=> //. exact/andP.
 Qed.
 
 Arguments clos_rtn1_rt {_ _ _ _}.
@@ -366,18 +363,23 @@ Arguments clos_trans_tn1 {_ _ _ _}.
 Arguments clos_trans_t1n {_ _ _ _}.
 Arguments clos_tn1_trans {_ _ _ _}.
 Arguments clos_t1n_trans {_ _ _ _}.
-Arguments clos_t_clos_rt {_ _ _ _}.
 Arguments t1n_trans _ {_ _ _ _}.
 
 Lemma t_closure_n1P x y: 
-  reflect (clos_trans_n1 T (@sfrel _ id_ndmorph T f) x y) (t_closure x y).
+  reflect (clos_trans_1n T (@sfrel _ id_ndmorph T f) x y) (t_closure x y).
 Proof.
-  apply: (iffP flatten_mapP)=> [[? /rt_closure_n1P /clos_rtn1_rt]|].
-  - rewrite clos_refl_transE=> [[? /clos_trans_t1n ? R|]]; last by constructor.
-    exact/clos_trans_tn1/clos_t1n_trans/(t1n_trans T R).
-  case/clos_tn1_trans/clos_trans_t1n=> [z ?|w ??].
-  - exists z=> //; apply/rt_closure_n1P; by constructor.
-  move/clos_t1n_trans/clos_t_clos_rt/clos_rt_rtn1/rt_closure_n1P; by exists w.
+  apply: (iffP flatten_mapP)=> [[z]|]. 
+  - move=> /rt_closure_1nP H ?. apply/clos_trans_t1n/clos_rt_t.
+    - apply/clos_rt1n_rt; exact: H.
+    - by apply/t_step.
+  case=> [z|z {}y]; first exists x=> //.
+  - apply/rt_closure_1nP/rt1n_refl.
+  move=> H /clos_t1n_trans/clos_trans_tn1 [{}y|].
+  - move=> ?; exists z=> //.
+    by apply/rt_closure_1nP/clos_rt1n_step.
+  move=> {}y {}z' ??. exists y=> //.
+  apply/rt_closure_1nP/rt1n_trans; first exact: H. 
+  by apply/clos_rt_rt1n/clos_t_clos_rt/clos_tn1_trans.
 Qed.
 
 End FinRTClosure.
