@@ -214,9 +214,161 @@ Proof. by rewrite seq_inE mem_pmap_sub. Qed.
 End SeqIn.
 
 (* ************************************************************************** *)
-(*     Missing definitions, notations and lemmas for Relation Algebra          *)
+(*     Missing definitions, notations and lemmas for Relation Algebra         *)
 (* ************************************************************************** *)
 
+(* ************************************************************************** *)
+(*     Instance of Lattice and KAT for decidable realtions                    *)
+(* ************************************************************************** *)
+
+(* Adopted from relation-algebra/fhrel.v  *)
+
+Section DHRelType.
+  Variables A B : eqType.
+  Definition dhrel_type := A -> B -> bool.
+  Definition dhrel_of of phant A & phant B := dhrel_type.
+End DHRelType.
+
+Notation "{ 'dhrel' A & B }" := (dhrel_of (Phant A) (Phant B))
+  (at level 0, format "{ 'dhrel'  A  &  B }") : type_scope.
+
+Section DHRel.
+Implicit Types A B : eqType.
+
+(* Lattice structure is derived via the powerset
+ * construction on the lattice of booleans. 
+ *)
+
+Canonical Structure dhrel_lattice_ops A B := 
+  lattice.mk_ops {dhrel A & B} lattice.leq weq cup cap neg bot top.
+
+Arguments lattice.leq : simpl never.
+Arguments lattice.weq : simpl never.
+
+Global Instance dhrel_lattice_laws A B : 
+  lattice.laws (BL+ONE+CNV) (dhrel_lattice_ops A B) := 
+    lower_lattice_laws (H:=pw_laws _).
+
+(** Enable rewriting of [lattice.leq] and [weq] using Ssreflect's rewrite tactic *)
+Global Instance leq_rewrite_relation ops : RewriteRelation (@lattice.leq ops).
+Qed.
+Global Instance weq_rewrite_relation ops : RewriteRelation (@weq ops).
+Qed.
+
+Section MonoidOps.
+Variables (A B C : eqType).
+
+Definition dhrel_cnv (r : {dhrel A & B}) : {dhrel B & A} := 
+  fun x y => r y x.
+Definition dhrel_one : {dhrel A & A} := 
+  @eq_op A.
+Definition dhrel_inj (p : pred A) := 
+  fun x y => (x == y) && p x.
+
+Definition dhrel_dot (r1 : {dhrel A & B}) (r2 : {dhrel B & C}) : {dhrel A & C} :=
+  fun x y => false.
+Definition dhrel_itr (r : {dhrel A & A}) : {dhrel A & A} := 
+  fun x y => false.
+Definition dhrel_str (r : {dhrel A & A}) : {dhrel A & A} := 
+  fun x y => false.
+Definition dhrel_ldv (r1 : {dhrel A & B}) (r2 : {dhrel A & C}) : {dhrel B & C} :=
+  fun x y => false.
+Definition dhrel_rdv (r1 : {dhrel B & A}) (r2 : {dhrel C & A}) : {dhrel C & B} :=
+  fun x y => false.
+
+End MonoidOps.
+
+Canonical dhrel_monoid_ops := 
+  monoid.mk_ops eqType dhrel_lattice_ops
+                dhrel_dot
+                dhrel_one
+                dhrel_itr
+                dhrel_str
+                dhrel_cnv
+                dhrel_ldv
+                dhrel_rdv.
+
+(** Ensure that the [fhrel_*] definitions simplify, given enough arguments. *)
+Arguments dhrel_dot {_ _ _} _ _ /.
+Arguments dhrel_cnv {_ _} _ _ /.
+Arguments dhrel_one {_} _ _ /.
+Arguments dhrel_str {_} _ _ /.
+Arguments dhrel_ldv {_} _ _ /.
+Arguments dhrel_rdv {_} _ _ /.
+Arguments dhrel_inj {_} _ _ _ /.
+
+(** We obtain the monoid laws using a faithful functor to the hrel model *)
+Definition hrel_of (A B : eqType) (r : {dhrel A & B}) : hrel A B := fun x y => r x y.
+Ltac hrel_prop := do ! move => ?; rewrite /hrel_of /=; to_prop; by firstorder.
+
+Lemma hrel_of_morphism (A B : eqType) : morphism (BDL+ONE+CNV) (@hrel_of A B).
+Proof.
+  split; try done; try hrel_prop.
+  move => e1 e2 H x y. apply/eq_bool_iff. exact: H.
+Qed.
+
+Lemma hrel_of_functor : functor (BDL+ONE+CNV) hrel_of.
+Proof.
+  apply (@Build_functor (BDL+ONE+CNV) dhrel_monoid_ops hrel_monoid_ops id hrel_of).
+  all: try done. all: try hrel_prop.
+  apply: hrel_of_morphism.
+Qed.
+
+Lemma dhrel_monoid_laws_BDL: monoid.laws (BDL+ONE+CNV) dhrel_monoid_ops.
+Proof.
+  eapply (laws_of_faithful_functor hrel_of_functor) => //.
+  move => A B e1 e2 H x y. apply/eq_bool_iff. exact: H.
+Qed.
+
+Global Instance hrel_monoid_laws: monoid.laws (BL+ONE+CNV) dhrel_monoid_ops.
+Proof.
+  case dhrel_monoid_laws_BDL => *.
+  split; try assumption. exact: dhrel_lattice_laws.
+Qed.
+
+Lemma dhrel_oneE A a b : (1 : {dhrel A & A}) a b = (a == b).
+Proof. reflexivity. Qed.
+Definition oneE := (hrel_oneE,fhrel_oneE).
+
+(* The following is required, see fhrel.v for details *)
+Definition d_top_def (A B : eqType) of phant A & phant B := 
+  (@top (@mor dhrel_monoid_ops A B)).
+Notation d_top A B := (d_top_def (Phant A) (Phant B)).
+
+Definition d_zero_def (A B : eqType) of phant A & phant B := 
+  (@bot (@mor dhrel_monoid_ops A B)).
+Notation d_zero A B := (d_zero_def (Phant A) (Phant B)).
+
+Definition d_one_def (A : eqType) of phant A := 
+  (@one dhrel_monoid_ops A).
+Notation d_one A := (d_one_def (Phant A)).
+
+Arguments d_top_def A B /.
+Arguments d_zero_def A B /.
+Arguments d_one_def A /.
+
+Definition dset : ob dhrel_monoid_ops -> lattice.ops := pw_ops bool_lattice_ops.
+
+Canonical Structure dhrel_kat_ops := 
+  kat.mk_ops dhrel_monoid_ops dset (@dhrel_inj).
+
+Global Instance dhrel_kat_laws: kat.laws (CUP+BOT+ONE) BL dhrel_kat_ops.
+Proof.
+  split.
+  - by eapply lower_laws. 
+  - move => A. by eapply lower_lattice_laws.
+  - move => A.
+    have H : Proper (lattice.leq ==> lattice.leq) (@dhrel_inj A).
+    { move => e1 e2 H x y /=. by case: (_ == _) => //=. }
+    split => //=.
+    + move => x y. rewrite !weq_spec. by intuition.
+    + move => _ f g x y /=. by case: (_ == _); case (f x); case (g x).
+    + move => _ x y /=. by rewrite andbF.
+  - move => _ _ A x y /=. by rewrite andbT.
+  - move => _ _ A p q x y //=. 
+Qed.
+
+End DHRel.
 
 (* ************************************************************************** *)
 (*     Cartesian product for lattice-valued functions                         *)
