@@ -27,6 +27,14 @@ From event_struct Require Import utilities eventstructure ident.
 (*                    returns corresponding add_label structure               *)
 (*         consist_Nread == lemma that ensures consistency of event structures*)
 (*                    obtained by add_label_of_Nread                          *)
+(*         contain al es == checks if event that we want to add (al) is       *)
+(*                    already in es                                           *)
+(*         add_new_event == adding a new event to the event structrure if it  *)
+(*                    is not contained there                                  *)
+(*         consist_add_new_event == statement about consistance of our new    *)
+(*                    structure obtained with add_new_event                   *)
+(*         consist_new_Nread== lemma that ensures consistency of event        *)
+(*                structures obtained by add_label_of_Nread of a new event    *)
 (******************************************************************************)
 
 Set Implicit Arguments.
