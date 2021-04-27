@@ -238,14 +238,9 @@ Definition eval_step (c : config) pr : seq config :=
   let: tid             := if pr \in dom ces then tid else fresh_tid c in
   let: (l, cont_st)    := thrd_sem (nth empty_prog prog tid) conf in
     if l is Some l then do 
-<<<<<<< HEAD
-      (e, v) <- add_hole ces l pr;
-      [:: Config e  [fsfun c with (fresh_seq (dom ces)) |-> (cont_st v, tid)]]
-=======
-      ev <- add_hole l pr : M _;
+      ev <- add_hole ces l pr : M _;
       let '(e, v) := ev in
-        [:: Config e  [fsfun c with fresh_id |-> (cont_st v, tid)]]
->>>>>>> 01e861d77835d84e8e68fa729a27cee3c3d06ebb
+        [:: Config e  [fsfun c with (fresh_seq (dom ces)) |-> (cont_st v, tid)]]
     else
       [:: Config ces [fsfun c with pr |-> (cont_st inh, tid)]].
 

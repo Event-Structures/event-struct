@@ -39,7 +39,4 @@ End GeneralDef.
 
 Export FinClosure.
 
-Definition ra_consist (es : cexec_event_struct):= 
-  all (fun x => x \notin t_closure (fwb es) x) (dom es).
-
 End MMConsist.
