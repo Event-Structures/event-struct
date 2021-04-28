@@ -27,6 +27,14 @@ From event_struct Require Import utilities eventstructure ident.
 (*                    returns corresponding add_label structure               *)
 (*         consist_Nread == lemma that ensures consistency of event structures*)
 (*                    obtained by add_label_of_Nread                          *)
+(*         contain al es == checks if event that we want to add (al) is       *)
+(*                    already in es                                           *)
+(*         add_new_event == adding a new event to the event structrure if it  *)
+(*                    is not contained there                                  *)
+(*         consist_add_new_event == statement about consistance of our new    *)
+(*                    structure obtained with add_new_event                   *)
+(*         consist_new_Nread== lemma that ensures consistency of event        *)
+(*                structures obtained by add_label_of_Nread of a new event    *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -80,7 +88,6 @@ Structure add_label := Add {
   add_write_consist : add_wr add_write fresh_id lab add_lb;
 }.
 
-
 Fact add_write_consist_of_fresh l : ~~ is_read l ->
   add_wr fresh_id fresh_id lab l.
 Proof. by move=> /= ->; rewrite eq_refl lab_fresh. Qed.
@@ -103,6 +110,9 @@ Notation pred := (add_pred al).
 (* if our event is `Read` then we should provide the corresponding `Write`
    event *)
 Notation write := (add_write al).
+
+Definition contain := 
+  has (fun e => (lab e == lb) && (ffrf e == write) && (ffpred e == pred)) dom.
 
 Definition add_lprf :=
   [ fsfun lprf with fresh_id |->
@@ -164,6 +174,8 @@ Definition add_event :=
         add_fpred_le
         add_frf_le
         add_frf_prop.
+
+Definition add_new_event := if contain then es else add_event.
 
 Hypothesis consist : dom_consistency es.
 Hypothesis ncf_rf : ~~ (cf add_event fresh_id write).
@@ -231,6 +243,9 @@ Proof.
   by rewrite /ica ?inE -Ef eq_refl.
 Qed.
 
+Lemma consist_add_new_event: dom_consistency add_new_event.
+Proof. rewrite /add_new_event; case: ifP=> // _; exact: consist_add_event. Qed.
+
 End AddEvent.
 
 Section Nread_Consist.
@@ -257,6 +272,13 @@ Proof.
     apply/contraL=> /eqP->; by rewrite ltxx.
   move: (fresh_seq_lt (dom_sorted ces) I); apply/contraL=> /eqP->.
   by rewrite ltxx.
+Qed.
+
+Lemma consist_new_Nread : 
+  dom_consistency (add_new_event (add_label_of_Nread pr_mem nr)).
+Proof.
+  rewrite /add_new_event. case: ifP=> // _; rewrite ?consist_Nread //.
+  by case: ces.
 Qed.
 
 End Nread_Consist.
