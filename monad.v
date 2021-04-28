@@ -1,5 +1,5 @@
-From mathcomp Require Import ssreflect ssrfun eqtype.
-From monae Require Import hierarchy monad_lib.
+From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq.
+From monae Require Import hierarchy monad_lib monad_model.
 
 Local Open Scope monae_scope.
 
@@ -27,22 +27,22 @@ End Exports.
  * for the required subclass of monads.  
  *)
 Module Import Syntax.
-Notation "f ≈≈> g" := (monmorph f g) (at level 51) : monae_scope.
+Notation "f ≈> g" := (monmorph f g) (at level 51) : monae_scope.
 End Syntax. 
 
 Module Import Theory.
 Section Theory.
 
-Lemma ret_morph (M N : monad) (η : M ≈≈> N) :
+Lemma ret_morph (M N : monad) (η : M ≈> N) :
   forall a, η a \o Ret = Ret.
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma join_morph (M N : monad) (η: M ≈≈> N) :
+Lemma join_morph (M N : monad) (η: M ≈> N) :
   forall a (m : M (M a)),
     η a (Join m) = Join (η (N a) ((M # (η a)) m)).
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma bind_morph (T : Type) (M N : monad) (η : M ≈≈> N) (m : M T) (k : T -> M T) :
+Lemma bind_morph (T : Type) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> M T) :
   η T (m >>= k) = (η T m) >>= (fun x => η T (k x)).
 Proof.
   rewrite /Bind join_morph.
@@ -58,7 +58,6 @@ End MonadMorphism.
 
 Export MonadMorphism.Exports.
 Export MonadMorphism.Theory.
-Export MonadMorphism.Syntax.
 
 Module NDMonadMorphism.
 
@@ -98,4 +97,106 @@ End NDMonadMorphism.
 
 Export NDMonadMorphism.Exports.
 Export NDMonadMorphism.Theory.
-Export NDMonadMorphism.Syntax.
+
+Section MorphismProperties.
+Import NDMonadMorphism.Syntax.
+Import ModelNondet ModelMonad ListMonad Monad_of_ret_bind.
+
+Context {T : eqType}.
+Variable (M : nondetMonad) (η : M ≈> ModelNondet.list).
+
+Definition mfilter (s : M T) (p : pred T) :=
+  s >>= (fun a => if p a then Ret a else Fail).
+
+Lemma mem_ret (x : T) :
+  η T (Ret x) = [:: x].
+Proof.
+  have: η T (Ret x) = (η T \o Ret) x.
+  { done. }
+  move=> ->. by rewrite ret_morph /Ret /= /ModelMonad.ListMonad.ret_component.
+Qed.
+
+Lemma mem_fail :
+  η T Fail = [::].
+Proof. by rewrite fail_morph. Qed.
+
+Lemma mem_ret_in (x y : T) :
+  x \in η T (Ret y) = (x == y).
+Proof.
+  have: η T (Ret y) = (η T \o Ret) y.
+  { done. }
+  move=> ->. rewrite ret_morph in_cons in_nil. by case: (x == y).
+Qed.
+
+Lemma mem_mfilter (p : pred T) (x : T) (s : M T) :
+  (x \in η T (mfilter s p)) = p x && (x \in η T s).
+Proof.
+  rewrite /mfilter bind_morph /Bind /list /= /Actm /= /Map /bind /=.
+  rewrite /ret_component /= /comp. apply /flatten_mapP.
+  case: ifP => /andP.
+  { move=> [px xs]. exists [:: x]; last exact: mem_head.
+    apply /flatten_mapP. exists x => //=.
+    by rewrite px mem_ret mem_head. }
+  move=> H [] l /flatten_mapP [] y ys lh xl.
+  move: H => []. case H: (p y).
+  { move: lh. rewrite H mem_ret mem_seq1 => /eqP ly.
+    move: xl. by rewrite ly mem_seq1 => /eqP ->. }
+  move: lh. rewrite H mem_fail mem_seq1 => /eqP el.
+  by rewrite el in xl.
+Qed.
+
+Lemma mem_alt_in (x : T) (s1 s2 : M T) :
+  x \in η T (Alt s1 s2) = (x \in η T s1) || (x \in η T s2).
+Proof. by rewrite alt_morph mem_cat. Qed.
+
+Lemma bind_mapP (s : M T) (m : T -> M T) y :
+  reflect (exists2 x, x \in η T s & y \in η T (m x)) (y \in η T (s >>= m)).
+Proof.
+  apply /(iffP idP).
+  { rewrite bind_morph => /flatten_mapP.
+    move => [] l /flatten_mapP [] x xs.
+    rewrite mem_seq1 => /eqP -> ymx.
+    by exists x. }
+  move => [] x xs ymx. rewrite bind_morph.
+  apply /flatten_mapP. exists (η T (m x)) => //.
+  apply /flatten_mapP. exists x => //. exact: mem_head.
+Qed.
+
+End MorphismProperties.
+
+Section SeqIdMorphism.
+
+Import NDMonadMorphism.Syntax.
+Import ModelNondet ModelMonad ListMonad Monad_of_ret_bind.
+
+Definition id_nattrans : list ~> list :=
+  Natural.Pack (Natural.Mixin (@natural_id _)).
+
+Lemma ret_id a : id_nattrans a \o Ret = Ret.
+Proof. by []. Qed.
+
+Lemma join_id a m : id_nattrans a (Join m) =
+  Join (id_nattrans (list a) ((list # id_nattrans a) m)).
+Proof.
+  rewrite /id_nattrans /= /bind /list /= /Actm /= /Map /= /ret_component /bind.
+  rewrite /comp.
+  have: flatten [seq [:: x] | x <- m] = m.
+  { by rewrite (flatten_map1 id) map_id. }
+  by move=> ->.
+Qed.
+
+Definition id_morph : MonadMorphism.Exports.monmorph list list :=
+  MonadMorphism.Pack _ _ id_nattrans
+    (MonadMorphism.Mixin _ _ id_nattrans ret_id join_id).
+
+Lemma fail_id a : id_morph a Fail = Fail.
+Proof. by []. Qed.
+
+Lemma alt_id a m n : id_morph a (m [~] n) = id_morph a m [~] id_morph a n.
+Proof. by []. Qed.
+
+Definition id_ndmorph : list ≈> list :=
+  NDMonadMorphism.Pack _ _ id_morph
+    (NDMonadMorphism.Mixin _ _ id_morph fail_id alt_id).
+
+End SeqIdMorphism.

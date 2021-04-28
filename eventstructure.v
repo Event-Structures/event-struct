@@ -264,7 +264,7 @@ Lemma fica_dom e :
   e \notin dom -> fica e = [:: e; e].
 Proof. by move=> nI; rewrite /fica frf_dom // fpred_dom. Qed.
 
-Lemma fica_le : (@sfrel _ FinClosure.id_ndmorph E) fica ≦ (<=%O : rel E).
+Lemma fica_le : (@sfrel _ monad.id_ndmorph E) fica ≦ (<=%O : rel E).
 Proof. 
   move=> ?? /=; red; rewrite /sfrel /=.
   rewrite ?inE=> /orP[]/eqP->; [exact: frf_le | exact: fpred_le]. 
@@ -272,7 +272,7 @@ Qed.
 
 (* TODO: consider to generalize this lemma and move to `relations.v` *)
 Lemma fica_lt :
-  (@sfrel _ FinClosure.id_ndmorph E (strictify E _ fica)) ≦ (<%O : rel E).
+  (@sfrel _ monad.id_ndmorph E (strictify E _ fica)) ≦ (<%O : rel E).
 Proof. 
   rewrite strictify_weq.
   (* TODO: can ssreflect rewrite do setoid rewrites? *)

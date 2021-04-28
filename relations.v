@@ -41,6 +41,8 @@ Local Open Scope order_scope.
 Local Open Scope ra_terms.
 Local Open Scope monae_scope.
 
+Import NDMonadMorphism.Syntax.
+
 Definition sfrel {M : nondetMonad} {η : M ≈> ModelNondet.list}
   {T : eqType} (f : T -> M T) : rel T :=
     [rel a b | a \in η T (f b)].
@@ -52,51 +54,8 @@ Context (T : eqType).
 Variable  (M : nondetMonad) (η : M ≈> ModelNondet.list).
 Implicit Type (f : T -> M T).
 
-Definition mfilter (s : M T) (p : pred T) :=
-  s >>= (fun a => if p a then Ret a else Fail).
-
-Lemma mem_ret (x : T) :
-  η T (Ret x) = [:: x].
-Proof.
-  have: η T (Ret x) = (η T \o Ret) x.
-  { done. }
-  move=> ->. by rewrite ret_morph /Ret /= /ModelMonad.ListMonad.ret_component.
-Qed.
-
-Lemma mem_fail :
-  η T Fail = [::].
-Proof. by rewrite fail_morph. Qed.
-
-Lemma mem_ret_eq (x y : T) :
-  x \in η T (Ret y) = (x == y).
-Proof.
-  have: η T (Ret y) = (η T \o Ret) y.
-  { done. }
-  move=> ->. rewrite ret_morph in_cons in_nil. by case: (x == y).
-Qed.
-
-Lemma mem_mfilter (p : pred T) (x : T) (s : M T) :
-  (x \in η T (mfilter s p)) = p x && (x \in η T s).
-Proof.
-  rewrite /mfilter bind_morph /Bind.
-  rewrite /ModelNondet.list /= /Actm /=.
-  rewrite /monad_lib.Monad_of_ret_bind.Map /ModelMonad.ListMonad.bind.
-  rewrite /ModelMonad.ListMonad.ret /ModelMonad.ListMonad.ret_component /=.
-  rewrite /comp. apply /flatten_mapP.
-  case: ifP => /andP.
-  { move=> [px xs]. exists [:: x]; last exact: mem_head.
-    apply /flatten_mapP. exists x => //=.
-    by rewrite px mem_ret mem_head. }
-  move=> H [] l /flatten_mapP [] y ys lh xl.
-  move: H => []. case H: (p y).
-  { move: lh. rewrite H mem_ret mem_seq1 => /eqP ly.
-    move: xl. by rewrite ly mem_seq1 => /eqP ->. }
-  move: lh. rewrite H mem_fail mem_seq1 => /eqP el.
-  by rewrite el in xl.
-Qed.
-
 Definition strictify f : T -> M T :=
-  fun x => mfilter (f x) (fun y => y != x).
+  fun x => mfilter M (f x) (fun y => y != x).
 
 Lemma strictify_weq f :
   @sfrel M η T (strictify f) ≡ (@sfrel M η T f \ eq_op).
@@ -157,23 +116,6 @@ Definition rt_closure : rel T :=
 (*       THEORY                                                               *)
 (* ************************************************************************** *)
 
-Lemma mem_alt (x : T) (s1 s2 : M T) :
-  x \in η T (Alt s1 s2) = (x \in η T s1) || (x \in η T s2).
-Proof. by rewrite alt_morph mem_cat. Qed.
-
-Lemma bind_mapP (s : M T) (m : T -> M T) y :
-  reflect (exists2 x, x \in η T s & y \in η T (m x)) (y \in η T (s >>= m)).
-Proof.
-  apply /(iffP idP).
-  { rewrite bind_morph => /flatten_mapP.
-    move => [] l /flatten_mapP [] x xs.
-    rewrite mem_seq1 => /eqP -> ymx.
-    by exists x. }
-  move => [] x xs ymx. rewrite bind_morph.
-  apply /flatten_mapP. exists (η T (m x)) => //.
-  apply /flatten_mapP. exists x => //. exact: mem_head.
-Qed.
-
 Lemma strict_lt n k : k \in η T ((strictify T M f) n) -> k < n.
 Proof. by rewrite mem_mfilter lt_neqAle=> /andP[] -> /descend /ltW ->. Qed.
 
@@ -181,7 +123,7 @@ Lemma t_closure_n1P x y :
   reflect (clos_trans_n1 T (@sfrel M η T f) x y) (t_closure x y).
 Proof.
   rewrite /t_closure. funelim (suffix y)=> /=. 
-  apply /(iffP idP); rewrite mem_alt /sfrel /=.
+  apply /(iffP idP); rewrite mem_alt_in /sfrel /=.
   { move=> /orP[|/bind_mapP[y]]; first exact: tn1_step.
     case: eqP=> // S /descend yx /X tr. move: (tr y yx erefl) => H.
     apply: tn1_trans; first by exact: S. done. }
@@ -220,8 +162,6 @@ Proof.
   apply /t_closureP /t_trans; eauto. 
 Qed.
 
-Ltac list_altP := rewrite /Alt /= /monae_lib.curry /= mem_cat.
-
 Lemma rt_closureP x y :
   reflect (clos_refl_trans T (@sfrel M η T f) x y) (rt_closure x y).
 Proof.
@@ -229,15 +169,17 @@ Proof.
   { rewrite clos_refl_transE clos_reflE. 
     apply or_iff_compat_l; symmetry.
     apply rwP; exact: t_closureP. }
-  rewrite /t_closure /rt_closure /wsuffix alt_morph. list_altP.
-  rewrite mem_ret_eq.
+  rewrite /t_closure /rt_closure /wsuffix alt_morph.
+  rewrite /Alt /= /monae_lib.curry /= mem_cat.
+  rewrite mem_ret_in.
   by apply predU1P.
 Qed.
 
 Lemma rt_closureE : rt_closure ≡ eq_op ⊔ t_closure.
 Proof. 
   move=> x y /=; rewrite /rt_closure /t_closure. 
-  rewrite /wsuffix alt_morph. list_altP. by rewrite mem_ret_eq.
+  rewrite /wsuffix alt_morph /Alt /= /monae_lib.curry /= mem_cat.
+  by rewrite mem_ret_in.
 Qed.
 
 Lemma rt_closure_le : rt_closure ≦ (<=%O : rel T).
@@ -249,7 +191,8 @@ Qed.
 
 Lemma rt_closure_refl x : rt_closure x x.
 Proof.
-  rewrite /rt_closure alt_morph. list_altP. by rewrite mem_ret_eq eq_refl. Qed.
+  rewrite /rt_closure alt_morph /Alt /= /monae_lib.curry /= mem_cat.
+  by rewrite mem_ret_in eq_refl. Qed.
 
 Lemma rt_closure_antisym : antisymmetric rt_closure.
 Proof.
@@ -317,38 +260,6 @@ Lemma equivs_hack_f x: equivs (f (fsval x)) (hack_f x).
 Proof.
   by apply/equivsP; rewrite -map_comp -{1}(val_seq_in (f _)) -eq_in_map.
 Qed.
-
-Definition id_nattrans : ModelNondet.list ~> ModelNondet.list :=
-  Natural.Pack (Natural.Mixin (@monad_lib.natural_id _)).
-
-Lemma ret_id a : id_nattrans a \o Ret = Ret.
-Proof. by []. Qed.
-
-Lemma join_id a m : id_nattrans a (Join m) =
-  Join (id_nattrans (ModelNondet.list a) ((ModelNondet.list # id_nattrans a) m)).
-Proof.
-  rewrite /id_nattrans /= /ModelMonad.ListMonad.bind /ModelNondet.list /=.
-  rewrite /Actm /= /monad_lib.Monad_of_ret_bind.Map /=.
-  rewrite /ModelMonad.ListMonad.ret_component /ModelMonad.ListMonad.bind /=.
-  rewrite /comp.
-  have: flatten [seq [:: x] | x <- m] = m.
-  { by rewrite (flatten_map1 id) map_id. }
-  by move=> ->.
-Qed.
-
-Definition id_morph : ModelNondet.list ≈≈> ModelNondet.list :=
-  MonadMorphism.Pack _ _ id_nattrans
-    (MonadMorphism.Mixin _ _ id_nattrans ret_id join_id).
-
-Lemma fail_id a : id_morph a Fail = Fail.
-Proof. by []. Qed.
-
-Lemma alt_id a m n : id_morph a (m [~] n) = id_morph a m [~] id_morph a n.
-Proof. by []. Qed.
-
-Definition id_ndmorph : ModelNondet.list ≈> ModelNondet.list :=
-  NDMonadMorphism.Pack _ _ id_morph
-    (NDMonadMorphism.Mixin _ _ id_morph fail_id alt_id).
 
 Lemma path_memF {x p y}: 
   path (fun x : T => (@sfrel ModelNondet.list id_ndmorph T f)^~ x) x p ->
