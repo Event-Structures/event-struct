@@ -294,65 +294,25 @@ Proof. exact: fica_ge. Qed.
 (* Causality relation *)
 Definition ca : rel E := (rt_closure fica_gt : {dhrel E & E})°.
 
-Lemma yewq {T : eqType} (r1 r2 : {dhrel T & T}) : 
-  r1 ≡ r2 -> (r1 : hrel T T) ≡ r2. 
-Proof. by move=> H x y /=; rewrite (H x y). Qed.
-
-Lemma hh {T : eqType} (r : {dhrel T & T}) : 
-  (r° : hrel T T) ≡ (r : hrel T T)°. 
-Proof. done. Qed.
-
-Lemma hhqq {T : eqType} (r : {dhrel T & T}) : 
-  (r^? : hrel T T) ≡ (r : hrel T T)^?. 
-Proof. 
-  move=> x y /=. rewrite /dhrel_one. 
-  symmetry. apply /(rwP predU1P).
-Qed.
-
-Lemma hhww {T : eqType} (r : {dhrel T & T}) : 
-  (r \ 1 : hrel T T) ≡ (r : hrel T T) \ 1. 
-Proof. 
-  move=> x y /=. rewrite /dhrel_one. 
-  rewrite and_comm andbC.
-  symmetry. apply /(rwP predD1P).
-Qed.
-
-Lemma uu {T : eqType} (R : hrel T T) (r : {dhrel T & T}) : 
-  R ≡ r -> forall x y, reflect (R x y) (r x y). 
-Proof. 
-  move=> H x y; apply: equivP; first by exact: idP. 
-  symmetry; apply H. 
-Qed.
-
-Lemma qq {T : eqType} (R : hrel T T) (r : {dhrel T & T}) : 
-  (forall x y, reflect (R x y) (r x y)) -> R ≡ r. 
-Proof. by move=> H x y; apply rwP. Qed.
-
-Lemma ss {T : eqType} (r1 r2 : {dhrel T & T}) : 
-  r1 ≡ r2 -> (r1 : hrel T T) ≡ r2. 
-Proof. move=> H. apply qq. move=> x y. rewrite (H x y). exact: idP. Qed.
-
 Lemma closureP e1 e2 :
   reflect (clos_refl_trans _ ica e1 e2) (ca e1 e2).
 Proof. 
-  rewrite /ca /ica. apply uu.
+  rewrite /ca /ica. apply weq_reflect.
   rewrite !clos_refl_trans_hrel_str.
-  rewrite hh hh -kleene.cnvstr.
+  rewrite rel_cnv_m rel_cnv_m -kleene.cnvstr.
   apply cnv_weq_iff.
   rewrite str_itr itr_qmk.
-
-  rewrite -cup_sub_one; last first.
-  (* (* TODO: make a lemma *) *)
-  - move=> x y /=. split; first done.
-    case: (boolP (x == y)) => /eqP; firstorder.
-
-  etransitivity. 
-  - rewrite -hhww -hhqq yewq; last by rewrite -strictify_weq.
-    rewrite hhqq; done.
-
+  rewrite -qmk_sub_one; last first.
+  (* TODO: make a lemma? *)
+  - rewrite -rel_top_m -rel_one_m -rel_neg_m -rel_cup_m.
+    apply /rel_weq_m/dhrel_eq_dec.
+  rewrite kleene.itr_weq; last first.
+  - rewrite -rel_one_m -rel_sub_m -rel_cup_m.
+    by apply /rel_weq_m; rewrite -strictify_weq.
+  rewrite rel_qmk_m.
   rewrite -itr_qmk -str_itr.
   rewrite -clos_refl_trans_hrel_str.
-  apply qq. apply /rt_closureP.
+  apply /reflect_weq/rt_closureP.
 Qed.
 
 Lemma closure_n1P e1 e2 :

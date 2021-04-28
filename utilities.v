@@ -222,6 +222,88 @@ End SeqIn.
 (* ************************************************************************** *)
 
 (* ************************************************************************** *)
+(*     Cartesian product for lattice-valued functions                         *)
+(* ************************************************************************** *)
+
+Section CartesianProd.
+
+Context {T : Type} {L : lattice.ops}.
+
+Definition cart_prod (p q : T -> L) : T -> T -> L :=
+  fun x y => p x ⊓ q y.
+
+End CartesianProd.
+
+Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
+
+(* ************************************************************************** *)
+(*     Reflexive closure                                                      *)
+(* ************************************************************************** *)
+
+Notation "r ^?" := (1 ⊔ r) (left associativity, at level 5, format "r ^?"): ra_terms.
+
+Lemma itr_qmk `{laws} `{BKA ≪ l} n (x: X n n) :
+  x^+^? ≡ x^?^+.
+Proof. ka. Qed.
+
+(* ************************************************************************** *)
+(*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
+(* ************************************************************************** *)
+
+Notation "x \ y" := (x ⊓ !y) (left associativity, at level 45): ra_terms.
+
+Section SubtractionTheory.
+
+Context `{monoid.laws} (n : ob X).
+Implicit Types (x : X n n). 
+
+(* TODO: introduce a class of lattices/kleene-algebras 
+ *   with decidable equality? *)
+Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
+
+(* TODO: reformulate in terms of reflexive closure once 
+ *   we'll generalize it to arbitary lattices with identity.
+ *)
+Lemma qmk_sub_one `{CUP+CAP+TOP ≪ l} x :
+  (x \ 1)^? ≡ x^?.
+Proof. 
+  apply/weq_spec; split; first by lattice.
+  by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
+Qed.
+
+End SubtractionTheory. 
+
+(* ************************************************************************** *)
+(*     Morphism instance for pointwise construction on lattices               *)
+(* ************************************************************************** *)
+
+Section PWMorph.
+
+Context {h l : level}.
+Context {X Y : lattice.ops}.
+Context {L : lattice.laws h Y}.
+Context {Hl : l ≪ h}.
+
+Universe pw. 
+
+Context {Z : Type@{pw}}.
+
+Instance pw_morph (f : X -> Y) :
+  @morphism l X Y f -> @morphism l (pw_ops X Z) (pw_ops Y Z) (fun g => f \o g).
+Proof.
+  move=> Hm; constructor; simpl.
+  - by move=> x y H a /=; apply: fn_leq. 
+  - by move=> x y H a /=; apply: fn_weq. 
+  - by move=> ? x y a /=; apply: fn_cup. 
+  - by move=> ? x y a /=; apply: fn_cap. 
+  - by move=> ? x /=; apply: fn_bot. 
+  - by move=> ? x /=; apply: fn_top. 
+  - by move=> ? x a /=; apply: fn_neg. 
+Qed.
+
+End PWMorph.
+
+(* ************************************************************************** *)
 (*     Instance of Lattice and KAT for decidable realtions                    *)
 (* ************************************************************************** *)
 
@@ -324,7 +406,7 @@ Proof.
   move => A B e1 e2 H x y. apply/eq_bool_iff. exact: H.
 Qed.
 
-Global Instance hrel_monoid_laws: monoid.laws (BL+ONE+CNV) dhrel_monoid_ops.
+Global Instance dhrel_monoid_laws: monoid.laws (BL+ONE+CNV) dhrel_monoid_ops.
 Proof.
   case dhrel_monoid_laws_BDL => *.
   split; try assumption. exact: dhrel_lattice_laws.
@@ -372,59 +454,114 @@ Proof.
   - move => _ _ A p q x y //=. 
 Qed.
 
+Section Theory. 
+
+Context {T : eqType}.
+
+Lemma dhrel_eq_dec : 1 ⊔ !1 ≡ (top : {dhrel T & T}).
+Proof. rewrite /weq => x y /=. case: (x =P y)=> //=. Qed.
+
+End Theory.
+
 End DHRel.
 
 (* ************************************************************************** *)
-(*     Cartesian product for lattice-valued functions                         *)
+(*     Morphism lemmas for bool/Prop relations.                               *)
 (* ************************************************************************** *)
 
-Section CartesianProd.
-
-Context {T : Type} {L : lattice.ops}.
-
-Definition cart_prod (p q : T -> L) : T -> T -> L :=
-  fun x y => p x ⊓ q y.
-
-End CartesianProd.
-
-Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
-
-(* ************************************************************************** *)
-(*     Reflexive closure                                                      *)
-(* ************************************************************************** *)
-
-Notation "r ^?" := (1 ⊔ r) (left associativity, at level 5, format "r ^?"): ra_terms.
-
-(* ************************************************************************** *)
-(*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
-(* ************************************************************************** *)
-
-Notation "x \ y" := (x ⊓ !y) (left associativity, at level 45): ra_terms.
-
-Section SubtractionTheory.
-
-Context `{monoid.laws} (n : ob X).
-Implicit Types (x : X n n). 
-
-(* TODO: introduce a class of lattices/kleene-algebras 
- *   with decidable equality? *)
-Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
-
-(* TODO: reformulate in terms of reflexive closure once 
- *   we'll generalize it to arbitary lattices with identity.
+(* The following lemmas are more convinient to work with 
+ * than using morphism instances directly. 
+ * Besides that, they provide a clean interface and 
+ * allow us to isolate some low-level details. 
+ * For example, in future we might switch to 
+ * homogeneous relations altogether.
  *)
-Lemma cup_sub_one `{CUP+CAP+TOP ≪ l} x :
-  (x \ 1)^? ≡ x^?.
+
+Section RelMorph. 
+
+Context {T : eqType}.
+
+Lemma rel_leq_m (r1 r2 : rel T) : 
+  r1 ≦ r2 -> (r1 : relation T) ≦ (r2 : relation T).
+Proof. by case (hrel_of_morphism T T)=> H ??????; apply H; solve_lower. Qed.
+
+Lemma rel_weq_m (r1 r2 : rel T) : 
+  r1 ≡ r2 -> (r1 : relation T) ≡ (r2 : relation T).
+Proof. by case (hrel_of_morphism T T)=> ? H ?????; apply H; solve_lower. Qed.
+
+Lemma rel_cup_m (r1 r2 : rel T) : 
+  (r1 ⊔ r2 : relation T) ≡ (r1 : relation T) ⊔ (r2 : relation T).
+Proof. by case (hrel_of_morphism T T)=> ?? H ????; apply H; solve_lower. Qed.
+
+Lemma rel_cap_m (r1 r2 : rel T) : 
+  (r1 ⊓ r2 : relation T) ≡ (r1 : relation T) ⊓ (r2 : relation T).
+Proof. by case (hrel_of_morphism T T)=> ??? H ???; apply H; solve_lower. Qed.
+
+Lemma rel_bot_m : 
+  ((bot : rel T) : relation T) ≡ (bot : relation T).
+Proof. by case (hrel_of_morphism T T)=> ???? H ??; apply H; solve_lower. Qed.
+
+Lemma rel_top_m : 
+  ((top : rel T) : relation T) ≡ (top : relation T).
+Proof. by case (hrel_of_morphism T T)=> ????? H ?; apply H; solve_lower. Qed.
+
+Lemma rel_neg_m (r : rel T) : 
+  (!r : relation T) ≡ !(r : relation T).
+Proof. move=> x y /=. split. apply /elimN/idP. apply /introN/idP. Qed.
+
+Lemma rel_sub_m (r1 r2 : rel T) : 
+  (r1 \ r2 : relation T) ≡ (r1 : relation T) \ (r2 : relation T).
+Proof. by rewrite -rel_neg_m rel_cap_m. Qed.
+
+Lemma rel_one_m : 
+  ((1 : {dhrel T & T}) : hrel T T) ≡ (1 : hrel T T).
+Proof. case hrel_of_functor=> ?? H ?????; apply H; solve_lower. Qed.
+
+Lemma rel_qmk_m (r : {dhrel T & T}) : 
+  (r^? : hrel T T) ≡ (r : hrel T T)^?. 
+Proof. by rewrite rel_cup_m rel_one_m. Qed.
+
+Lemma rel_cnv_m (r : {dhrel T & T}) : 
+  (r° : hrel T T) ≡ (r : hrel T T)°.
+Proof. case hrel_of_functor=> ????? H ??; apply H; solve_lower. Qed.
+
+End RelMorph.
+
+(* ************************************************************************** *)
+(*     Missing opportunities for rewriting                                    *)
+(* ************************************************************************** *)
+
+Instance hrel_neg_leq {A B : Type} : 
+  Proper ((@leq (hrel_lattice_ops A B)) --> (@leq (hrel_lattice_ops A B))) neg.
+Proof. rewrite /leq=> x y /= H a b; apply /contra_not/H. Qed.
+
+Instance hrel_neg_weq {A B : Type} : 
+  Proper (@weq (hrel_lattice_ops A B) ==> (@weq (hrel_lattice_ops A B))) neg.
 Proof. 
-  apply/weq_spec; split; first by lattice.
-  by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
+  rewrite /weq=> x y /= H a b. 
+  move: (H a b)=> [Hl Hr]; split; by apply /contra_not.
 Qed.
 
-End SubtractionTheory. 
+(* ************************************************************************** *)
+(*     Connecting reflection lemmas with pointwise equivalence                *)
+(* ************************************************************************** *)
 
-Lemma itr_qmk `{laws} `{BKA ≪ l} n (x: X n n) :
-  x^+^? ≡ x^?^+.
-Proof. ka. Qed.
+Section PwEqvReflect.
+
+Context {T : eqType}.
+Implicit Types (R : relation T) (r : rel T).
+
+(* TODO: introduce `reflect_rel := forall x y, (R x y) (r x y)` ? *)
+
+Lemma weq_reflect R r :
+  R ≡ r -> forall x y, reflect (R x y) (r x y).
+Proof. move=> H x y; apply: equivP; [exact: idP | symmetry; apply H]. Qed.
+
+Lemma reflect_weq R r :
+  (forall x y, reflect (R x y) (r x y)) -> R ≡ r.
+Proof. by move=> H x y; apply rwP. Qed.
+
+End PwEqvReflect.
 
 (* ************************************************************************** *)
 (*     Reconciling relation-algebra relation closures with vanilla Coq        *)
@@ -546,5 +683,4 @@ Proof.
 Qed.
 
 End RelationOnSeq.
-
 
