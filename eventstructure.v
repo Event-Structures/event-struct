@@ -1,5 +1,5 @@
 From Coq Require Import Relations Relation_Operators.
-From RelationAlgebra Require Import lattice rel kat_tac.
+From RelationAlgebra Require Import lattice monoid rel kat_tac rel.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype.
 From event_struct Require Import utilities relations wftype ident.
@@ -38,6 +38,7 @@ From event_struct Require Import utilities relations wftype ident.
 
 Import Order.LTheory.
 Open Scope order_scope.
+Local Open Scope ra_terms.
 Import WfClosure.
 
 Set Implicit Arguments.
@@ -105,6 +106,8 @@ Notation "w << r" := (write_read_from w r) (at level 0).
 
 Lemma rf_thrdend w : w << ThreadEnd = false.
 Proof. by case: w. Qed.
+
+Definition same_loc l l' := lloc l == lloc l'.
 
 
 (* ************************************************************************* *)
@@ -512,7 +515,7 @@ Lemma cfE e1 e2: e1 # e2 = cf_step e1 e2.
 Proof.
   apply/idP/idP; last by apply: cf_step_cf.
   case/cfP=> e1' [e2' [[]]].
-  case: (boolP (e1' == e1))=> [/eqP-> _|].
+  case: (boolP (e1' == e1))=> [/eqP-> _ |].
   - case: (boolP (e2' == e2))=> [/eqP->_->|]; first (apply/orP; by left).
     move/ca_step_last/[apply] => [[x /and3P[/cf_consistr H N + /icf_cf/H]]].
     rewrite lt_neqAle=> /andP[] *.
@@ -548,10 +551,10 @@ Proof.
   suff C: ~ m # (fpred m).
   case: (boolP (frf m == m))=> [/eqP fE|?].
   - rewrite cfE => /orP; rewrite orbb icfxx => [[]] //=.
-  rewrite fE; case: ifP=> [/eqP//|_]; case: ifP=>//= _; by rewrite orbF => /C.
+  rewrite fE; case: ifP=> [/eqP//| _]; case: ifP=>//= _; by rewrite orbF => /C.
   rewrite cfE icfxx orbb=> /hasP[? /(mem_subseq (filter_subseq _ _))] /=.
   by rewrite ?inE=> /orP[/eqP->|/eqP->/C]//; rewrite rff_consist.
-  move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _|].
+  move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _ |].
   - by move=> /ca_le L /and4P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
   move/ca_step_last=> /[apply] [[z /and3P[/[swap]]]].
   rewrite /ica !inE=> /pred2P[]-> Cx L.
@@ -560,6 +563,76 @@ Proof.
     apply/eqP=> fE; by rewrite fE ltxx in L.
   by move=> Cy /icf_cf/cf_consist2/(_ Cx Cy); exact/IHm.
 Qed.
+
+(* ************************************************************************* *)
+(*     Writes-Before relation                                                *)
+(* ************************************************************************* *)
+
+Definition sca : hrel E E := (ca : hrel E E) ∩ (fun x y => x <> y).
+
+Definition rf_inv : hrel E E := fun x y => frf x = y.
+
+Definition wb1 : hrel E E := fun e1 e2 =>
+  (
+    ((same_loc (lab e1) (lab e2)) *
+    (is_write (lab e1))) * 
+    ((is_write (lab e2)) *
+    ((sca e1 e2)))
+  )%type.
+
+Definition wb2 : hrel E E := fun e1 e2 =>
+  (
+    ((same_loc (lab e1) (lab e2)) *
+    (is_write (lab e1))) * 
+    ((is_write (lab e2)) *
+    (((hrel_dot _ _ _ sca rf_inv) e1 e2) * (e1 <> e2)))
+  )%type.
+
+(* wb := [W] ; (po ∪ rf)⁺ |loc ; [W] ∪ [W]; (po ∪ rf)⁺ |loc ; rf⁻ ; [W] \ id *)
+
+Definition wb := wb1 ⊔ wb2.
+
+Definition rwb1 e1 e2 := 
+  (
+    ((same_loc (lab e1) (lab e2)) *
+    (is_read (lab e1))) * 
+    ((is_read (lab e2)) *
+    ((frf e1) <> (frf e2))) *
+    (sca (frf e1) e2)
+  )%type.
+
+Definition rwb2 e1 e2 := 
+  (
+    ((same_loc (lab e1) (lab e2)) *
+    (is_read (lab e1))) * 
+    ((is_read (lab e2)) *
+    ((wb1 ⋅ sca) (frf e1) e2))
+  )%type.
+
+Definition rwb : hrel E E := rwb1 ⊔ rwb2.
+
+Lemma wb_rbw : 
+  (exists x, wb^* x x) <->
+  exists x, rwb^* x x.
+Proof. Admitted.
+
+Definition frwb : {fsfun E -> seq E with [::]}. Admitted.
+
+Lemma frwbP e1 e2: 
+  reflect (rwb e1 e2) (e2 \in frwb e1).
+Proof. Admitted.
+
+Definition seq_contr (f : E -> seq E) (xs : seq E): {fsfun E -> seq E with [::]} :=
+  [fsfun x in seq_fset tt dom => [seq y <- f x | y \in xs]] .
+
+Export FinClosure.
+
+Definition fwb_cf (rs : seq E) := 
+  if rs is r :: _ then
+    (t_closure (seq_contr frwb rs) r r) ||
+    (~~ allrel (fun e1 e2 => ~~ e1 # e2) rs rs)
+  else false.
+
 
 End ExecEventStructure.
 

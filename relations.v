@@ -2,6 +2,7 @@ From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order choice.
 From mathcomp Require Import finmap fingraph fintype finfun ssrnat path.
+From monae Require Import hierarchy monad_model.
 From Equations Require Import Equations.
 From event_struct Require Import utilities wftype monad.
 
@@ -38,11 +39,12 @@ Set Equations Transparent.
 Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
+Open Scope monae.
+
+Local Notation M := ModelMonad.ListMonad.t.
 
 Definition sfrel {T : eqType} (f : T -> seq T) : rel T :=
   [rel a b | a \in f b].
-
-
 
 Section Strictify.
 
@@ -360,4 +362,25 @@ Qed.
 End FinRTClosure.
 
 End FinClosure.
+
+Section Operations.
+
+Context {T : Type}.
+Variables (f g : T -> M T) (p : pred T).
+
+Definition composition := g >=> f.
+
+Definition fun_of_pred := 
+  fun x => if p x then [:: x] else [::].
+
+Definition funion := 
+  fun x => f x ++ g x.
+
+End Operations.
+
+(*Notation "p 'ᶠ'" := (fun_of_pred p) (at level 10).
+Notation "f ∘ g" := (composition f g) (at level 100, right associativity).
+Notation "f ∪ g" := (funion f g) (at level 100).*)
+
+
 
