@@ -112,6 +112,8 @@ Notation "'[' '1' '!' rules ']'"     := (ltac:(rewrite rules))
   (at level 0, rules at level 200, only parsing) : ssripat_scope.
 Notation "'[' '!' rules ']'"         := (ltac:(rewrite !rules))
   (at level 0, rules at level 200, only parsing) : ssripat_scope.
+Notation "'[' '-!' rules ']'"         := (ltac:(rewrite -!rules))
+  (at level 0, rules at level 200, only parsing) : ssripat_scope.
 Notation "'[' 'apply' ']'" := (ltac:(let f := fresh "_top_" in move=> f {}/f))
   (at level 0, only parsing) : ssripat_scope.
  (* we try to preserve the naming by matching the names from the goal *)
