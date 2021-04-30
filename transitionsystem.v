@@ -45,6 +45,8 @@ Import Order.LTheory.
 Open Scope order_scope.
 Open Scope fset_scope.
 
+Export Label.
+
 Definition add_wr {E V : eqType} e1 e2 (lab : E -> @label V V) l :=
   (e1 == e2) && (~~ is_read l) || ((lab e1) << l).
 

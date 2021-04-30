@@ -51,6 +51,45 @@ Inductive label {Rval Wval : Type} :=
 | ThreadStart
 | ThreadEnd.
 
+Module Label.
+
+Section Label.
+
+Context {V : eqType}.
+
+Local Notation label := (@label V V).
+
+Implicit Type l : label.
+
+(* label location *)
+Definition lloc (l : label) :=
+  match l with
+  | Write x _ => Some x
+  | Read  x _ => Some x
+  | _         => None
+  end.
+
+Definition is_read l := if l is (Read _ _) then true else false.
+
+Definition is_write l := if l is Write _ _ then true else false.
+
+Definition is_thdstart l := if l is ThreadStart then true else false.
+
+Definition write_read_from (w r : label) :=
+  match w, r with
+  | Write x a, Read y b => (x == y) && (a == b)
+  | _, _ => false
+  end.
+
+Lemma rf_thrdend w : write_read_from w ThreadEnd = false.
+Proof. by case: w. Qed.
+
+End Label.
+
+End Label.
+
+Notation "w << r" := (Label.write_read_from w r) (at level 0).
+
 Section PrimeEventStructure.
 
 Context {V : eqType}.
@@ -81,37 +120,14 @@ Qed.
 Canonical label_eqMixin := EqMixin eqlabelP.
 Canonical label_eqType := Eval hnf in EqType label label_eqMixin.
 
-(* label location *)
-Definition lloc (l : label) :=
-  match l with
-  | Write x _ => Some x
-  | Read  x _ => Some x
-  | _         => None
-  end.
-
-Definition is_read l := if l is (Read _ _) then true else false.
-
-Definition is_write l := if l is Write _ _ then true else false.
-
-Definition is_thdstart l := if l is ThreadStart then true else false.
-
-Definition write_read_from (w r : label) :=
-  match w, r with
-  | Write x a, Read y b => (x == y) && (a == b)
-  | _, _ => false
-  end.
-
-Notation "w << r" := (write_read_from w r) (at level 0).
-
-Lemma rf_thrdend w : w << ThreadEnd = false.
-Proof. by case: w. Qed.
-
 
 (* ************************************************************************* *)
 (*     Exec Event Structure                                                  *)
 (* ************************************************************************* *)
 
 Section ExecEventStructureDef.
+
+Export Label.
 
 Context {disp : unit} (E : identType disp).
 
@@ -180,6 +196,11 @@ Notation lab := (lab es).
 Notation fpred := (fpred es).
 Notation frf := (frf es).
 
+Definition is_read := Label.is_read \o lab.
+
+Definition is_write := Label.is_write \o lab.
+
+
 Lemma labE e : lab e = lab_prj (lprf e).
 Proof. by []. Qed.
 
@@ -238,7 +259,7 @@ Proof.
 Qed.
 
 Lemma frf_cond r : let w := frf r in
-  ((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r)).
+  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) << (lab r)).
 Proof.
   case: (boolP (r \in dom))=> [|/[dup] ndom /frf_dom->//]; rewrite /dom/frf/lab.
   - case: es => ????????? /= /forallP L; rewrite -(@seq_fsetE tt)=> I.
@@ -590,4 +611,3 @@ End PrimeEventStructure.
 
 (*Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 10).*)
 Notation "e '|-' a # b" := (cf e a b) (at level 10).
-Notation "w << r" := (write_read_from w r) (at level 0).
