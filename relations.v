@@ -43,15 +43,22 @@ Local Open Scope monae_scope.
 
 Import NDMonadMorphism.Syntax.
 
-Definition sfrel {M : nondetMonad} {η : M ≈> ModelNondet.list}
+(* A shorter name for list monad. 
+ * TODO: rename to Seq? 
+ * TODO: Use canonical structures to infer the 
+ *   monad instance for seq automatically?  
+ *)
+Local Notation List := ModelNondet.list.
+
+(* TODO: rename to `mrel` and move to `monad.v` ? *)
+Definition sfrel {M : nondetMonad} {η : M ≈> List}
   {T : eqType} (f : T -> M T) : rel T :=
     [rel a b | a \in η T (f b)].
-
 
 Section Strictify.
 
 Context (T : eqType).
-Variable  (M : nondetMonad) (η : M ≈> ModelNondet.list).
+Variable  (M : nondetMonad) (η : M ≈> List).
 Implicit Type (f : T -> M T).
 
 Definition strictify f : T -> M T :=
@@ -76,7 +83,7 @@ Section WfRTClosure.
 
 Context {disp : unit} {T : wfType disp}.
 
-Variable (M : nondetMonad) (η : M ≈> ModelNondet.list) (f : T -> M T).
+Variable (M : nondetMonad) (η : M ≈> List) (f : T -> M T).
 
 (* Hypothesis descend : forall x y, y \in f x -> y < x. *)
 Hypothesis descend : @sfrel M η T f ≦ (<%O).
@@ -90,11 +97,12 @@ Hypothesis descend : @sfrel M η T f ≦ (<%O).
  Definition suffix_aux (x : T) (rec : forall y : T, y < x -> M T) := 
   let ys := f x in 
   let ps := ys >>= (fun x => 
-  if x \in η T ys =P true is ReflectT pf then
-    rec x (descend _ _ pf)
-  else
-    Fail
-  ) in Alt ys ps.
+    if x \in η T ys =P true is ReflectT pf then
+      rec x (descend _ _ pf)
+    else
+      Fail
+  ) in 
+  Alt ys ps.
 
 (* strict suffix of an element `x`, i.e. a set { y | x R y } *)
 Equations suffix (x : T) : M T by wf x (<%O : rel T) := 
@@ -123,12 +131,12 @@ Lemma t_closure_n1P x y :
   reflect (clos_trans_n1 T (@sfrel M η T f) x y) (t_closure x y).
 Proof.
   rewrite /t_closure. funelim (suffix y)=> /=. 
-  apply /(iffP idP); rewrite mem_alt_in /sfrel /=.
-  { move=> /orP[|/bind_mapP[y]]; first exact: tn1_step.
+  apply /(iffP idP); rewrite mem_alt /sfrel /=.
+  { move=> /orP[|/mem_bindP[y]]; first exact: tn1_step.
     case: eqP=> // S /descend yx /X tr. move: (tr y yx erefl) => H.
     apply: tn1_trans; first by exact: S. done. }
   move: X=> /[swap] [[?-> //|y z L /[swap]]].
-  move=> /[apply] H; apply/orP; right; apply/bind_mapP.
+  move=> /[apply] H; apply/orP; right; apply/mem_bindP.
   exists y=> //. case: eqP => // /descend yz. exact: H.
 Qed.
 
@@ -171,7 +179,7 @@ Proof.
     apply rwP; exact: t_closureP. }
   rewrite /t_closure /rt_closure /wsuffix alt_morph.
   rewrite /Alt /= /monae_lib.curry /= mem_cat.
-  rewrite mem_ret_in.
+  rewrite mem_ret.
   by apply predU1P.
 Qed.
 
@@ -179,7 +187,7 @@ Lemma rt_closureE : rt_closure ≡ eq_op ⊔ t_closure.
 Proof. 
   move=> x y /=; rewrite /rt_closure /t_closure. 
   rewrite /wsuffix alt_morph /Alt /= /monae_lib.curry /= mem_cat.
-  by rewrite mem_ret_in.
+  by rewrite mem_ret.
 Qed.
 
 Lemma rt_closure_le : rt_closure ≦ (<=%O : rel T).
@@ -192,7 +200,8 @@ Qed.
 Lemma rt_closure_refl x : rt_closure x x.
 Proof.
   rewrite /rt_closure alt_morph /Alt /= /monae_lib.curry /= mem_cat.
-  by rewrite mem_ret_in eq_refl. Qed.
+  by rewrite mem_ret eq_refl. 
+Qed.
 
 Lemma rt_closure_antisym : antisymmetric rt_closure.
 Proof.

@@ -98,35 +98,69 @@ End NDMonadMorphism.
 Export NDMonadMorphism.Exports.
 Export NDMonadMorphism.Theory.
 
-Section MorphismProperties.
+Section ListMonadMorphismTheory.
+
 Import NDMonadMorphism.Syntax.
-Import ModelNondet ModelMonad ListMonad Monad_of_ret_bind.
+Import ModelNondet ModelMonad ListMonad.
+
+Context {T : eqType}.
+Variable (M : nondetMonad) (η : M ≈> ModelNondet.list).
+
+Lemma ret_morph_list (x : T) :
+  η T (Ret x) = [:: x].
+Proof. 
+  have ->: η T (Ret x) = (η T \o Ret) x by done.
+  by rewrite ret_morph. 
+Qed.
+
+Lemma fail_morph_list :
+  η T Fail = [::].
+Proof. by rewrite fail_morph. Qed.
+
+Lemma alt_morph_list (m n : M T) : 
+  η T (Alt m n) = (η T m) ++ (η T n). 
+Proof. by rewrite alt_morph. Qed.
+
+Lemma mem_ret (x y : T) :
+  x \in η T (Ret y) = (x == y).
+Proof.
+  have ->: η T (Ret y) = (η T \o Ret) y by done.
+  by rewrite ret_morph in_cons in_nil; case: (x == y).
+Qed.
+
+Lemma mem_fail (x : T) : 
+  x \in η T Fail = false.
+Proof. by rewrite fail_morph_list. Qed.
+
+Lemma mem_alt (x : T) (m n : M T) :
+  x \in η T (Alt m n) = (x \in η T m) || (x \in η T n).
+Proof. by rewrite alt_morph mem_cat. Qed.
+
+Lemma mem_bindP (s : M T) (k : T -> M T) (y : T) :
+  reflect (exists2 x, x \in η T s & y \in η T (k x)) (y \in η T (s >>= k)).
+Proof.
+  apply /(iffP idP).
+  { rewrite bind_morph => /flatten_mapP.
+    move => [] l /flatten_mapP [] x xs.
+    rewrite mem_seq1 => /eqP -> ymx.
+    by exists x. }
+  move => [] x xs ymx. rewrite bind_morph.
+  apply /flatten_mapP. exists (η T (k x)) => //.
+  apply /flatten_mapP. exists x => //. exact: mem_head.
+Qed.
+
+End ListMonadMorphismTheory.
+
+Section MFilter.
+
+Import NDMonadMorphism.Syntax.
+Import ModelNondet ModelMonad ListMonad Monad_of_ret_bind. 
 
 Context {T : eqType}.
 Variable (M : nondetMonad) (η : M ≈> ModelNondet.list).
 
 Definition mfilter (s : M T) (p : pred T) :=
   s >>= (fun a => if p a then Ret a else Fail).
-
-Lemma mem_ret (x : T) :
-  η T (Ret x) = [:: x].
-Proof.
-  have: η T (Ret x) = (η T \o Ret) x.
-  { done. }
-  move=> ->. by rewrite ret_morph /Ret /= /ModelMonad.ListMonad.ret_component.
-Qed.
-
-Lemma mem_fail :
-  η T Fail = [::].
-Proof. by rewrite fail_morph. Qed.
-
-Lemma mem_ret_in (x y : T) :
-  x \in η T (Ret y) = (x == y).
-Proof.
-  have: η T (Ret y) = (η T \o Ret) y.
-  { done. }
-  move=> ->. rewrite ret_morph in_cons in_nil. by case: (x == y).
-Qed.
 
 Lemma mem_mfilter (p : pred T) (x : T) (s : M T) :
   (x \in η T (mfilter s p)) = p x && (x \in η T s).
@@ -136,35 +170,18 @@ Proof.
   case: ifP => /andP.
   { move=> [px xs]. exists [:: x]; last exact: mem_head.
     apply /flatten_mapP. exists x => //=.
-    by rewrite px mem_ret mem_head. }
+    by rewrite px ret_morph_list mem_head. }
   move=> H [] l /flatten_mapP [] y ys lh xl.
   move: H => []. case H: (p y).
-  { move: lh. rewrite H mem_ret mem_seq1 => /eqP ly.
+  { move: lh. rewrite H ret_morph_list mem_seq1 => /eqP ly.
     move: xl. by rewrite ly mem_seq1 => /eqP ->. }
-  move: lh. rewrite H mem_fail mem_seq1 => /eqP el.
+  move: lh. rewrite H fail_morph_list mem_seq1 => /eqP el.
   by rewrite el in xl.
 Qed.
 
-Lemma mem_alt_in (x : T) (s1 s2 : M T) :
-  x \in η T (Alt s1 s2) = (x \in η T s1) || (x \in η T s2).
-Proof. by rewrite alt_morph mem_cat. Qed.
+End MFilter.
 
-Lemma bind_mapP (s : M T) (m : T -> M T) y :
-  reflect (exists2 x, x \in η T s & y \in η T (m x)) (y \in η T (s >>= m)).
-Proof.
-  apply /(iffP idP).
-  { rewrite bind_morph => /flatten_mapP.
-    move => [] l /flatten_mapP [] x xs.
-    rewrite mem_seq1 => /eqP -> ymx.
-    by exists x. }
-  move => [] x xs ymx. rewrite bind_morph.
-  apply /flatten_mapP. exists (η T (m x)) => //.
-  apply /flatten_mapP. exists x => //. exact: mem_head.
-Qed.
-
-End MorphismProperties.
-
-Section SeqIdMorphism.
+Section ListIdMorphism.
 
 Import NDMonadMorphism.Syntax.
 Import ModelNondet ModelMonad ListMonad Monad_of_ret_bind.
@@ -199,4 +216,4 @@ Definition id_ndmorph : list ≈> list :=
   NDMonadMorphism.Pack _ _ id_morph
     (NDMonadMorphism.Mixin _ _ id_morph fail_id alt_id).
 
-End SeqIdMorphism.
+End ListIdMorphism.
