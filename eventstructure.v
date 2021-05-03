@@ -286,22 +286,26 @@ Qed.
 (* ************************************************************************* *)
 
 (* Immediate causality relation *)
-Definition ica : rel E := (@sfrel _ monad.id_ndmorph E fica : {dhrel E & E})°.
+Definition ica : {dhrel E & E} := 
+  (@sfrel _ monad.id_ndmorph E fica : {dhrel E & E})°.
+
+Lemma icaE : ica =2 [rel e1 e2 | e1 \in fica e2].
+Proof. by []. Qed.
 
 Lemma ica_le e1 e2 : ica e1 e2 -> e1 <= e2.
 Proof. exact: fica_ge. Qed.
 
 (* Causality relation *)
-Definition ca : rel E := (rt_closure fica_gt : {dhrel E & E})°.
+Definition ca : rel E := (rt_closure fica_gt)°.
 
 Lemma closureP e1 e2 :
   reflect (clos_refl_trans _ ica e1 e2) (ca e1 e2).
 Proof. 
   rewrite /ca /ica. apply weq_reflect.
   rewrite !clos_refl_trans_hrel_str.
-  rewrite rel_cnv_m rel_cnv_m -kleene.cnvstr.
+  rewrite rel_cnv_m -kleene.cnvstr.
   apply cnv_weq_iff.
-  rewrite str_itr itr_qmk.
+  rewrite cnv_invol str_itr itr_qmk.
   rewrite -qmk_sub_one; last first.
   (* TODO: make a lemma? *)
   - rewrite -rel_top_m -rel_one_m -rel_neg_m -rel_cup_m.
@@ -329,16 +333,13 @@ Proof. by move=> x y H; apply /closureP /rt_step. Qed.
 (* Proof. exact: rt_closure_subrel. Qed. *)
 
 Lemma ica_fpred {e}: ica (fpred e) e.
-Proof. by rewrite /ica /= /dhrel_cnv /= /sfrel /= /fica !inE eqxx. Qed.
+Proof. by rewrite icaE /= !inE eqxx. Qed.
 
 Lemma ica_notdom e1 e2:
   e2 \notin dom ->
   ica e1 e2 ->
   e1 == e2.
-Proof. 
-  move=> ?; rewrite /ica /= /dhrel_cnv/sfrel /=. 
-  by rewrite fica_dom // !inE orbb. 
-Qed.
+Proof. by move=> ?; rewrite icaE /= fica_dom // !inE orbb. Qed.
 
 Lemma ca_refl {e} : ca e e.
 Proof. exact: rt_closure_refl. Qed.
@@ -568,7 +569,7 @@ Proof.
   move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _|].
   - by move=> /ca_le L /and4P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
   move/ca_step_last=> /[apply] [[z /and3P[/[swap]]]].
-  rewrite /ica /= /dhrel_cnv /= /sfrel /fica /= !inE=> /pred2P[]-> Cx L.
+  rewrite icaE /= !inE=> /pred2P[]-> Cx L.
   - move=> /ca_fpredr Cy /icf_cf/cf_consist2/(_ Cx Cy).
     rewrite cf_sym rff_consist //=. 
     apply/eqP=> fE; by rewrite fE ltxx in L.

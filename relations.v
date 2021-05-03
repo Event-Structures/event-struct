@@ -52,7 +52,7 @@ Local Notation List := ModelNondet.list.
 
 (* TODO: rename to `mrel` and move to `monad.v` ? *)
 Definition sfrel {M : nondetMonad} {η : M ≈> List}
-  {T : eqType} (f : T -> M T) : rel T :=
+  {T : eqType} (f : T -> M T) : {dhrel T & T} :=
     [rel a b | b \in η T (f a)].
 
 Section Strictify.
@@ -113,11 +113,11 @@ Definition wsuffix (x : T) : M T :=
   Alt (Ret x) (suffix x).
 
 (* decidable transitive closure *)
-Definition t_closure : rel T := 
+Definition t_closure : {dhrel T & T} := 
   fun x y => y \in η T (suffix x).
 
 (* decidable reflexive-transitive closure *)
-Definition rt_closure : rel T := 
+Definition rt_closure : {dhrel T & T} := 
   fun x y => y \in η T (wsuffix x).
   
 (* ************************************************************************** *)
@@ -179,7 +179,7 @@ Proof.
   by apply predU1P.
 Qed.
 
-Lemma rt_closureE : rt_closure ≡ (t_closure : {dhrel T & T})^?.
+Lemma rt_closureE : rt_closure ≡ t_closure^?.
 Proof. 
   move=> x y /=; rewrite /rt_closure /t_closure /wsuffix. 
   rewrite alt_morph /Alt /= /monae_lib.curry /= mem_cat /dhrel_one.
