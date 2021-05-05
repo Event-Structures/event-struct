@@ -227,7 +227,7 @@ Global Instance leq_rewrite_relation ops :
 Qed.
 
 Global Instance weq_rewrite_relation ops : 
-  RewriteRelation (@weq ops).
+  RewriteRelation (@lattice.weq ops).
 Qed.
 
 (* ************************************************************************** *)
@@ -341,8 +341,10 @@ Arguments lattice.leq : simpl never.
 Arguments lattice.weq : simpl never.
 
 Global Instance dhrel_lattice_laws A B : 
-  lattice.laws (BL+ONE+CNV) (dhrel_lattice_ops A B) := 
+  lattice.laws BDL (dhrel_lattice_ops A B) := 
     lower_lattice_laws (H:=pw_laws _).
+  (* lattice.laws (BL+ONE+CNV) (dhrel_lattice_ops A B) :=  *)
+  (*   lower_lattice_laws (H:=pw_laws _). *)
 
 Section MonoidOps.
 Variables (A B C : eqType).
@@ -393,30 +395,45 @@ Arguments dhrel_inj {_} _ _ _ /.
 Definition hrel_of (A B : eqType) (r : {dhrel A & B}) : hrel A B := fun x y => r x y.
 Ltac hrel_prop := do ! move => ?; rewrite /hrel_of /=; to_prop; by firstorder.
 
-Lemma hrel_of_morphism (A B : eqType) : morphism (BDL+ONE+CNV) (@hrel_of A B).
+Lemma hrel_of_morphism (A B : eqType) : 
+  morphism BDL (@hrel_of A B).
+  (* morphism (BDL+ONE+CNV) (@hrel_of A B). *)
 Proof.
   split; try done; try hrel_prop.
   move => e1 e2 H x y. apply/eq_bool_iff. exact: H.
 Qed.
 
-Lemma hrel_of_functor : functor (BDL+ONE+CNV) hrel_of.
-Proof.
-  apply (@Build_functor (BDL+ONE+CNV) dhrel_monoid_ops hrel_monoid_ops id hrel_of).
-  all: try done. all: try hrel_prop.
-  apply: hrel_of_morphism.
-Qed.
+(* We cannot declare the monoid laws instance, since 
+ * we cannot define composition on `dhrel` structure.
+ * The current design of relation-algebra package 
+ * does not allow an optional composition operation. 
+ * This requires a custom fork:
+ * git+https://github.com/eupp/relation-algebra#monoid-decoupling
+ * However, maintaining the custom fork seems to be a bit complicated task, 
+ * therefore we postpone it (we hope it will be merged eventually). 
+ * Despite we cannot declare monoid laws instance 
+ * (and thus we cannot use some lemmas from relation-algebra)
+ * we still can use notations.
+ *)
 
-Lemma dhrel_monoid_laws_BDL: monoid.laws (BDL+ONE+CNV) dhrel_monoid_ops.
-Proof.
-  eapply (laws_of_faithful_functor hrel_of_functor) => //.
-  move => A B e1 e2 H x y. apply/eq_bool_iff. exact: H.
-Qed.
+(* Lemma hrel_of_functor : functor (BDL+ONE+CNV) hrel_of. *)
+(* Proof. *)
+(*   apply (@Build_functor (BDL+ONE+CNV) dhrel_monoid_ops hrel_monoid_ops id hrel_of). *)
+(*   all: try done. all: try hrel_prop. *)
+(*   apply: hrel_of_morphism. *)
+(* Qed. *)
 
-Global Instance dhrel_monoid_laws: monoid.laws (BL+ONE+CNV) dhrel_monoid_ops.
-Proof.
-  case dhrel_monoid_laws_BDL => *.
-  split; try assumption. exact: dhrel_lattice_laws.
-Qed.
+(* Lemma dhrel_monoid_laws_BDL: monoid.laws (BDL+ONE+CNV) dhrel_monoid_ops. *)
+(* Proof. *)
+(*   eapply (laws_of_faithful_functor hrel_of_functor) => //. *)
+(*   move => A B e1 e2 H x y. apply/eq_bool_iff. exact: H. *)
+(* Qed. *)
+
+(* Global Instance dhrel_monoid_laws: monoid.laws (BL+ONE+CNV) dhrel_monoid_ops. *)
+(* Proof. *)
+(*   case dhrel_monoid_laws_BDL => *. *)
+(*   split; try assumption. exact: dhrel_lattice_laws. *)
+(* Qed. *)
 
 Lemma dhrel_oneE A a b : (1 : {dhrel A & A}) a b = (a == b).
 Proof. reflexivity. Qed.
@@ -444,21 +461,23 @@ Definition dset : ob dhrel_monoid_ops -> lattice.ops := pw_ops bool_lattice_ops.
 Canonical Structure dhrel_kat_ops := 
   kat.mk_ops dhrel_monoid_ops dset (@dhrel_inj).
 
-Global Instance dhrel_kat_laws: kat.laws (CUP+BOT+ONE) BL dhrel_kat_ops.
-Proof.
-  split.
-  - by eapply lower_laws. 
-  - move => A. by eapply lower_lattice_laws.
-  - move => A.
-    have H : Proper (lattice.leq ==> lattice.leq) (@dhrel_inj A).
-    + move => e1 e2 H x y /=. by case: (_ == _) => //=. 
-    split => //=.
-    + move => x y. rewrite !weq_spec. by intuition.
-    + move => _ f g x y /=. by case: (_ == _); case (f x); case (g x).
-    + move => _ x y /=. by rewrite andbF.
-  - move => _ _ A x y /=. by rewrite andbT.
-  - move => _ _ A p q x y //=. 
-Qed.
+(* Same issue as for monoid laws instance (see above). *)
+
+(* Global Instance dhrel_kat_laws: kat.laws (CUP+BOT+ONE) BL dhrel_kat_ops. *)
+(* Proof. *)
+(*   split. *)
+(*   - by eapply lower_laws.  *)
+(*   - move => A. by eapply lower_lattice_laws. *)
+(*   - move => A. *)
+(*     have H : Proper (lattice.leq ==> lattice.leq) (@dhrel_inj A). *)
+(*     + move => e1 e2 H x y /=. by case: (_ == _) => //=.  *)
+(*     split => //=. *)
+(*     + move => x y. rewrite !weq_spec. by intuition. *)
+(*     + move => _ f g x y /=. by case: (_ == _); case (f x); case (g x). *)
+(*     + move => _ x y /=. by rewrite andbF. *)
+(*   - move => _ _ A x y /=. by rewrite andbT. *)
+(*   - move => _ _ A p q x y //=.  *)
+(* Qed. *)
 
 Section Theory. 
 
@@ -513,7 +532,8 @@ Proof. by rewrite -rel_neg_m rel_cap_m. Qed.
 
 Lemma rel_one_m {A : eqType} : 
   ((1 : {dhrel A & A}) : hrel A A) ≡ (1 : hrel A A).
-Proof. case hrel_of_functor=> ?? H ?????; apply H; solve_lower. Qed.
+Proof. do ! move => ?; rewrite /hrel_of /=; to_prop; by firstorder. Qed.
+(* Proof. case hrel_of_functor=> ?? H ?????; apply H; solve_lower. Qed. *)
 
 Lemma rel_qmk_m {A : eqType} (r : {dhrel A & A}) : 
   (r^? : hrel A A) ≡ (r : hrel A A)^?. 
@@ -521,7 +541,8 @@ Proof. by rewrite rel_cup_m rel_one_m. Qed.
 
 Lemma rel_cnv_m {A : eqType} (r : {dhrel A & A}) : 
   (r° : hrel A A) ≡ (r : hrel A A)°.
-Proof. case hrel_of_functor=> ????? H ??; apply H; solve_lower. Qed.
+Proof. do ! move => ?; rewrite /hrel_of /=; to_prop; by firstorder. Qed.
+(* Proof. case hrel_of_functor=> ????? H ??; apply H; solve_lower. Qed. *)
 
 (* ************************************************************************** *)
 (*     Missing opportunities for rewriting                                    *)
