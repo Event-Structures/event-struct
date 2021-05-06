@@ -96,6 +96,16 @@ Local Notation fresh := (@fresh disp T).
 Lemma fresh_lt x : x < fresh x.
 Proof. by case: T x=> ? [/= ? []]. Qed.
 
+Lemma fresh_iter n m x: iter n fresh x = iter m fresh x -> n = m.
+Proof.
+  have F: forall x n, x < iter n.+1 fresh x.
+  - move=> {x}{n}x; elim=> /= [|? /lt_trans]; last apply; exact/fresh_lt.
+  elim: n m x=> /= [[] // n x|n IHn [/= x|l x]].
+  - move: (F x n)=>/[swap]{1}->; by rewrite ltxx.
+  - rewrite -iterS; move: (F x n)=>/[swap]{1}->; by rewrite ltxx.
+  by rewrite -iterS ?iterSr => /IHn->.
+Qed.
+
 Definition fresh_seq s := fresh (head ident0 s).
 
 Section Add_Sorted.
@@ -117,6 +127,7 @@ Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed.
 
 Lemma fresh_seq_notin : fresh_seq s \notin s.
 Proof. by apply/memPn => x /fresh_seq_lt; rewrite lt_neqAle=> /andP[]. Qed.
+
 
 End Add_Sorted.
 
