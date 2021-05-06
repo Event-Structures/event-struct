@@ -185,6 +185,22 @@ Lemma bij_ext f: bijective f -> bijective (ext f).
 Proof. case=> g *; exists (ext g); exact/ext_can. Qed.
 
 
+Definition ext (f : E -> E) (lprf : lab_pred_rfrom) :=
+  let: Lprf l p r := lprf in
+  Lprf l (f p) (f r).
+
+Lemma ext_id: ext id =1 id.
+Proof. by case. Qed.
+
+Lemma ext_comp f g: ext (f \o g) =1 ext f \o ext g.
+Proof. by case. Qed.
+
+Lemma ext_can f g: cancel f g -> cancel (ext f) (ext g).
+Proof. move=> ? [/= ???]; exact/congr2. Qed.
+
+Lemma bij_ext f: bijective f -> bijective (ext f).
+Proof. case=> g *; exists (ext g); exact/ext_can. Qed.
+
 Definition prod_of_lprf lprf :=
   let: Lprf l p rf := lprf in (l, p, rf).
 
