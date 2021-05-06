@@ -696,6 +696,57 @@ Qed.
 
 End RelationOnSeq.
 
+Section Swap.
+
+Context {T : eqType}.
+
+Section SwapDef.
+
+Context (f : T -> T) (a b : T).
+
+Definition swap := fun x =>
+  if x == a then
+    f b
+  else if x == b then 
+    f a
+  else f x.
+
+Lemma swap1: swap a = f b.
+Proof. by rewrite /swap eq_refl. Qed.
+
+Lemma swap2: swap b = f a.
+Proof. by rewrite /swap eq_refl; case: ifP=> // /eqP->. Qed.
+
+Lemma swap_not_eq x: x != a -> x != b -> f x = swap x.
+Proof. by rewrite /swap=> /negbTE->/negbTE->. Qed.
+
+End SwapDef.
+
+Lemma swap_inv a b: involutive (swap id a b).
+Proof.
+  move=> ?; rewrite {2}/swap; case: ifP=> [/eqP->|]; first exact/swap2.
+  move/negbT=> ?; case: ifP=> [/eqP->|/negbT ?]; first exact/swap1.
+  exact/esym/swap_not_eq.
+Qed.
+
+
+Lemma bij_swap a b f : bijective f -> bijective (swap f a b).
+Proof.
+  move=> /[dup] bi [g c1 c2].
+  apply/(@Bijective _ _ _ (swap g (f a) (f b)))=> x; rewrite /swap.
+  - case: (x =P a)=> [->|]; rewrite ?eq_refl ?c1 ?bij_eq //.
+    - by case: ifP=> // /eqP.
+    case: (x =P b)=> [->|]; first by rewrite ?eq_refl.
+    by rewrite ?bij_eq // => /eqP/negbTE->/eqP/negbTE->.
+  case: (x =P f a)=>[->|]; rewrite ?c1 ?eq_refl; first by case: ifP=>[/eqP->|].
+  case: (x =P f b)=>[->|]; rewrite ?eq_refl // -?[g x == _](bij_eq bi) c2.
+  by move/eqP/negbTE->=>/eqP/negbTE->.
+Qed.
+
+
+End Swap.
+
+
 
 Section OptionUtils. 
 
