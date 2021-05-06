@@ -224,13 +224,12 @@ Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
 Hypothesis ledrr : forall l1 l2, (eqv_diamond_commute (r l1) (r l2) e).
-Hypothesis leder  : forall l, diamond_commute e (r l).
+Hypothesis leder  : diamond_commute e (gen r).
 
 Theorem eqv_comm_union : eqv_confluent (gen r) e.
 Proof.
-  apply/eqv_confl=> // [???[l1 /ledrr C [l2 /C [s4 [s4' [[*]]]]]]|???/leder C].
+  apply/eqv_confl => // ???[l1 /ledrr C [l2 /C [s4 [s4' [[*]]]]]].
   - exists s4, s4'; do ? split=> //; by [exists l2| exists l1].
-  case=> l /C[s4 *]; exists s4=> //; by exists l.
 Qed.
 
 End ELabRewritingSystem.
@@ -250,8 +249,8 @@ Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
-Hypothesis ledrr : forall l1 l2, (eqv_diamond_commute (r l1) (r l2) e).
-Hypothesis leder  : forall l, diamond_commute e (r l).
+Hypothesis ledrr : forall l1 l2, eqv_diamond_commute (r l1) (r l2) e.
+Hypothesis leder : diamond_commute e (gen r).
 
 Definition eqv_respect_p := forall s (t : T), e (val t) s -> p s.
 
@@ -272,8 +271,8 @@ Proof.
   - move=> ????? /= /[dup] /eqv_r R /ledrr E /[dup] /R P /E[s4 [? [[/[dup]]]]].
     move=> /P ps4 ?? /[dup]; rewrite -{1}[s4](@SubK S p T)=> /eqv_p ps4' ?.
     by exists (Sub _ ps4), (Sub _ ps4'); do ? split; rewrite /sub ?SubK //.
-  move=> ???? /= /leder /[apply][[?? /[dup] /eqv_p ps ?]].
-  by exists (Sub _ ps); rewrite /sub SubK.
+  move=> ??? /= /leder /[apply][[? [l ?] /[dup] /eqv_p ps ?]].
+  by exists (Sub _ ps); first exists l; rewrite /sub /= ?SubK.
 Qed.
 
 End SubRewritingSystem.
