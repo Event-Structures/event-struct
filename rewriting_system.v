@@ -153,7 +153,7 @@ Lemma scomm_rw_eqv : strong_commute e r.
 Proof.
   move=> s1 s2 s3 /[swap].
   have: e^+ ≡ e.
-  - by apply/(antisym _ _ _ (itr_ext e))/itr_ind_l1=> // ++ [/[swap]]. 
+  - apply/(antisym _ _ _ (itr_ext e))/itr_ind_l1=> // [??[?]]; exact/eqv_trans.
   move=> E /(dcomm_comm edcomm) H /E /H [x ??]; exists x=> //; exact/E. 
 Qed.
 
