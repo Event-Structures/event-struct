@@ -107,6 +107,7 @@ Proof.
   by rewrite -iterS ?iterSr => /IHn->.
 Qed.
 
+<<<<<<< HEAD
 Lemma ident0_le x : ident0 <= x.
 Proof. by case: T x=> ? [/= ? []]. Qed.
 
@@ -119,6 +120,8 @@ Proof.
   move: (ident0_le a); by case: (comparable_ltgtP C).
 Qed.
 
+=======
+>>>>>>> e7c34f2... feat: add lemmas about iteration of fresh-function
 Definition fresh_seq s := fresh (head ident0 s).
 
 Lemma ident0_fresh_seq s: ident0 < fresh_seq s.
@@ -146,6 +149,7 @@ Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed.
 
 Lemma fresh_seq_notin : fresh_seq s \notin s.
 Proof. by apply/memPn => x /fresh_seq_lt; rewrite lt_neqAle=> /andP[]. Qed.
+
 
 End Add_Sorted.
 
