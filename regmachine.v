@@ -1,5 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice finfun finmap tuple.
+From monae Require Import hierarchy monad_model.
 From event_struct Require Import utilities eventstructure inhtype.
 From event_struct Require Import transitionsystem ident.
 
@@ -53,7 +54,11 @@ Unset Printing Implicit Defensive.
 
 Section RegMachine.
 
-Open Scope fmap.
+Open Scope fmap_scope.
+Open Scope do_notation.
+
+Local Notation M := ModelMonad.ListMonad.t.
+
 Context {V : inhType} {disp} {E : identType disp}.
 
 (*Notation n := (@n val).*)
@@ -68,10 +73,11 @@ Definition reg := nat.
 
 (* Instruction Set *)
 Inductive instr :=
-| WriteReg : V -> reg -> instr
-| ReadLoc  : reg -> loc -> instr
-| WriteLoc : V -> loc -> instr
-| CJmp     : reg -> nat -> instr.
+| WriteReg of V   & reg 
+| ReadLoc  of reg & loc
+| WriteLoc of V   & loc 
+| CJmp     of reg & nat 
+| Stop.
 
 Definition seqprog := seq instr.
 
@@ -103,7 +109,7 @@ Record config := Config {
   trhdmap  :> {fsfun E -> (thrd_state * nat)%type with (init_state, 0)}
 }.
 
-Notation inth := (nth (CJmp 0 0)).
+Notation inth := (nth Stop).
 
 Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
   (option (@label unit V) * (V -> thrd_state))%type :=
@@ -124,6 +130,7 @@ Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
     | CJmp     r n => (None,
                       fun _ => {| ip     := if rmap r != inh then n.+1 else ip.+1;
                                   regmap := rmap |} )
+    | Stop         => (None, fun=> st)
     end.
 
 Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
@@ -170,11 +177,11 @@ Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
       let: w_in     := valP w in
       let: read_lab := Read x (wval (lab es wr)) in
       (
-        add_event
+        add_new_event
           {| add_lb            := read_lab;
-            add_pred_in_dom   := pr_mem;
-            add_write_in_dom  := ws_mem   w_in;
-            add_write_consist := ws_wpred w_in; |},
+             add_pred_in_dom   := pr_mem;
+             add_write_in_dom  := ws_mem   w_in;
+             add_write_consist := ws_wpred w_in; |},
         wr
       ) | w <- (seq_in (writes_seq x))]
   else [::].
@@ -190,6 +197,7 @@ Lemma mem_ces_seq_aux x pr ces:
 Proof.
   case: ces => ces w; rewrite mem_filter /= /es_seq => /andP[?].
   case: eqP=> // ? /mapP[?? [/[dup] C -> ws]].
+  move: C. rewrite /add_new_event; case: ifP=> _ C; first by case: es.
   apply/consist_add_event=> /=; first by case: es.
   by rewrite -C -ws.
 Qed.
@@ -202,7 +210,7 @@ Definition ces_seq x pr :=
     (Consist (mem_ces_seq_aux ces_mem), wval (lab es w)) | 
     ces_w_mem <- seq_in (@ces_seq_aux x pr)].
 
-Arguments consist_Nread {_ _ _}.
+Arguments consist_new_Nread {_ _ _}.
 
 Definition add_hole
   (l : @label unit V) pr :
@@ -210,9 +218,9 @@ Definition add_hole
   if pr \in fresh_id :: dom es =P true is ReflectT pr_mem then
     match l with
     | Write x v => 
-      [:: (Consist (consist_Nread es pr (Write x v) erefl pr_mem), v)]  
+      [:: (Consist (consist_new_Nread es pr (Write x v) erefl pr_mem), v)]  
     | ThreadStart =>
-      [:: (Consist (consist_Nread es pr ThreadStart erefl pr_mem), inh)]
+      [:: (Consist (consist_new_Nread es pr ThreadStart erefl pr_mem), inh)]
     | Read x __ => ces_seq x pr
     | _         => [::]
     end
@@ -229,8 +237,9 @@ Definition eval_step (c : config) pr : seq config :=
   let: tid            := if pr \in dom es then tid else fresh_tid c in
   let: (l, cont_st)   := thrd_sem (nth empty_prog prog tid) conf in
     if l is Some l then do 
-      (e, v) <- add_hole l pr;
-      [:: Config e  [fsfun c with fresh_id |-> (cont_st v, tid)]]
+      ev <- add_hole l pr : M _;
+      let '(e, v) := ev in
+        [:: Config e  [fsfun c with fresh_id |-> (cont_st v, tid)]]
     else
       [:: Config es [fsfun c with pr |-> (cont_st inh, tid)]].
 
