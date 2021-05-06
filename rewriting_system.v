@@ -1,5 +1,5 @@
 From RelationAlgebra Require Import lattice monoid rel kat_tac kleene.
-From mathcomp Require Import ssreflect ssrbool ssrfun.
+From mathcomp Require Import ssreflect ssrbool ssrfun eqtype choice.
 From event_struct Require Import utilities.
 
 (*****************************************************************************)
@@ -124,7 +124,66 @@ End Confluence.
 Arguments dconfl_confl {_ _}.
 
 
-Section EqvRewriting.
+Section EqvCommtation.
+
+Context {S : Type} (r1 r2 e : hrel S S).
+
+Hypothesis eqv_trans : Transitive e.
+Hypothesis eqv_symm  : Symmetric e.
+Hypothesis eqv_refl  : 1 ≦ e.
+
+Definition eqv_diamond_commute := forall s1 s2 s3, 
+  r1 s1 s2 -> r2 s1 s3 -> 
+  exists s4 s4', (r2 s2 s4 * r1 s3 s4' * e s4 s4')%type.
+
+Definition eqv_commute := forall s1 s2 s3,
+  r1^+ s1 s2 -> r2^+ s1 s3 -> 
+  exists s4 s4', (r2^+ s2 s4 * r1^+ s3 s4' * e s4 s4')%type.
+
+Hypothesis edconfl : eqv_diamond_commute.
+Hypothesis edcomm1 : diamond_commute e r1.
+Hypothesis edcomm2 : diamond_commute e r2.
+
+Lemma dcomm_rw_rw_eqv : diamond_commute r2 (r1 ⋅ e).
+Proof.
+  move=> s1 s2 s3 /= /edconfl D [s3' {D}/D [s4'' [s4' [[R ?? /edcomm2]]]]].
+  case/(_ _ R)=> x ??; exists x=> //; exists s4'=> //.
+  apply/(eqv_trans _ s4'')=> //; exact/eqv_symm.
+Qed.
+
+Lemma scomm_rw_eqv : strong_commute e r1.
+Proof.
+  move=> s1 s2 s3 /[swap].
+  have: e^+ ≡ e.
+  - apply/(antisym _ _ _ (itr_ext e))/itr_ind_l1=> // [??[?]]; exact/eqv_trans.
+  move=> E /(dcomm_comm edcomm1) H /E /H [x ??]; exists x=> //; exact/E. 
+Qed.
+
+Lemma rw_eqv_itr : (r1 ⋅ e)^+ ≡ r1^+ ⋅ e.
+Proof.
+  apply/(antisym (r1 ⋅ e)^+ )=> [|s1 s2 [x ]].
+  apply/itr_ind_l1=> [|s1 s3 [s2 [x + /eqv_symm R [y /scomm_rw_eqv-/(_ _ R)]]]]. 
+  - exact/(dot_leq (itr_ext r1) (leq_Reflexive e)).
+  move=> s [s5 ? /eqv_symm/eqv_trans t/t ?]; exists s5=> //. 
+  apply/(itr_cons r1); by exists x.
+  suff: (r1^+ ≦ (fun s1 x => e x s2 -> (r1 ⋅ e)^+  s1 s2)).
+  - exact.
+  apply/itr_ind_l1=> {s1 x} [s1 x ??|s1 x /= [y ? /[apply] ?]].
+  - apply/(itr_ext (r1 ⋅ e)); by exists x.
+  apply/(itr_cons (r1 ⋅ e)); do ? exists y=> //; exact/eqv_refl.
+Qed.
+
+Theorem comm_eqv : eqv_commute.
+Proof.
+  move=> s1 s2 s3 /[swap].
+  move/(dcomm_comm dcomm_rw_rw_eqv) => /[swap]/[dup] ? /[-! dotx1 r1^+ s1].
+  move/(dot_leq (leq_Reflexive r1^+) eqv_refl) /rw_eqv_itr=> R /(_ _ R)[x].
+  case/rw_eqv_itr=> y; exists x, y; do? split=> //; exact/eqv_symm.
+Qed.
+
+End EqvCommtation.
+
+Section EqvConfulence.
 
 Context {S : Type} (r e : hrel S S).
 
@@ -132,51 +191,89 @@ Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
-Definition eqv_diamond_confluent := forall s1 s2 s3, 
-  r s1 s2 -> r s1 s3 -> 
-  exists s4 s4', (r s2 s4 * r s3 s4 * e s4 s4')%type.
+Definition eqv_diamond_confluent := 
+  eqv_diamond_commute r r e.
 
-Definition eqv_confluent := forall s1 s2 s3,
-  r^+ s1 s2 -> r^+ s1 s3 -> 
-  exists s4 s4', (r^+ s2 s4 * r^+ s3 s4' * e s4 s4')%type.
+Definition eqv_confluent := 
+  eqv_commute r r e.
 
 Hypothesis edconfl : eqv_diamond_confluent.
 Hypothesis edcomm : diamond_commute e r.
 
-Lemma dcomm_rw_rw_eqv : diamond_commute r (r ⋅ e).
+Theorem eqv_confl : eqv_confluent.
 Proof.
-  move=> s1 s2 s3 /= /edconfl D [s3' {D}/D[s4'' [s4' [[? R ? /edcomm]]]]].
-  case/(_ _ R)=> x ??; exists x=> //; exists s4''=> //; exact/(eqv_trans _ s4').
+  exact/(comm_eqv _ _ _ eqv_trans eqv_symm eqv_refl edconfl edcomm edcomm).
 Qed.
 
-Lemma scomm_rw_eqv : strong_commute e r.
+
+End EqvConfulence.
+
+Definition gen {T L : Type} (r : L -> hrel T T) : hrel T T := 
+  fun t1 t2 => exists l, r l t1 t2.
+
+
+Section ELabRewritingSystem.
+
+Context {S L : Type} (r : L -> hrel S S) (e : hrel S S).
+
+Hypothesis eqv_trans : Transitive e.
+Hypothesis eqv_symm  : Symmetric e.
+Hypothesis eqv_refl  : 1 ≦ e.
+
+Hypothesis ledrr : forall l1 l2, (eqv_diamond_commute (r l1) (r l2) e).
+Hypothesis leder  : forall l, diamond_commute e (r l).
+
+Theorem eqv_comm_union : eqv_confluent (gen r) e.
 Proof.
-  move=> s1 s2 s3 /[swap].
-  have: e^+ ≡ e.
-  - apply/(antisym _ _ _ (itr_ext e))/itr_ind_l1=> // [??[?]]; exact/eqv_trans.
-  move=> E /(dcomm_comm edcomm) H /E /H [x ??]; exists x=> //; exact/E. 
+  apply/eqv_confl=> // [???[l1 /ledrr C [l2 /C [s4 [s4' [[*]]]]]]|???/leder C].
+  - exists s4, s4'; do ? split=> //; by [exists l2| exists l1].
+  case=> l /C[s4 *]; exists s4=> //; by exists l.
 Qed.
 
-Lemma rw_eqv_itr : (r ⋅ e)^+ ≡ r^+ ⋅ e.
+End ELabRewritingSystem.
+
+Section SubRewritingSystem.
+
+Context {S : eqType} {L : Type} {p : pred S} {T : subType p}.
+
+Definition sub (r : hrel S S) : hrel T T :=
+  fun t1 t2 => r (val t1) (val t2).
+
+Context (r : L -> hrel S S) (e : hrel S S).
+
+Implicit Types (t : T) (s : S) (l : L).
+
+Hypothesis eqv_trans : Transitive e.
+Hypothesis eqv_symm  : Symmetric e.
+Hypothesis eqv_refl  : 1 ≦ e.
+
+Hypothesis ledrr : forall l1 l2, (eqv_diamond_commute (r l1) (r l2) e).
+Hypothesis leder  : forall l, diamond_commute e (r l).
+
+Definition eqv_respect_p := forall s (t : T), e (val t) s -> p s.
+
+Definition r_respect_p := forall l1 l2 t1 t2 t3 s,
+  sub (r l1) t1 t2 -> 
+  sub (r l2) t1 t3 ->
+  r l2 (val t2) s -> p s.
+
+Hypothesis eqv_p : eqv_respect_p.
+Hypothesis eqv_r : r_respect_p.
+
+Theorem sub_eqv_comm_union : eqv_confluent (gen (sub \o r)) (sub e).
 Proof.
-  apply/(antisym (r ⋅ e)^+ )=> [|s1 s2 [x ]].
-  apply/itr_ind_l1=> [|s1 s3 [s2 [x + /eqv_symm R [y /scomm_rw_eqv-/(_ _ R)]]]]. 
-  - exact/(dot_leq (itr_ext r) (leq_Reflexive e)).
-  move=> s [s5 ? /eqv_symm/eqv_trans t/t ?]; exists s5=> //. 
-  apply/(itr_cons r); by exists x.
-  suff: (r^+ ≦ (fun s1 x => e x s2 -> (r ⋅ e)^+  s1 s2)).
-  - exact.
-  apply/itr_ind_l1=> {s1 x} [s1 x ??|s1 x /= [y ? /[apply] ?]].
-  - apply/(itr_ext (r ⋅ e)); by exists x.
-  apply/(itr_cons (r ⋅ e)); do ? exists y=> //; exact/eqv_refl.
+  apply/eqv_comm_union.
+  - rewrite /sub=>> /eqv_trans; exact.
+  - rewrite /sub=>> /eqv_symm; exact.
+  - rewrite /sub=> x1 x2 /=->; exact/eqv_refl.
+  - move=> ????? /= /[dup] /eqv_r R /ledrr E /[dup] /R P /E[s4 [? [[/[dup]]]]].
+    move=> /P ps4 ?? /[dup]; rewrite -{1}[s4](@SubK S p T)=> /eqv_p ps4' ?.
+    by exists (Sub _ ps4), (Sub _ ps4'); do ? split; rewrite /sub ?SubK //.
+  move=> ???? /= /leder /[apply][[?? /[dup] /eqv_p ps ?]].
+  by exists (Sub _ ps); rewrite /sub SubK.
 Qed.
 
-Theorem confl_eqv : eqv_confluent.
-Proof.
-  move=> s1 s2 s3.
-  move/(dcomm_comm dcomm_rw_rw_eqv) => /[swap]/[dup] ? /[-! dotx1 r^+ s1].
-  move/(dot_leq (leq_Reflexive r^+) eqv_refl) /rw_eqv_itr=> R /(_ _ R)[x].
-  by case/rw_eqv_itr=> y; exists y, x.
-Qed.
+End SubRewritingSystem.
 
-End EqvRewriting.
+
+
