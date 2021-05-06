@@ -339,3 +339,102 @@ Qed.
 End Equivalence.
 
 Notation "e1 ~~ e2" := (eqv e1 e2) (at level 20).
+
+Section Confluence.
+
+Lemma comm_eqv_tr : 
+  commuting_diamond_prop eqv tr_add_event.
+Proof.
+  move=> es es3 ? /[swap][][[al ap apd aw awd awc]]->.
+  case=> f [[][] i /[dup] /(_ 0) /= it' it l /[dup] /bij_inj ? b].
+  have H: forall e, e \in fresh_seq (dom es) :: dom es ->
+    f e \in fresh_seq (dom es3) :: dom es3=> [e|].
+  by rewrite ?inE=>/orP[/eqP->|]; rewrite ?it' ?eq_refl -i ?mem_map // =>->.
+  have [: a1 a2 a3] @s4: add_label es3 := @Add _ al (f ap) a1 (f aw) a2 a3.
+  1,2: by apply/H; rewrite (apd, awd).
+  - move: awc; rewrite /add_wr -it' bij_eq // /lab; move: (l aw)=> /=.
+    case L: (lprf _ aw)=> /=; case L': (lprf es3 (f aw))=> /=; by case=>->.
+  exists (add_event s4); [by exists s4 | exists f].
+  (do ? split)=> //= [?|n|x/=]; first by rewrite ?inE i (it 0).
+  - move: (it n.+1)=> /=; by rewrite /fresh_seq /= -?iterSr -?iterS.
+  rewrite ?lprf_add_eventE -it' (bij_eq b); case: ifP=> // ?; exact/(l x).
+Qed.
+
+Lemma swap_dom es d e: e <= d -> d \in dom es -> 
+  swap id (fresh_seq (dom es)) (fresh_seq (fresh_seq (dom es) :: dom es)) e = e.
+Proof.
+  move/le_lt_trans=> L /(fresh_seq_lt (dom_sorted _)) /L /[dup]. 
+  move/lt_trans/(_ (fresh_lt _))/lt_eqF/negbT=> ? /lt_eqF/negbT ?.
+  by rewrite -swap_not_eq.
+Qed.
+
+Lemma add_add (es : exec_event_struct) 
+  (al1 al2 : add_label es) : 
+  exists al : add_label (add_event al1), 
+  ext 
+    (swap id (fresh_seq (dom es)) (fresh_seq (fresh_seq (dom es) :: dom es))) 
+    (Lprf (add_lb al)  (add_pred al)  (add_write al)) = 
+    (Lprf (add_lb al2) (add_pred al2) (add_write al2)).
+Proof.
+  have S: sorted (>%O) (dom es) by case: es {al1 al2}.
+  case: al1=> ?? apd1 ? awd1 awc1; set e1 := Add apd1 awd1 awc1.
+  set f := swap id (fresh_seq (dom es)) (fresh_seq (fresh_seq (dom es) :: dom es)).
+  case: al2=> l p apd2 w awd2 awc2 /=.
+  have: forall e, e \in fresh_seq (dom es) :: dom es ->
+        f e \in fresh_seq (dom (add_event e1)) :: dom (add_event e1)=> [e|add].
+  - by rewrite ?inE /f=> /orP[/eqP|/[dup]/(swap_dom (lexx _))->]-> //;
+    rewrite swap1 eq_refl.
+  have [:a1 a2 a3] @al : add_label (add_event e1) := 
+    @Add _ l (f p) a1 (f w) a2 a3; try exact/add.
+  - move: awc2; rewrite /= -[f _ == _](bij_eq (f := f)). 
+    - move: awd2; rewrite /f swap_inv swap2 ?inE; case: (w =P _)=>/=.
+      - move->; rewrite /f swap1 lab_add_eventE; case: ifP=> [/eqP|?].
+        - by move/(@fresh_iter _ _ 2 1).
+        rewrite /lab ?fsfun_dflt //; apply/negP=> /lprf_dom /(fresh_seq_lt S);
+        first move/(lt_trans (fresh_lt _)); by rewrite ltxx.
+      by move/eqP/negbTE=> +/(swap_dom (lexx _))->; rewrite lab_add_eventE=>->.
+    exact/inv_bij/swap_inv.
+  by exists al; rewrite /f ?swap_inv.
+Qed. 
+
+Lemma ediamond_prop_tr: 
+  ediamond_prop tr_add_event eqv.
+Proof.
+  move=> es1 ??.
+  case=> [[?? apd1 ? awd1 awc1]]->; set e1 := Add apd1 awd1 awc1.
+  case=> [[?? apd2 ? awd2 awc2]]->; set e2 := Add apd2 awd2 awc2.
+  case: (add_add e1 e2)=> e4 /= a1; case: (add_add e2 e1)=> e4' /= a2.
+  exists (add_event e4), (add_event e4'); do ? split.
+  - by exists e4.
+  - by exists e4'.
+  set fr  := fresh_seq (dom es1).
+  set ffr := fresh_seq (fresh_seq (dom es1) :: dom es1).
+  exists (swap id fr ffr); do ? split; last exact/bij_swap/inv_bij.
+  - move=> /= => x; rewrite /fr /ffr ?swap1 ?swap2.
+    under (proj1 (eq_in_map _ _ _))=> ? /(swap_dom (lexx _))-> do over.
+    rewrite map_id ?inE; lattice.
+  - move=> n /=. rewrite -swap_not_eq // /fresh_seq /= -?iterSr.
+    - by apply/eqP=> /(@fresh_iter _ _ n.+3 1).
+    by apply/eqP=> /(@fresh_iter _ _ n.+3 2).
+  move=> x /=; rewrite /comp ?lprf_add_eventE /= -/ffr -/fr.
+  have: fr <> ffr by rewrite /fr /ffr /fresh_seq /==> /(@fresh_iter _ _ 1 2).
+  move/eqP/negbTE=> F; case: (x =P fr)=> [->|/eqP /[dup] ? /negbTE N1].
+  - by rewrite swap1 eq_refl F -a2 /= ?swap_inv.
+  case: (x =P ffr)=>[->|/eqP/[dup] ? /negbTE N2].
+  - by rewrite swap2 eq_refl F -a1.
+  rewrite ?inv_eq ?swap1 ?swap2 ?N1 ?N2; try exact/swap_inv.
+  rewrite  -swap_not_eq //; case: (boolP (x \in dom es1))=> [|/negP ?]. 
+  - case L: (lprf _ x)=> [l p r] I /=; apply/congr2; rewrite (swap_dom _ I) //.
+    - by rewrite -[p]/(fpred_prj (Lprf l p r)) -L fpred_le.
+    by rewrite -[r]/(frf_prj (Lprf l p r)) -L frf_le.
+  by rewrite fsfun_dflt /= -?swap_not_eq //; apply/negP => /lprf_dom.
+Qed.
+
+Lemma confuence_tr : econfluence tr_add_event eqv.
+Proof.
+  exact/(ENewman _ _ eqv_trans eqv_symm eqv_refl ediamond_prop_tr comm_eqv_tr).
+Qed.
+
+End Confluence.
+
+End TransitionSystem.
