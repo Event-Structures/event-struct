@@ -273,11 +273,69 @@ End Nread_Consist.
 
 Definition tr_add_event es1 es2 := exists al, es2 = @add_event es1 al.
 
-Notation "es1 '-->' es2" := (tr_add_event es1 es2) (at level 0).
+Notation "es1 '~>' es2" := (tr_add_event es1 es2) (at level 20).
 
 Definition ltr_add_event es1 al es2 := es2 = @add_event es1 al.
 
-Notation "es1 '--' al '-->' es2" := (ltr_add_event es1 al es2) (at level 0).
+Notation "es1 '~' al '~>' es2" := (ltr_add_event es1 al es2) (at level 20).
 
-End TransitionSystem.
+Section Equivalence.
 
+Section IsoDef.
+
+Context (es1 es2 : exec_event_struct).
+
+Notation dom1   := (dom   es1).
+Notation lprf1  := (lprf   es1).
+Notation fresh1 := (fresh_seq dom1).
+Notation dom2   := (dom   es2).
+Notation lprf2  := (lprf   es2).
+Notation fresh2 := (fresh_seq dom2).
+
+Definition is_morph f := 
+  ((map f dom1 =i dom2) *
+   (forall n, f (iter n fresh fresh1) = iter n fresh fresh2) *
+   (lprf2 \o f =1 (ext f) \o lprf1))%type.
+
+Definition is_iso f := (is_morph f * bijective f)%type.
+
+End IsoDef.
+
+Definition eqv : hrel exec_event_struct exec_event_struct := 
+  fun es1 es2 => exists f, is_iso es1 es2 f.
+
+Lemma eqv_refl : 1 ≦ eqv.
+Proof. 
+  move=> ??->. exists id; do ? split=> //; last exact/inv_bij;
+  rewrite ?map_id // => ? /=; by rewrite  ext_id.
+Qed.
+
+Lemma is_iso_comp es1 es2 es3 f g: 
+  is_iso es1 es2 f -> is_iso es2 es3 g ->
+  is_iso es1 es3 (g \o f).
+Proof.
+  case=> [][][] i1 it1 l1 ?[][][] i2 it2 l2 /[dup] [[]].
+  move=> ?? c1 ?.
+  do ? split; last exact/bij_comp; move=> x.
+  - rewrite map_comp -i2 -[x]c1 ?mem_map //; exact/bij_inj.
+  - by rewrite /= it1 it2.
+  by move: (l1 x) (l2 (f x))=> /=; rewrite ext_comp /= => <-.
+Qed.
+
+Lemma eqv_trans: Transitive eqv.
+Proof. move=> ???[f i [g ?]]; exists (g \o f); exact/(is_iso_comp i). Qed.
+
+Lemma eqv_symm: Symmetric eqv.
+Proof.
+  move=>> [f [[][] i it l /[dup] b[g c1 c2]]].
+  have B: bijective g by apply/(bij_can_bij b). 
+  exists g; split=> //; do ? split; move=> x /=.
+  - rewrite -{1}[x]c1 mem_map -?i ?mem_map //; exact/bij_inj.
+  - by apply/(bij_inj b); rewrite c2 it.
+  apply/(bij_inj (bij_ext b)); move: (l (g x))=> /= <-.
+  by rewrite ?(ext_can c2) c2.
+Qed.
+
+End Equivalence.
+
+Notation "e1 ~~ e2" := (eqv e1 e2) (at level 20).
