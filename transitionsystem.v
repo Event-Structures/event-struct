@@ -1,6 +1,8 @@
+From RelationAlgebra Require Import lattice monoid rel kat_tac kleene.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice seq path.
-From mathcomp Require Import order finmap fintype.
+From mathcomp Require Import order finmap fintype ssrnat.
 From event_struct Require Import utilities eventstructure ident.
+From event_struct Require Import rewriting_system.
 
 (******************************************************************************)
 (* Here we want to make function that by event and event structure creates a  *)
@@ -60,8 +62,8 @@ Section AddEvent.
 Context (es : exec_event_struct).
 
 Notation dom := (dom es).
-Notation lprf := (lprf es).
-Notation lab := (lab es).
+Notation flprf := (lprf es).
+Notation flab := (lab es).
 Notation ffpred := (fpred es).
 Notation ffrf := (frf es).
 Notation fresh_id := (fresh_seq dom).
@@ -77,12 +79,12 @@ Structure add_label := Add {
 
   add_write         : E;
   add_write_in_dom  : add_write \in fresh_id :: dom;
-  add_write_consist : add_wr add_write fresh_id lab add_lb;
+  add_write_consist : add_wr add_write fresh_id flab add_lb;
 }.
 
 
 Fact add_write_consist_of_fresh l : ~~ is_read l ->
-  add_wr fresh_id fresh_id lab l.
+  add_wr fresh_id fresh_id flab l.
 Proof. by move=> /= ->; rewrite eq_refl lab_fresh. Qed.
 
 Definition add_label_of_Nread l {p}
@@ -105,7 +107,7 @@ Notation pred := (add_pred al).
 Notation write := (add_write al).
 
 Definition add_lprf :=
-  [ fsfun lprf with fresh_id |->
+  [ fsfun flprf with fresh_id |->
                     {| lab_prj := lb; fpred_prj := pred; frf_prj := write |} ].
 
 Definition add_lab := fun e : E => lab_prj (add_lprf e).
@@ -169,6 +171,14 @@ Hypothesis consist : dom_consistency es.
 Hypothesis ncf_rf : ~~ (cf add_event fresh_id write).
 
 Import Relation_Operators.
+
+Lemma lprf_add_eventE e :
+  lprf add_event e = if e == fresh_id then Lprf lb pred write else lprf es e.
+Proof. by rewrite /add_event /= fsfun_withE /=; case: ifP. Qed.
+
+Lemma lab_add_eventE e :
+  lab add_event e = if e == fresh_id then lb else lab es e.
+Proof. by rewrite /lab /add_event /= fsfun_withE /=; case: ifP. Qed.
 
 Lemma fpred_add_eventE e :
   fpred add_event e = if e == fresh_id then pred else fpred es e.
