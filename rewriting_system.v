@@ -154,7 +154,7 @@ Proof.
   move=> s1 s2 s3 /[swap].
   have: e^+ ≡ e.
   - by apply/(antisym _ _ _ (itr_ext e))/itr_ind_l1=> // ++ [/[swap]]. 
-  move=> E /(dcomm_comm edcomm) H /E /H [x +]; exists x=> //; exact/E. 
+  move=> E /(dcomm_comm edcomm) H /E /H [x ??]; exists x=> //; exact/E. 
 Qed.
 
 Lemma rw_eqv_itr : (r ⋅ e)^+ ≡ r^+ ⋅ e.
@@ -165,7 +165,7 @@ Proof.
   move=> s [s5 ? /eqv_symm/eqv_trans t/t ?]; exists s5=> //. 
   apply/(itr_cons r); by exists x.
   suff: (r^+ ≦ (fun s1 x => e x s2 -> (r ⋅ e)^+  s1 s2)).
-  - apply.
+  - exact.
   apply/itr_ind_l1=> {s1 x} [s1 x ??|s1 x /= [y ? /[apply] ?]].
   - apply/(itr_ext (r ⋅ e)); by exists x.
   apply/(itr_cons (r ⋅ e)); do ? exists y=> //; exact/eqv_refl.
