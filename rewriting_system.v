@@ -4,12 +4,9 @@ From event_struct Require Import utilities.
 
 (*****************************************************************************)
 (* General theory of rewriting systems                                       *)
-(* Fisrt section called RewritingSystem. Here the theory of general rewriting*)
-(* systems with to rewriting rules derived:                                  *)
-(*   s1 ~>  s2                ==  the first rewriting rule                   *)
-(*   s2 ~>+ s2                ==  transitive closure of the first rule       *)
-(*   s2 >>  s2                ==  the second rewriting rule                  *)
-(*   s2 >>+ s2                ==  transitive closure of the second rule      *)
+(* inspired by "Term Rewriting and All That"                                 *)
+(* Fisrt section called Commutation. Here the theory of general rewriting    *)
+(* systems with two rewriting rules derived:                                 *)
 (* We define several properties of rewriting systems and prove some          *)
 (* relationships between them                                                *)
 (*   diamond_commute (~>) (>>) == ∀ s1 s2 s3                                 *)
@@ -40,30 +37,58 @@ From event_struct Require Import utilities.
 (*                                       implies commute (~>) (>>)           *)
 (*   dconfl_confl                        <-> diamond_confluent (~>) implies  *)
 (*                                       confluence (~>)                     *)
-(* In the ERewritingSystem we have the general theory of the rewriting system*)
-(* with some equivalence relation. It is more comfortible to derive a such   *)
-(* theory using lemmas about casual rewriting system with two rewriting rules*)
-(*   s1 ~>   s2              ==  the rewriting rule                          *)
-(*   s1 ~~   s2              ==  the equivalence relation                    *)
-(*   s2 ~>~  s2              ==   ~> ⋅ ~~                                    *)
-(*   s1 ~>+~ s2              ==  ~>⁺ ⋅ ~~                                    *)
-(*   s1 ~>~+ s2              ==  (~> ⋅ ~~)⁺                                  *)
+(* In the EqvRewriting we have the general theory of the rewriting system    *)
+(* with some equivalence relation.                                           *)
+(* eqv_diamond_confluent (~>) (~~) == version of the diamond property for    *)
+(*                         the rewriting systems with equivalence: it states *)
+(*                         that s1 ~> s2 and s1 ~> s3 implies existance of   *)
+(*                         some s4 and s4' s.t. s2 ~> s4, s3 ~> s4' and      *)
+(*                         s4 ~~ s4'.                                        *)
+(*   eqv_confluent (~>) (~~)       == the confluence principle for the       *)
+(*                         rewriting systems with an equivalence relation:   *)
+(*             s1 ~>⁺ s2 |                                                   *)
+(*                       | ==> exists s4 ~~ s4' s.t. s2 ~>⁺ s4 and s3 ~>⁺ s4'*)
+(*             s1 ~>⁺ s3 |                                                   *)
+(*   confl_eqv                     <-> diamond_commute (~>) (~~) with        *)
+(*                         eqv_diamond_confluent (~>) (~~) implies           *)
+(*                         eqv_confluent (~>) (~~)                           *)
+(* In the EqvLabRewriting we proved the analogue of Commuation Union Lemma   *)
+(* Originally this lemma states that if one have two relations ~> and >> and *)
+(* they statisfy diamond_commute (~>) (>>), then (~> ∪ >>) is confluent.     *)
+(* But want to generalize this lemma in two steps:                           *)
+(*   1) let us have an arbitrary number of relations -- we model it by       *)
+(*      consindering one labeling relation: r : L -> hrel S S, where L is an *)
+(*      arbitrary label Type                                                 *)
+(*   2) let us parametrize this lemma with some equivalence relation         *)
+(* Let L and S be some types and r : L -> hrel S S                           *)
 (* eqv_diamond_commute (~>) (>>) (~~) == version of the diamond property for *)
 (*                         the rewriting systems with equivalence: it states *)
+(*                         that s1 ~> s2 and s1 ~> s3 implies existance of   *)
+(*                         some s4 and s4' s.t. s2 ~> s4, s3 ~> s4' and      *)
 (*                         that s1 ~> s2 and s1 >> s3 implies existance of   *)
 (*                         some s4 and s4' s.t. s2 ~> s4, s3 >> s4' and      *)
-(*                         s4 ~~ s4'.                                        *)
-(*    eqv_diamond_confl (~>) (~~)     == eqv_diamond_comm (~>) (~>) (~~)     *)
-(*   eqv_commute (~>) (>>) (~~)       == the commutation principle for the   *)
-(*                         rewriting systems with an equivalence relation:   *)
-(*           eqv_confluent (~>) (~~)  == eqv_commute (~>) (~>) (~~)          *)
-(*             s1 ~>⁺ s2 |                                                   *)
-(*                       | ==> exists s4 ~~ s4' s.t. s2 ~>⁺ s4 and s3 >>⁺ s4'*)
-(*             s1 >>⁺ s3 |                                                   *)
-(*   comm_eqv                     <-> diamond_commute (~>) (~~),             *)
-(*                         diamond_commute (>>) (~~) and                     *)
-(*                         eqv_diamond_commute (~>) (>>) (~~) implies        *)
-(*                         eqv_commute (~>) (>>) (~~)                        *)
+(*                        gen r s1 s2 == ∃ l, s.t. r l s1 s2 holds           *)
+(*            eqv_diamoind_commute r e <-> if forall two labels l₁ l₂ we now *)
+(*                         that eqv_diamond_commute (r l1) (r l2) (~~) and   *)
+(*                         diamond_commute (gen r) (~~) than gen r is        *)
+(*                         conluent w.r.t (~~) i.e eqv_confluent (gen r) (~~)*)
+(* Consider we have some labeled relation r (statisfying all properties      *)
+(* above), and some equivalence ~~. If r has type L -> hrel S S, and T is a  *)
+(* S's subType, forall relation rel : hrel S S we can define                 *)
+(*                       sub rel == contranction of rel to the sub-type T    *)
+(* so clearly we can define a labeled rewriting system with an equivalence   *)
+(* relation structure on T (with relations `sub ∘ r` and `sub (~~)`).        *)
+(* The question is: when such subsystem is confluent? In the SubRewriting    *)
+(* section we are trying to answer on this question.                         *)
+(* Let T : subType p, for some p : pred S, with s1, s2,... we will denote the*)
+(* variables of type S, and with t1, t2,... we will denote the variables     *)
+(* of type T                                                                 *)
+(*          eqv_restpect_p (~~) <-> if t ~~ s then p s holds                 *)
+(*          r_respects_p   (r)  <-> if for some labels l1, l2, r l2 t1 t2,   *)
+(*                        r l1 t1 t3, then for all s s.t. r l2 t3 s we have  *)
+(*                        that p s holds                                     *)
+(*    sub_eqv_comm_union r (~~) <-> it two properties above holds than       *)
+(*                        eqv_confluent (gen (sub ∘ r)) (sub ~~)             *)
 (*****************************************************************************)
 
 Section Commutation.
@@ -126,67 +151,7 @@ End Confluence.
 
 Arguments dconfl_confl {_ _}.
 
-
-Section EqvCommtation.
-
-Context {S : Type} (r1 r2 e : hrel S S).
-
-Hypothesis eqv_trans : Transitive e.
-Hypothesis eqv_symm  : Symmetric e.
-Hypothesis eqv_refl  : 1 ≦ e.
-
-Definition eqv_diamond_commute := forall s1 s2 s3, 
-  r1 s1 s2 -> r2 s1 s3 -> 
-  exists s4 s4', (r2 s2 s4 * r1 s3 s4' * e s4 s4')%type.
-
-Definition eqv_commute := forall s1 s2 s3,
-  r1^+ s1 s2 -> r2^+ s1 s3 -> 
-  exists s4 s4', (r2^+ s2 s4 * r1^+ s3 s4' * e s4 s4')%type.
-
-Hypothesis edconfl : eqv_diamond_commute.
-Hypothesis edcomm1 : diamond_commute e r1.
-Hypothesis edcomm2 : diamond_commute e r2.
-
-Lemma dcomm_rw_rw_eqv : diamond_commute r2 (r1 ⋅ e).
-Proof.
-  move=> s1 s2 s3 /= /edconfl D [s3' {D}/D [s4'' [s4' [[R ?? /edcomm2]]]]].
-  case/(_ _ R)=> x ??; exists x=> //; exists s4'=> //.
-  apply/(eqv_trans _ s4'')=> //; exact/eqv_symm.
-Qed.
-
-Lemma scomm_rw_eqv : strong_commute e r1.
-Proof.
-  move=> s1 s2 s3 /[swap].
-  have: e^+ ≡ e.
-  - apply/(antisym _ _ _ (itr_ext e))/itr_ind_l1=> // [??[?]]; exact/eqv_trans.
-  move=> E /(dcomm_comm edcomm1) H /E /H [x ??]; exists x=> //; exact/E. 
-Qed.
-
-Lemma rw_eqv_itr : (r1 ⋅ e)^+ ≡ r1^+ ⋅ e.
-Proof.
-  apply/(antisym (r1 ⋅ e)^+ )=> [|s1 s2 [x ]].
-  apply/itr_ind_l1=> [|s1 s3 [s2 [x + /eqv_symm R [y /scomm_rw_eqv-/(_ _ R)]]]]. 
-  - exact/(dot_leq (itr_ext r1) (leq_Reflexive e)).
-  move=> s [s5 ? /eqv_symm/eqv_trans t/t ?]; exists s5=> //. 
-  apply/(itr_cons r1); by exists x.
-  suff: (r1^+ ≦ (fun s1 x => e x s2 -> (r1 ⋅ e)^+  s1 s2)).
-  - exact.
-  apply/itr_ind_l1=> {s1 x} [s1 x ??|s1 x /= [y ? /[apply] ?]].
-  - apply/(itr_ext (r1 ⋅ e)); by exists x.
-  apply/(itr_cons (r1 ⋅ e)); do ? exists y=> //; exact/eqv_refl.
-Qed.
-
-Theorem comm_eqv : eqv_commute.
-Proof.
-  move=> s1 s2 s3 /[swap].
-  move/(dcomm_comm dcomm_rw_rw_eqv) => /[swap]/[dup] ? /[-! dotx1 r1^+ s1].
-  move/(dot_leq (leq_Reflexive r1^+) eqv_refl) /rw_eqv_itr=> R /(_ _ R)[x].
-  case/rw_eqv_itr=> y; exists x, y; do? split=> //; exact/eqv_symm.
-Qed.
-
-End EqvCommtation.
-
-Section EqvConfulence.
+Section EqvRewriting.
 
 Context {S : Type} (r e : hrel S S).
 
@@ -194,28 +159,60 @@ Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
-Definition eqv_diamond_confluent := 
-  eqv_diamond_commute r r e.
+Definition eqv_diamond_confluent := forall s1 s2 s3, 
+  r s1 s2 -> r s1 s3 -> 
+  exists s4 s4', (r s2 s4 * r s3 s4' * e s4 s4')%type.
 
-Definition eqv_confluent := 
-  eqv_commute r r e.
+Definition eqv_confluent := forall s1 s2 s3,
+  r^+ s1 s2 -> r^+ s1 s3 -> 
+  exists s4 s4', (r^+ s2 s4 * r^+ s3 s4' * e s4 s4')%type.
 
 Hypothesis edconfl : eqv_diamond_confluent.
 Hypothesis edcomm : diamond_commute e r.
 
-Theorem eqv_confl : eqv_confluent.
+Lemma dcomm_rw_rw_eqv : diamond_commute r (r ⋅ e).
 Proof.
-  exact/(comm_eqv _ _ _ eqv_trans eqv_symm eqv_refl edconfl edcomm edcomm).
+  move=> s1 s2 s3 /= /edconfl D [s3' {D}/D[s4'' [s4' [[? R ? /edcomm]]]]].
+  case/(_ _ R)=> x ??; exists x=> //; exists s4''=> //; exact/(eqv_trans _ s4').
 Qed.
 
+Lemma scomm_rw_eqv : strong_commute e r.
+Proof.
+  move=> s1 s2 s3 /[swap].
+  have: e^+ ≡ e.
+  - apply/(antisym _ _ _ (itr_ext e))/itr_ind_l1=> // [??[?]]; exact/eqv_trans.
+  move=> E /(dcomm_comm edcomm) H /E /H [x ??]; exists x=> //; exact/E. 
+Qed.
 
-End EqvConfulence.
+Lemma rw_eqv_itr : (r ⋅ e)^+ ≡ r^+ ⋅ e.
+Proof.
+  apply/(antisym (r ⋅ e)^+ )=> [|s1 s2 [x ]].
+  apply/itr_ind_l1=> [|s1 s3 [s2 [x + /eqv_symm R [y /scomm_rw_eqv-/(_ _ R)]]]]. 
+  - exact/(dot_leq (itr_ext r) (leq_Reflexive e)).
+  move=> s [s5 ? /eqv_symm/eqv_trans t/t ?]; exists s5=> //. 
+  apply/(itr_cons r); by exists x.
+  suff: (r^+ ≦ (fun s1 x => e x s2 -> (r ⋅ e)^+  s1 s2)).
+  - exact.
+  apply/itr_ind_l1=> {s1 x} [s1 x ??|s1 x /= [y ? /[apply] ?]].
+  - apply/(itr_ext (r ⋅ e)); by exists x.
+  apply/(itr_cons (r ⋅ e)); do ? exists y=> //; exact/eqv_refl.
+Qed.
+
+Theorem confl_eqv : eqv_confluent.
+Proof.
+  move=> s1 s2 s3.
+  move/(dcomm_comm dcomm_rw_rw_eqv) => /[swap]/[dup] ? /[-! dotx1 r^+ s1].
+  move/(dot_leq (leq_Reflexive r^+) eqv_refl) /rw_eqv_itr=> R /(_ _ R)[x].
+  by case/rw_eqv_itr=> y; exists y, x.
+Qed.
+
+End EqvRewriting.
 
 Definition gen {T L : Type} (r : L -> hrel T T) : hrel T T := 
   fun t1 t2 => exists l, r l t1 t2.
 
 
-Section ELabRewritingSystem.
+Section EqvLabRewriting.
 
 Context {S L : Type} (r : L -> hrel S S) (e : hrel S S).
 
@@ -223,18 +220,23 @@ Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
+Definition eqv_diamond_commute (r1 r2 e : hrel S S) := forall s1 s2 s3, 
+   r1 s1 s2 -> r2 s1 s3 -> 
+   exists s4 s4', (r2 s2 s4 * r1 s3 s4' * e s4 s4')%type.
+
+
 Hypothesis ledrr : forall l1 l2, (eqv_diamond_commute (r l1) (r l2) e).
 Hypothesis leder  : diamond_commute e (gen r).
 
 Theorem eqv_comm_union : eqv_confluent (gen r) e.
 Proof.
-  apply/eqv_confl => // ???[l1 /ledrr C [l2 /C [s4 [s4' [[*]]]]]].
+  apply/confl_eqv => // ???[l1 /ledrr C [l2 /C [s4 [s4' [[*]]]]]].
   - exists s4, s4'; do ? split=> //; by [exists l2| exists l1].
 Qed.
 
-End ELabRewritingSystem.
+End EqvLabRewriting.
 
-Section SubRewritingSystem.
+Section SubRewriting.
 
 Context {S : eqType} {L : Type} {p : pred S} {T : subType p}.
 
@@ -275,7 +277,7 @@ Proof.
   by exists (Sub _ ps); first exists l; rewrite /sub /= ?SubK.
 Qed.
 
-End SubRewritingSystem.
+End SubRewriting.
 
 
 
