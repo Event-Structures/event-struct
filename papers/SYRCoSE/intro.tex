@@ -40,14 +40,17 @@ a symmetric and irreflexive relation
 encoding mutually exclusive events.
 Each particular trace can be extracted from the event structure
 as a linearisation of some \emph{configuration}, 
-that is a causally-closed and conflict-free 
-subset of events. 
+that is a causally-closed and conflict-free subset of events,  
+which additionally should satisfy constraint 
+that each read is preceded by a matching write. 
 
 \input{fig/intro-es.tex}
 
 The programming languages theory and formal semantics research communities 
 are moving to increase the usage of \emph{proof assistants} 
-like Coq, Agda, Isabelle/HOL, Arend, and others,
+like Coq~\cite{Coq}, Agda~\cite{Agda}, 
+Isabelle/HOL~\cite{Nipkow-al:Isabelle2002}, 
+Arend~\cite{Arend}, and others,
 to complement theoretical studies with their mechanisation,
 as this process increases the reliability and reproducibility 
 of scientific results.

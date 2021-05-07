@@ -1,7 +1,8 @@
-\newcommand{\ESAddEventRule}{{(Add Event)~}}
-\newcommand{\ESIdleRule}{{(Idle)~}}
-\newcommand{\ESStoreRule}{{(Store)~}}
-\newcommand{\ESLoadRule}{{(Load)~}}
+\newcommand{\ESAddEventRule}{{(Add Event)}}
+\newcommand{\ESIdleRule}{{(Idle)}}
+\newcommand{\ESStoreRule}{{(Store)}}
+\newcommand{\ESLoadRule}{{(Load)}}
+\newcommand{\ESLoadBotRule}{{(Load-Bottom)}}
 
 \begin{figure*}[t]
 \begin{center}
@@ -31,7 +32,7 @@
   \AXC{$S \esstep{\tup{e, \ell, e_{\lPO}, \bot}} S'$}
   \AXC{$l = \wlab{x}{v}$}
   \RightLabel{\ESStoreRule}
-  \QIC{$P \vdash \tup{S, \thrdmap} \fullstep{\tup{e, \ell, e_{\lPO}, e_{\lRF}}} \tup{S', \updmap{\thrdmap}{e}{\thrdst'}}$}
+  \QIC{$P \vdash \tup{S, \thrdmap} \fullstep{\tup{e, \ell, e_{\lPO}, \bot}} \tup{S', \updmap{\thrdmap}{e}{\thrdst'}}$}
   \DisplayProof
 
   \rulevspace
@@ -46,6 +47,17 @@
   \RightLabel{\ESLoadRule}
   \QuinaryInfC{$P \vdash \tup{S, \thrdmap} \fullstep{\tup{e, \ell, e_{\lPO}, e_{\lRF}}} \tup{S', \updmap{\thrdmap}{e}{\thrdst'}}$}
   \DisplayProof
+
+  \rulevspace
+
+  \AXC{$\thrdst = \appmap{\thrdmap}{e_{\lPO}}$}
+  \AXC{$P \vdash \thrdst \thrdstep{\ell} \thrdst'$}
+  \AXC{$S \esstep{\tup{e, \ell, e_{\lPO}, \bot}} S'$}
+  \AXC{$l = \rlab{x}{\bot}$}
+  \RightLabel{\ESLoadBotRule}
+  \QIC{$P \vdash \tup{S, \thrdmap} \fullstep{\tup{e, \ell, e_{\lPO}, \bot}} \tup{S', \updmap{\thrdmap}{e}{\thrdst'}}$}
+  \DisplayProof
+
   
   \caption{Semantics of register machine event structure}
   \label{fig:eventstruct-sem}

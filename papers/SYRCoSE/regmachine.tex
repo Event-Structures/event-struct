@@ -57,12 +57,14 @@ from a \emph{memory model}.
 \end{figure}
 
 The semantics is given in the form of a
-\emph{labelled transition system}~%
+\emph{labelled transition system}:~%
 \footnote{As we have mentioned, in our \coq~development we actually use 
 the monadic encoding of the operational semantics. 
-The labelled transition system can be derived from this encoding.}.
-The state of the system consists of an instruction pointer
-and a map from registers to their values, 
+The labelled transition system can be derived from this encoding.}
+$P \vdash s \thrdstep{l} s'$,
+where $P$ is a program, $l$ is a label, $s$ and $s'$ are states of the machine. 
+The state of the machine itself consist of an instruction pointer $\ip{i}$
+and a map from registers to their values $\regmap$, 
 as shown in \cref{fig:regmachine-thrdstate}. 
 The rules of the semantics are standard 
 (see \cref{fig:regmachine-thrdsem}).
