@@ -43,91 +43,123 @@ Import WfClosure.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Definition loc := nat.
 
-Inductive label {Rval Wval : Type} :=
-| Read of loc & Rval
-| Write of loc & Wval
+(* TODO: make opaque? *)
+Definition location := nat.
+
+Inductive label {rvalue wvalue : Type} :=
+| Read  of location & rvalue
+| Write of location & wvalue
 | ThreadStart
 | ThreadEnd.
 
 Module Label.
+Section Label. 
 
-Section Label.
+Context {value : eqType}.
 
-Context {V : eqType}.
+Local Notation label := (@label value value).
 
-Local Notation label := (@label V V).
+Definition loc : label -> option location := 
+  fun lab =>
+    match lab with
+    | Write x _ => Some x
+    | Read  x _ => Some x
+    | _         => None
+    end.
 
-Implicit Type l : label.
+Definition val : label -> option value := 
+  fun lab =>
+    match lab with
+    | Write _ v => Some v
+    | Read  _ v => Some v
+    | _         => None
+    end.
 
-(* label location *)
-Definition lloc (l : label) :=
-  match l with
-  | Write x _ => Some x
-  | Read  x _ => Some x
-  | _         => None
-  end.
+Definition is_read : pred label := 
+  fun l => if l is (Read _ _) then true else false.
 
-Definition is_read l := if l is (Read _ _) then true else false.
+Definition is_write : pred label := 
+  fun l => if l is (Write _ _) then true else false.
 
-Definition is_write l := if l is Write _ _ then true else false.
+Definition is_thrdstart : pred label := 
+  fun l => if l is ThreadStart then true else false.
 
-Definition is_thdstart l := if l is ThreadStart then true else false.
+Definition is_thrdend : pred label := 
+  fun l => if l is ThreadEnd then true else false.
 
-Definition write_read_from (w r : label) :=
-  match w, r with
-  | Write x a, Read y b => (x == y) && (a == b)
-  | _, _ => false
-  end.
+Definition eq_lab : rel label :=
+  fun l1 l2 => 
+    match l1, l2 with
+    | Read  x a, Read  y b     => [&& a == b & x == y]
+    | Write x a, Write y b     => [&& a == b & x == y]
+    | ThreadEnd, ThreadEnd     => true
+    | ThreadStart, ThreadStart => true
+    | _, _                     => false
+    end.
 
-Lemma rf_thrdend w : write_read_from w ThreadEnd = false.
-Proof. by case: w. Qed.
-
-End Label.
-
-End Label.
-
-Notation "w << r" := (Label.write_read_from w r) (at level 0).
-
-Section PrimeEventStructure.
-
-Context {V : eqType}.
-
-(* ************************************************************************* *)
-(*     Label                                                                 *)
-(* ************************************************************************* *)
-
-Local Notation label := (@label V V).
-
-Implicit Type l : label.
-
-Definition eq_label l l' :=
-  match l, l' with
-  | Read a x,  Read b y      => [&& a == b & x == y]
-  | Write a x, Write b y     => [&& a == b & x == y]
-  | ThreadEnd, ThreadEnd     => true
-  | ThreadStart, ThreadStart => true
-  | _, _                     => false
-  end.
-
-Lemma eqlabelP : Equality.axiom eq_label.
+Lemma eq_labP : Equality.axiom Label.eq_lab.
 Proof.
   case=> [v x [] * /=|v x []* /=|[]|[]]; try constructor=>//;
   by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
 Qed.
 
-Canonical label_eqMixin := EqMixin eqlabelP.
-Canonical label_eqType := Eval hnf in EqType label label_eqMixin.
+Definition eq_loc : rel label := 
+  orelpre loc eq_op.
 
+Definition eq_val : rel label := 
+  orelpre val eq_op.
+
+(* TODO: invent a better name? 
+ *   `synch` clashes with `synchronizes-with` relation 
+ *    from weak memory theory, which has 
+ *    slightly different meaning. 
+ *)
+Definition synch (l1 l2 : label) :=
+  match l1, l2 with
+  | Write x a, Read y b => (x == y) && (a == b)
+  | _, _ => false
+  end.
+
+(* Lemma rf_thrdend w : write_read_from w ThreadEnd = false. *)
+(* Proof. by case: w. Qed. *)
+
+End Label.
+
+Module Exports.
+Section Label.
+
+Context {V : eqType}.
+
+Canonical label_eqMixin := EqMixin (@eq_labP V).
+Canonical label_eqType  := Eval hnf in EqType (@label V V) label_eqMixin.
+
+End Label.
+End Exports. 
+
+Module Syntax. 
+Notation "l1 \>> l2" := (Label.synch l1 l2) (no associativity, at level 20).
+Notation "l1 \>= l2" := (Label.synch l1 l2) (no associativity, at level 20).
+End Syntax. 
+
+End Label.
+
+Export Label.Exports. 
+Import Label.Syntax. 
+
+Section PrimeEventStructure.
+
+Context {value : eqType}.
+
+Local Notation label := (@label value value).
+
+Implicit Type l : label.
 
 (* ************************************************************************* *)
 (*     Exec Event Structure                                                  *)
 (* ************************************************************************* *)
 
 Section ExecEventStructureDef.
-
-Export Label.
 
 Context {disp : unit} (E : identType disp).
 
@@ -163,7 +195,7 @@ Structure fin_exec_event_struct := Pack {
   _          : [forall rs : seq_fset tt dom, 
                   let r := val rs in
                   let w := frf r  in
-                  ((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r))];
+                  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) >> (lab r))];
 }.
 
 End ExecEventStructureDef.
@@ -259,7 +291,7 @@ Proof.
 Qed.
 
 Lemma frf_cond r : let w := frf r in
-  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) << (lab r)).
+  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) >> (lab r)).
 Proof.
   case: (boolP (r \in dom))=> [|/[dup] ndom /frf_dom->//]; rewrite /dom/frf/lab.
   - case: es => ????????? /= /forallP L; rewrite -(@seq_fsetE tt)=> I.

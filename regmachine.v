@@ -74,8 +74,8 @@ Definition reg := nat.
 (* Instruction Set *)
 Inductive instr :=
 | WriteReg of V   & reg 
-| ReadLoc  of reg & loc
-| WriteLoc of V   & loc 
+| ReadLoc  of reg & location
+| WriteLoc of V   & location 
 | CJmp     of reg & nat 
 | Stop.
 
@@ -152,8 +152,8 @@ Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 Definition wval (l : @label V V) : V :=
   if l is Write _ v then v else inh.
 
-Definition wpred (x : loc) (w : E) :=
-   (lloc (lab es w) == Some x) && (is_write (lab es w)).
+Definition wpred (x : location) (w : E) :=
+   (Label.loc (lab es w) == Some x) && (Label.is_write (lab es w)).
 
 Arguments wpred /.
 

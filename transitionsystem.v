@@ -45,10 +45,10 @@ Import Order.LTheory.
 Open Scope order_scope.
 Open Scope fset_scope.
 
-Export Label.
+Import Label.Syntax.
 
 Definition add_wr {E V : eqType} e1 e2 (lab : E -> @label V V) l :=
-  (e1 == e2) && (~~ is_read l) || ((lab e1) << l).
+  (e1 == e2) && (~~ Label.is_read l) || ((lab e1) >> l).
 
 Arguments add_wr /.
 
@@ -61,7 +61,7 @@ Notation cexec_event_struct := (@cexec_event_struct V disp E).
 
 Notation label := (@label V V).
 
-Implicit Types (x : loc) (a : V) (es : exec_event_struct).
+Implicit Types (x : location) (a : V) (es : exec_event_struct).
 
 (* Section with definitions for execution graph with added event *)
 Section AddEvent.
@@ -90,12 +90,12 @@ Structure add_label := Add {
   add_write_consist : add_wr add_write fresh_id lab add_lb;
 }.
 
-Fact add_write_consist_of_fresh l : ~~ is_read l ->
+Fact add_write_consist_of_fresh l : ~~ Label.is_read l ->
   add_wr fresh_id fresh_id lab l.
 Proof. by move=> /= ->; rewrite eq_refl lab_fresh. Qed.
 
 Definition add_label_of_Nread l {p}
-           (p_mem : p \in fresh_id :: dom) (nr : ~~ is_read l) : add_label :=
+           (p_mem : p \in fresh_id :: dom) (nr : ~~ Label.is_read l) : add_label :=
   Add
     p_mem
     (mem_head fresh_id dom)
@@ -154,7 +154,7 @@ Fact add_frf_prop :
   [forall rs : seq_fset tt (fresh_id :: dom),
     let r := val rs in
     let w := add_frf r in
-    (w == r) && ~~ is_read (add_lab r) || (add_lab w) << (add_lab r)].
+    (w == r) && ~~ Label.is_read (add_lab r) || (add_lab w) >> (add_lab r)].
 Proof.
   apply/forallP=> [[r /=]]; rewrite (@seq_fsetE tt)=> ?.
   rewrite /add_frf /add_lab /add_lprf !fsfun_withE /=.
@@ -257,7 +257,7 @@ Context (ces : cexec_event_struct) (pr : E) (l : label).
 Notation domain := (dom ces).
 Notation fresh_id := (fresh_seq domain).
 
-Hypothesis nr     : ~~ is_read l.
+Hypothesis nr     : ~~ Label.is_read l.
 Hypothesis pr_mem : pr \in fresh_id :: domain.
 
 Lemma consist_Nread:
