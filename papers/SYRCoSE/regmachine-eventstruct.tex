@@ -143,7 +143,7 @@ correspond to store and load performed by some thread.
 Similarly to \ESIdleRule, an event $e_{\lPO}$ is selected
 and one reduction is performed from the corresponding thread state~$s$.
 Unlike the \ESIdleRule case, however, a new event~$e$ is also generated.
-In case of \ESLoadRule additionally an event~$e_{\lRF}$ is selected,
+In the case of \ESLoadRule, additionally, an event~$e_{\lRF}$ is selected,
 such that it has a write label matching the read label of the new event.    
 The rule \ESLoadBotRule corresponds to a case when load 
 is performed ``too early'', before any write to the given location is available.
@@ -157,7 +157,7 @@ indeed satisfies the axioms of the prime event structure.
 \end{theorem}
 
 We sketch the proof below\footnote{
-One can also find mechanized proof in our \coq development.
+One can also find its mechanized proof in our \coq development.
 }. 
 
 First, we need to show that $\caOrd \ \defeq \ (\lPO \cup \lRF)^*$
