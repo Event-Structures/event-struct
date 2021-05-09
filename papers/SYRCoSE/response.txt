@@ -15,7 +15,7 @@ We answer both of this questions below, as they are connected to each other.
 The requirement that the "read is preceded by the last write to the same location" 
 in fact corresponds to the sequentially consistent memory model. 
 In other models (e.g. total store order TSO, or release/acquire RA) this condition is relaxed
-(these models do not require an existance of total order on all events within a single execution (configuration)
+(these models do not require an existence of total order on all events within a single execution (configuration)
 and thus in general there is no unique "last" write to read-from).
  
 Our construction of event structure guarantees only the basic condition --- 
@@ -26,7 +26,7 @@ total store order, release/acquire, etc.
 Whenever the configuration is extracted from the event structure
 it can be checked to additionally satisfy the consistency predicate 
 of a particular memory model 
-(we briefy mention this in the paper, at the end of Section V). 
+(we briefly mention this in the paper, at the end of Section V). 
 
 Moreover, a po+rf acyclic prime event structure together with 
 a consistency predicate for a particular memory model 
