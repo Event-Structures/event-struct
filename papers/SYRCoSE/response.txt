@@ -42,8 +42,8 @@ but the Fig.2 presents po+rf acyclic event structure.
 We will try to address this problem and remove the confusion.
  
 > A bit more information about the Coq libraries you use, and why yo use them would be welcome. 
-There is space to say a bit more on the approach, may be also for those not "fluent in Coq".
-The library is not presented at all, only the application. One would like to get some information about the library itself
+> There is space to say a bit more on the approach, may be also for those not "fluent in Coq".
+> The library is not presented at all, only the application. One would like to get some information about the library itself
 
 We will try to address this problem and give more detailed description
 of both our library itself and its dependencies. 
