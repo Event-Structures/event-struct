@@ -85,6 +85,15 @@
 % have to be run twice to clear warning/error messages.
 
 
+\usepackage{xspace}
+% https://ctan.org/pkg/xspace?lang=en
+% The xspace package provides a single command that looks at what comes after
+% it in the command stream, and decides whether to insert a space to replace
+% one “eaten” by the TEX command decoder. The decision is based on what came
+% after any space, not on whether there was a space (which is unknowable): so
+% if the next thing proves to be punctuation, the chances are there was no
+% space, but if it’s a letter, there’s probably a need for space. This
+% technique is not perfect, but works in a large proportion of cases.
 
 
 

@@ -41,16 +41,16 @@ encoding mutually exclusive events.
 Each particular trace can be extracted from the event structure
 as a linearisation of some \emph{configuration}, 
 that is a causally-closed and conflict-free subset of events,  
-which additionally should satisfy constraint 
+which additionally should satisfy the constraint 
 that each read is preceded by a matching write. 
 
 \input{fig/intro-es.tex}
 
 The programming languages theory and formal semantics research communities 
 are moving to increase the usage of \emph{proof assistants} 
-like Coq~\cite{Coq}, Agda~\cite{Agda}, 
-Isabelle/HOL~\cite{Nipkow-al:Isabelle2002}, 
-Arend~\cite{Arend}, and others,
+like \coq~\cite{Coq}, \agda~\cite{Agda}, 
+\isabelle~\cite{Nipkow-al:Isabelle2002}, 
+\arend~\cite{Arend}, and others,
 to complement theoretical studies with their mechanisation,
 as this process increases the reliability and reproducibility 
 of scientific results.
@@ -58,7 +58,7 @@ Yet, to the best of our knowledge, there is little work on
 mechanisation of the theory of event structures.
 The present report aims to close the gap.
 
-Our goal is to develop a Coq library containing 
+Our goal is to develop a \coq library containing 
 a comprehensive set of common definitions, lemmas, 
 and tactics that would allow researchers 
 to utilise the theory of event structures 
