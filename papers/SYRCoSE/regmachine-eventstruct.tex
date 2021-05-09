@@ -105,7 +105,7 @@ shown in \cref{fig:regmachine-eventstruct-example}.
 
 The construction starts from an initial event structure
 containing, for each thread, an event labelled by $\tslab{}$.
-We depict the corresponding thread state below the label.
+We depict the corresponding thread state below each label.
 Initially, each event is mapped to an initial thread state
 consisting of an instruction pointer pointing to the first 
 instruction to be executed and an initial mapping of registers
@@ -114,9 +114,9 @@ The first step executes the store instruction from
 the leftmost thread and exits the program, 
 since the execution of this thread terminates
 (we omit the $\exitInst$ instructions at the end of each thread for brevity).
-Next, the store from the rightmost thread is executed and corresponding
+Next, the store from the rightmost thread is executed and the corresponding
 write event gets added to the structure. 
-After that the load instruction from the middle thread is executed. 
+After that, the load instruction from the middle thread is executed. 
 Since there are two matching write events in the event structure, 
 two conflicting reads are conjoined to the event structure. 
 Note that the events can be added non-deterministically in any order
@@ -128,7 +128,7 @@ before another read $\rlab{x}{1}$.
 \input{fig/eventstruct-sem.tex}
 
 The rules of operational semantics constructing 
-the event structure are presented on~\cref{fig:eventstruct-sem}.
+the event structure are presented in~\cref{fig:eventstruct-sem}.
 The first auxiliary rule \ESAddEventRule~ adds a new event, sets its 
 label, $\lPO$ and $\lRF$ predecessors. 
 The \ESIdleRule~ handles the case when a thread of 
