@@ -1,8 +1,8 @@
 \subsection{Register Machine}
 
-For our case study we use a simple idealised model 
+For our case study, we use a simple idealised model 
 of a register machine, which consists of a finite 
-sequence of instructions, an instruction pointer 
+sequence of instructions, an instruction pointer,
 and an infinite set of registers. 
 The syntax of the machine's language is 
 shown in~\cref{fig:regmachine-syntax}.
@@ -63,7 +63,7 @@ the monadic encoding of the operational semantics.
 The labelled transition system can be derived from this encoding.}
 $P \vdash s \thrdstep{l} s'$,
 where $P$ is a program, $l$ is a label, $s$ and $s'$ are states of the machine. 
-The state of the machine itself consist of an instruction pointer $\ip{i}$
+The state of the machine itself consists of an instruction pointer $\ip{i}$
 and a map from registers to their values $\regmap$, 
 as shown in \cref{fig:regmachine-thrdstate}. 
 The rules of the semantics are standard 
