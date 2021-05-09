@@ -7,7 +7,7 @@ set of possible behaviours of the register machine.
 The event structure is constructed incrementally 
 in a step-by-step fashion by adding a single event 
 on each step. In order to generate a new event 
-on each step we require that events behave as \emph{identifiers}.  
+on each step, we require that events behave as \emph{identifiers}.  
 
 \begin{definition}
   We say that a set $\eventSet$ together with strict partial order $\identOrd$
@@ -59,7 +59,7 @@ we represent them via their inverse covering functions $\lfPO$ and $\lfRF$.
  
 We use the inverse covering function because it is 
 more convenient in our setting. Indeed, the semantics adds a new event
-at each step. Then it is convenient to require that in addition 
+at each step. Then it is convenient to require that, in addition,
 the small-step relation is provided with the $\lPO$ and $\lRF$
 predecessors of a new event.  
 
@@ -90,8 +90,8 @@ $$ e_1 \cfRel e_2 \iff
    e'_1 \caOrd e_1 \land e'_2 \caOrd e_2 $$
 
 We also need a way to reconcile the event structure
-with the states of machine's threads. 
-To do so we use a function ${\thrdmap : \eventSet \fun \ThrdState}$
+with the states of the machine's threads. 
+To do so, we use a function ${\thrdmap : \eventSet \fun \ThrdState}$
 which maps an event to a thread state obtained as the result of
 the execution of the event's side-effect.
 
