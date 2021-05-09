@@ -129,23 +129,23 @@ before another read $\rlab{x}{1}$.
 
 The rules of operational semantics constructing 
 the event structure are presented in~\cref{fig:eventstruct-sem}.
-The first auxiliary rule \ESAddEventRule~ adds a new event, sets its 
+The first auxiliary rule \ESAddEventRule adds a new event, sets its 
 label, $\lPO$ and $\lRF$ predecessors. 
-The \ESIdleRule~ handles the case when a thread of 
+The \ESIdleRule handles the case when a thread of 
 the register machine performs an internal step 
 without any side effect. 
 It chooses an event~$e$ together with 
 the thread state~$s$ corresponding to it
 and performs one step reduction to a new state~$s'$.
 It then updates the mapping of events to thread states.   
-The last three rules \ESStoreRule, \ESLoadRule, and \ESLoadBotRule~
+The last three rules \ESStoreRule, \ESLoadRule, and \ESLoadBotRule
 correspond to store and load performed by some thread.  
 Similarly to \ESIdleRule, an event $e_{\lPO}$ is selected
 and one reduction is performed from the corresponding thread state~$s$.
-Unlike the \ESIdleRule~ case, however, a new event~$e$ is also generated.
-In case of \ESLoadRule~ additionally an event~$e_{\lRF}$ is selected,
+Unlike the \ESIdleRule case, however, a new event~$e$ is also generated.
+In case of \ESLoadRule additionally an event~$e_{\lRF}$ is selected,
 such that it has a write label matching the read label of the new event.    
-The rule \ESLoadBotRule~ corresponds to a case when load 
+The rule \ESLoadBotRule corresponds to a case when load 
 is performed ``too early'', before any write to the given location is available.
 
 The following theorem asserts that the event structure built this way
