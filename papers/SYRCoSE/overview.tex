@@ -37,7 +37,17 @@ we encode the binary relations of the event structures
 as decidable \texttt{bool}-valued relations, 
 \ie $\caOrd, \cfRel : E \fun E \fun \texttt{bool}$,
 as opposed to \emph{propositional} 
-relations of type $E \fun E \fun \texttt{Prop}$. 
+relations of type $E \fun E \fun \texttt{Prop}$.
+
+Encoding computable relations in \coq,
+especially their (computable) transitive closures,
+can be quite challenging since \coq is a total language and
+its termination checker only understands termination patterns
+going slightly beyond simple structural recursion.
+To make it easier, we employ the \equations function definition plugin~%
+\cite{Sozeau-Mangin:ICFP2019}
+which provides both notations for writing programs by dependent pattern-matching
+and good support for well-founded recursion.
 
 In fact, binary relations are omnipresent in our formalization.
 This quickly manifested in a substantial amount of proof overhead and
