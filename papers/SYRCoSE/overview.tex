@@ -40,13 +40,15 @@ as opposed to \emph{propositional}
 relations of type $E \fun E \fun \texttt{Prop}$. 
 
 In fact, binary relations are omnipresent in our formalization.
-In order to further automate the reasoning about them, 
+This quickly manifested in a substantial amount of proof overhead and
+we seeked for tools to automate our proofs.
+Since binary relations form a \emph{Kleene Algebra with Tests}~(KAT)~\cite{Kozen:TOPLAS:1997},
 we have chosen to use the \relationalgebra%
 \footnote{\url{https://github.com/damien-pous/relation-algebra}}~%
 \cite{Pous-ITP2013} package 
 which provides a number of tactics to solve goals using
-decision procedures for the theory of lattices  
-and \emph{Kleene Algebras with Tests}~\cite{Kozen:TOPLAS:1997}.
+decision procedures for a number of theories, such as
+partially ordered monoids, lattices, residuated Kleene allegories and KATs.
 
 We also favour the computational encoding of semantics. 
 Similar to the recent related works on mechanisation 
