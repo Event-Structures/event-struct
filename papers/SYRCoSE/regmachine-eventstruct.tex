@@ -80,11 +80,9 @@ not equal and have a common $\lPO$ predecessor.
 For this definition to work properly, we also need 
 to assume that each thread has a special initial event 
 labelled by a distinguished \emph{thread start} label $\tslab{}$. 
-
 $$ e_1 \primcfRel e_2 \iff e_1 \neq e_2 \wedge \lfPO(e_1) = \lfPO(e2) $$
 
 Second, we extend the primitive conflict along the causality relation:
-
 $$ e_1 \cfRel e_2 \iff 
    \exists e'_1, e'_2 \in \eventSet \ldotp e'_1 \primcfRel e'_2 \land
    e'_1 \caOrd e_1 \land e'_2 \caOrd e_2 $$

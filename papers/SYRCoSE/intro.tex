@@ -48,7 +48,8 @@ that each read is preceded by a matching write.
 
 The programming languages theory and formal semantics research communities 
 are moving to increase the usage of \emph{proof assistants} 
-like \coq~\cite{Coq}, \agda~\cite{Agda}, 
+like \coq~\cite{Coq},
+%\agda~\cite{Agda}, 
 \isabelle~\cite{Nipkow-al:Isabelle2002}, 
 \arend~\cite{Arend}, and others,
 to complement theoretical studies with their mechanisation,
@@ -57,6 +58,14 @@ of scientific results.
 Yet, to the best of our knowledge, there is little work on 
 mechanisation of the theory of event structures.
 The present report aims to close the gap.
+
+We have chosen \coq as the proof assistant because it's a mature formal proof management tool
+with a rich ecosystem of libraries, plugins, documentation, and
+existing applications including the certification of properties of programming languages:
+the verified C compiler CompCert~\cite{Leroy-Compcert-CACM:2006},
+the Verified Software Toolchain~\cite{Appel-ESOP2011} for verification of C programs,
+and the Iris framework~\cite{Jung-al:JFP2018} for concurrent separation logic,
+to name a few.
 
 Our end goal is to develop a \coq library containing 
 a comprehensive set of common definitions, lemmas, 
