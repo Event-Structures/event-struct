@@ -20,14 +20,16 @@ shown in~\cref{fig:regmachine-syntax}.
               & &   & | & \readInst{r}{x}                 & \text{read from memory}        \\
               & &   & | & \writeInst{x}{v}                & \text{write to memory}         \\
 
-  r      &\in& \Reg     &   &                    & \text{thread-local register}   \\ 
-  x      &\in& \Loc     &   &                    & \text{shared memory location}  \\ 
-  v      &\in& \Z       &   &                    & \text{value}                   \\
-  \otimes&\in& \BinOp   &   &                    & \text{binary operation}        \\
-  \ip{i} &\in& \N       &   &                    & \text{instruction label}       \\ 
+  r      &\in& \Reg     &   &                    & \text{thread-local register} \\ 
+  x      &\in& \Loc     &   &                    & \text{shared memory }        \\
+         &   &          &   &                    & \qquad  \text{location}      \\
+  v      &\in& \Z       &   &                    & \text{value}                 \\
+  \otimes&\in& \BinOp   &   &                    & \text{binary operation}      \\
+  \ip{i} &\in& \N       &   &                    & \text{instruction label}     \\ 
 
 \end{array}
 \] 
+
 \caption{Syntax of the register machine}
 \label{fig:regmachine-syntax}
 \end{figure}
