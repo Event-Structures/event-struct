@@ -1,9 +1,15 @@
-\section{Overview}
+\section{Overview of Our Library}
 
 In this section, we sketch the design principles of our library. 
 
 We build our mechanisation on top of the \mathcomp~\cite{Mahboubi-Tassi:MATHCOMP17} library 
-using the \ssreflect~\cite{Gonthier-al:SSR2016} extension of the \coq system.
+which is an extensive and coherent repository of formalized mathematical theories,
+whose implementation is based on the \ssreflect~\cite{Gonthier-al:SSR2016} extension of the \coq system.
+By using \mathcomp, we draw on the large corpus of already formalised algorithms and mathematical results:
+its core modules feature support for a range of useful data structures,
+e.g. numbers, sequences, finite graphs,
+and also interfaces: types with decidable equality, subtypes, finite types, and so on.
+
 We also use the \emph{small-scale reflection} 
 methodology~\cite{Gonthier-Assia:SSR2010, Gonthier-al:SSR2016}, 
 a key ingredient of \ssreflect. 
@@ -24,7 +30,7 @@ they can switch to the logical representation
 and perform some proof steps manually. 
 
 To achieve better automation and e.g. get \emph{proof irrelevance}
-automatically, one is encouraged
+for free, one is encouraged
 to use \emph{decision} procedures whenever possible.
 For example, in the context of our library, 
 we encode the binary relations of the event structures
