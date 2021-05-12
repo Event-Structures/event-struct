@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice seq path.
 From mathcomp Require Import order finmap fintype.
-From event_struct Require Import utilities eventstructure ident.
+From event_struct Require Import utilities relations eventstructure ident.
 
 (******************************************************************************)
 (* Here we want to make function that by event and event structure creates a  *)
@@ -198,7 +198,7 @@ Lemma ica_add_eventE e1 e2 :
     (pred == e1) || (write == e1)
   else ica es e1 e2.
 Proof.
-  rewrite /ica /fica frf_add_eventE fpred_add_eventE.
+  rewrite icaE /= /fica frf_add_eventE fpred_add_eventE.
   by case: ifP=> ?; rewrite ?(andTb, andFb) ?orbF // ?inE eq_sym orbC eq_sym.
 Qed.
 
@@ -242,7 +242,7 @@ Proof.
   rewrite -cf_add_eventE //.
   apply/negP=> /eqP Ef.
   have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
-  by rewrite /ica ?inE -Ef eq_refl.
+  by rewrite icaE /= ?inE -Ef eq_refl.
 Qed.
 
 Lemma consist_add_new_event: dom_consistency add_new_event.

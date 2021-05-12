@@ -1,5 +1,5 @@
 From Coq Require Import Relations Relation_Operators.
-From RelationAlgebra Require Import lattice rel kat_tac.
+From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype.
 From monae Require Import hierarchy monad_model.
@@ -387,19 +387,19 @@ Lemma fica_dom e :
   e \notin dom -> fica e = [:: e; e].
 Proof. by move=> nI; rewrite /fica frf_dom // fpred_dom. Qed.
 
-Lemma fica_le : (@sfrel _ monad.id_ndmorph E) fica ≦ (<=%O : rel E).
+Lemma fica_ge : (@sfrel _ monad.id_ndmorph E) fica ≦ (>=%O : rel E).
 Proof. 
   move=> ?? /=; red; rewrite /sfrel /=.
   rewrite ?inE=> /orP[]/eqP->; [exact: frf_le | exact: fpred_le]. 
 Qed.
 
 (* TODO: consider to generalize this lemma and move to `relations.v` *)
-Lemma fica_lt :
-  (@sfrel _ monad.id_ndmorph E (strictify E _ fica)) ≦ (<%O : rel E).
+Lemma fica_gt :
+  (@sfrel _ monad.id_ndmorph E (strictify E _ fica)) ≦ (>%O : rel E).
 Proof. 
   rewrite strictify_weq.
   (* TODO: can ssreflect rewrite do setoid rewrites? *)
-  rewrite -> fica_le.
+  rewrite -> fica_ge.
   move=> x y //=; red.
   by rewrite lt_def andbC eq_sym.
 Qed.
@@ -409,35 +409,37 @@ Qed.
 (* ************************************************************************* *)
 
 (* Immediate causality relation *)
-Definition ica e1 e2 : bool := e1 \in fica e2.
+Definition ica : {dhrel E & E} := 
+  (@sfrel _ monad.id_ndmorph E fica : {dhrel E & E})°.
+
+Lemma icaE : ica =2 [rel e1 e2 | e1 \in fica e2].
+Proof. by []. Qed.
 
 Lemma ica_le e1 e2 : ica e1 e2 -> e1 <= e2.
-Proof. exact: fica_le. Qed.
+Proof. exact: fica_ge. Qed.
 
 (* Causality relation *)
-Definition ca : rel E := rt_closure fica_lt.
+Definition ca : rel E := (rt_closure fica_gt)°.
 
 Lemma closureP e1 e2 :
   reflect (clos_refl_trans _ ica e1 e2) (ca e1 e2).
 Proof. 
-  rewrite /ca /ica.
-  apply: equivP; first exact: rt_closureP.
+  rewrite /ca /ica. apply weq_reflect.
   rewrite !clos_refl_trans_hrel_str.
-  (* TODO: refactor the proof once we'll fix the problems
-   *   with relation-algebra (i.e. reflexive closure and converse)
-   *)
-  rewrite kleene.str_weq1; first by apply: iff_refl. 
-  move=> x y /=.  
-  split; move=> [<-|]; try by left.
-  { rewrite strictify_weq /=. 
-    by move=> /andP[H ?]; right. }
-  case H: (x == y); move: H=> /eqP.
-  { by move=> <- ?; left. }
-  move=> H ?; right. 
-  rewrite strictify_weq.
-  apply /andP; split; try done.
-  apply: (@contraPneq _ True); last done.
-  by move=> ??; apply: H. 
+  rewrite rel_cnv_m -kleene.cnvstr.
+  apply cnv_weq_iff.
+  rewrite cnv_invol str_itr itr_qmk.
+  rewrite -qmk_sub_one; last first.
+  (* TODO: make a lemma? *)
+  - rewrite -rel_top_m -rel_one_m -rel_neg_m -rel_cup_m.
+    apply /rel_weq_m/dhrel_eq_dec.
+  rewrite kleene.itr_weq; last first.
+  - rewrite -rel_one_m -rel_sub_m -rel_cup_m.
+    by apply /rel_weq_m; rewrite -strictify_weq.
+  rewrite rel_qmk_m.
+  rewrite -itr_qmk -str_itr.
+  rewrite -clos_refl_trans_hrel_str.
+  apply /reflect_weq/rt_closureP.
 Qed.
 
 Lemma closure_n1P e1 e2 :
@@ -454,13 +456,13 @@ Proof. by move=> x y H; apply /closureP /rt_step. Qed.
 (* Proof. exact: rt_closure_subrel. Qed. *)
 
 Lemma ica_fpred {e}: ica (fpred e) e.
-Proof. by rewrite /ica !inE eqxx. Qed.
+Proof. by rewrite icaE /= !inE eqxx. Qed.
 
 Lemma ica_notdom e1 e2:
   e2 \notin dom ->
   ica e1 e2 ->
   e1 == e2.
-Proof. by move=> Ndom2; rewrite /ica fica_dom // !inE orbb. Qed.
+Proof. by move=> ?; rewrite icaE /= fica_dom // !inE orbb. Qed.
 
 Lemma ca_refl {e} : ca e e.
 Proof. exact: rt_closure_refl. Qed.
@@ -468,15 +470,26 @@ Proof. exact: rt_closure_refl. Qed.
 Hint Resolve ca_refl : core.
 
 Lemma ca_trans: transitive ca.
-Proof. exact: rt_closure_trans. Qed.
+Proof. 
+  (* TODO: generalize lemma *)
+  rewrite /ca /transitive /= /dhrel_cnv. 
+  move=> x y z /[swap]. apply rt_closure_trans.
+Qed.
 
 Arguments ca_trans {_ _ _}.
 
 Lemma ca_anti: antisymmetric ca.
-Proof. exact: rt_closure_antisym. Qed.
+Proof. 
+  (* TODO: generalize lemma *)
+  rewrite /ca /antisymmetric /= /dhrel_cnv. 
+  move=> x y. rewrite andbC. apply /rt_closure_antisym. 
+Qed.
 
 Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
-Proof. exact: rt_closure_le. Qed.
+Proof. 
+  rewrite /ca /= /dhrel_cnv. 
+  apply /rt_closure_ge.
+Qed.
 
 Lemma ca_step_last e1 e3 :
   e1 != e3 ->
@@ -502,7 +515,7 @@ Proof.
   by move=> /(ica_notdom N3) /eqP-> /(_ N3).
 Qed.
 
-Definition seqpred_ca := wsuffix fica_lt.
+Definition seqpred_ca := wsuffix fica_gt.
 
 Lemma seqpred_ca_in e1 e2 : e1 \in seqpred_ca e2 = ca e1 e2.
 Proof. by []. Qed.
@@ -514,10 +527,10 @@ Notation fresh_id := (fresh_seq dom).
 
 Lemma ica_fresh e: ica fresh_id e -> e = fresh_id.
 Proof.
-  move/[dup]/ica_ca/ca_notdom/[swap]/fica_le.
+  move/[dup]/ica_ca/ca_notdom/[swap]/fica_ge.
   rewrite /ica ?inE.
   case I: (e \in dom); last by move=> ?/(_ erefl)/eqP->.
-  by move/lt_geF: (fresh_seq_lt (dom_sorted es) I)=>->.
+  by move: (fresh_seq_lt (dom_sorted es) I)=> /= /lt_geF ->. 
 Qed.
 
 Lemma ca_fresh e: ca fresh_id e -> e = fresh_id.
@@ -679,7 +692,7 @@ Proof.
   move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _|].
   - by move=> /ca_le L /and4P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
   move/ca_step_last=> /[apply] [[z /and3P[/[swap]]]].
-  rewrite /ica !inE=> /pred2P[]-> Cx L.
+  rewrite icaE /= !inE=> /pred2P[]-> Cx L.
   - move=> /ca_fpredr Cy /icf_cf/cf_consist2/(_ Cx Cy).
     rewrite cf_sym rff_consist //=. 
     apply/eqP=> fE; by rewrite fE ltxx in L.
