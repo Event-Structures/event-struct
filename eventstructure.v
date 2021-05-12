@@ -44,69 +44,111 @@ Import WfClosure.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Definition loc := nat.
+Declare Scope exec_eventstruct_scope.
+Delimit Scope exec_eventstruct_scope with exec_es.
 
-Inductive label {Rval Wval : Type} :=
-| Read of loc & Rval
-| Write of loc & Wval
+Local Open Scope exec_eventstruct_scope.
+
+
+(* TODO: make opaque? *)
+Definition Loc := nat.
+
+Inductive Lab {RVal WVal : Type} :=
+| Read  of Loc & RVal
+| Write of Loc & WVal
 | ThreadStart
 | ThreadEnd.
 
-Section PrimeEventStructure.
+Module Label.
+Section Label. 
 
-Context {V : eqType}.
+Context {Val : eqType}.
 
-(* ************************************************************************* *)
-(*     Label                                                                 *)
-(* ************************************************************************* *)
+Local Notation Lab := (@Lab Val Val).
 
-Local Notation label := (@label V V).
+Definition loc : Lab -> option Loc := 
+  fun lab =>
+    match lab with
+    | Write x _ => Some x
+    | Read  x _ => Some x
+    | _         => None
+    end.
 
-Implicit Type l : label.
+Definition value : Lab -> option Val := 
+  fun lab =>
+    match lab with
+    | Write _ v => Some v
+    | Read  _ v => Some v
+    | _         => None
+    end.
 
-Definition eq_label l l' :=
-  match l, l' with
-  | Read a x,  Read b y      => [&& a == b & x == y]
-  | Write a x, Write b y     => [&& a == b & x == y]
-  | ThreadEnd, ThreadEnd     => true
-  | ThreadStart, ThreadStart => true
-  | _, _                     => false
-  end.
+Definition is_read : pred Lab := 
+  fun l => if l is (Read _ _) then true else false.
 
-Lemma eqlabelP : Equality.axiom eq_label.
+Definition is_write : pred Lab := 
+  fun l => if l is (Write _ _) then true else false.
+
+Definition is_thrdstart : pred Lab := 
+  fun l => if l is ThreadStart then true else false.
+
+Definition is_thrdend : pred Lab := 
+  fun l => if l is ThreadEnd then true else false.
+
+Definition eq_lab : rel Lab :=
+  fun l1 l2 => 
+    match l1, l2 with
+    | Read  x a, Read  y b     => [&& a == b & x == y]
+    | Write x a, Write y b     => [&& a == b & x == y]
+    | ThreadEnd, ThreadEnd     => true
+    | ThreadStart, ThreadStart => true
+    | _, _                     => false
+    end.
+
+Lemma eq_labP : Equality.axiom eq_lab.
 Proof.
   case=> [v x [] * /=|v x []* /=|[]|[]]; try constructor=>//;
   by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
 Qed.
 
-Canonical label_eqMixin := EqMixin eqlabelP.
-Canonical label_eqType := Eval hnf in EqType label label_eqMixin.
+Definition eq_loc : rel Lab := 
+  orelpre loc eq_op.
 
-(* label location *)
-Definition lloc (l : label) :=
-  match l with
-  | Write x _ => Some x
-  | Read  x _ => Some x
-  | _         => None
-  end.
+Definition eq_value : rel Lab := 
+  orelpre value eq_op.
 
-Definition is_read l := if l is (Read _ _) then true else false.
-
-Definition is_write l := if l is Write _ _ then true else false.
-
-Definition is_thdstart l := if l is ThreadStart then true else false.
-
-Definition write_read_from (w r : label) :=
-  match w, r with
-  | Write x a, Read y b => (x == y) && (a == b)
+(* TODO: invent a better name? 
+ *   `synch` clashes with `synchronizes-with` relation 
+ *    from weak memory theory, which has slightly different meaning. 
+ *)
+Definition synch (l1 l2 : Lab) :=
+  match l1, l2 with
+  (* write synchronizes with a read with the matching value *)
+  | Write x a, Read y b  => (x == y) && (a == b)
+  (* otherwise there is no synchronization *)
   | _, _ => false
   end.
 
-Notation "w << r" := (write_read_from w r) (at level 0).
+(* Lemma rf_thrdend w : write_read_from w ThreadEnd = false. *)
+(* Proof. by case: w. Qed. *)
 
-Lemma rf_thrdend w : w << ThreadEnd = false.
-Proof. by case: w. Qed.
+End Label.
 
+Module Exports.
+Section Label.
+Context {V : eqType}.
+Canonical Lab_eqMixin := EqMixin (@eq_labP V).
+Canonical Lab_eqType  := Eval hnf in EqType (@Lab V V) Lab_eqMixin.
+End Label.
+End Exports. 
+
+Module Syntax. 
+Notation "l1 \>> l2" := (Label.synch l1 l2) (no associativity, at level 20).
+End Syntax. 
+
+End Label.
+
+Export Label.Exports. 
+Import Label.Syntax. 
 
 (* ************************************************************************* *)
 (*     Exec Event Structure                                                  *)
@@ -114,10 +156,14 @@ Proof. by case: w. Qed.
 
 Section ExecEventStructureDef.
 
-Context {disp : unit} (E : identType disp).
+Context {disp : unit} (E : identType disp) (Val : eqType).
+
+Local Notation Lab := (@Lab Val Val).
+
+Implicit Type l : Lab.
 
 (* lprf stands for label, predecessor, reads-from *)
-Record lab_pred_rfrom := Lprf {lab_prj : label; fpred_prj : E; frf_prj : E}.
+Record lab_pred_rfrom := Lprf {lab_prj : Lab; fpred_prj : E; frf_prj : E}.
 
 Definition prod_of_lprf lprf :=
   let: Lprf l p rf := lprf in (l, p, rf).
@@ -132,7 +178,7 @@ Definition lprf_eqMixin := CanEqMixin prod_of_lprfK.
 
 Canonical lprf_eqType := Eval hnf in EqType lab_pred_rfrom lprf_eqMixin.
 
-Open Scope fset_scope.
+Local Open Scope fset_scope.
 
 Structure fin_exec_event_struct := Pack {
   dom        : seq E;
@@ -148,19 +194,18 @@ Structure fin_exec_event_struct := Pack {
   _          : [forall rs : seq_fset tt dom, 
                   let r := val rs in
                   let w := frf r  in
-                  ((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r))];
+                  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r))];
 }.
 
 End ExecEventStructureDef.
 
-Section ExecEventStructure.
+Section ExecEventStructEq. 
 
-Open Scope fset_scope.
+Context {disp} {E : identType disp} {Val : eqType}.
 
-Context {disp} {E : identType disp} (es : fin_exec_event_struct E).
-
-Definition eq_es (es es' : fin_exec_event_struct E) : bool :=
+Definition eq_es (es es' : fin_exec_event_struct E Val) : bool :=
   [&& dom es == dom es' & lprf es == lprf es'].
+
 Lemma eqesP : Equality.axiom eq_es.
 Proof.
   move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
@@ -175,11 +220,90 @@ Proof.
   do ? split; exact: eq_irrelevance.
 Qed.
 
+End ExecEventStructEq. 
+
+(* ************************************************************************* *)
+(*     Label related functions, predicates and relations on events           *)
+(* ************************************************************************* *)
+
+Section ExecEventStructLab. 
+Context {disp} {E : identType disp} {Val : eqType}.
+Context (x : Loc) (v : Val).
+Context (es : fin_exec_event_struct E Val).
+
+Notation lab := (lab es).
+
+Definition loc : E -> option Loc := 
+  Label.loc \o lab. 
+
+Definition value : E -> option Val := 
+  Label.value \o lab. 
+
+Definition with_loc : pred E := 
+  opreim loc (eq_op x).
+
+Definition with_value : pred E := 
+  opreim value (eq_op v).
+
+Definition is_read : pred E := 
+  Label.is_read \o lab. 
+
+Definition is_write : pred E := 
+  Label.is_write \o lab. 
+
+Definition is_thrdstart : pred E := 
+  Label.is_thrdstart \o lab. 
+
+Definition is_thrdend : pred E := 
+  Label.is_thrdend \o lab. 
+
+Definition eq_lab : rel E :=
+  relpre lab Label.eq_lab.  
+
+Definition eq_loc : rel E := 
+  relpre lab Label.eq_loc.  
+
+Definition eq_value : rel E := 
+  relpre lab Label.eq_value.
+
+End ExecEventStructLab. 
+
+(* ************************************************************************* *)
+(*     Notations to filter out events of an event structure                  *)
+(* ************************************************************************* *)
+
+Notation "[ 'events' 'of' S | P ]" := 
+  (filter (P S) (dom S)) 
+    (at level 0) : exec_eventstruct_scope. 
+
+Notation "[ 'events' 'of' S | P1 & P2 ]" := 
+  (filter (fun e => P1 S e && P2 S e) (dom S)) 
+    (at level 0) : exec_eventstruct_scope. 
+
+Notation "[ 'events' e <- S | C ]" := 
+  (filter (fun e => C) (dom S)) 
+    (at level 0) : exec_eventstruct_scope.
+
+Notation "[ 'events' e <- S | C1 & C2 ]" := 
+  (filter (fun e => C1 && C2) (dom S)) 
+    (at level 0) : exec_eventstruct_scope.
+
+
+Section ExecEventStructure.
+Context {disp} {E : identType disp} {Val : eqType}.
+Context (es : fin_exec_event_struct E Val).
+
+Local Open Scope fset_scope.
+
 Notation lprf := (lprf es).
 Notation dom := (dom es).
 Notation lab := (lab es).
 Notation fpred := (fpred es).
 Notation frf := (frf es).
+
+(* ************************************************************************* *)
+(*     Auxiliary lemmas about labels                                         *)
+(* ************************************************************************* *)
 
 Lemma labE e : lab e = lab_prj (lprf e).
 Proof. by []. Qed.
@@ -189,7 +313,6 @@ Proof. by []. Qed.
 
 Lemma frfE e : frf e = frf_prj (lprf e).
 Proof. by []. Qed.
-
 
 Lemma lprf_dom : {subset (finsupp lprf) <= dom}.
 Proof. 
@@ -239,7 +362,7 @@ Proof.
 Qed.
 
 Lemma frf_cond r : let w := frf r in
-  ((w == r) && ~~ is_read (lab r)) || ((lab w) << (lab r)).
+  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r)).
 Proof.
   case: (boolP (r \in dom))=> [|/[dup] ndom /frf_dom->//]; rewrite /dom/frf/lab.
   - case: es => ????????? /= /forallP L; rewrite -(@seq_fsetE tt)=> I.
@@ -565,14 +688,14 @@ Qed.
 
 End ExecEventStructure.
 
-Canonical es_eqMixin disp E := EqMixin (@eqesP disp E).
-Canonical es_eqType disp E := 
-  Eval hnf in EqType (@fin_exec_event_struct disp E) (es_eqMixin E).
+Canonical es_eqMixin disp E V := EqMixin (@eqesP disp E V).
+Canonical es_eqType disp E V := 
+  Eval hnf in EqType (@fin_exec_event_struct disp E V) (es_eqMixin E V).
 
 Section Consistency.
 
-Context {disp : unit} {E : identType disp}.
-Implicit Type es : (@fin_exec_event_struct disp E).
+Context {disp : unit} (E : identType disp) (V : eqType).
+Implicit Type es : (@fin_exec_event_struct disp E V).
 
 Inductive cexec_event_struct := Consist es of (dom_consistency es).
 
@@ -588,8 +711,5 @@ Proof. exact: val_inj. Qed.
 
 End Consistency.
 
-End PrimeEventStructure.
-
 (*Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 10).*)
 Notation "e '|-' a # b" := (cf e a b) (at level 10).
-Notation "w << r" := (write_read_from w r) (at level 0).

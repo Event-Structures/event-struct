@@ -25,9 +25,6 @@ From event_struct Require Import transitionsystem ident.
 (*     Read x __  ie. read with hole instead of read value. And as a mapping  *)
 (*     from registers to values we return somehow codded function hole        *)
 (*  ltr_thrd_sem == version of thrd_sem as labeled relation                   *)
-(*    writes_seq == function that takes local variable x and some event       *)
-(*          structure and returns all events in this event structure that are *)
-(*          writing in x                                                      *)
 (*        es_seq == takes event structure `es`, location `x`, predsessor event*)
 (*          `pr` and returns sequence of `es + Read x v`, where v runs on all *)
 (*           values  `v` that we can read in location `x`                     *)
@@ -56,27 +53,28 @@ Section RegMachine.
 
 Open Scope fmap_scope.
 Open Scope do_notation.
+Open Scope exec_eventstruct_scope.
 
 Local Notation M := ModelMonad.ListMonad.t.
 
-Context {V : inhType} {disp} {E : identType disp}.
+Context {disp} {E : identType disp} {Val : inhType}.
 
 (*Notation n := (@n val).*)
-Notation exec_event_struct := (@fin_exec_event_struct V _ E).
-Notation cexec_event_struct := (@cexec_event_struct V _ E).
+Notation exec_event_struct := (fin_exec_event_struct E Val).
+Notation cexec_event_struct := (cexec_event_struct E Val).
 
 (*Notation lab := (@lab val).*)
 Notation __ := (tt).
 
 (* Registers --- thread local variables *)
-Definition reg := nat.
+Definition Reg := nat.
 
 (* Instruction Set *)
 Inductive instr :=
-| WriteReg of V   & reg 
-| ReadLoc  of reg & loc
-| WriteLoc of V   & loc 
-| CJmp     of reg & nat 
+| WriteReg of Val & Reg 
+| ReadLoc  of Reg & Loc
+| WriteLoc of Val & Loc 
+| CJmp     of Reg & nat 
 | Stop.
 
 Definition seqprog := seq instr.
@@ -87,7 +85,7 @@ Definition parprog := seq seqprog.
 
 Record thrd_state := Thrd_state {
   ip     : nat;
-  regmap :> {fsfun reg -> V with inh}
+  regmap :> {fsfun Reg -> Val with inh}
 }.
 
 Definition eq_thrd_state st st' :=
@@ -112,7 +110,7 @@ Record config := Config {
 Notation inth := (nth Stop).
 
 Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
-  (option (@label unit V) * (V -> thrd_state))%type :=
+  (option (@Lab unit Val) * (Val -> thrd_state))%type :=
   let: {| ip := ip; regmap := rmap |} := st in
   if ip == 0 then
     (Some ThreadStart, fun=> {| ip := 1; regmap := rmap |})
@@ -133,7 +131,7 @@ Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
     | Stop         => (None, fun=> st)
     end.
 
-Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
+Definition ltr_thrd_sem (l : option (@Lab Val Val)) pgm st1 st2 : bool :=
   match thrd_sem pgm st1, l with
   | (Some (Write x v), st), Some (Write y u) => [&& x == y, v == u & st inh == st2]
   | (Some (Read  x _), st), Some (Read  y u) => (x == y) && (st u == st2)
@@ -149,25 +147,20 @@ Notation fresh_id := (fresh_seq (dom es)).
 
 Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 
-Definition wval (l : @label V V) : V :=
-  if l is Write _ v then v else inh.
-
-Definition wpred (x : loc) (w : E) :=
-   (lloc (lab es w) == Some x) && (is_write (lab es w)).
-
-Arguments wpred /.
-
-Definition writes_seq x := [seq y <- dom es | wpred x y].
-
-Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: (dom es).
+Lemma ws_mem x w : 
+  w \in [events of es | is_write & with_loc x] -> w \in fresh_id :: (dom es).
 Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
 Lemma ws_wpred x w :
-  w \in writes_seq x ->
-  add_wr w fresh_id (lab es) (Read x (wval (lab es w))).
+  w \in [events of es | is_write & with_loc x] ->
+  add_wr w fresh_id (lab es) (Read x (odflt inh (value es w))).
 Proof.
   rewrite mem_filter=> /andP[] /=.
-  case: (lab es w)=> //= [?? /andP[]|?? /andP[/eqP[->]]] //; by rewrite ?eq_refl.
+  rewrite /is_write /with_loc /loc /value.
+  rewrite /Label.synch /Label.is_write /Label.value /Label.loc /=. 
+  case: (lab es w)=> l v //=. 
+  move=> /[swap] ? /eqP ->. 
+  by rewrite !eq_refl.
 Qed.
 
 Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
@@ -175,7 +168,7 @@ Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
     [seq
       let: wr       := sval w in
       let: w_in     := valP w in
-      let: read_lab := Read x (wval (lab es wr)) in
+      let: read_lab := Read x (odflt inh (value es wr)) in
       (
         add_new_event
           {| add_lb            := read_lab;
@@ -183,9 +176,8 @@ Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
              add_write_in_dom  := ws_mem   w_in;
              add_write_consist := ws_wpred w_in; |},
         wr
-      ) | w <- (seq_in (writes_seq x))]
+      ) | w <- seq_in [events of es | is_write & with_loc x]]
   else [::].
-
 
 Definition ces_seq_aux x pr := 
   [seq estr_w <- @es_seq x pr | 
@@ -207,14 +199,14 @@ Definition ces_seq x pr :=
     let: ces_w    := sval ces_w_mem in
     let: (ces, w) := ces_w in
     let: ces_mem  := valP ces_w_mem in 
-    (Consist (mem_ces_seq_aux ces_mem), wval (lab es w)) | 
+    (Consist (mem_ces_seq_aux ces_mem), odflt inh (value es w)) | 
     ces_w_mem <- seq_in (@ces_seq_aux x pr)].
 
 Arguments consist_new_Nread {_ _ _}.
 
 Definition add_hole
-  (l : @label unit V) pr :
-  seq (cexec_event_struct * V) :=
+  (l : @Lab unit Val) pr :
+  seq (cexec_event_struct * Val) :=
   if pr \in fresh_id :: dom es =P true is ReflectT pr_mem then
     match l with
     | Write x v => 
