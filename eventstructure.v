@@ -43,6 +43,12 @@ Import WfClosure.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
+Declare Scope exec_eventstruct_scope.
+Delimit Scope exec_eventstruct_scope with exec_es.
+
+Local Open Scope exec_eventstruct_scope.
+
+
 (* TODO: make opaque? *)
 Definition Loc := nat.
 
@@ -143,21 +149,17 @@ End Label.
 Export Label.Exports. 
 Import Label.Syntax. 
 
-Section PrimeEventStructure.
-
-Context {Val : eqType}.
-
-Local Notation Lab := (@Lab Val Val).
-
-Implicit Type l : Lab.
-
 (* ************************************************************************* *)
 (*     Exec Event Structure                                                  *)
 (* ************************************************************************* *)
 
 Section ExecEventStructureDef.
 
-Context {disp : unit} (E : identType disp).
+Context {disp : unit} (E : identType disp) (Val : eqType).
+
+Local Notation Lab := (@Lab Val Val).
+
+Implicit Type l : Lab.
 
 (* lprf stands for label, predecessor, reads-from *)
 Record lab_pred_rfrom := Lprf {lab_prj : Lab; fpred_prj : E; frf_prj : E}.
@@ -175,7 +177,7 @@ Definition lprf_eqMixin := CanEqMixin prod_of_lprfK.
 
 Canonical lprf_eqType := Eval hnf in EqType lab_pred_rfrom lprf_eqMixin.
 
-Open Scope fset_scope.
+Local Open Scope fset_scope.
 
 Structure fin_exec_event_struct := Pack {
   dom        : seq E;
@@ -196,14 +198,13 @@ Structure fin_exec_event_struct := Pack {
 
 End ExecEventStructureDef.
 
-Section ExecEventStructure.
+Section ExecEventStructEq. 
 
-Open Scope fset_scope.
+Context {disp} {E : identType disp} {Val : eqType}.
 
-Context {disp} {E : identType disp} (es : fin_exec_event_struct E).
-
-Definition eq_es (es es' : fin_exec_event_struct E) : bool :=
+Definition eq_es (es es' : fin_exec_event_struct E Val) : bool :=
   [&& dom es == dom es' & lprf es == lprf es'].
+
 Lemma eqesP : Equality.axiom eq_es.
 Proof.
   move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
@@ -218,17 +219,30 @@ Proof.
   do ? split; exact: eq_irrelevance.
 Qed.
 
-Notation lprf := (lprf es).
-Notation dom := (dom es).
-Notation lab := (lab es).
-Notation fpred := (fpred es).
-Notation frf := (frf es).
+End ExecEventStructEq. 
 
-Definition addr : E -> option Loc := 
+(* ************************************************************************* *)
+(*     Label related functions, predicates and relations on events           *)
+(* ************************************************************************* *)
+
+Section ExecEventStructLab. 
+Context {disp} {E : identType disp} {Val : eqType}.
+Context (x : Loc) (v : Val).
+Context (es : fin_exec_event_struct E Val).
+
+Notation lab := (lab es).
+
+Definition loc : E -> option Loc := 
   Label.loc \o lab. 
 
 Definition value : E -> option Val := 
   Label.value \o lab. 
+
+Definition with_loc : pred E := 
+  opreim loc (eq_op x).
+
+Definition with_value : pred E := 
+  opreim value (eq_op v).
 
 Definition is_read : pred E := 
   Label.is_read \o lab. 
@@ -251,6 +265,45 @@ Definition eq_loc : rel E :=
 Definition eq_value : rel E := 
   relpre lab Label.eq_value.
 
+End ExecEventStructLab. 
+
+(* ************************************************************************* *)
+(*     Notations to filter out events of an event structure                  *)
+(* ************************************************************************* *)
+
+Notation "[ 'events' 'of' S | P ]" := 
+  (filter (P S) (dom S)) 
+    (at level 0) : exec_eventstruct_scope. 
+
+Notation "[ 'events' 'of' S | P1 & P2 ]" := 
+  (filter (fun e => P1 S e && P2 S e) (dom S)) 
+    (at level 0) : exec_eventstruct_scope. 
+
+Notation "[ 'events' e <- S | C ]" := 
+  (filter (fun e => C) (dom S)) 
+    (at level 0) : exec_eventstruct_scope.
+
+Notation "[ 'events' e <- S | C1 & C2 ]" := 
+  (filter (fun e => C1 && C2) (dom S)) 
+    (at level 0) : exec_eventstruct_scope.
+
+
+Section ExecEventStructure.
+Context {disp} {E : identType disp} {Val : eqType}.
+Context (es : fin_exec_event_struct E Val).
+
+Local Open Scope fset_scope.
+
+Notation lprf := (lprf es).
+Notation dom := (dom es).
+Notation lab := (lab es).
+Notation fpred := (fpred es).
+Notation frf := (frf es).
+
+(* ************************************************************************* *)
+(*     Auxiliary lemmas about labels                                         *)
+(* ************************************************************************* *)
+
 Lemma labE e : lab e = lab_prj (lprf e).
 Proof. by []. Qed.
 
@@ -259,7 +312,6 @@ Proof. by []. Qed.
 
 Lemma frfE e : frf e = frf_prj (lprf e).
 Proof. by []. Qed.
-
 
 Lemma lprf_dom : {subset (finsupp lprf) <= dom}.
 Proof. 
@@ -634,14 +686,14 @@ Qed.
 
 End ExecEventStructure.
 
-Canonical es_eqMixin disp E := EqMixin (@eqesP disp E).
-Canonical es_eqType disp E := 
-  Eval hnf in EqType (@fin_exec_event_struct disp E) (es_eqMixin E).
+Canonical es_eqMixin disp E V := EqMixin (@eqesP disp E V).
+Canonical es_eqType disp E V := 
+  Eval hnf in EqType (@fin_exec_event_struct disp E V) (es_eqMixin E V).
 
 Section Consistency.
 
-Context {disp : unit} {E : identType disp}.
-Implicit Type es : (@fin_exec_event_struct disp E).
+Context {disp : unit} (E : identType disp) (V : eqType).
+Implicit Type es : (@fin_exec_event_struct disp E V).
 
 Inductive cexec_event_struct := Consist es of (dom_consistency es).
 
@@ -656,8 +708,6 @@ Lemma consist_inj : injective (ev_struct_of).
 Proof. exact: val_inj. Qed.
 
 End Consistency.
-
-End PrimeEventStructure.
 
 (*Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 10).*)
 Notation "e '|-' a # b" := (cf e a b) (at level 10).

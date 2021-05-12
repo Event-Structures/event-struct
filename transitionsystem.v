@@ -54,10 +54,10 @@ Arguments add_wr /.
 
 Section TransitionSystem.
 
-Context {V : eqType} {disp} (E : identType disp).
+Context {disp} (E : identType disp) (V : eqType).
 
-Notation exec_event_struct := (@fin_exec_event_struct V disp E).
-Notation cexec_event_struct := (@cexec_event_struct V disp E).
+Notation exec_event_struct := (@fin_exec_event_struct disp E V).
+Notation cexec_event_struct := (@cexec_event_struct disp E V).
 
 Notation label := (@Lab V V).
 

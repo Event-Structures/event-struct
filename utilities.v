@@ -409,11 +409,14 @@ Qed.
 End RelationOnSeq.
 
 
-Section RelUtils. 
+Section OptionUtils. 
 
 Context {T rT : Type}.
+
+Definition opreim (f : T -> option rT) (p : pred rT) : simpl_pred T := 
+  [pred x | match f x with Some x => p x | _ => false end]. 
 
 Definition orelpre (f : T -> option rT) (r : rel rT) : simpl_rel T := 
   [rel x y | match f x, f y with Some x, Some y => r x y | _, _ => false end].
 
-End RelUtils.
+End OptionUtils.

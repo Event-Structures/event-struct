@@ -56,14 +56,15 @@ Section RegMachine.
 
 Open Scope fmap_scope.
 Open Scope do_notation.
+Open Scope exec_eventstruct_scope.
 
 Local Notation M := ModelMonad.ListMonad.t.
 
-Context {Val : inhType} {disp} {E : identType disp}.
+Context {disp} {E : identType disp} {Val : inhType}.
 
 (*Notation n := (@n val).*)
-Notation exec_event_struct := (@fin_exec_event_struct Val _ E).
-Notation cexec_event_struct := (@cexec_event_struct Val _ E).
+Notation exec_event_struct := (fin_exec_event_struct E Val).
+Notation cexec_event_struct := (cexec_event_struct E Val).
 
 (*Notation lab := (@lab val).*)
 Notation __ := (tt).
@@ -149,25 +150,20 @@ Notation fresh_id := (fresh_seq (dom es)).
 
 Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 
-Definition wval (l : @Lab Val Val) : Val :=
-  if l is Write _ v then v else inh.
-
-Definition wpred (x : Loc) (w : E) :=
-   (Label.loc (lab es w) == Some x) && (Label.is_write (lab es w)).
-
-Arguments wpred /.
-
-Definition writes_seq x := [seq y <- dom es | wpred x y].
-
-Lemma ws_mem x w : w \in writes_seq x -> w \in fresh_id :: (dom es).
+Lemma ws_mem x w : 
+  w \in [events of es | is_write & with_loc x] -> w \in fresh_id :: (dom es).
 Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
 Lemma ws_wpred x w :
-  w \in writes_seq x ->
-  add_wr w fresh_id (lab es) (Read x (wval (lab es w))).
+  w \in [events of es | is_write & with_loc x] ->
+  add_wr w fresh_id (lab es) (Read x (odflt inh (value es w))).
 Proof.
   rewrite mem_filter=> /andP[] /=.
-  case: (lab es w)=> //= [?? /andP[]|?? /andP[/eqP[->]]] //; by rewrite ?eq_refl.
+  rewrite /is_write /with_loc /loc /value.
+  rewrite /Label.synch /Label.is_write /Label.value /Label.loc /=. 
+  case: (lab es w)=> l v //=. 
+  move=> /[swap] ? /eqP ->. 
+  by rewrite !eq_refl.
 Qed.
 
 Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
@@ -175,7 +171,7 @@ Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
     [seq
       let: wr       := sval w in
       let: w_in     := valP w in
-      let: read_lab := Read x (wval (lab es wr)) in
+      let: read_lab := Read x (odflt inh (value es wr)) in
       (
         add_new_event
           {| add_lb            := read_lab;
@@ -183,9 +179,8 @@ Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
              add_write_in_dom  := ws_mem   w_in;
              add_write_consist := ws_wpred w_in; |},
         wr
-      ) | w <- (seq_in (writes_seq x))]
+      ) | w <- seq_in [events of es | is_write & with_loc x]]
   else [::].
-
 
 Definition ces_seq_aux x pr := 
   [seq estr_w <- @es_seq x pr | 
@@ -207,7 +202,7 @@ Definition ces_seq x pr :=
     let: ces_w    := sval ces_w_mem in
     let: (ces, w) := ces_w in
     let: ces_mem  := valP ces_w_mem in 
-    (Consist (mem_ces_seq_aux ces_mem), wval (lab es w)) | 
+    (Consist (mem_ces_seq_aux ces_mem), odflt inh (value es w)) | 
     ces_w_mem <- seq_in (@ces_seq_aux x pr)].
 
 Arguments consist_new_Nread {_ _ _}.
