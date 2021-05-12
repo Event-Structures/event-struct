@@ -43,24 +43,23 @@ Import WfClosure.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-
 (* TODO: make opaque? *)
-Definition location := nat.
+Definition Loc := nat.
 
-Inductive label {rvalue wvalue : Type} :=
-| Read  of location & rvalue
-| Write of location & wvalue
+Inductive Lab {RVal WVal : Type} :=
+| Read  of Loc & RVal
+| Write of Loc & WVal
 | ThreadStart
 | ThreadEnd.
 
 Module Label.
 Section Label. 
 
-Context {value : eqType}.
+Context {Val : eqType}.
 
-Local Notation label := (@label value value).
+Local Notation Lab := (@Lab Val Val).
 
-Definition loc : label -> option location := 
+Definition loc : Lab -> option Loc := 
   fun lab =>
     match lab with
     | Write x _ => Some x
@@ -68,7 +67,7 @@ Definition loc : label -> option location :=
     | _         => None
     end.
 
-Definition val : label -> option value := 
+Definition value : Lab -> option Val := 
   fun lab =>
     match lab with
     | Write _ v => Some v
@@ -76,19 +75,19 @@ Definition val : label -> option value :=
     | _         => None
     end.
 
-Definition is_read : pred label := 
+Definition is_read : pred Lab := 
   fun l => if l is (Read _ _) then true else false.
 
-Definition is_write : pred label := 
+Definition is_write : pred Lab := 
   fun l => if l is (Write _ _) then true else false.
 
-Definition is_thrdstart : pred label := 
+Definition is_thrdstart : pred Lab := 
   fun l => if l is ThreadStart then true else false.
 
-Definition is_thrdend : pred label := 
+Definition is_thrdend : pred Lab := 
   fun l => if l is ThreadEnd then true else false.
 
-Definition eq_lab : rel label :=
+Definition eq_lab : rel Lab :=
   fun l1 l2 => 
     match l1, l2 with
     | Read  x a, Read  y b     => [&& a == b & x == y]
@@ -98,26 +97,27 @@ Definition eq_lab : rel label :=
     | _, _                     => false
     end.
 
-Lemma eq_labP : Equality.axiom Label.eq_lab.
+Lemma eq_labP : Equality.axiom eq_lab.
 Proof.
   case=> [v x [] * /=|v x []* /=|[]|[]]; try constructor=>//;
   by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
 Qed.
 
-Definition eq_loc : rel label := 
+Definition eq_loc : rel Lab := 
   orelpre loc eq_op.
 
-Definition eq_val : rel label := 
-  orelpre val eq_op.
+Definition eq_value : rel Lab := 
+  orelpre value eq_op.
 
 (* TODO: invent a better name? 
  *   `synch` clashes with `synchronizes-with` relation 
- *    from weak memory theory, which has 
- *    slightly different meaning. 
+ *    from weak memory theory, which has slightly different meaning. 
  *)
-Definition synch (l1 l2 : label) :=
+Definition synch (l1 l2 : Lab) :=
   match l1, l2 with
-  | Write x a, Read y b => (x == y) && (a == b)
+  (* write synchronizes with a read with the matching value *)
+  | Write x a, Read y b  => (x == y) && (a == b)
+  (* otherwise there is no synchronization *)
   | _, _ => false
   end.
 
@@ -128,18 +128,14 @@ End Label.
 
 Module Exports.
 Section Label.
-
 Context {V : eqType}.
-
-Canonical label_eqMixin := EqMixin (@eq_labP V).
-Canonical label_eqType  := Eval hnf in EqType (@label V V) label_eqMixin.
-
+Canonical Lab_eqMixin := EqMixin (@eq_labP V).
+Canonical Lab_eqType  := Eval hnf in EqType (@Lab V V) Lab_eqMixin.
 End Label.
 End Exports. 
 
 Module Syntax. 
 Notation "l1 \>> l2" := (Label.synch l1 l2) (no associativity, at level 20).
-Notation "l1 \>= l2" := (Label.synch l1 l2) (no associativity, at level 20).
 End Syntax. 
 
 End Label.
@@ -149,11 +145,11 @@ Import Label.Syntax.
 
 Section PrimeEventStructure.
 
-Context {value : eqType}.
+Context {Val : eqType}.
 
-Local Notation label := (@label value value).
+Local Notation Lab := (@Lab Val Val).
 
-Implicit Type l : label.
+Implicit Type l : Lab.
 
 (* ************************************************************************* *)
 (*     Exec Event Structure                                                  *)
@@ -164,7 +160,7 @@ Section ExecEventStructureDef.
 Context {disp : unit} (E : identType disp).
 
 (* lprf stands for label, predecessor, reads-from *)
-Record lab_pred_rfrom := Lprf {lab_prj : label; fpred_prj : E; frf_prj : E}.
+Record lab_pred_rfrom := Lprf {lab_prj : Lab; fpred_prj : E; frf_prj : E}.
 
 Definition prod_of_lprf lprf :=
   let: Lprf l p rf := lprf in (l, p, rf).
@@ -195,7 +191,7 @@ Structure fin_exec_event_struct := Pack {
   _          : [forall rs : seq_fset tt dom, 
                   let r := val rs in
                   let w := frf r  in
-                  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) >> (lab r))];
+                  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r))];
 }.
 
 End ExecEventStructureDef.
@@ -228,10 +224,32 @@ Notation lab := (lab es).
 Notation fpred := (fpred es).
 Notation frf := (frf es).
 
-Definition is_read := Label.is_read \o lab.
+Definition addr : E -> option Loc := 
+  Label.loc \o lab. 
 
-Definition is_write := Label.is_write \o lab.
+Definition value : E -> option Val := 
+  Label.value \o lab. 
 
+Definition is_read : pred E := 
+  Label.is_read \o lab. 
+
+Definition is_write : pred E := 
+  Label.is_write \o lab. 
+
+Definition is_thrdstart : pred E := 
+  Label.is_thrdstart \o lab. 
+
+Definition is_thrdend : pred E := 
+  Label.is_thrdend \o lab. 
+
+Definition eq_lab : rel E :=
+  relpre lab Label.eq_lab.  
+
+Definition eq_loc : rel E := 
+  relpre lab Label.eq_loc.  
+
+Definition eq_value : rel E := 
+  relpre lab Label.eq_value.
 
 Lemma labE e : lab e = lab_prj (lprf e).
 Proof. by []. Qed.
@@ -291,7 +309,7 @@ Proof.
 Qed.
 
 Lemma frf_cond r : let w := frf r in
-  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) >> (lab r)).
+  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r)).
 Proof.
   case: (boolP (r \in dom))=> [|/[dup] ndom /frf_dom->//]; rewrite /dom/frf/lab.
   - case: es => ????????? /= /forallP L; rewrite -(@seq_fsetE tt)=> I.

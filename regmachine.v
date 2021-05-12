@@ -59,24 +59,24 @@ Open Scope do_notation.
 
 Local Notation M := ModelMonad.ListMonad.t.
 
-Context {V : inhType} {disp} {E : identType disp}.
+Context {Val : inhType} {disp} {E : identType disp}.
 
 (*Notation n := (@n val).*)
-Notation exec_event_struct := (@fin_exec_event_struct V _ E).
-Notation cexec_event_struct := (@cexec_event_struct V _ E).
+Notation exec_event_struct := (@fin_exec_event_struct Val _ E).
+Notation cexec_event_struct := (@cexec_event_struct Val _ E).
 
 (*Notation lab := (@lab val).*)
 Notation __ := (tt).
 
 (* Registers --- thread local variables *)
-Definition reg := nat.
+Definition Reg := nat.
 
 (* Instruction Set *)
 Inductive instr :=
-| WriteReg of V   & reg 
-| ReadLoc  of reg & location
-| WriteLoc of V   & location 
-| CJmp     of reg & nat 
+| WriteReg of Val & Reg 
+| ReadLoc  of Reg & Loc
+| WriteLoc of Val & Loc 
+| CJmp     of Reg & nat 
 | Stop.
 
 Definition seqprog := seq instr.
@@ -87,7 +87,7 @@ Definition parprog := seq seqprog.
 
 Record thrd_state := Thrd_state {
   ip     : nat;
-  regmap :> {fsfun reg -> V with inh}
+  regmap :> {fsfun Reg -> Val with inh}
 }.
 
 Definition eq_thrd_state st st' :=
@@ -112,7 +112,7 @@ Record config := Config {
 Notation inth := (nth Stop).
 
 Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
-  (option (@label unit V) * (V -> thrd_state))%type :=
+  (option (@Lab unit Val) * (Val -> thrd_state))%type :=
   let: {| ip := ip; regmap := rmap |} := st in
   if ip == 0 then
     (Some ThreadStart, fun=> {| ip := 1; regmap := rmap |})
@@ -133,7 +133,7 @@ Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
     | Stop         => (None, fun=> st)
     end.
 
-Definition ltr_thrd_sem (l : option (@label V V)) pgm st1 st2 : bool :=
+Definition ltr_thrd_sem (l : option (@Lab Val Val)) pgm st1 st2 : bool :=
   match thrd_sem pgm st1, l with
   | (Some (Write x v), st), Some (Write y u) => [&& x == y, v == u & st inh == st2]
   | (Some (Read  x _), st), Some (Read  y u) => (x == y) && (st u == st2)
@@ -149,10 +149,10 @@ Notation fresh_id := (fresh_seq (dom es)).
 
 Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 
-Definition wval (l : @label V V) : V :=
+Definition wval (l : @Lab Val Val) : Val :=
   if l is Write _ v then v else inh.
 
-Definition wpred (x : location) (w : E) :=
+Definition wpred (x : Loc) (w : E) :=
    (Label.loc (lab es w) == Some x) && (Label.is_write (lab es w)).
 
 Arguments wpred /.
@@ -213,8 +213,8 @@ Definition ces_seq x pr :=
 Arguments consist_new_Nread {_ _ _}.
 
 Definition add_hole
-  (l : @label unit V) pr :
-  seq (cexec_event_struct * V) :=
+  (l : @Lab unit Val) pr :
+  seq (cexec_event_struct * Val) :=
   if pr \in fresh_id :: dom es =P true is ReflectT pr_mem then
     match l with
     | Write x v => 

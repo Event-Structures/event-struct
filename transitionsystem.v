@@ -47,8 +47,8 @@ Open Scope fset_scope.
 
 Import Label.Syntax.
 
-Definition add_wr {E V : eqType} e1 e2 (lab : E -> @label V V) l :=
-  (e1 == e2) && (~~ Label.is_read l) || ((lab e1) >> l).
+Definition add_wr {E V : eqType} e1 e2 (lab : E -> @Lab V V) l :=
+  (e1 == e2) && (~~ Label.is_read l) || ((lab e1) \>> l).
 
 Arguments add_wr /.
 
@@ -59,9 +59,9 @@ Context {V : eqType} {disp} (E : identType disp).
 Notation exec_event_struct := (@fin_exec_event_struct V disp E).
 Notation cexec_event_struct := (@cexec_event_struct V disp E).
 
-Notation label := (@label V V).
+Notation label := (@Lab V V).
 
-Implicit Types (x : location) (a : V) (es : exec_event_struct).
+Implicit Types (x : Loc) (a : V) (es : exec_event_struct).
 
 (* Section with definitions for execution graph with added event *)
 Section AddEvent.
@@ -154,7 +154,7 @@ Fact add_frf_prop :
   [forall rs : seq_fset tt (fresh_id :: dom),
     let r := val rs in
     let w := add_frf r in
-    (w == r) && ~~ Label.is_read (add_lab r) || (add_lab w) >> (add_lab r)].
+    (w == r) && ~~ Label.is_read (add_lab r) || (add_lab w) \>> (add_lab r)].
 Proof.
   apply/forallP=> [[r /=]]; rewrite (@seq_fsetE tt)=> ?.
   rewrite /add_frf /add_lab /add_lprf !fsfun_withE /=.
