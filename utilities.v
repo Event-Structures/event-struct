@@ -116,6 +116,8 @@ Notation "'[' '1' '!' rules ']'"     := (ltac:(rewrite rules))
   (at level 0, rules at level 200, only parsing) : ssripat_scope.
 Notation "'[' '!' rules ']'"         := (ltac:(rewrite !rules))
   (at level 0, rules at level 200, only parsing) : ssripat_scope.
+Notation "'[' '-!' rules ']'"         := (ltac:(rewrite -!rules))
+  (at level 0, rules at level 200, only parsing) : ssripat_scope.
 Notation "'[' 'apply' ']'" := (ltac:(let f := fresh "_top_" in move=> f {}/f))
   (at level 0, only parsing) : ssripat_scope.
  (* we try to preserve the naming by matching the names from the goal *)
@@ -216,6 +218,7 @@ Lemma seq_in_mem s x (p : x \in s) :
 Proof. by rewrite seq_inE mem_pmap_sub. Qed.
 
 End SeqIn.
+
 
 (* ************************************************************************** *)
 (*     Missing definitions, notations and lemmas for Relation Algebra         *)
@@ -693,3 +696,15 @@ Qed.
 
 End RelationOnSeq.
 
+
+Section OptionUtils. 
+
+Context {T rT : Type}.
+
+Definition opreim (f : T -> option rT) (p : pred rT) : simpl_pred T := 
+  [pred x | match f x with Some x => p x | _ => false end]. 
+
+Definition orelpre (f : T -> option rT) (r : rel rT) : simpl_rel T := 
+  [rel x y | match f x, f y with Some x, Some y => r x y | _, _ => false end].
+
+End OptionUtils.
