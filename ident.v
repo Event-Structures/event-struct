@@ -119,8 +119,13 @@ Proof.
   move: (ident0_le a); by case: (comparable_ltgtP C).
 Qed.
 
-
 Definition fresh_seq s := fresh (head ident0 s).
+
+Lemma ident0_fresh_seq s: ident0 < fresh_seq s.
+Proof.
+  case: s=> [|??]; first exact/fresh_lt.
+  exact/(le_lt_trans _ (fresh_lt _))/ident0_le.
+Qed.
 
 Section Add_Sorted.
 

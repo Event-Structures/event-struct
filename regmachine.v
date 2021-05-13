@@ -148,7 +148,7 @@ Notation fresh_id := (fresh_seq (dom es)).
 Arguments add_label_of_Nread {_ _ _ _} _ {_}.
 
 Lemma ws_mem x w : 
-  w \in [events of es | is_write & with_loc x] -> w \in ident0 :: (dom es).
+  w \in [events of es | is_write & with_loc x] -> w \in dom es.
 Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
 Lemma ws_wpred x w :
@@ -164,7 +164,7 @@ Proof.
 Qed.
 
 Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
-  if pr \in ident0 :: dom es =P true is ReflectT pr_mem then
+  if pr \in dom es =P true is ReflectT pr_mem then
     [seq
       let: wr       := sval w in
       let: w_in     := valP w in
@@ -207,7 +207,7 @@ Arguments consist_new_Nread {_ _ _}.
 Definition add_hole
   (l : @Lab unit Val) pr :
   seq (cexec_event_struct * Val) :=
-  if pr \in ident0 :: dom es =P true is ReflectT pr_mem then
+  if pr \in dom es =P true is ReflectT pr_mem then
     match l with
     | Write x v => 
       [:: (Consist (consist_new_Nread es pr (Write x v) erefl pr_mem), v)]  

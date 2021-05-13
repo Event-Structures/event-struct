@@ -207,13 +207,13 @@ Structure fin_exec_event_struct := Pack {
                       fpred_prj := e;
                       frf_prj   := e |} };
   dom_sorted : sorted (>%O) dom;
-  Ndom0      : ident0 \notin dom;
-  _          : finsupp lprf == seq_fset tt dom;
+  dom0       : ident0 \in dom;
+  _          : finsupp lprf == (seq_fset tt dom `\ ident0);
   lab e      := lab_prj (lprf e);
   fpred e    := fpred_prj (lprf e);
   frf e      := frf_prj (lprf e);
   _          : [forall e : finsupp lprf, fpred (val e) < val e];
-  _          : [forall e : finsupp lprf, frf (val e) < val e];
+  _          : [forall e : finsupp lprf, frf   (val e) < val e];
   _          : [forall rs : seq_fset tt dom, 
                   let r := val rs in
                   let w := frf r  in
@@ -344,10 +344,10 @@ Lemma fpred_prj_ext e f:
 Proof. rewrite /fpred; by case: (lprf e). Qed.
 
 
-Lemma lprf_dom : (finsupp lprf) =i dom.
+Lemma lprf_dom : (finsupp lprf) =i [seq x <- dom | x != ident0].
 Proof. 
   case: es=> ???? /[dup] /fset_eqP + * x /=.
-  by move/(_ x)=>->; rewrite seq_fsetE. 
+  by move/(_ x)=>->; rewrite ?inE mem_filter seq_fsetE. 
 Qed.
 
 (***** Labels and Freshness *****)
@@ -357,17 +357,16 @@ Notation fresh_id := (fresh_seq dom).
 
 
 Lemma lab0 : lab ident0 = ThreadEnd.
-Proof. by rewrite /lab fsfun_dflt // lprf_dom Ndom0. Qed.
+Proof. by rewrite /lab fsfun_dflt // lprf_dom mem_filter eq_refl. Qed.
 
 Lemma lab_fresh : lab fresh_id = ThreadEnd.
-Proof. by rewrite /lab fsfun_dflt // lprf_dom fresh_seq_notin ?dom_sorted. Qed.
+Proof. 
+  rewrite /lab fsfun_dflt // lprf_dom mem_filter negb_and fresh_seq_notin //.
+  exact/dom_sorted.
+Qed.
 
 Lemma ident0_fresh: ident0 < fresh_id.
-Proof.
-  move: (Ndom0 es); rewrite /fresh_id ident0_mem. case: dom=> /= [_|??/andP[]].
-  - exact/fresh_lt.
-  by move=> /(lt_trans)/(_ (fresh_lt _)).
-Qed.
+Proof. exact/ident0_fresh_seq. Qed.
 
 End LabelsFresh.
 
@@ -377,18 +376,26 @@ End LabelsFresh.
 
 Lemma fpred_dom e :
   e \notin dom -> fpred e = e.
-Proof. by move=> ndom; rewrite /fpred fsfun_dflt // lprf_dom. Qed.
+Proof. 
+  move=> ndom.
+  by rewrite /fpred fsfun_dflt // lprf_dom mem_filter negb_and ndom.
+Qed.
 
-Lemma fpred_dom_lt: {in dom, forall e, fpred e < e}.
+Lemma fpred0: fpred ident0 = ident0.
 Proof.
-  case: es=> ???? /[dup] /fset_eqP I; rewrite /eventstructure.fpred /==> ? /forallP + * x.
-  by move: (I x); rewrite seq_fsetE=><- /[swap] {I}I /(_ [`I]).
+  by rewrite /fpred fsfun_dflt // lprf_dom mem_filter eq_refl.
+Qed.
+
+Lemma fpred_dom_lt: {in finsupp lprf, forall e, fpred e < e}.
+Proof.
+  case: es=> ????; rewrite /eventstructure.fpred /==> ? /forallP + * x I.
+  by move/(_ [` I]).
 Qed.
 
 Lemma fpred_le e: fpred e <= e.
 Proof.
-  case: (boolP ( e \in dom))=> [/fpred_dom_lt|/fpred_dom->];
-  by rewrite (lt_neqAle,lexx) // => /andP[].
+  case: (boolP (e \in finsupp lprf))=> [/fpred_dom_lt/ltW//|?].
+  by rewrite /fpred fsfun_dflt .
 Qed.
 
 (* ************************************************************************* *)
@@ -396,8 +403,28 @@ Qed.
 (* ************************************************************************* *)
 
 Lemma frf_dom e :
-  e \notin dom -> frf e = e.
-Proof. by move=> ndom; rewrite /frf fsfun_dflt // lprf_dom. Qed.
+e \notin dom -> frf e = e.
+Proof. 
+  move=> ndom.
+  by rewrite /frf fsfun_dflt // lprf_dom mem_filter negb_and ndom.
+Qed.
+
+Lemma frf0: frf ident0 = ident0.
+Proof.
+  by rewrite /frf fsfun_dflt // lprf_dom mem_filter eq_refl.
+Qed.
+
+Lemma frf_dom_lt: {in finsupp lprf, forall e, frf e < e}.
+Proof.
+  case: es=> ?????; rewrite /eventstructure.frf /==> ? /forallP + * x I.
+  by move/(_ [` I]).
+Qed.
+
+Lemma frf_le e: frf e <= e.
+Proof.
+  case: (boolP (e \in finsupp lprf))=> [/frf_dom_lt/ltW//|?].
+  by rewrite /frf fsfun_dflt .
+Qed.
 
 Lemma frf_cond r : r \in dom -> let w := frf r in
   ((w == ident0) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r)).
@@ -407,28 +434,15 @@ Proof.
   by move=> ?????? /forallP /[swap] L /(_ [`L]) /=.
 Qed.
 
-Lemma frf_dom_lt: {in dom, forall e, frf e < e}.
-Proof.
-  case: es=> ???? /[dup] /fset_eqP I; rewrite /eventstructure.frf /==> ?? /forallP + * x.
-  by move: (I x); rewrite seq_fsetE=><- /[swap] {I}I /(_ [`I]).
-Qed.
-
-Lemma frf_le r : frf r <= r.
-Proof.   
-  case: (boolP (r \in dom))=> [/frf_dom_lt|/frf_dom->];
-  by rewrite (lt_neqAle,lexx) // => /andP[].
-Qed.
-
-Lemma frf_lt {e1 e2} : e1 < e2 -> frf e1 < e2.
-Proof.
-  by case: (boolP (e1 \in dom))=> [/frf_dom_lt/lt_trans/[apply]|/frf_dom->].
-Qed.
-
 Definition fica e : ModelNondet.list E := [:: frf e; fpred e].
 
 Lemma fica_dom e :
   e \notin dom -> fica e = [:: e; e].
 Proof. by move=> nI; rewrite /fica frf_dom // fpred_dom. Qed.
+
+Lemma fica_finsupp e :
+  e \notin finsupp lprf -> fica e = [:: e; e].
+Proof. by move=> ?; rewrite /fica /frf /fpred ?fsfun_dflt //. Qed.
 
 Lemma fica_ge : (@sfrel _ monad.id_ndmorph E) fica ≦ (>=%O : rel E).
 Proof. 
@@ -507,6 +521,12 @@ Lemma ica_notdom e1 e2:
   e1 == e2.
 Proof. by move=> ?; rewrite icaE /= fica_dom // !inE orbb. Qed.
 
+Lemma ica_notfinsupp e1 e2:
+  e2 \notin finsupp lprf ->
+  ica e1 e2 ->
+  e1 == e2.
+Proof. by move=> ?; rewrite icaE /= fica_finsupp // !inE orbb. Qed.
+
 Lemma ca_refl {e} : ca e e.
 Proof. exact: rt_closure_refl. Qed.
 
@@ -556,6 +576,14 @@ Lemma ca_notdom e1 e2:
 Proof.
   move/closure_n1P; elim=> // {}e2 e3 + _ + N3.
   by move=> /(ica_notdom N3) /eqP-> /(_ N3).
+Qed.
+
+Lemma ca_notfinsupp e1 e2:
+  ca e1 e2 -> e2 \notin finsupp lprf ->
+  e1 == e2.
+Proof.
+  move/closure_n1P; elim=> // {}e2 e3 + _ + N3.
+  by move=> /(ica_notfinsupp N3) /eqP-> /(_ N3).
 Qed.
 
 Definition seqpred_ca := wsuffix fica_gt.
@@ -703,8 +731,9 @@ Qed.
 
 Lemma cfx0 e: ~~ cf e ident0.
 Proof.
-  apply/negP=> /cfP[?[?[[?/ca_notdom/(_ (Ndom0 _))/eqP->/and4P[]]]]].
-  by rewrite (fpred_dom (Ndom0 _)) ltxx.
+  apply/negP=> /cfP[?[?[[?/ca_notfinsupp]]]].
+  rewrite lprf_dom mem_filter eq_refl=> /(_ erefl)/eqP-> /and4P[]. 
+  by rewrite fpred0 ltxx.
 Qed.
 
 
