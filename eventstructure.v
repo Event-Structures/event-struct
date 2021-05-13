@@ -30,6 +30,9 @@ From event_struct Require Import utilities relations wftype ident.
 (*      ca == non-strict casuality relation, i.e. the reflexive-transitive    *)
 (*              closure of ica.                                               *)
 (* e1 # e2 == e1 and e2 are conflicting events.                               *)
+(* ext f   == if we have some function f : E -> E we can extend it to the     *)
+(*            function of type lad_pred_rfrom -> lad_pred_rfrom, applying f   *)
+(*            just to the 2nd and 3rd components                              *)
 (*                                                                            *)
 (* One can prove irreflexivity of the conflict relation under the assumption  *)
 (* that reads are not in conflict with the writes they read from:             *)
@@ -164,6 +167,23 @@ Implicit Type l : Lab.
 
 (* lprf stands for label, predecessor, reads-from *)
 Record lab_pred_rfrom := Lprf {lab_prj : Lab; fpred_prj : E; frf_prj : E}.
+
+Definition ext (f : E -> E) (lprf : lab_pred_rfrom) :=
+  let: Lprf l p r := lprf in
+  Lprf l (f p) (f r).
+
+Lemma ext_id: ext id =1 id.
+Proof. by case. Qed.
+
+Lemma ext_comp f g: ext (f \o g) =1 ext f \o ext g.
+Proof. by case. Qed.
+
+Lemma ext_can f g: cancel f g -> cancel (ext f) (ext g).
+Proof. move=> ? [/= ???]; exact/congr2. Qed.
+
+Lemma bij_ext f: bijective f -> bijective (ext f).
+Proof. case=> g *; exists (ext g); exact/ext_can. Qed.
+
 
 Definition prod_of_lprf lprf :=
   let: Lprf l p rf := lprf in (l, p, rf).
