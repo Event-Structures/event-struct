@@ -1,11 +1,11 @@
-From RelationAlgebra Require Import lattice monoid rel kat_tac kleene.
+From RelationAlgebra Require Import lattice monoid rel kat_tac kat kleene.
 From mathcomp Require Import ssreflect ssrbool ssrfun eqtype choice.
 From event_struct Require Import utilities.
 
 (*****************************************************************************)
-(* General theory of rewriting systems                                       *)
+(* exlaberal theory of rewriting systems                                       *)
 (* inspired by "Term Rewriting and All That"                                 *)
-(* Fisrt section called Commutation. Here the theory of general rewriting    *)
+(* Fisrt section called Commutation. Here the theory of exlaberal rewriting    *)
 (* systems with two rewriting rules derived:                                 *)
 (* We define several properties of rewriting systems and prove some          *)
 (* relationships between them                                                *)
@@ -37,7 +37,7 @@ From event_struct Require Import utilities.
 (*                                       implies commute (~>) (>>)           *)
 (*   dconfl_confl                        <-> diamond_confluent (~>) implies  *)
 (*                                       confluence (~>)                     *)
-(* In the EqvRewriting we have the general theory of the rewriting system    *)
+(* In the EqvRewriting we have the exlaberal theory of the rewriting system    *)
 (* with some equivalence relation.                                           *)
 (* eqv_diamond_confluent (~>) (~~) == version of the diamond property for    *)
 (*                         the rewriting systems with equivalence: it states *)
@@ -55,7 +55,7 @@ From event_struct Require Import utilities.
 (* In the EqvLabRewriting we proved the analogue of Commuation Union Lemma   *)
 (* Originally this lemma states that if one have two relations ~> and >> and *)
 (* they statisfy diamond_commute (~>) (>>), then (~> ∪ >>) is confluent.     *)
-(* But want to generalize this lemma in two steps:                           *)
+(* But want to exlaberalize this lemma in two steps:                           *)
 (*   1) let us have an arbitrary number of relations -- we model it by       *)
 (*      consindering one labeling relation: r : L -> hrel S S, where L is an *)
 (*      arbitrary label Type                                                 *)
@@ -67,11 +67,11 @@ From event_struct Require Import utilities.
 (*                         some s4 and s4' s.t. s2 ~> s4, s3 ~> s4' and      *)
 (*                         that s1 ~> s2 and s1 >> s3 implies existance of   *)
 (*                         some s4 and s4' s.t. s2 ~> s4, s3 >> s4' and      *)
-(*                        gen r s1 s2 == ∃ l, s.t. r l s1 s2 holds           *)
+(*                        exlab r s1 s2 == ∃ l, s.t. r l s1 s2 holds           *)
 (*            eqv_diamoind_commute r e <-> if forall two labels l₁ l₂ we now *)
 (*                         that eqv_diamond_commute (r l1) (r l2) (~~) and   *)
-(*                         diamond_commute (gen r) (~~) than gen r is        *)
-(*                         conluent w.r.t (~~) i.e eqv_confluent (gen r) (~~)*)
+(*                         diamond_commute (exlab r) (~~) than exlab r is        *)
+(*                         conluent w.r.t (~~) i.e eqv_confluent (exlab r) (~~)*)
 (* Consider we have some labeled relation r (statisfying all properties      *)
 (* above), and some equivalence ~~. If r has type L -> hrel S S, and T is a  *)
 (* S's subType, forall relation rel : hrel S S we can define                 *)
@@ -88,7 +88,7 @@ From event_struct Require Import utilities.
 (*                        r l1 t1 t3, then for all s s.t. r l2 t3 s we have  *)
 (*                        that p s holds                                     *)
 (*    sub_eqv_comm_union r (~~) <-> it two properties above holds than       *)
-(*                        eqv_confluent (gen (sub ∘ r)) (sub ~~)             *)
+(*                        eqv_confluent (exlab (sub ∘ r)) (sub ~~)             *)
 (*****************************************************************************)
 
 Section Commutation.
@@ -161,18 +161,18 @@ Hypothesis eqv_refl  : 1 ≦ e.
 
 Definition eqv_diamond_confluent := forall s1 s2 s3, 
   r s1 s2 -> r s1 s3 -> 
-  exists s4 s4', (r s2 s4 * r s3 s4' * e s4 s4')%type.
+  exists s4 s4', [/\ r s2 s4, r s3 s4' & e s4 s4'].
 
 Definition eqv_confluent := forall s1 s2 s3,
   r^+ s1 s2 -> r^+ s1 s3 -> 
-  exists s4 s4', (r^+ s2 s4 * r^+ s3 s4' * e s4 s4')%type.
+  exists s4 s4', [/\ r^+ s2 s4, r^+ s3 s4' & e s4 s4'].
 
 Hypothesis edconfl : eqv_diamond_confluent.
 Hypothesis edcomm : diamond_commute e r.
 
 Lemma dcomm_rw_rw_eqv : diamond_commute r (r ⋅ e).
 Proof.
-  move=> s1 s2 s3 /= /edconfl D [s3' {D}/D[s4'' [s4' [[? R ? /edcomm]]]]].
+  move=> s1 s2 s3 /= /edconfl D [s3' {D}/D[s4'' [s4' [? R ? /edcomm]]]].
   case/(_ _ R)=> x ??; exists x=> //; exists s4''=> //; exact/(eqv_trans _ s4').
 Qed.
 
@@ -206,9 +206,9 @@ Proof.
   by case/rw_eqv_itr=> y; exists y, x.
 Qed.
 
-End EqvRewriting.
+End EqvRewriting. 
 
-Definition gen {T L : Type} (r : L -> hrel T T) : hrel T T := 
+Definition exlab {T L : Type} (r : L -> hrel T T) : hrel T T := 
   fun t1 t2 => exists l, r l t1 t2.
 
 
@@ -222,15 +222,15 @@ Hypothesis eqv_refl  : 1 ≦ e.
 
 Definition eqv_diamond_commute (r1 r2 e : hrel S S) := forall s1 s2 s3, 
    r1 s1 s2 -> r2 s1 s3 -> 
-   exists s4 s4', (r2 s2 s4 * r1 s3 s4' * e s4 s4')%type.
+   exists s4 s4', [/\ r2 s2 s4, r1 s3 s4' & e s4 s4'].
 
 
 Hypothesis ledrr : forall l1 l2, (eqv_diamond_commute (r l1) (r l2) e).
-Hypothesis leder  : diamond_commute e (gen r).
+Hypothesis leder  : diamond_commute e (exlab r).
 
-Theorem eqv_comm_union : eqv_confluent (gen r) e.
+Theorem eqv_comm_union : eqv_confluent (exlab r) e.
 Proof.
-  apply/confl_eqv => // ???[l1 /ledrr C [l2 /C [s4 [s4' [[*]]]]]].
+  apply/confl_eqv => // ???[l1 /ledrr C [l2 /C [s4 [s4' [*]]]]].
   - exists s4, s4'; do ? split=> //; by [exists l2| exists l1].
 Qed.
 
@@ -238,43 +238,47 @@ End EqvLabRewriting.
 
 Section SubRewriting.
 
-Context {S : eqType} {L : Type} {p : pred S} {T : subType p}.
+Local Open Scope ra_terms.
 
-Definition sub (r : hrel S S) : hrel T T :=
-  fun t1 t2 => r (val t1) (val t2).
+Context {S : eqType} {L : Type} {p : rel.dset S}.
+
+Definition sub (r : hrel S S) : hrel S S := r ⊓ (p × p).
 
 Context (r : L -> hrel S S) (e : hrel S S).
 
-Implicit Types (t : T) (s : S) (l : L).
+Implicit Types (s : S) (l : L).
 
 Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
 Hypothesis ledrr : forall l1 l2, eqv_diamond_commute (r l1) (r l2) e.
-Hypothesis leder : diamond_commute e (gen r).
+Hypothesis leder : diamond_commute e (exlab r).
 
-Definition eqv_respect_p := forall s (t : T), e (val t) s -> p s.
+Definition eqv_respect_p := [p] ⋅ e ≦ e ⋅ [p].
 
-Definition r_respect_p := forall l1 l2 t1 t2 t3 s,
-  sub (r l1) t1 t2 -> 
-  sub (r l2) t1 t3 ->
-  r l2 (val t2) s -> p s.
+Definition r_respect_p := forall l1 l2 s1 s2 s3 s,
+  sub (r l1) s1 s2 -> 
+  sub (r l2) s1 s3 ->
+  r l2 s2 s -> p s.
 
 Hypothesis eqv_p : eqv_respect_p.
 Hypothesis eqv_r : r_respect_p.
 
-Theorem sub_eqv_comm_union : eqv_confluent (gen (sub \o r)) (sub e).
+Lemma r_exlab l: r l ≦ exlab r.
+Proof. by exists l. Qed.
+
+Theorem sub_eqv_comm_union : eqv_confluent (exlab (sub \o r)) e.
 Proof.
-  apply/eqv_comm_union.
-  - rewrite /sub=>> /eqv_trans; exact.
-  - rewrite /sub=>> /eqv_symm; exact.
-  - rewrite /sub=> x1 x2 /=->; exact/eqv_refl.
-  - move=> ????? /= /[dup] /eqv_r R /ledrr E /[dup] /R P /E[s4 [? [[/[dup]]]]].
-    move=> /P ps4 ?? /[dup]; rewrite -{1}[s4](@SubK S p T)=> /eqv_p ps4' ?.
-    by exists (Sub _ ps4), (Sub _ ps4'); do ? split; rewrite /sub ?SubK //.
-  move=> ??? /= /leder /[apply][[? [l ?] /[dup] /eqv_p ps ?]].
-  by exists (Sub _ ps); first exists l; rewrite /sub /= ?SubK.
+  apply/eqv_comm_union=> //.
+  - move=> ????? /= /[dup] /eqv_r R[/ledrr] E /andP[??] /[dup]/R P[/E[s4 [x]]].
+    case=> /[dup] /P ps4 ?? /[dup] ?.
+    have/eqv_p[??[->??/andP[??]]]: ([p] ⋅ e) s4 x by exists s4.
+    exists s4, x; do ? split=> //; exact/andP.
+  move=> s1 s2 s /= /[dup] ? /leder E [? [/r_exlab /E [x [l ?? /andP[??]]]]].
+  have/eqv_p[??[->?]]: ([p] ⋅ e) s  x  by exists s.
+  have/eqv_p[??[->?]]: ([p] ⋅ e) s1 s2 by exists s1.
+  exists x=> //; exists l; split=> //; exact/andP.
 Qed.
 
 End SubRewriting.
