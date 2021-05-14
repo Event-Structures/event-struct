@@ -30,6 +30,9 @@ From event_struct Require Import utilities relations wftype ident.
 (*      ca == non-strict casuality relation, i.e. the reflexive-transitive    *)
 (*              closure of ica.                                               *)
 (* e1 # e2 == e1 and e2 are conflicting events.                               *)
+(* ext f   == if we have some function f : E -> E we can extend it to the     *)
+(*            function of type lad_pred_rfrom -> lad_pred_rfrom, applying f   *)
+(*            just to the 2nd and 3rd components                              *)
 (*                                                                            *)
 (* One can prove irreflexivity of the conflict relation under the assumption  *)
 (* that reads are not in conflict with the writes they read from:             *)
@@ -165,6 +168,23 @@ Implicit Type l : Lab.
 (* lprf stands for label, predecessor, reads-from *)
 Record lab_pred_rfrom := Lprf {lab_prj : Lab; fpred_prj : E; frf_prj : E}.
 
+Definition ext (f : E -> E) (lprf : lab_pred_rfrom) :=
+  let: Lprf l p r := lprf in
+  Lprf l (f p) (f r).
+
+Lemma ext_id: ext id =1 id.
+Proof. by case. Qed.
+
+Lemma ext_comp f g: ext (f \o g) =1 ext f \o ext g.
+Proof. by case. Qed.
+
+Lemma ext_can f g: cancel f g -> cancel (ext f) (ext g).
+Proof. move=> ? [/= ???]; exact/congr2. Qed.
+
+Lemma bij_ext f: bijective f -> bijective (ext f).
+Proof. case=> g *; exists (ext g); exact/ext_can. Qed.
+
+
 Definition prod_of_lprf lprf :=
   let: Lprf l p rf := lprf in (l, p, rf).
 
@@ -182,22 +202,27 @@ Local Open Scope fset_scope.
 
 Structure fin_exec_event_struct := Pack {
   dom        : seq E;
-  dom_sorted : sorted (>%O) dom;
   lprf       : { fsfun for fun e =>
-                   {| lab_prj := ThreadEnd; fpred_prj := e; frf_prj := e |} };
-  _          : finsupp lprf `<=` seq_fset tt dom;
+                   {| lab_prj   := ThreadEnd;
+                      fpred_prj := e;
+                      frf_prj   := e |} };
+  dom_sorted : sorted (>%O) dom;
+  dom0       : ident0 \in dom;
+  _          : finsupp lprf == (seq_fset tt dom `\ ident0);
   lab e      := lab_prj (lprf e);
   fpred e    := fpred_prj (lprf e);
   frf e      := frf_prj (lprf e);
-  _          : [forall e : finsupp lprf, fpred (val e) <= val e];
-  _          : [forall e : finsupp lprf, frf (val e) <= val e];
+  _          : [forall e : finsupp lprf, fpred (val e) < val e];
+  _          : [forall e : finsupp lprf, frf   (val e) < val e];
   _          : [forall rs : seq_fset tt dom, 
                   let r := val rs in
                   let w := frf r  in
-                  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r))];
+                  ((w == ident0) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r))];
 }.
 
 End ExecEventStructureDef.
+
+Arguments dom_sorted {_ _ _ _}.
 
 Section ExecEventStructEq. 
 
@@ -209,15 +234,11 @@ Definition eq_es (es es' : fin_exec_event_struct E Val) : bool :=
 Lemma eqesP : Equality.axiom eq_es.
 Proof.
   move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
-  case: x=> d1 ds1 l1 s1 lab1; rewrite {}/lab1 => pc1 rc1 rc1'.
-  case: y=> d2 ds2 l2 s2 lab2; rewrite {}/lab2 => pc2 rc2 rc2'.
+  case: x=> d1 l1 i1 s1 ds1 lab1; rewrite {}/lab1 => pc1 rc1 rc1'.
+  case: y=> d2 l2 i2 s2 ds2 lab2; rewrite {}/lab2 => pc2 rc2 rc2'.
   case/andP=> /= /eqP E1 /eqP E2.
-  move: E1 E2 ds1 s1 pc1 rc1 rc1' ds2 s2 pc2 rc2 rc2'; (do 2 case: _ /).
-  move=> ds1 s1 pc1 rc1 rc1' ds2 s2 pc2 rc2 rc2'.
-  suff Eqs: (((ds1 = ds2) * (s1 = s2)) * ((pc1 = pc2) * (rc1 = rc2))
-            * (rc1' = rc2'))%type.
-  - by rewrite ?Eqs.
-  do ? split; exact: eq_irrelevance.
+  move: E1 E2 ds1 i1 s1 s2 pc1 rc1 rc1' ds2 i2 pc2 rc2 rc2'; (do 2 case: _ /).
+  move=> *; congr Pack; exact/eq_irrelevance.
 Qed.
 
 End ExecEventStructEq. 
@@ -314,9 +335,19 @@ Proof. by []. Qed.
 Lemma frfE e : frf e = frf_prj (lprf e).
 Proof. by []. Qed.
 
-Lemma lprf_dom : {subset (finsupp lprf) <= dom}.
+Lemma frf_prj_ext e f: 
+  frf_prj (ext f (lprf e)) = f (frf e).
+Proof. rewrite /frf; by case: (lprf e). Qed.
+
+Lemma fpred_prj_ext e f: 
+  fpred_prj (ext f (lprf e)) = f (fpred e).
+Proof. rewrite /fpred; by case: (lprf e). Qed.
+
+
+Lemma lprf_dom : (finsupp lprf) =i [seq x <- dom | x != ident0].
 Proof. 
-  case: es=> /= ??? /fsubsetP /= L ???? /L; by rewrite (@seq_fsetE tt).
+  case: es=> ???? /[dup] /fset_eqP + * x /=.
+  by move/(_ x)=>->; rewrite ?inE mem_filter seq_fsetE. 
 Qed.
 
 (***** Labels and Freshness *****)
@@ -324,11 +355,18 @@ Section LabelsFresh.
 
 Notation fresh_id := (fresh_seq dom).
 
+
+Lemma lab0 : lab ident0 = ThreadEnd.
+Proof. by rewrite /lab fsfun_dflt // lprf_dom mem_filter eq_refl. Qed.
+
 Lemma lab_fresh : lab fresh_id = ThreadEnd.
-Proof.
-  rewrite /lab fsfun_dflt //; apply/negP=> /lprf_dom; apply/negP.
-  by rewrite fresh_seq_notin ?dom_sorted.
+Proof. 
+  rewrite /lab fsfun_dflt // lprf_dom mem_filter negb_and fresh_seq_notin //.
+  exact/dom_sorted.
 Qed.
+
+Lemma ident0_fresh: ident0 < fresh_id.
+Proof. exact/ident0_fresh_seq. Qed.
 
 End LabelsFresh.
 
@@ -338,16 +376,26 @@ End LabelsFresh.
 
 Lemma fpred_dom e :
   e \notin dom -> fpred e = e.
-Proof.
-  move=> ndom; rewrite /fpred fsfun_dflt //; move: ndom.
-  by apply/contra/lprf_dom.
+Proof. 
+  move=> ndom.
+  by rewrite /fpred fsfun_dflt // lprf_dom mem_filter negb_and ndom.
 Qed.
 
-Lemma fpred_le e : fpred e <= e.
+Lemma fpred0: fpred ident0 = ident0.
 Proof.
-  rewrite /fpred; case (boolP (e \in finsupp lprf)).
-  - case: es=> ??????? /= /forallP L ?? I; rewrite -[e]/(fsval [` I]); exact/L.
-  by move=> ndom; rewrite /fpred fsfun_dflt.
+  by rewrite /fpred fsfun_dflt // lprf_dom mem_filter eq_refl.
+Qed.
+
+Lemma fpred_dom_lt: {in finsupp lprf, forall e, fpred e < e}.
+Proof.
+  case: es=> ????; rewrite /eventstructure.fpred /==> ? /forallP + * x I.
+  by move/(_ [` I]).
+Qed.
+
+Lemma fpred_le e: fpred e <= e.
+Proof.
+  case: (boolP (e \in finsupp lprf))=> [/fpred_dom_lt/ltW//|?].
+  by rewrite /fpred fsfun_dflt .
 Qed.
 
 (* ************************************************************************* *)
@@ -355,37 +403,46 @@ Qed.
 (* ************************************************************************* *)
 
 Lemma frf_dom e :
-  e \notin dom -> frf e = e.
+e \notin dom -> frf e = e.
+Proof. 
+  move=> ndom.
+  by rewrite /frf fsfun_dflt // lprf_dom mem_filter negb_and ndom.
+Qed.
+
+Lemma frf0: frf ident0 = ident0.
 Proof.
-  move=> ndom; rewrite /frf fsfun_dflt //; move: ndom.
-  by apply/contra/lprf_dom.
+  by rewrite /frf fsfun_dflt // lprf_dom mem_filter eq_refl.
 Qed.
 
-Lemma frf_cond r : let w := frf r in
-  ((w == r) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r)).
+Lemma frf_dom_lt: {in finsupp lprf, forall e, frf e < e}.
 Proof.
-  case: (boolP (r \in dom))=> [|/[dup] ndom /frf_dom->//]; rewrite /dom/frf/lab.
-  - case: es => ????????? /= /forallP L; rewrite -(@seq_fsetE tt)=> I.
-    rewrite -[r]/(fsval [` I]); exact: L.
-  rewrite eq_refl /= /lab fsfun_dflt //; move: ndom.
-  exact/contra/lprf_dom.
+  case: es=> ?????; rewrite /eventstructure.frf /==> ? /forallP + * x I.
+  by move/(_ [` I]).
 Qed.
 
-Lemma frf_le r : frf r <= r.
-Proof.   
-  rewrite /frf; case (boolP (r \in finsupp lprf)).
-  - case: es=> ???????? /= /forallP L ? I; rewrite -[r]/(fsval [` I]); exact/L.
-  by move=> ndom; rewrite /fpred fsfun_dflt.
+Lemma frf_le e: frf e <= e.
+Proof.
+  case: (boolP (e \in finsupp lprf))=> [/frf_dom_lt/ltW//|?].
+  by rewrite /frf fsfun_dflt .
 Qed.
 
-Lemma frf_lt {e1 e2} : e1 < e2 -> frf e1 < e2.
-Proof. by apply/le_lt_trans/frf_le. Qed.
+Lemma frf_cond r : r \in dom -> let w := frf r in
+  ((w == ident0) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r)).
+Proof.
+  rewrite -(@seq_fsetE tt); case: es=> /= d;
+  rewrite /eventstructure.frf /eventstructure.lab /= .
+  by move=> ?????? /forallP /[swap] L /(_ [`L]) /=.
+Qed.
 
 Definition fica e : ModelNondet.list E := [:: frf e; fpred e].
 
 Lemma fica_dom e :
   e \notin dom -> fica e = [:: e; e].
 Proof. by move=> nI; rewrite /fica frf_dom // fpred_dom. Qed.
+
+Lemma fica_finsupp e :
+  e \notin finsupp lprf -> fica e = [:: e; e].
+Proof. by move=> ?; rewrite /fica /frf /fpred ?fsfun_dflt //. Qed.
 
 Lemma fica_ge : (@sfrel _ monad.id_ndmorph E) fica ≦ (>=%O : rel E).
 Proof. 
@@ -464,6 +521,12 @@ Lemma ica_notdom e1 e2:
   e1 == e2.
 Proof. by move=> ?; rewrite icaE /= fica_dom // !inE orbb. Qed.
 
+Lemma ica_notfinsupp e1 e2:
+  e2 \notin finsupp lprf ->
+  ica e1 e2 ->
+  e1 == e2.
+Proof. by move=> ?; rewrite icaE /= fica_finsupp // !inE orbb. Qed.
+
 Lemma ca_refl {e} : ca e e.
 Proof. exact: rt_closure_refl. Qed.
 
@@ -515,6 +578,14 @@ Proof.
   by move=> /(ica_notdom N3) /eqP-> /(_ N3).
 Qed.
 
+Lemma ca_notfinsupp e1 e2:
+  ca e1 e2 -> e2 \notin finsupp lprf ->
+  e1 == e2.
+Proof.
+  move/closure_n1P; elim=> // {}e2 e3 + _ + N3.
+  by move=> /(ica_notfinsupp N3) /eqP-> /(_ N3).
+Qed.
+
 Definition seqpred_ca := wsuffix fica_gt.
 
 Lemma seqpred_ca_in e1 e2 : e1 \in seqpred_ca e2 = ca e1 e2.
@@ -530,7 +601,7 @@ Proof.
   move/[dup]/ica_ca/ca_notdom/[swap]/fica_ge.
   rewrite /ica ?inE.
   case I: (e \in dom); last by move=> ?/(_ erefl)/eqP->.
-  by move: (fresh_seq_lt (dom_sorted es) I)=> /= /lt_geF ->. 
+  by move: (fresh_seq_lt dom_sorted I)=> /= /lt_geF ->. 
 Qed.
 
 Lemma ca_fresh e: ca fresh_id e -> e = fresh_id.
@@ -556,19 +627,14 @@ Qed.*)
 
 (* Strict (irreflexive) causality *)
 (*Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
-
 Lemma sca_def : forall e1 e2, sca e1 e2 = (e2 != e1) && (ca e1 e2).
 Proof. done. Qed.
-
 Definition orderMixin :=
   LePOrderMixin sca_def ca_refl ca_anti (@ca_trans).
-
 Definition ev_display : unit.
 Proof. exact: tt. Qed.
-
 (* TODO: make this canonocal projection work *)
 Canonical predorderType := POrderType ev_display E orderMixin.
-
 Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 0).*)
 
 (* ************************************************************************* *)
@@ -662,6 +728,14 @@ Proof.
   have-> //: has (cf e2) [seq x0 <- fica e1 | e1 != x0].
   apply/hasP; exists x=> //; rewrite ?mem_filter 1?cf_sym //; exact/andP. 
 Qed.
+
+Lemma cfx0 e: ~~ cf e ident0.
+Proof.
+  apply/negP=> /cfP[?[?[[?/ca_notfinsupp]]]].
+  rewrite lprf_dom mem_filter eq_refl=> /(_ erefl)/eqP-> /and4P[]. 
+  by rewrite fpred0 ltxx.
+Qed.
+
 
 (* ************************************************************************* *)
 (*     Reads-From Consistency                                                *)

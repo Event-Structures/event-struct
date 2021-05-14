@@ -32,6 +32,7 @@ Record mixin_of T0 (b : WellFounded.class_of T0)
   (T := WellFounded.Pack tt b) := Mixin {
   fresh : T -> T;
   ident0 : T;
+  _ : forall x, ident0 <= x;
   _ : forall x, x < fresh x;
 }.
 
@@ -96,7 +97,35 @@ Local Notation fresh := (@fresh disp T).
 Lemma fresh_lt x : x < fresh x.
 Proof. by case: T x=> ? [/= ? []]. Qed.
 
+Lemma fresh_iter n m x: iter n fresh x = iter m fresh x -> n = m.
+Proof.
+  have F: forall x n, x < iter n.+1 fresh x.
+  - move=> {x}{n}x; elim=> /= [|? /lt_trans]; last apply; exact/fresh_lt.
+  elim: n m x=> /= [[] // n x|n IHn [/= x|l x]].
+  - move: (F x n)=>/[swap]{1}->; by rewrite ltxx.
+  - rewrite -iterS; move: (F x n)=>/[swap]{1}->; by rewrite ltxx.
+  by rewrite -iterS ?iterSr => /IHn->.
+Qed.
+
+Lemma ident0_le x : ident0 <= x.
+Proof. by case: T x=> ? [/= ? []]. Qed.
+
+Lemma ident0_mem s: 
+  ident0 \notin s = all (> ident0) s.
+Proof.
+  elim: s=> //= a ? <-; rewrite ?inE.
+  case: (ident0 \in _)=> //=; rewrite (orbF, orbT) (andbF, andbT) //.
+  have C: (ident0 >=< a) by rewrite /(_ >=< _) (ident0_le _).
+  move: (ident0_le a); by case: (comparable_ltgtP C).
+Qed.
+
 Definition fresh_seq s := fresh (head ident0 s).
+
+Lemma ident0_fresh_seq s: ident0 < fresh_seq s.
+Proof.
+  case: s=> [|??]; first exact/fresh_lt.
+  exact/(le_lt_trans _ (fresh_lt _))/ident0_le.
+Qed.
 
 Section Add_Sorted.
 
@@ -157,9 +186,10 @@ Import Order.NatOrder.
 Section IdentDataTypes.
 
 Definition nat_identMixin :=
-  @IdentType.Mixin nat (WellFounded.class nat_wfType) succn 0 ltnSn.
+  @IdentType.Mixin nat (WellFounded.class nat_wfType) succn 0 leq0n ltnSn.
 
 End IdentDataTypes.
 
 Canonical nat_identType :=
   Eval hnf in IdentType nat_display nat nat_identMixin.
+
