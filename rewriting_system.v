@@ -240,7 +240,7 @@ Section SubRewriting.
 
 Local Open Scope ra_terms.
 
-Context {S : eqType} {L : Type} {p : rel.dset S}.
+Context {S : Type} {L : Type} {p : rel.dset S}.
 
 Definition sub (r : hrel S S) : hrel S S := r ⊓ (p × p).
 
@@ -282,6 +282,29 @@ Proof.
 Qed.
 
 End SubRewriting.
+
+Section EqRewritng.
+
+Context {S : Type} (r1 r1' r2 r2' e e' : hrel S S).
+
+Lemma eq_diamond_commute: 
+  r1 ≡ r1' -> r2 ≡ r2' ->
+  diamond_commute r1 r2 -> diamond_commute r1' r2'.
+Proof.
+  move=> E1 E2 D ???; rewrite -(E1 _ _) -(E2 _ _)=> /D/[apply][[s]].
+  rewrite (E1 _ _) (E2 _ _); by exists s.
+Qed.
+
+Lemma eq_eqv_confluence: 
+  r1 ≡ r1' -> e ≡ e' ->
+  eqv_confluent r1 e -> eqv_confluent r1' e'.
+Proof.
+  move=> E E' D ???; rewrite -?(kleene.itr_weq E _ _)=> /D/[apply][[s1 [s2]]].
+  rewrite ?(kleene.itr_weq E _ _) (E' _ _); by exists s1, s2.
+Qed.
+
+End EqRewritng.
+
 
 
 
