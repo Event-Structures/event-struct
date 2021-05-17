@@ -478,5 +478,3 @@ Proof. by move=> ??; split=> [[l ->]|[?[l ->]]]; do ? exists l. Qed.
 End Confluence.
 
 End TransitionSystem.
-
-

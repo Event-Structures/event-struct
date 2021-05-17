@@ -746,8 +746,6 @@ Qed.
 
 End Swap.
 
-
-
 Section OptionUtils. 
 
 Context {T rT : Type}.
