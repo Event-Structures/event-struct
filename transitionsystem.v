@@ -89,7 +89,7 @@ Structure add_label := Add {
 
   add_pred_in_dom   : add_pred \in dom;
   add_write_in_dom  : add_write \in dom;
-  add_write_consist : add_wr add_write ident0 flab add_lb;
+  add_write_consist : add_wr add_write \i0 flab add_lb;
 }.
 
 Coercion of_add_label := fun
@@ -102,7 +102,7 @@ Proof.
 Qed.
 
 Fact add_write_consist_of_fresh l : ~~ Label.is_read l ->
-  add_wr ident0 ident0 flab l.
+  add_wr \i0 \i0 flab l.
 Proof. by move=> /= ->; rewrite eq_refl lab0. Qed.
 
 Definition add_label_of_Nread l {p}
@@ -141,15 +141,15 @@ Definition add_lab := fun e : E => lab_prj (add_lprf e).
 Definition add_fpred := fun e : E => fpred_prj (add_lprf e).
 Definition add_frf := fun e : E => frf_prj (add_lprf e).
 
-Arguments ident0_fresh {_ _ _ _}.
+Arguments i0_fresh {_ _ _ _}.
 
-Fact add_lprf_finsupp : finsupp add_lprf == (seq_fset tt (fresh_id :: dom) `\ ident0).
+Fact add_lprf_finsupp : finsupp add_lprf == (seq_fset tt (fresh_id :: dom) `\ \i0).
 Proof.
   apply/fset_eqP=> x; rewrite ?inE seq_fsetE finsupp_with.
   case: ifP; rewrite ?inE lprf_dom // mem_filter.
   - move: pred_fresh_id=> /[swap]/eqP[?->]; by rewrite ltxx.
   case: (x =P fresh_id)=> //=-> ?; rewrite andbT eq_sym.
-  exact/esym/negbT/lt_eqF/ident0_fresh.
+  exact/esym/negbT/lt_eqF/i0_fresh.
 Qed.
 
 Fact add_fpred_le : 
@@ -174,7 +174,7 @@ Fact add_frf_prop :
   [forall rs : seq_fset tt (fresh_id :: dom),
     let r := val rs in
     let w := add_frf r in
-    (w == ident0) && ~~ Label.is_read (add_lab r) || (add_lab w) \>> (add_lab r)].
+    (w == \i0) && ~~ Label.is_read (add_lab r) || (add_lab w) \>> (add_lab r)].
 Proof.
   apply/forallP=> [[r /=]]; rewrite (@seq_fsetE tt).
   rewrite /add_frf /add_lab /add_lprf !fsfun_withE /= ?inE.
@@ -185,7 +185,7 @@ Proof.
 Qed.
 
 Lemma Nfresh_dom0: 
-  ident0 \in fresh_id :: dom.
+  \i0 \in fresh_id :: dom.
 Proof. by rewrite ?inE dom0. Qed.
 
 Definition add_event :=
@@ -336,12 +336,12 @@ Definition is_morph f :=
 
 Definition is_iso f := is_morph f /\ bijective f.
 
-Lemma iso0 f: is_iso f -> f ident0 = ident0.
+Lemma iso0 f: is_iso f -> f \i0 = \i0.
 Proof.
-  case=> [[]] /(_ (f ident0)) + _ /(_ ident0) + /bij_inj ?.
+  case=> [[]] /(_ (f \i0)) + _ /(_ \i0) + /bij_inj ?.
   rewrite mem_map //= dom0 [lprf1 _]fsfun_dflt /==> [I|].
   - move/(congr1 (@fpred_prj _ _ _))/eqP=> /=.
-    case: (boolP (f ident0 \in finsupp lprf2))=> [/fpred_dom_lt/lt_eqF->|]//.
+    case: (boolP (f \i0 \in finsupp lprf2))=> [/fpred_dom_lt/lt_eqF->|]//.
     by rewrite lprf_dom mem_filter -I andbT=> /negbNE/eqP.
   by rewrite lprf_dom mem_filter eq_refl //.
 Qed.
@@ -438,7 +438,7 @@ Lemma swap_add es
   is_iso (add_event al3) (add_event al4) 
     (swap id (fresh_id es) (fresh_id2 es)).
 Proof.
-  case: al1 al3 al2 al4=> ??????[/=???+++][??????[/=???+++ E1 E2]].
+  case: al1 al3 al2 al4=> ??????[/=???+++] [??????[/=???+++ E1 E2]].
   case: E1 E2; do 3? case:_/; case; (do 3? case:_/)=>*.
   do ? split; last exact/bij_swap/inv_bij.
   - move=> /= => x; rewrite ?swap1 ?swap2.

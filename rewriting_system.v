@@ -208,12 +208,6 @@ Qed.
 
 End EqvRewriting. 
 
-Lemma eq_eqv_confluent (S : Type) (r1 r2 : hrel S S) e:
-  r1 ≡ r2 -> 
-  eqv_confluent r1 e -> eqv_confluent r2 e.
-Proof. 
-
-
 Definition exlab {T L : Type} (r : L -> hrel T T) : hrel T T := 
   fun t1 t2 => exists l, r l t1 t2.
 

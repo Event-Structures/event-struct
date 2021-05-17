@@ -7,11 +7,11 @@ From event_struct Require Import utilities wftype.
 (*  identType d == interface for inhabited well-founded orders equipped with  *)
 (*                 increasing function to generate "fresh" identifiers.       *)
 (*     fresh id == a fresh identifier coming after id (id < fresh id).        *)
-(*       ident0 == an initial identifier.                                     *)
+(*       \i0 == an initial identifier.                                     *)
 (*     nfresh n == a decreasing sequence of size n+1 of fresh identifiers     *)
-(*                 with ident0 as the last element.                           *)
+(*                 with \i0 as the last element.                           *)
 (*  fresh_seq s == an identifier fresher than the head of the s sequence      *)
-(*                 (ident0 if s is empty). Helps with reducing time           *)
+(*                 (\i0 if s is empty). Helps with reducing time           *)
 (*                 complexity of incremental generation of sequences of fresh *)
 (*                 identifiers).                                              *)
 (* This file also contains canonical instance of identType for nat.           *)
@@ -89,6 +89,8 @@ End Exports.
 End IdentType.
 Export IdentType.Exports.
 
+Notation "'\i0'" := (@ident0 _ _).
+
 Section IdentTheory.
 Context {disp} {T : identType disp}.
 Local Notation ident0 := (@ident0 disp T).
@@ -107,24 +109,24 @@ Proof.
   by rewrite -iterS ?iterSr => /IHn->.
 Qed.
 
-Lemma ident0_le x : ident0 <= x.
+Lemma i0_le (x : T) : \i0 <= x.
 Proof. by case: T x=> ? [/= ? []]. Qed.
 
-Lemma ident0_mem s: 
-  ident0 \notin s = all (> ident0) s.
+Lemma i0_mem (s : seq T): 
+  \i0 \notin s = all (> \i0) s.
 Proof.
   elim: s=> //= a ? <-; rewrite ?inE.
-  case: (ident0 \in _)=> //=; rewrite (orbF, orbT) (andbF, andbT) //.
-  have C: (ident0 >=< a) by rewrite /(_ >=< _) (ident0_le _).
-  move: (ident0_le a); by case: (comparable_ltgtP C).
+  case: (\i0 \in _)=> //=; rewrite (orbF, orbT) (andbF, andbT) //.
+  have C: (\i0 >=< a) by rewrite /(_ >=< _) (i0_le _).
+  move: (i0_le a); by case: (comparable_ltgtP C).
 Qed.
 
-Definition fresh_seq s := fresh (head ident0 s).
+Definition fresh_seq s := fresh (head \i0 s).
 
-Lemma ident0_fresh_seq s: ident0 < fresh_seq s.
+Lemma i0_fresh_seq s: \i0 < fresh_seq s.
 Proof.
   case: s=> [|??]; first exact/fresh_lt.
-  exact/(le_lt_trans _ (fresh_lt _))/ident0_le.
+  exact/(le_lt_trans _ (fresh_lt _))/i0_le.
 Qed.
 
 Section Add_Sorted.
@@ -151,12 +153,12 @@ Proof. by apply/memPn => x /fresh_seq_lt; rewrite lt_neqAle=> /andP[]. Qed.
 End Add_Sorted.
 
 
-Definition nfresh n := iter n (fun s => fresh_seq s :: s) [:: ident0].
+Definition nfresh n := iter n (fun s => fresh_seq s :: s) [:: \i0].
 
 Lemma nfreshS n : nfresh n.+1 = fresh_seq (nfresh n) :: (nfresh n).
 Proof. by []. Qed.
 
-Lemma fresh_seq_iter n : fresh_seq (nfresh n) = iter n.+1 fresh ident0.
+Lemma fresh_seq_iter n : fresh_seq (nfresh n) = iter n.+1 fresh \i0.
 Proof. by elim: n=> //= ? ->. Qed.
 
 Section NfreshSpec.
@@ -164,7 +166,7 @@ Section NfreshSpec.
 Lemma nfresh_sorted n : sorted (>%O) (nfresh n).
 Proof. by elim: n=> //= n IHn; rewrite path_fresh_seq. Qed.
 
-Lemma nfreshE n : nfresh n = rev (traject fresh ident0 n.+1).
+Lemma nfreshE n : nfresh n = rev (traject fresh \i0 n.+1).
 Proof.
   by elim: n=> // n IHn; rewrite nfreshS fresh_seq_iter trajectSr rev_rcons IHn.
 Qed.
@@ -172,7 +174,7 @@ Qed.
 Lemma nfresh_size n : size (nfresh n) = n.+1.
 Proof. by rewrite nfreshE size_rev size_traject. Qed.
 
-Lemma nfresh_last n : last ident0 (nfresh n) = ident0.
+Lemma nfresh_last n : last \i0 (nfresh n) = \i0.
 Proof. by rewrite nfreshE trajectS rev_cons -cats1 last_cat. Qed.
 
 End NfreshSpec.
