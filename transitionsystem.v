@@ -311,10 +311,10 @@ Definition tr_add_event es1 es2 := exists al, es2 = @add_event es1 al.
 
 Notation "es1 '~>' es2" := (tr_add_event es1 es2) (at level 0).
 
-Definition ltr_add_event es1 l es2 := 
+Definition ltr_add_event (l : lab_pred_rfrom E V) es1 es2 := 
   exists2 al, es2 = @add_event es1 al & l = al.
 
-Notation "es1 '~(' l ')~>' es2" := (ltr_add_event es1 l es2) (at level 0).
+Notation "es1 '~(' l ')~>' es2" := (ltr_add_event l es2 es2) (at level 0).
 
 Section Equivalence.
 
@@ -434,7 +434,7 @@ Lemma swap_add es
   (al3 : add_label (add_event al1))
   (al4 : add_label (add_event al2)) : 
   al1 = al4 :> lab_pred_rfrom E V ->
-  al2 = al3  :> lab_pred_rfrom E V ->
+  al2 = al3 :> lab_pred_rfrom E V ->
   is_iso (add_event al3) (add_event al4) 
     (swap id (fresh_id es) (fresh_id2 es)).
 Proof.
@@ -460,6 +460,20 @@ Proof.
     by rewrite -[r]/(frf_prj (Lprf l p r)) -L frf_le.
   by rewrite fsfun_dflt /= -?swap_not_eq // lprf_dom mem_filter negb_and I.
 Qed.
+
+Lemma comm_ltr l1 l2: 
+  eqv_diamond_commute (ltr_add_event l1) (ltr_add_event l2) eqv.
+Proof.
+  move=> es ?? [al1 -> /[swap][[al2->]]].
+  case: (add_add al1 al2)=> al3 /[dup]? <-->.
+  case: (add_add al2 al1)=> al4 /[dup]? <-->.
+  exists (add_event al3), (add_event al4).
+  split; [by exists al3| by exists al4|].
+  exists (swap id (fresh_id es) (fresh_id2 es)); exact/swap_add.
+Qed.
+
+Lemma exlab_tr: tr_add_event ≡ exlab ltr_add_event.
+Proof. by move=> ??; split=> [[l ->]|[?[l ->]]]; do ? exists l. Qed.
 
 End Confluence.
 
