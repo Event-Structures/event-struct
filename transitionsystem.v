@@ -330,21 +330,25 @@ Notation lprf2  := (lprf   es2).
 Notation fresh2 := (fresh_seq dom2).
 
 Definition is_morph f := 
-   [/\ map f dom1 =i dom2,
+   [/\ f \i0  = \i0,
        forall n, f (iter n fresh fresh1) = iter n fresh fresh2 &
        lprf2 \o f =1 (ext f) \o lprf1].
 
 Definition is_iso f := is_morph f /\ bijective f.
 
-Lemma iso0 f: is_iso f -> f \i0 = \i0.
+Lemma iso_dom f: is_iso f ->
+  map f dom1 =i dom2.
 Proof.
-  case=> [[]] /(_ (f \i0)) + _ /(_ \i0) + /bij_inj ?.
-  rewrite mem_map //= dom0 [lprf1 _]fsfun_dflt /==> [I|].
-  - move/(congr1 (@fpred_prj _ _ _))/eqP=> /=.
-    case: (boolP (f \i0 \in finsupp lprf2))=> [/fpred_dom_lt/lt_eqF->|]//.
-    by rewrite lprf_dom mem_filter -I andbT=> /negbNE/eqP.
-  by rewrite lprf_dom mem_filter eq_refl //.
+  move=> [[i ? l] /[dup] B [g /[dup] c1 /can_inj I c2 x]].
+  rewrite -[x]c2 (mem_map I) ?lprf_finsupp -(bij_eq B) c2 i.
+  case: (boolP (x == \i0))=> //=. rewrite -{-2}[x]c2 -i (bij_eq B).
+  set y := g x; rewrite ?mem_finsupp; move: (l y)=> /=->.
+  rewrite -[Lprf ThreadEnd (f y) (f y)]/(ext f (Lprf ThreadEnd y y)).
+  by rewrite (bij_eq (bij_ext _ B)).
 Qed.
+
+Lemma iso0 f: is_iso f -> f \i0 = \i0.
+Proof. by  do 2? case. Qed.
 
 End IsoDef.
 
@@ -364,8 +368,7 @@ Proof.
   case=> [][] i1 it1 l1 ?[][] i2 it2 l2 /[dup] [[]].
   move=> ?? c1 ?.
   do ? split; last exact/bij_comp; try move=> x.
-  - rewrite map_comp -i2 -[x]c1 ?mem_map //; exact/bij_inj.
-  - by rewrite /= it1 it2.
+  1,2: by rewrite /= (it1, i1) (it2, i2).
   by move: (l1 x) (l2 (f x))=> /=; rewrite ext_comp /= => <-.
 Qed.
 
@@ -377,7 +380,7 @@ Proof.
   move=>> [f [[] i it l /[dup] b[g c1 c2]]].
   have B: bijective g by apply/(bij_can_bij b). 
   exists g; split=> //; do ? split; try move=> x /=.
-  - rewrite -{1}[x]c1 mem_map -?i ?mem_map //; exact/bij_inj.
+  - by rewrite -{1}i c1.
   - by apply/(bij_inj b); rewrite c2 it.
   apply/(bij_inj (bij_ext _ b)); move: (l (g x))=> /= <-.
   by rewrite ?(ext_can c2) c2.
@@ -398,13 +401,13 @@ Proof.
   move=> es es3 ? /[swap][][[al ap aw apd awd awc]]->.
   case=> f /[dup] I [[] i /[dup] /(_ 0) /= it' it l /[dup] /bij_inj ? b].
   have H: forall e, e \in dom es -> f e \in dom es3=> [e|].
-  by rewrite -i mem_map.
+  by rewrite -(iso_dom I) mem_map.
   have [: a1 a2 a3] @s4: add_label es3 := @Add _ al (f ap) (f aw) a1 a2 a3.
   1,2: by apply/H; rewrite (apd, awd).
   - move: awc; rewrite /add_wr -{2}(iso0 I) bij_eq // /lab; move: (l aw)=> /=.
     case L: (lprf _ aw)=> /=; case L': (lprf es3 (f aw))=> /=; by case=>->.
   exists (add_event s4); [by exists s4 | exists f].
-  (do ? split)=> //=[?|n|x/=]; first by rewrite ?inE i (it 0).
+  (do ? split)=> //=[n|x/=].
   - move: (it n.+1)=> /=; by rewrite /fresh_seq /= -?iterSr -?iterS.
   rewrite ?lprf_add_eventE -it' (bij_eq b); case: ifP=> // ?; exact/(l x).
 Qed.
@@ -441,9 +444,7 @@ Proof.
   case: al1 al3 al2 al4=> ??????[/=???+++] [??????[/=???+++ E1 E2]].
   case: E1 E2; do 3? case:_/; case; (do 3? case:_/)=>*.
   do ? split; last exact/bij_swap/inv_bij.
-  - move=> /= => x; rewrite ?swap1 ?swap2.
-    under (proj1 (eq_in_map _ _ _))=> ? /(swap_dom (lexx _))-> do over.
-    rewrite map_id ?inE; lattice.
+  - by rewrite -swap_not_eq // lt_eqF // i0_fresh_seq.
   - move=> n /=. rewrite -swap_not_eq // /fresh_seq /= -?iterSr.
     - by apply/eqP=> /(@fresh_iter _ _ n.+3 1).
     by apply/eqP=> /(@fresh_iter _ _ n.+3 2).
