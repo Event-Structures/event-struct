@@ -25,7 +25,7 @@ Interface for types with well-founded partial order.
 ##### `ident.v`
 Interface for types that can be used as identifiers.
 We require the following properties.
-1) `ident0` -- first identifier.
+1) `\i0` -- first identifier.
 2) `fresh : T -> T` -- function that returns a fresh identifier.
 3) `forall x, x < fresh x` -- freshness axiom. 
    We require `<` to be well-founded order.  

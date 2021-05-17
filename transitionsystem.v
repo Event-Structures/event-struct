@@ -89,7 +89,7 @@ Structure add_label := Add {
 
   add_pred_in_dom   : add_pred \in dom;
   add_write_in_dom  : add_write \in dom;
-  add_write_consist : add_wr add_write ident0 flab add_lb;
+  add_write_consist : add_wr add_write \i0 flab add_lb;
 }.
 
 Coercion of_add_label := fun
@@ -102,7 +102,7 @@ Proof.
 Qed.
 
 Fact add_write_consist_of_fresh l : ~~ Label.is_read l ->
-  add_wr ident0 ident0 flab l.
+  add_wr \i0 \i0 flab l.
 Proof. by move=> /= ->; rewrite eq_refl lab0. Qed.
 
 Definition add_label_of_Nread l {p}
@@ -141,15 +141,15 @@ Definition add_lab := fun e : E => lab_prj (add_lprf e).
 Definition add_fpred := fun e : E => fpred_prj (add_lprf e).
 Definition add_frf := fun e : E => frf_prj (add_lprf e).
 
-Arguments ident0_fresh {_ _ _ _}.
+Arguments i0_fresh {_ _ _ _}.
 
-Fact add_lprf_finsupp : finsupp add_lprf == (seq_fset tt (fresh_id :: dom) `\ ident0).
+Fact add_lprf_finsupp : finsupp add_lprf == (seq_fset tt (fresh_id :: dom) `\ \i0).
 Proof.
   apply/fset_eqP=> x; rewrite ?inE seq_fsetE finsupp_with.
   case: ifP; rewrite ?inE lprf_dom // mem_filter.
   - move: pred_fresh_id=> /[swap]/eqP[?->]; by rewrite ltxx.
   case: (x =P fresh_id)=> //=-> ?; rewrite andbT eq_sym.
-  exact/esym/negbT/lt_eqF/ident0_fresh.
+  exact/esym/negbT/lt_eqF/i0_fresh.
 Qed.
 
 Fact add_fpred_le : 
@@ -174,7 +174,7 @@ Fact add_frf_prop :
   [forall rs : seq_fset tt (fresh_id :: dom),
     let r := val rs in
     let w := add_frf r in
-    (w == ident0) && ~~ Label.is_read (add_lab r) || (add_lab w) \>> (add_lab r)].
+    (w == \i0) && ~~ Label.is_read (add_lab r) || (add_lab w) \>> (add_lab r)].
 Proof.
   apply/forallP=> [[r /=]]; rewrite (@seq_fsetE tt).
   rewrite /add_frf /add_lab /add_lprf !fsfun_withE /= ?inE.
@@ -185,7 +185,7 @@ Proof.
 Qed.
 
 Lemma Nfresh_dom0: 
-  ident0 \in fresh_id :: dom.
+  \i0 \in fresh_id :: dom.
 Proof. by rewrite ?inE dom0. Qed.
 
 Definition add_event :=
@@ -317,5 +317,4 @@ Definition ltr_add_event es1 l es2 :=
 Notation "es1 '~(' l ')~>' es2" := (ltr_add_event es1 l es2) (at level 0).
 
 End TransitionSystem.
-
 
