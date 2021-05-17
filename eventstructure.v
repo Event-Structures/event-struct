@@ -349,6 +349,13 @@ Proof.
   by move/(_ x)=>->; rewrite ?inE mem_filter seq_fsetE. 
 Qed.
 
+Lemma lprf_finsupp x: 
+  x \in dom = (x == \i0) || (x \in finsupp lprf).
+Proof.
+  rewrite lprf_dom mem_filter orb_andr orbN /=.
+  case: (boolP (x == \i0))=> // /eqP->; exact/dom0.
+Qed.
+
 (***** Labels and Freshness *****)
 Section LabelsFresh.
 
