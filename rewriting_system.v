@@ -240,7 +240,7 @@ Section SubRewriting.
 
 Local Open Scope ra_terms.
 
-Context {S : eqType} {L : Type} {p : rel.dset S}.
+Context {S L : Type} {p : rel.dset S}.
 
 Definition sub (r : hrel S S) : hrel S S := r ⊓ (p × p).
 
