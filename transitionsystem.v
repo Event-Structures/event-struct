@@ -412,18 +412,21 @@ Proof.
       - rewrite -(iso_dom Ig) mem_map ?(fresh_seq_notin dom_sorted) //.
         exact/(can_inj c2).
       by rewrite -(iso_dom I) mem_map ?(fresh_seq_notin dom_sorted).
-  move=> N1 N2. apply/lab_pred_rfromE; split. 
-  - by move/(congr1 (@lab_prj _ _ _)): (l x); rewrite /= ?lab_prj_ext.
-  - move/(congr1 (@fpred_prj _ _ _)): (l x)=>/=.
-    rewrite ?fpred_prj_ext. case: ifP=> [/eqP/fpred_fresh N|].
+  move=> N1 N2. apply/eqP. rewrite lab_pred_rfromE. 
+  apply/andP; split; [|apply/andP; split].
+  - by move: (l x)=> /= ->; rewrite /= !lab_prj_ext. 
+  - move/(congr1 (@fpred_prj _ _ _)): (l x)=> /=.
+    rewrite /= !fpred_prj_ext. 
+    case: ifP=> [/eqP/fpred_fresh N|].
     - by rewrite N eq_refl in N2.
-    case: ifP=> // /eqP /(congr1 f) ++ N; rewrite -N c2.
+    case: ifP=> [|??->] // /eqP/(congr1 f)=> ++ N; rewrite -N c2.
     move/fpred_fresh/(congr1 g); rewrite c1=> {N}N.
     by rewrite N eq_refl in N1.
-  move/(congr1 (@frf_prj _ _ _)): (l x)=>/=.
-  rewrite ?frf_prj_ext; case: ifP=> [/eqP/frf_fresh N|].
+  move/(congr1 (@frf_prj _ _ _)): (l x)=> /=.
+  rewrite /= !frf_prj_ext. 
+  case: ifP=> [/eqP/frf_fresh N|].
   - by rewrite N eq_refl in N2.
-  case: ifP=> // /eqP /(congr1 f) ++ N; rewrite -N c2.
+  case: ifP=> [|??->] // /eqP /(congr1 f) ++ N; rewrite -N c2.
   move/frf_fresh/(congr1 g); rewrite c1=> {N}N.
   by rewrite N eq_refl in N1.
 Qed.

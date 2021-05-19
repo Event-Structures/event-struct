@@ -168,11 +168,6 @@ Implicit Type l : Lab.
 (* lprf stands for label, predecessor, reads-from *)
 Record lab_pred_rfrom := Lprf {lab_prj : Lab; fpred_prj : E; frf_prj : E}.
 
-Lemma lab_pred_rfromE (l l1 : lab_pred_rfrom): 
-  l = l1 <->
-  [/\ lab_prj l = lab_prj l1, fpred_prj l = fpred_prj l1 & frf_prj l = frf_prj l1].
-Proof. by case: l1 l=>???[*/=]; split=> [][]->->->. Qed.
-
 Definition ext (f : E -> E) (lprf : lab_pred_rfrom) :=
   let: Lprf l p r := lprf in
   Lprf l (f p) (f r).
@@ -201,6 +196,14 @@ Proof. by case. Qed.
 Definition lprf_eqMixin := CanEqMixin prod_of_lprfK.
 
 Canonical lprf_eqType := Eval hnf in EqType lab_pred_rfrom lprf_eqMixin.
+
+Lemma lab_pred_rfromE (l1 l2 : lab_pred_rfrom): 
+  l1 == l2 = [&& lab_prj l1 == lab_prj l2, fpred_prj l1 == fpred_prj l2 & frf_prj l1 == frf_prj l2].
+Proof. 
+  case: l1 l2=>???[*/=]; rewrite {1}/eq_op /=.
+  rewrite -pair_eqE !/pair_eq /= -pair_eqE !/pair_eq /=.
+  by rewrite andbA.
+Qed.
 
 Local Open Scope fset_scope.
 
