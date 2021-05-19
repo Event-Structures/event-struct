@@ -184,7 +184,6 @@ Proof. move=> ? [/= ???]; exact/congr2. Qed.
 Lemma bij_ext f: bijective f -> bijective (ext f).
 Proof. case=> g *; exists (ext g); exact/ext_can. Qed.
 
-
 Definition prod_of_lprf lprf :=
   let: Lprf l p rf := lprf in (l, p, rf).
 
@@ -207,8 +206,8 @@ Structure fin_exec_event_struct := Pack {
                       fpred_prj := e;
                       frf_prj   := e |} };
   dom_sorted : sorted (>%O) dom;
-  dom0       : ident0 \in dom;
-  _          : finsupp lprf == (seq_fset tt dom `\ ident0);
+  dom0       : \i0 \in dom;
+  _          : finsupp lprf == (seq_fset tt dom `\ \i0);
   lab e      := lab_prj (lprf e);
   fpred e    := fpred_prj (lprf e);
   frf e      := frf_prj (lprf e);
@@ -217,7 +216,7 @@ Structure fin_exec_event_struct := Pack {
   _          : [forall rs : seq_fset tt dom, 
                   let r := val rs in
                   let w := frf r  in
-                  ((w == ident0) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r))];
+                  ((w == \i0) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r))];
 }.
 
 End ExecEventStructureDef.
@@ -344,7 +343,7 @@ Lemma fpred_prj_ext e f:
 Proof. rewrite /fpred; by case: (lprf e). Qed.
 
 
-Lemma lprf_dom : (finsupp lprf) =i [seq x <- dom | x != ident0].
+Lemma lprf_dom : (finsupp lprf) =i [seq x <- dom | x != \i0].
 Proof. 
   case: es=> ???? /[dup] /fset_eqP + * x /=.
   by move/(_ x)=>->; rewrite ?inE mem_filter seq_fsetE. 
@@ -356,7 +355,7 @@ Section LabelsFresh.
 Notation fresh_id := (fresh_seq dom).
 
 
-Lemma lab0 : lab ident0 = ThreadEnd.
+Lemma lab0 : lab \i0 = ThreadEnd.
 Proof. by rewrite /lab fsfun_dflt // lprf_dom mem_filter eq_refl. Qed.
 
 Lemma lab_fresh : lab fresh_id = ThreadEnd.
@@ -365,8 +364,8 @@ Proof.
   exact/dom_sorted.
 Qed.
 
-Lemma ident0_fresh: ident0 < fresh_id.
-Proof. exact/ident0_fresh_seq. Qed.
+Lemma i0_fresh: \i0 < fresh_id.
+Proof. exact/i0_fresh_seq. Qed.
 
 End LabelsFresh.
 
@@ -381,7 +380,7 @@ Proof.
   by rewrite /fpred fsfun_dflt // lprf_dom mem_filter negb_and ndom.
 Qed.
 
-Lemma fpred0: fpred ident0 = ident0.
+Lemma fpred0: fpred \i0 = \i0.
 Proof.
   by rewrite /fpred fsfun_dflt // lprf_dom mem_filter eq_refl.
 Qed.
@@ -409,7 +408,7 @@ Proof.
   by rewrite /frf fsfun_dflt // lprf_dom mem_filter negb_and ndom.
 Qed.
 
-Lemma frf0: frf ident0 = ident0.
+Lemma frf0: frf \i0 = \i0.
 Proof.
   by rewrite /frf fsfun_dflt // lprf_dom mem_filter eq_refl.
 Qed.
@@ -427,7 +426,7 @@ Proof.
 Qed.
 
 Lemma frf_cond r : r \in dom -> let w := frf r in
-  ((w == ident0) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r)).
+  ((w == \i0) && ~~ Label.is_read (lab r)) || ((lab w) \>> (lab r)).
 Proof.
   rewrite -(@seq_fsetE tt); case: es=> /= d;
   rewrite /eventstructure.frf /eventstructure.lab /= .
@@ -729,7 +728,7 @@ Proof.
   apply/hasP; exists x=> //; rewrite ?mem_filter 1?cf_sym //; exact/andP. 
 Qed.
 
-Lemma cfx0 e: ~~ cf e ident0.
+Lemma cfx0 e: ~~ cf e \i0.
 Proof.
   apply/negP=> /cfP[?[?[[?/ca_notfinsupp]]]].
   rewrite lprf_dom mem_filter eq_refl=> /(_ erefl)/eqP-> /and4P[]. 

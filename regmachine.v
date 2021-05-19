@@ -153,7 +153,7 @@ Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
 Lemma ws_wpred x w :
   w \in [events of es | is_write & with_loc x] ->
-  add_wr w ident0 (lab es) (Read x (odflt inh (value es w))).
+  add_wr w \i0 (lab es) (Read x (odflt inh (value es w))).
 Proof.
   rewrite mem_filter=> /andP[] /=.
   rewrite /is_write /with_loc /loc /value.
