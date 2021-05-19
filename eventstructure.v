@@ -316,8 +316,7 @@ Proof.
   case/andP=> /= /eqP E1 /eqP E2. 
   move: df1 ds1 di1 li1 pc1 f1 g1 rc1 rc1'. 
   move: df2 ds2 di2 li2 pc2 f2 g2 rc2 rc2'. 
-  move: E1 E2.
-  do 2 (case: _ /). 
+  move: E1 E2; do 2 (case: _ /). 
   move=> *; congr Pack; exact/eq_irrelevance.
 Qed.
 

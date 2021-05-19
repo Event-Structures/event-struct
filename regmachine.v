@@ -143,7 +143,7 @@ Definition ltr_thrd_sem (l : option (@Lab Val Val)) pgm st1 st2 : bool :=
   end.
 
 Variable (es : cexec_event_struct).
-Notation ffpo   := (fpo es).
+Notation ffpo     := (fpo es).
 Notation ffrf     := (frf es).
 Notation fresh_id := (fresh_seq (dom es)).
 

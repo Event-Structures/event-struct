@@ -81,9 +81,6 @@ Notation ffrf := (frf es).
 
 Notation fresh_id := (fresh_seq dom).
 
-(* Definition wr (lab : E -> label) := *)
-(*   [rel r w : E | (w <= r) && add_wr w r lab (lab r)]. *)
-
 Structure add_label := Add {
   add_lb            : label;
   add_po            : E;
