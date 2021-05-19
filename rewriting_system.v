@@ -287,20 +287,26 @@ Section EqRewritng.
 
 Context {S : Type} (r1 r1' r2 r2' e e' : hrel S S).
 
-Lemma eq_diamond_commute: 
-  r1 ≡ r1' -> r2 ≡ r2' ->
-  diamond_commute r1 r2 -> diamond_commute r1' r2'.
+Instance dcomm_weq: Proper 
+  ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
+  diamond_commute.
 Proof.
-  move=> E1 E2 D ???; rewrite -(E1 _ _) -(E2 _ _)=> /D/[apply][[s]].
-  rewrite (E1 _ _) (E2 _ _); by exists s.
+  move=> ?? E1 ?? E2; split=> D ???.
+  - rewrite -(E1 _ _) -(E2 _ _)=> /D/[apply][[s]].
+    rewrite (E1 _ _) (E2 _ _); by exists s.
+  rewrite (E1 _ _) (E2 _ _)=> /D/[apply][[s]].
+  rewrite -(E1 _ _) -(E2 _ _); by exists s.
 Qed.
 
-Lemma eq_eqv_confluence: 
-  r1 ≡ r1' -> e ≡ e' ->
-  eqv_confluent r1 e -> eqv_confluent r1' e'.
+Instance eq_confl_weq: Proper
+  ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
+  eqv_confluent.
 Proof.
-  move=> E E' D ???; rewrite -?(kleene.itr_weq E _ _)=> /D/[apply][[s1 [s2]]].
-  rewrite ?(kleene.itr_weq E _ _) (E' _ _); by exists s1, s2.
+  move=> ?? E ?? E'; split=> D ???.
+  - rewrite -?(kleene.itr_weq E _ _)=> /D/[apply][[s1 [s2]]].
+    rewrite ?(kleene.itr_weq E _ _) (E' _ _); by exists s1, s2.
+  rewrite ?(kleene.itr_weq E _ _)=> /D/[apply][[s1 [s2]]].
+  rewrite -?(kleene.itr_weq E _ _) -(E' _ _); by exists s1, s2.
 Qed.
 
 End EqRewritng.
