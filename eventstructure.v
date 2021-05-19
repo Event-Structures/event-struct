@@ -168,6 +168,11 @@ Implicit Type l : Lab.
 (* lprf stands for label, predecessor, reads-from *)
 Record lab_pred_rfrom := Lprf {lab_prj : Lab; fpred_prj : E; frf_prj : E}.
 
+Lemma lab_pred_rfromE (l l1 : lab_pred_rfrom): 
+  l = l1 <->
+  [/\ lab_prj l = lab_prj l1, fpred_prj l = fpred_prj l1 & frf_prj l = frf_prj l1].
+Proof. by case: l1 l=>???[*/=]; split=> [][]->->->. Qed.
+
 Definition ext (f : E -> E) (lprf : lab_pred_rfrom) :=
   let: Lprf l p r := lprf in
   Lprf l (f p) (f r).
@@ -334,6 +339,10 @@ Proof. by []. Qed.
 Lemma frfE e : frf e = frf_prj (lprf e).
 Proof. by []. Qed.
 
+Lemma lab_prj_ext e f: 
+  lab_prj (ext f (lprf e)) = lab e.
+Proof. rewrite /lab; by case: (lprf e). Qed.
+
 Lemma frf_prj_ext e f: 
   frf_prj (ext f (lprf e)) = f (frf e).
 Proof. rewrite /frf; by case: (lprf e). Qed.
@@ -356,11 +365,14 @@ Proof.
   case: (boolP (x == \i0))=> // /eqP->; exact/dom0.
 Qed.
 
-(***** Labels and Freshness *****)
-Section LabelsFresh.
+Lemma lprf_Ndom e: e \notin dom ->
+  lprf e = Lprf ThreadEnd e e.
+Proof. rewrite lprf_finsupp negb_or=> /andP[*]; by rewrite fsfun_dflt. Qed.
 
 Notation fresh_id := (fresh_seq dom).
 
+(***** Labels and Freshness *****)
+Section LabelsFresh.
 
 Lemma lab0 : lab \i0 = ThreadEnd.
 Proof. by rewrite /lab fsfun_dflt // lprf_dom mem_filter eq_refl. Qed.
@@ -404,6 +416,13 @@ Proof.
   by rewrite /fpred fsfun_dflt .
 Qed.
 
+Lemma fpred_fresh e: 
+  fpred  e = fresh_id -> e = fresh_id.
+Proof.
+  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/fpred_dom->//].
+  by move/le_lt_trans: (fpred_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
+Qed.
+
 (* ************************************************************************* *)
 (*     Reads-From                                                            *)
 (* ************************************************************************* *)
@@ -430,6 +449,13 @@ Lemma frf_le e: frf e <= e.
 Proof.
   case: (boolP (e \in finsupp lprf))=> [/frf_dom_lt/ltW//|?].
   by rewrite /frf fsfun_dflt .
+Qed.
+
+Lemma frf_fresh e: 
+  frf e = fresh_id -> e = fresh_id.
+Proof.
+  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/frf_dom->//].
+  by move/le_lt_trans: (frf_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
 Qed.
 
 Lemma frf_cond r : r \in dom -> let w := frf r in
