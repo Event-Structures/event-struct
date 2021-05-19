@@ -399,8 +399,8 @@ Lemma is_iso_swap es1 es2 f g:
   cancel f g -> cancel g f ->
   is_iso es1 es2 f -> is_iso es1 es2 (swap f (fresh_id es1) (g (fresh_id es2))).
 Proof.
-  move=> /[dup]/is_iso_can H + /[dup] {H}/H H ++ /[dup] {H}/H.
-  move=> Ig /[dup] I [[i l /[dup] /bij_inj ? b]] c2 c1.
+  move=> c1 c2 I; move: (is_iso_can I c1 c2) (I).
+  move=> Ig [[i l /[dup] /bij_inj ? b]].
   (do ? split)=> [|x/=|]; last exact/bij_swap.
   rewrite -swap_not_eq // -[\i0]c1 ?bij_eq ?(c1, i) ?(lt_eqF (i0_fresh_seq _)) //.
   - exact/(bij_can_bij b).
