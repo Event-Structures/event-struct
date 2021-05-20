@@ -149,6 +149,7 @@ Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed.
 Lemma fresh_seq_notin : fresh_seq s \notin s.
 Proof. by apply/memPn => x /fresh_seq_lt; rewrite lt_neqAle=> /andP[]. Qed.
 
+
 End Add_Sorted.
 
 
