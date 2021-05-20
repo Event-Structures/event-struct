@@ -320,22 +320,15 @@ Section Equivalence.
 
 Section IsoDef.
 
-Context (es1 es2 : exec_event_struct).
+Context (f : E -> E) (es1 es2 : exec_event_struct).
 
-Notation dom1   := (dom   es1).
-Notation lprf1  := (lprf   es1).
-Notation fresh1 := (fresh_seq dom1).
-Notation dom2   := (dom   es2).
-Notation lprf2  := (lprf   es2).
-Notation fresh2 := (fresh_seq dom2).
+Definition is_morph := 
+  f \i0  = \i0 /\ lprf es2 \o f =1 (ext f) \o lprf es1.
 
-Definition is_morph f := 
-  f \i0  = \i0 /\ lprf2 \o f =1 (ext f) \o lprf1.
+Definition is_iso := is_morph /\ bijective f.
 
-Definition is_iso f := is_morph f /\ bijective f.
-
-Lemma iso_dom f: is_iso f ->
-  map f dom1 =i dom2.
+Lemma iso_dom: is_iso ->
+  map f (dom es1) =i dom es2.
 Proof.
   move=> [[i l] /[dup] B [g /[dup] c1 /can_inj I c2 x]].
   rewrite -[x]c2 (mem_map I) ?lprf_finsupp -(bij_eq B) c2 i.
@@ -345,13 +338,12 @@ Proof.
   by rewrite (bij_eq (bij_ext _ B)).
 Qed.
 
-Lemma iso0 f: is_iso f -> f \i0 = \i0.
-Proof. by  do 2? case. Qed.
+Lemma iso0: is_iso -> f \i0 = \i0.
+Proof. by do 2? case. Qed.
 
 End IsoDef.
 
-Definition eqv : hrel exec_event_struct exec_event_struct := 
-  fun es1 es2 => exists f, is_iso es1 es2 f.
+Definition eqv := exlab is_iso.
 
 Lemma eqv_refl : 1 ≦ eqv.
 Proof. 
@@ -360,8 +352,8 @@ Proof.
 Qed.
 
 Lemma is_iso_comp es1 es2 es3 f g: 
-  is_iso es1 es2 f -> is_iso es2 es3 g ->
-  is_iso es1 es3 (g \o f).
+  is_iso f es1 es2 -> is_iso g es2 es3 ->
+  is_iso (g \o f) es1 es3 .
 Proof.
   case=> [][] i1 l1 ?[][] i2 l2 /[dup] [[?? c1 ?]] .
   (do ? split)=>[|x|]; last exact/bij_comp; first by  rewrite /= i1 i2. 
@@ -372,8 +364,8 @@ Lemma eqv_trans: Transitive eqv.
 Proof. move=> ???[f i [g ?]]; exists (g \o f); exact/(is_iso_comp i). Qed.
 
 Lemma is_iso_can es1 es2 f g: 
-  is_iso es1 es2 f -> cancel f g -> cancel g f -> 
-  is_iso es2 es1 g.
+  is_iso f es1 es2 -> cancel f g -> cancel g f -> 
+  is_iso g es2 es1.
 Proof.
   move=> [[] i l b c1 c2].
   have B: bijective g by apply/(bij_can_bij b). 
@@ -397,7 +389,8 @@ Notation fresh_id2 es := (fresh_seq (fresh_seq (dom es) :: dom es)).
 
 Lemma is_iso_swap es1 es2 f g: 
   cancel f g -> cancel g f ->
-  is_iso es1 es2 f -> is_iso es1 es2 (swap f (fresh_id es1) (g (fresh_id es2))).
+  is_iso f es1 es2 -> 
+  is_iso (swap f (fresh_id es1) (g (fresh_id es2))) es1 es2.
 Proof.
   move=> c1 c2 I; move: (is_iso_can I c1 c2) (I).
   move=> Ig [[i l /[dup] /bij_inj ? b]].
@@ -476,8 +469,8 @@ Lemma swap_add es
   (al4 : add_label (add_event al2)) : 
   al1 = al4 :> lab_pred_rfrom E V ->
   al2 = al3 :> lab_pred_rfrom E V ->
-  is_iso (add_event al3) (add_event al4) 
-    (swap id (fresh_id es) (fresh_id2 es)).
+  is_iso (swap id (fresh_id es) (fresh_id2 es))
+    (add_event al3) (add_event al4) .
 Proof.
   case: al1 al3 al2 al4=> ??????[/=???+++] [??????[/=???+++ E1 E2]].
   case: E1 E2; do 3? case:_/; case; (do 3? case:_/)=>*.
