@@ -327,14 +327,30 @@ Qed.
 
 End Nread_Consist.
 
-Definition tr_add_event es1 es2 := exists al, es2 = @add_event es1 al.
+End TransitionSystem.
 
-Notation "es1 '~>' es2" := (tr_add_event es1 es2) (at level 0).
+Module AddEvent.
 
-Definition ltr_add_event (l : lab_pred_rfrom E V) es1 es2 := 
-  exists2 al, es2 = @add_event es1 al & l = al.
+Section Confluence.
 
-Notation "es1 '~(' l ')~>' es2" := (ltr_add_event l es2 es2) (at level 0).
+Context {disp} (E : identType disp) (V : eqType).
+
+Notation exec_event_struct := (@fin_exec_event_struct disp E V).
+Notation cexec_event_struct := (@cexec_event_struct disp E V).
+
+Notation label := (@Lab V V).
+
+Implicit Types (x : Loc) (a : V) (es : exec_event_struct).
+
+
+Definition tr es1 es2 := exists al, es2 = @add_event disp _ V es1 al.
+
+Notation "es1 '~>' es2" := (tr es1 es2) (at level 0).
+
+Definition ltr (l : lab_pred_rfrom E V) es1 es2 := 
+  exists2 al, es2 = @add_event disp _ V es1 al & l = al.
+
+Notation "es1 '~(' l ')~>' es2" := (ltr es2 es2) (at level 0).
 
 Section Equivalence.
 
@@ -413,8 +429,6 @@ End Equivalence.
 
 Notation "e1 ~~ e2" := (eqv e1 e2) (at level 20).
 
-Section Confluence.
-
 Notation fresh_id1  es := (fresh_seq (dom es)).
 Notation fresh_id2 es := (fresh_seq (fresh_seq (dom es) :: dom es)).
 
@@ -442,8 +456,10 @@ Proof.
   by rewrite ?H //= ?F1 ?F2 //  -?(iso_dom I) mem_map.
 Qed.
 
+Arguments Add {_ _ _ _} _ _ _.
+
 Lemma comm_eqv_tr :
-  diamond_commute eqv tr_add_event.
+  diamond_commute eqv tr.
 Proof.
   move=> es es3 ? /[swap][][[al ap aw apd awd awc]]->.
   case=> f /[dup][[_ [g? c]]] I.
@@ -455,7 +471,7 @@ Proof.
   move=> /[dup] I [[] i l /[dup] /bij_inj ? b].
   have H: forall e, e \in dom es -> h e \in dom es3=> [e|].
   by rewrite -(iso_dom I) mem_map.
-  have [: a1 a2 a3] @s4: add_label es3 := @Add _ al (h ap) (h aw) a1 a2 a3.
+  have [: a1 a2 a3] @s4: add_label es3 := Add al (h ap) (h aw) a1 a2 a3.
   1,2: by apply/H; rewrite (apd, awd).
   - move: awc; rewrite /add_wr -{2}(iso0 I) bij_eq // /lab; move: (l aw)=> /=.
     case L: (lprf _ aw)=> /=; case L': (lprf es3 (f aw))=> /=; by move=>->.
@@ -480,7 +496,7 @@ Lemma add_add (es : exec_event_struct)
 Proof.
   case: al2=> l p w ap aw ?.
   have [:a1 a2 a3] @al : add_label (add_event al1) := 
-    @Add _ l p w a1 a2 a3; try by rewrite ?inE (ap, aw) orbT.
+    Add l p w a1 a2 a3; try by rewrite ?inE (ap, aw) orbT.
   - by rewrite /= lab_add_eventE (lt_eqF (fresh_seq_lt dom_sorted aw)).
   by exists al; rewrite ?(swap_dom (lexx _)).
 Qed.
@@ -513,7 +529,7 @@ Proof.
 Qed.
 
 Lemma comm_ltr l1 l2 : 
-  eqv_diamond_commute (ltr_add_event l1) (ltr_add_event l2) eqv.
+  eqv_diamond_commute (ltr l1) (ltr l2) eqv.
 Proof.
   move=> es ?? [al1 -> /[swap][[al2->]]].
   case: (add_add al1 al2)=> al3 /[dup]? <-->.
@@ -523,9 +539,9 @@ Proof.
   exists (swap id (fresh_id1 es) (fresh_id2 es)); exact/swap_add.
 Qed.
 
-Lemma exlab_tr : tr_add_event ≡ exlab ltr_add_event.
+Lemma exlab_tr : tr ≡ exlab ltr.
 Proof. by move=> ??; split=> [[l ->]|[?[l ->]]]; do ? exists l. Qed.
 
 End Confluence.
 
-End TransitionSystem.
+End AddEvent.
