@@ -175,6 +175,9 @@ Definition ext (f : E -> E) (lprf : lab_pred_rfrom) :=
 Lemma ext_id: ext id =1 id.
 Proof. by case. Qed.
 
+Lemma eq_ext f g: f =1 g -> ext f =1 ext g.
+Proof. by move=> H [/=] ???; rewrite ?H. Qed.
+
 Lemma ext_comp f g: ext (f \o g) =1 ext f \o ext g.
 Proof. by case. Qed.
 
