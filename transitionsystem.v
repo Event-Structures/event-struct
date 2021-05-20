@@ -272,7 +272,7 @@ Lemma icf_add_eventE e1 e2 :
   icf es e1 e2 = icf add_event e1 e2.
 Proof. by rewrite /icf !fpred_add_eventE=> /negbTE->/negbTE->. Qed.
 
-Lemma cf_add_eventE e1 e2:
+Lemma cf_add_eventE e1 e2 :
   e1 != fresh_id -> e2 != fresh_id ->
   cf es e1 e2 = cf add_event e1 e2.
 Proof.
@@ -363,10 +363,10 @@ Definition is_morph :=
 
 Definition is_iso := is_morph /\ bijective f.
 
-Lemma iso0: is_iso -> f \i0 = \i0.
+Lemma iso0 : is_iso -> f \i0 = \i0.
 Proof. by do 2? case. Qed.
 
-Lemma iso_dom: is_iso ->
+Lemma iso_dom : is_iso ->
   map f (dom es1) =i dom es2.
 Proof.
   move=> [[i l] /[dup] B [g /[dup] c1 /can_inj I c2 x]].
@@ -379,7 +379,7 @@ Qed.
 
 End IsoDef.
 
-Lemma eq_is_iso f g es1 es2: f =1 g ->
+Lemma eq_is_iso f g es1 es2 : f =1 g ->
   is_iso f es1 es2 <-> is_iso g es1 es2.
 Proof.
   move=> /[dup] /fsym H1 H2; rewrite /is_iso /is_morph H1.
@@ -407,7 +407,7 @@ Proof.
   by move: (l1 x) (l2 (f x))=> /=; rewrite ext_comp /= => <-.
 Qed.
 
-Lemma eqv_trans: Transitive eqv.
+Lemma eqv_trans : Transitive eqv.
 Proof. move=> ???[f i [g ?]]; exists (g \o f); exact/(is_iso_comp i). Qed.
 
 Lemma is_iso_can es1 es2 f g : 
@@ -422,7 +422,7 @@ Proof.
   by rewrite ?(ext_can c2) c2.
 Qed.
 
-Lemma eqv_symm: Symmetric eqv.
+Lemma eqv_symm : Symmetric eqv.
 Proof. move=>> [? /[dup] I [_ [f *]]]; exists f; exact/(is_iso_can I).  Qed.
 
 End Equivalence.
