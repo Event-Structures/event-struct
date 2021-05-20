@@ -722,6 +722,9 @@ Proof. by rewrite /swap=> /negbTE->/negbTE->. Qed.
 
 End SwapDef.
 
+Lemma swapxx x f : swap f x x =1 f.
+Proof. by move=> y; rewrite /swap eq_sym; case: (x =P y)=> [->|]. Qed.
+
 Lemma swap_inv a b: involutive (swap id a b).
 Proof.
   move=> ?; rewrite {2}/swap; case: ifP=> [/eqP->|]; first exact/swap2.
