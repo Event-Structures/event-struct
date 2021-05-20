@@ -220,7 +220,9 @@ Structure fin_exec_event_struct := Pack {
   fpred e    := fpred_prj (lprf e);
   frf e      := frf_prj (lprf e);
   _          : [forall e : finsupp lprf, fpred (val e) < val e];
+  _          : [forall e : finsupp lprf, fpred (val e) \in dom];
   _          : [forall e : finsupp lprf, frf   (val e) < val e];
+  _          : [forall e : finsupp lprf, frf   (val e) \in dom];
   _          : [forall rs : seq_fset tt dom, 
                   let r := val rs in
                   let w := frf r  in
@@ -241,10 +243,11 @@ Definition eq_es (es es' : fin_exec_event_struct E Val) : bool :=
 Lemma eqesP : Equality.axiom eq_es.
 Proof.
   move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
-  case: x=> d1 l1 i1 s1 ds1 lab1; rewrite {}/lab1 => pc1 rc1 rc1'.
-  case: y=> d2 l2 i2 s2 ds2 lab2; rewrite {}/lab2 => pc2 rc2 rc2'.
+  case: x=> d1 l1 i1 s1 ds1 lab1; rewrite {}/lab1 => pc1 f1 g1 rc1 rc1'.
+  case: y=> d2 l2 i2 s2 ds2 lab2; rewrite {}/lab2 => pc2 f2 g2 rc2 rc2'.
   case/andP=> /= /eqP E1 /eqP E2.
-  move: E1 E2 ds1 i1 s1 s2 pc1 rc1 rc1' ds2 i2 pc2 rc2 rc2'; (do 2 case: _ /).
+  move: E1 E2 ds1 i1 s1 s2 pc1 f1 f2 g1 g2 rc1 rc1' ds2 i2 pc2 rc2 rc2'.
+  (do 2 case: _ /).
   move=> *; congr Pack; exact/eq_irrelevance.
 Qed.
 
@@ -395,7 +398,7 @@ End LabelsFresh.
 (*     Predecessor                                                           *)
 (* ************************************************************************* *)
 
-Lemma fpred_dom e :
+Lemma fpred_ndom e :
   e \notin dom -> fpred e = e.
 Proof. 
   move=> ndom.
@@ -422,15 +425,24 @@ Qed.
 Lemma fpred_fresh e: 
   fpred  e = fresh_id -> e = fresh_id.
 Proof.
-  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/fpred_dom->//].
+  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/fpred_ndom->//].
   by move/le_lt_trans: (fpred_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
 Qed.
+
+Lemma fpred_dom e: 
+  e \in dom -> fpred e \in dom.
+Proof.
+  rewrite lprf_finsupp=>/orP[/eqP->|]; first by rewrite fpred0 dom0.
+  case: es=> /=; rewrite /eventstructure.fpred /==>> ???? /forallP H ??? L.
+  exact/(H [` L]).
+Qed.
+
 
 (* ************************************************************************* *)
 (*     Reads-From                                                            *)
 (* ************************************************************************* *)
 
-Lemma frf_dom e :
+Lemma frf_ndom e :
 e \notin dom -> frf e = e.
 Proof. 
   move=> ndom.
@@ -444,7 +456,7 @@ Qed.
 
 Lemma frf_dom_lt: {in finsupp lprf, forall e, frf e < e}.
 Proof.
-  case: es=> ?????; rewrite /eventstructure.frf /==> ? /forallP + * x I.
+  case: es=> ?????; rewrite /eventstructure.frf /==> ?? /forallP + * x I.
   by move/(_ [` I]).
 Qed.
 
@@ -457,7 +469,7 @@ Qed.
 Lemma frf_fresh e: 
   frf e = fresh_id -> e = fresh_id.
 Proof.
-  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/frf_dom->//].
+  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/frf_ndom->//].
   by move/le_lt_trans: (frf_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
 Qed.
 
@@ -466,14 +478,22 @@ Lemma frf_cond r : r \in dom -> let w := frf r in
 Proof.
   rewrite -(@seq_fsetE tt); case: es=> /= d;
   rewrite /eventstructure.frf /eventstructure.lab /= .
-  by move=> ?????? /forallP /[swap] L /(_ [`L]) /=.
+  by move=> ???????? /forallP /[swap] L /(_ [`L]) /=.
+Qed.
+
+Lemma frf_dom e: 
+  e \in dom -> frf e \in dom.
+Proof.
+  rewrite lprf_finsupp=>/orP[/eqP->|]; first by rewrite frf0 dom0.
+  case: es=> /=; rewrite /eventstructure.frf /==>> ?????? /forallP H ? L.
+  exact/(H [` L]).
 Qed.
 
 Definition fica e : ModelNondet.list E := [:: frf e; fpred e].
 
 Lemma fica_dom e :
   e \notin dom -> fica e = [:: e; e].
-Proof. by move=> nI; rewrite /fica frf_dom // fpred_dom. Qed.
+Proof. by move=> nI; rewrite /fica frf_ndom // fpred_ndom. Qed.
 
 Lemma fica_finsupp e :
   e \notin finsupp lprf -> fica e = [:: e; e].
@@ -785,7 +805,7 @@ Lemma rff_consist e : (frf e) != e -> e \# (frf e) = false.
 Proof.
   move=> N. apply/negbTE/negP; case: (boolP (e \in dom)) => [D|nD].
   - move/allP/(_ _ D)/negP: Consistent; rewrite N; by apply/contra_not=>->.
-  rewrite frf_dom // => /cfP[e1 [e2 [[]]]]; do 2 move/ca_notdom/(_ nD)/eqP->.
+  rewrite frf_ndom // => /cfP[e1 [e2 [[]]]]; do 2 move/ca_notdom/(_ nD)/eqP->.
   by rewrite icfxx.
 Qed.
 
