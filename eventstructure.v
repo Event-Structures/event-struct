@@ -1,9 +1,9 @@
 From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
-From mathcomp Require Import eqtype choice order finmap fintype.
+From mathcomp Require Import eqtype choice order finmap fintype finfun.
 From monae Require Import hierarchy monad_model.
-From event_struct Require Import utilities relations wftype ident.
+From event_struct Require Import utilities relations wftype ident inhtype.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
@@ -294,6 +294,23 @@ Structure fin_exec_event_struct := Pack {
 
   _          : [forall e : finsupp fed, lab (frf (val e)) \>> lab (val e)]; 
 }.
+
+Open Scope fmap_scope.
+
+Lemma inh_exec_event_structure : fin_exec_event_struct.
+Proof.
+  pose dom0 := ([:: \i0] : seq E).
+  pose fed0 := [fsfun [fsfun] with ident0 |-> mk_edescr Init \i0 \i0] :
+    {fsfun for fun e => mk_edescr Eps e e : edescr}.
+  have S: finsupp fed0 =i [:: \i0] => [?|].
+  - by rewrite /fed0 finsupp_with /= finsupp0 ?inE orbF.
+  have F: fed0 \i0 = mk_edescr Init \i0 \i0 by rewrite ?fsfun_with.
+  have [: a1 a2 a3 a4 a5 a6 a7 a8 a9] @evstr : 
+  fin_exec_event_struct := Pack dom0 fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9;
+  rewrite /dom0 ?inE ?eq_refl //.
+  - by apply/eqP/fsetP=> ?; rewrite S seq_fsetE.
+  all: by apply/forallP=> [[/= x]]; rewrite S ?inE=> /eqP-> /[! F]/=.
+Qed.
 
 End ExecEventStructureDef.
 
@@ -885,6 +902,12 @@ End ExecEventStructure.
 Canonical es_eqMixin disp E V := EqMixin (@eqesP disp E V).
 Canonical es_eqType disp E V := 
   Eval hnf in EqType (@fin_exec_event_struct disp E V) (es_eqMixin E V).
+
+Definition es_inhMixin {disp E V} := 
+  @Inhabitant.Mixin (@fin_exec_event_struct disp E V) _ 
+    (inh_exec_event_structure _ _).
+Canonical es_inhType disp E V := 
+  Eval hnf in Inhabitant (@fin_exec_event_struct disp E V) es_inhMixin.
 
 Section Consistency.
 
