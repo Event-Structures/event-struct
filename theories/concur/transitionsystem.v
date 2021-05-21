@@ -118,7 +118,7 @@ Proof. by move/add_pred_in_dom/(fresh_seq_lt dom_sorted): al. Qed.
 Lemma write_fresh_id : write < fresh_id.
 Proof. by move/add_write_in_dom/(fresh_seq_lt dom_sorted): al. Qed.
 
-Definition contain := 
+Definition contain :=
   has (fun e => (flab e == lb) && (ffrf e == write) && (ffpo e == pred)) dom.
 
 Definition add_fed :=
@@ -176,7 +176,7 @@ Proof.
   by move=> ? /frf_dom->.
 Qed.
 
-Fact add_fpo_le : 
+Fact add_fpo_le :
   [forall e : finsupp add_fed, add_fpo (val e) <= val e].
 Proof.
   apply/forallP=> [[/=]] e. 
@@ -186,7 +186,7 @@ Proof.
   exact/fpo_le. 
 Qed.
 
-Fact add_frf_le : 
+Fact add_frf_le :
   [forall e : finsupp add_fed, add_frf (val e) <= val e].
 Proof.
   apply/forallP=> [[/=]] e. 
@@ -510,7 +510,7 @@ Proof.
   rewrite ?map_id // => ? /=; by rewrite edescr_map_id.
 Qed.
 
-Lemma is_iso_comp es1 es2 es3 f g : 
+Lemma is_iso_comp es1 es2 es3 f g :
   is_iso f es1 es2 -> is_iso g es2 es3 ->
   is_iso (g \o f) es1 es3 .
 Proof.
@@ -606,7 +606,7 @@ Qed.
 Lemma swap_add es 
   (al1 al2 : add_label es)
   (al3 : add_label (add_event al1))
-  (al4 : add_label (add_event al2)) : 
+  (al4 : add_label (add_event al2)) :
   al1 = al4 :> edescr E label ->
   al2 = al3 :> edescr E label ->
   is_iso (swap id (fresh_id1 es) (fresh_id2 es))
@@ -629,7 +629,7 @@ Proof.
   by rewrite fsfun_dflt /= -?swap_not_eq // fed_dom I.
 Qed.
 
-Lemma comm_ltr l1 l2 : 
+Lemma comm_ltr l1 l2 :
   eqv_diamond_commute (ltr l1) (ltr l2) eqv.
 Proof.
   move=> es ?? [al1 -> /[swap][[al2->]]].
