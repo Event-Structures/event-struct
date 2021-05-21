@@ -56,3 +56,6 @@ End Exports.
 End Inhabitant.
 Export Inhabitant.Exports.
 
+Definition nat_inhMixin := @Inhabitant.Mixin nat _ 0.
+Canonical nat_inhType := Eval hnf in Inhabitant nat nat_inhMixin.
+
