@@ -310,7 +310,7 @@ Proof.
   rewrite /dom0 ?inE ?eq_refl //.
   - by apply/eqP/fsetP=> ?; rewrite S seq_fsetE.
   all: by apply/forallP=> [[/= x]]; rewrite S ?inE=> /eqP-> /[! F]/=.
-Qed.
+Defined.
 
 End ExecEventStructureDef.
 
