@@ -376,7 +376,7 @@ Notation "es1 '~>' es2" := (tr es1 es2) (at level 0).
 Definition ltr (ed : edescr E label) es1 es2 := 
   exists2 al, es2 = @add_event disp _ V es1 al & ed = al.
 
-Notation "es1 '~(' l ')~>' es2" := (ltr es2 es2) (at level 0).
+Notation "es1 '~(' l ')~>' es2" := (ltr l es1 es2) (at level 0).
 
 Section Equivalence.
 
