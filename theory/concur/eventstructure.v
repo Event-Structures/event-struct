@@ -3,7 +3,7 @@ From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
 From monae Require Import hierarchy monad_model.
-From eventstruct Require Import utilities relations wftype ident inhtype.
+From eventstruct Require Import utils relalg rel wftype ident inhtype.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)

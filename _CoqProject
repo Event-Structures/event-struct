@@ -9,11 +9,13 @@
 -arg -w -arg -deprecated-ssr-search
 -arg -w -arg -ambiguous-paths
 
-theory/common/utilities.v
+theory/common/utils.v
+theory/common/relalg.v
+theory/common/ssrnatlia.v
 theory/common/wftype.v
 theory/common/inhtype.v
 theory/common/ident.v
-theory/common/relations.v
+theory/common/rel.v
 theory/common/monoid.v
 theory/common/monad.v
 theory/common/rewriting_system.v

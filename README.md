@@ -12,9 +12,7 @@ operational small-step semantics for their incremental construction.
 All files include a more detailed description of their contents.
 
 ##### `utilities.v`
-Utility lemmas and tactics. Includes `lia` analogue for ssreflect --
-`ssrnatlia`, extracted from https://github.com/amahboubi/lia4mathcomp by Assia
-Mahboubi.
+Utility lemmas and tactics. 
 
 ##### `inhtype.v`
 Interface for inhabited type, that is a type with one distinguished inhabitant. 

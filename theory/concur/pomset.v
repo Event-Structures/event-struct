@@ -1,7 +1,7 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice order finmap. 
 From RelationAlgebra Require Import lattice monoid rel boolean.
-From eventstruct Require Import utilities.
+From eventstruct Require Import utils.
 
 (******************************************************************************)
 (* This file provides a theory of pomsets.                                    *)
