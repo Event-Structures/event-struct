@@ -22,7 +22,7 @@ From event_struct Require Import utilities relations wftype ident.
 (*            defined on dom; returns ThreadEnd for the events outside of     *)
 (*            dom.                                                            *)
 (*   fpo e == the program order predecessor of the event e,                   *)
-(*            fpred is a finitely supported function that shoud return        *) 
+(*            fpo is a finitely supported function that shoud return          *) 
 (*            e if e is outside of dom.                                       *)
 (*   frf e == finite function that by x returns element form that x reads     *)
 (*              if lab x = Read and ident0 otherwise                          *)
@@ -614,7 +614,7 @@ Proof. by move=> x y H; apply /closureP /rt_step. Qed.
 (* Lemma ica_ca e1 e2 : ica e1 e2 -> ca e1 e2. *)
 (* Proof. exact: rt_closure_subrel. Qed. *)
 
-Lemma ica_fpred {e} : ica (fpo e) e.
+Lemma ica_fpo {e} : ica (fpo e) e.
 Proof. by rewrite icaE /= !inE eqxx. Qed.
 
 Lemma ica_ndom e1 e2 :
@@ -664,11 +664,11 @@ Proof.
   by exists e2; rewrite C12 I23 lt_neqAle neq23 ica_le.
 Qed.
 
-Lemma ca_fpredl {e} : ca (fpo e) e.
-Proof. exact/ica_ca/ica_fpred. Qed.
+Lemma ca_fpo_l {e} : ca (fpo e) e.
+Proof. exact/ica_ca/ica_fpo. Qed.
 
-Lemma ca_fpredr e1 e2 : ca e1 (fpo e2) -> ca e1 e2.
-Proof. by move/ca_trans/(_ ca_fpredl). Qed.
+Lemma ca_fpo_r e1 e2 : ca e1 (fpo e2) -> ca e1 e2.
+Proof. by move/ca_trans/(_ ca_fpo_l). Qed.
 
 Lemma ca_ndom e1 e2 :
   ca e1 e2 -> e2 \notin dom ->
@@ -874,7 +874,7 @@ Proof.
   - by move=> /ca_le L /and4P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
   move/ca_step_last=> /[apply] [[z /and3P[/[swap]]]].
   rewrite icaE /= !inE=> /pred2P[]-> Cx L.
-  - move=> /ca_fpredr Cy /icf_cf/cf_consist2/(_ Cx Cy).
+  - move=> /ca_fpo_r Cy /icf_cf/cf_consist2/(_ Cx Cy).
     rewrite cf_sym rff_consist //=. 
     apply/eqP=> fE; by rewrite fE ltxx in L.
   by move=> Cy /icf_cf/cf_consist2/(_ Cx Cy); exact/IHm.
