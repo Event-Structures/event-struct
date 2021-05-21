@@ -232,7 +232,6 @@ Definition add_event :=
 Definition add_new_event := if contain then es else add_event.
 
 Hypothesis consist : dom_consistency es.
-Hypothesis ncf_rf : ~~ (cf add_event fresh_id write).
 
 Import Relation_Operators.
 
@@ -296,19 +295,28 @@ Proof.
   by rewrite Cnf2 ?C.
 Qed.
 
-Lemma consist_add_event : dom_consistency add_event.
+Lemma consist_add_event :
+  ~~ (cf add_event fresh_id write) <-> dom_consistency add_event.
 Proof.
-  rewrite /dom_consistency; apply /allP=> e1.
-  rewrite /frf /= fsfun_withE ?inE.
-  case: ifP=> /= [/eqP-> _|/negbT N /(allP consist)] //; first exact/implyP.
-  rewrite -cf_add_eventE //.
-  apply/negP=> /eqP Ef.
-  have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
-  by rewrite icaE /= ?inE -Ef eq_refl.
+  split=> [?|].
+  - rewrite /dom_consistency; apply /allP=> e1.
+    rewrite /frf /= fsfun_withE ?inE.
+    case: ifP=> /= [/eqP-> _|/negbT N /(allP consist)] //; first exact/implyP.
+    rewrite -cf_add_eventE //.
+    apply/negP=> /eqP Ef.
+    have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
+    by rewrite icaE /= ?inE -Ef eq_refl.
+  case: (boolP (write == fresh_id))=> [/eqP<- /cf_irrelf/(_ write)->|?] //.
+  move/allP/(_ fresh_id)=> /=; rewrite frf_add_eventE inE eq_refl /=.
+  move/(_ erefl)/implyP; exact.
 Qed.
 
-Lemma consist_add_new_event : dom_consistency add_new_event.
-Proof. rewrite /add_new_event; case: ifP=> // _; exact: consist_add_event. Qed.
+Lemma consist_add_new_event : ~~ (cf add_event fresh_id write) -> 
+dom_consistency add_new_event.
+Proof. 
+  rewrite /add_new_event; case: ifP=> // _. 
+  exact: (proj1 consist_add_event). 
+Qed.
 
 End AddEvent.
 
@@ -336,7 +344,7 @@ Lemma consist_nread :
    dom_consistency (add_event add_label_nread).
 Proof. apply/consist_add_event=> //=; first (by case: ces); exact/cf0. Qed.
 
-Lemma consist_new_nread : 
+Lemma consist_new_nread :
   dom_consistency (add_new_event add_label_nread).
 Proof.
   rewrite /add_new_event; case: ifP=> // _.
