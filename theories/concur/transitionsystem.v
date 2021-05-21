@@ -386,19 +386,110 @@ Context (f : E -> E) (es1 es2 : exec_event_struct).
 
 Definition is_morph := fed es2 \o f =1 (edescr_map f) \o fed es1.
 
+Section Morphism.
+
+Hypothesis morph: is_morph.
+
+Lemma is_morph_lab e :
+  lab es2 (f e) = lab es1 e.
+Proof.
+  move/(congr1 (@lab_prj _ _)): (morph e).
+  by rewrite /lab /=; case: (fed es1 e).
+Qed.
+
+Lemma is_morph_po e :
+  fpo es2 (f e) = f (fpo es1 e).
+Proof.
+  move/(congr1 (@fpo_prj _ _)): (morph e).
+  by rewrite fpo_prj_edescr_map.
+Qed.
+
+Lemma is_morph_rf e :
+  frf es2 (f e) = f (frf es1 e).
+Proof.
+  move/(congr1 (@frf_prj _ _)): (morph e).
+  by rewrite frf_prj_edescr_map.
+Qed.
+
+Lemma is_morph_ica e1 e2 : 
+  ica es1 e1 e2 -> ica es2 (f e1) (f e2).
+Proof.
+  rewrite ?icaE /fica /= ?inE is_morph_po is_morph_rf=> /orP[]/eqP->;
+  by rewrite eq_refl.
+Qed.
+
+Lemma is_morph_ca e1 e2 : 
+  ca es1 e1 e2 -> ca es2 (f e1) (f e2).
+Proof.
+  move/closure_n1P; elim=> [|??/is_morph_ica I ?]; first exact/ca_refl.
+  move/closure_n1P=> ?; apply/closure_n1P.
+  by apply/Relation_Operators.rtn1_trans; first by exact/I.
+Qed.
+
+End Morphism.
+
+
 Definition is_iso := is_morph /\ bijective f.
 
-Lemma iso_dom : is_iso ->
-  map f (dom es1) =i dom es2.
+Section IsoMorphism.
+
+Hypothesis iso : is_iso.
+
+Lemma iso_dom : map f (dom es1) =i dom es2.
 Proof.
-  move=> [l /[dup] B [g /[dup] c1 /can_inj I c2 x]].
+  case: iso=> l /[dup] B [g /[dup] c1 /can_inj I c2 x].
   rewrite -[x]c2 (mem_map I) !fed_dom_mem !mem_finsupp. 
   move: (l (g x))=> /= ->.
   rewrite -[_ _ (f _) _]/(edescr_map f (mk_edescr _ _ _)).
   by rewrite (bij_eq (@edescr_map_bij label E E _ B)).
 Qed.
 
+Lemma f_icf e1 e2 :
+  icf es1 e1 e2 -> icf es2 (f e1) (f e2).
+Proof.
+  case: iso=> ??.
+  by rewrite/icf ?lt_neqAle ?fpo_le ?andbT ?is_morph_po ?(bij_eq (f := f)).
+Qed.
+
+Lemma f_cf e1 e2 :
+  es1 |- e1 # e2 -> es2 |- (f e1) # (f e2).
+Proof.
+  case: iso=> ?? /cfP [x [y H]]; apply/cfP; exists (f x), (f y).
+  by rewrite ?is_morph_ca ?f_icf ?H.
+Qed.
+
+End IsoMorphism.
+
 End IsoDef.
+
+Lemma is_iso_can es1 es2 f g :
+  is_iso f es1 es2 -> cancel f g -> cancel g f -> 
+  is_iso g es2 es1.
+Proof.
+  move=> [l b c1 c2].
+  have B: bijective g by apply/(bij_can_bij b). 
+  split=> //; do ? split; try move=> x /=.
+  apply/(bij_inj (@edescr_map_bij label _ _ _ b)). 
+  move: (l (g x))=> /= <-.
+  by rewrite ?(edescr_map_can c2) c2.
+Qed.
+
+Lemma isoE f e1 e2 es1 es2: is_iso f es1 es2 -> 
+  ( 
+    (lab es2 (f e1) = lab es1 e1) *
+    ((fpo es2 (f e1) = f (fpo es1 e1)) *
+    (frf es2 (f e1) = f (frf es1 e1))) *
+    ((ca es2 (f e1) (f e2) = ca es1 e1 e2) *
+    (cf es2 (f e1) (f e2) = cf es1 e1 e2))
+  )%type.
+Proof.
+  move=> /[dup] If [M []? /[dup] c /(is_iso_can If) /[apply] Ig].
+  do ? split; rewrite ?(is_morph_po M) ?(is_morph_lab M) ?(is_morph_rf M) //.
+  - apply/(sameP idP)/(equivP idP).
+    split=> [/(is_morph_ca M)//|/(is_morph_ca Ig.1)]; by rewrite ?c.
+  apply/(sameP idP)/(equivP idP).
+  split=> [/(f_cf If)//|/(f_cf Ig)]; by rewrite ?c.
+Qed.
 
 Lemma eq_is_iso f g es1 es2 : f =1 g ->
   is_iso f es1 es2 <-> is_iso g es1 es2.
@@ -430,18 +521,6 @@ Qed.
 
 Lemma eqv_trans : Transitive eqv.
 Proof. move=> ???[f i [g ?]]; exists (g \o f); exact/(is_iso_comp i). Qed.
-
-Lemma is_iso_can es1 es2 f g : 
-  is_iso f es1 es2 -> cancel f g -> cancel g f -> 
-  is_iso g es2 es1.
-Proof.
-  move=> [l b c1 c2].
-  have B: bijective g by apply/(bij_can_bij b). 
-  split=> //; do ? split; try move=> x /=.
-  apply/(bij_inj (@edescr_map_bij label _ _ _ b)). 
-  move: (l (g x))=> /= <-.
-  by rewrite ?(edescr_map_can c2) c2.
-Qed.
 
 Lemma eqv_symm : Symmetric eqv.
 Proof. move=>> [? /[dup] I [_ [f *]]]; exists f; exact/(is_iso_can I).  Qed.
