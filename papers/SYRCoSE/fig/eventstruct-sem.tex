@@ -1,0 +1,66 @@
+\newcommand{\ESAddEventRule}{{(Add Event)}\xspace}
+\newcommand{\ESIdleRule}{{(Idle)}\xspace}
+\newcommand{\ESStoreRule}{{(Store)}\xspace}
+\newcommand{\ESLoadRule}{{(Load)}\xspace}
+\newcommand{\ESLoadBotRule}{{(Load-Bottom)}\xspace}
+
+\begin{figure*}[t]
+\begin{center}
+
+  \AXC{$e = \fresh(\first(\eventSeq))$}
+  \AXC{$e_{\lPO} \in \eventSeq$}
+  \AXC{$e_{\lRF} \in \eventSeq$}
+  \RightLabel{\ESAddEventRule}
+  \TIC{$\tup{\eventSeq, \lLAB, \lfPO, \lfRF}
+        \esstep{\tup{e, \ell, e_{\lPO}, e_{\lRF}}}
+        \tup{e :: \eventSeq, \updmap{\lLAB}{e}{\ell}, \updmap{\lfPO}{e}{e_{\lPO}}, \updmap{\lfRF}{e}{e_{\lRF}}}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$e \in S.\eventSeq$}
+  \AXC{$\thrdst = \appmap{\thrdmap}{e}$}
+  \AXC{$P \vdash \thrdst \thrdstep{\eps} \thrdst'$}
+  \RightLabel{\ESIdleRule}
+  \TIC{$P \vdash \tup{S, \thrdmap} \fullstep{\eps} \tup{S, \updmap{\thrdmap}{e}{\thrdst'}}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$\thrdst = \appmap{\thrdmap}{e_{\lPO}}$}
+  \AXC{$P \vdash \thrdst \thrdstep{\ell} \thrdst'$}
+  \AXC{$S \esstep{\tup{e, \ell, e_{\lPO}, \bot}} S'$}
+  \AXC{$l = \wlab{x}{v}$}
+  \RightLabel{\ESStoreRule}
+  \QIC{$P \vdash \tup{S, \thrdmap} \fullstep{\tup{e, \ell, e_{\lPO}, \bot}} \tup{S', \updmap{\thrdmap}{e}{\thrdst'}}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$\thrdst = \appmap{\thrdmap}{e_{\lPO}}$}
+  \AXC{$P \vdash \thrdst \thrdstep{\ell} \thrdst'$}
+  \AXC{$S \esstep{\tup{e, \ell, e_{\lPO}, e_{\lRF}}} S'$}
+  \AXC{$\neg (e \cfRel e_{\lRF})$}
+  \AXC{$l = \rlab{x}{v}$}
+  \noLine
+  \UIC{$\appmap{\lLAB}{e_{\lRF}} = \wlab{x}{v}$}
+  \RightLabel{\ESLoadRule}
+  \QuinaryInfC{$P \vdash \tup{S, \thrdmap} \fullstep{\tup{e, \ell, e_{\lPO}, e_{\lRF}}} \tup{S', \updmap{\thrdmap}{e}{\thrdst'}}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$\thrdst = \appmap{\thrdmap}{e_{\lPO}}$}
+  \AXC{$P \vdash \thrdst \thrdstep{\ell} \thrdst'$}
+  \AXC{$S \esstep{\tup{e, \ell, e_{\lPO}, \bot}} S'$}
+  \AXC{$l = \rlab{x}{\bot}$}
+  \RightLabel{\ESLoadBotRule}
+  \QIC{$P \vdash \tup{S, \thrdmap} \fullstep{\tup{e, \ell, e_{\lPO}, \bot}} \tup{S', \updmap{\thrdmap}{e}{\thrdst'}}$}
+  \DisplayProof
+
+  
+  \caption{Semantics of register machine event structure}
+  \label{fig:eventstruct-sem}
+
+\end{center}
+\end{figure*}

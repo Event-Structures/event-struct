@@ -1,0 +1,302 @@
+%% for proof trees
+\newcommand{\rulehskip}{\hskip 1.5em}
+\newcommand{\rulevspace}{\vspace{1em}}
+
+% set notation
+\newcommand{\set}[1]{\{ #1 \}}
+
+% tuple with angle brackets
+\newcommand{\tup}[1]{\langle #1 \rangle}
+
+% semantics brackets
+\newcommand{\sem}[1]{\llbracket #1 \rrbracket}
+
+% equality by definition
+\newcommand{\defeq}{\triangleq}
+
+% function arrow
+\newcommand{\fun}{\rightarrow}
+
+% partial function arrow
+\newcommand{\pfun}{\rightharpoonup}
+
+% sequential composition
+\newcommand{\seq}{;}
+
+% power set
+\newcommand{\pwset}[1]{\mathcal{P}(#1)}
+
+% prefix 
+\newcommand{\prefix}[1]{\lceil #1 \rceil}
+
+% function-to-relation
+\newcommand{\frel}[1]{#1^\uparrow}
+
+% epsilon/empty 
+\newcommand{\eps}{\epsilon}
+
+% some math sets
+\newcommand{\N}{{\mathbb{N}}}
+\newcommand{\Z}{{\mathbb{Z}}}
+\newcommand{\Q}{{\mathbb{Q}}}
+
+% domain/codomain notation
+\newcommand{\dom}[1]{\textit{dom}{({#1})}}
+\newcommand{\codom}[1]{\textit{codom}{({#1})}}
+
+%\newcommand{\implies}{{\Rightarrow}}
+\renewcommand{\iff}{{\Leftrightarrow}}
+
+% check-mark and cross-mark
+\newcommand{\cmark}{\text{\color{green!50!black}\ding{51}}}
+\newcommand{\xmark}{\text{\color{red!50!black}\ding{55}}}
+
+\newcommand{\instrvdist}{0.75cm}
+\newcommand{\instrhdist}{1.1cm}
+
+%% abbrevations
+
+\newcommand{\ie}{\emph{i.e.,} }
+\newcommand{\eg}{\emph{e.g.,} }
+\newcommand{\etc}{\emph{etc.} }
+\newcommand{\sth}{\emph{s.t.} }
+\newcommand{\etal}{\emph{et~al.} }
+\newcommand{\wrt}{\emph{w.r.t.} }
+\newcommand{\aka}{\emph{a.k.a.} }
+
+% event set
+\newcommand{\lE}{{\mathtt{E}}}
+\newcommand{\lEi}[1]{\lE_{#1}}
+\newcommand{\lEo}{\lEi{0}}
+\newcommand{\lEs}{\widehat{{\mathtt{E}}}}
+\newcommand{\lEsi}[1]{\lEs_{#1}}
+\newcommand{\lEso}{\lEsi{0}}
+\newcommand{\lR}{{\mathtt{R}}}
+\newcommand{\lW}{{\mathtt{W}}}
+\newcommand{\lF}{{\mathtt{F}}}
+\newcommand{\lTS}{{\mathtt{TS}}}
+
+\newcommand{\lX}{{\mathtt{X}}}
+
+\newcommand{\lEsqeq}[1]{{\lE^{\sqsupseteq#1}}}
+\newcommand{\lRsqeq}[1]{{\lR^{\sqsupseteq#1}}}
+\newcommand{\lWsqeq}[1]{{\lW^{\sqsupseteq#1}}}
+\newcommand{\lFsqeq}[1]{{\lF^{\sqsupseteq#1}}}
+
+% various common domains
+\newcommand{\Prog}{\mathsf{Prog}}
+\newcommand{\Inst}{\mathsf{Instr}}
+\newcommand{\Tid}{\mathsf{Tid}}
+\newcommand{\Reg}{\mathsf{Reg}}
+\newcommand{\Loc}{\mathsf{Loc}}
+\newcommand{\Val}{\mathsf{Val}}
+\newcommand{\Bool}{\mathsf{Bool}}
+\newcommand{\BinOp}{\mathsf{BinOp}}
+\newcommand{\Lab}{\mathsf{Lab}}
+\newcommand{\Mod}{\mathsf{Mod}}
+\newcommand{\Cont}{\kappa}
+\newcommand{\Scp}{\mathsf{Scope}}
+\newcommand{\Path}{\pi}
+\newcommand{\ThrdState}{\mathsf{ThrdState}}
+
+% labeling of events
+\newcommand{\lLAB}{{\mathtt{lab}}}
+\newcommand{\lTID}{{\mathtt{tid}}}
+\newcommand{\lTYP}{{\mathtt{typ}}}
+\newcommand{\lLOC}{{\mathtt{loc}}}
+\newcommand{\lMOD}{{\mathtt{mod}}}
+\newcommand{\lVALR}{{\mathtt{val_r}}}
+\newcommand{\lVALW}{{\mathtt{val_w}}}
+
+\newcommand{\rlab}[2]{\lR({#1},{#2})}
+\newcommand{\wlab}[2]{\lW({#1},{#2})}
+\newcommand{\flab}{\lF}
+
+\newcommand{\tslab}[1]{\lTS{#1}}
+
+% maps
+\newcommand{\regmap}{\sigma}
+\newcommand{\thrdmap}{\Sigma}
+\newcommand{\appmap}[2]{#1(#2)}
+\newcommand{\updmap}[3]{#1[#2 \mapsto #3]}
+
+% instruction pointer
+\newcommand{\ip}[1]{#1}
+
+% length
+\newcommand{\len}{\mathsf{len}}
+
+% small-step semantics
+\newcommand{\thrdst}{s}
+\newcommand{\thrdsti}{s_{\mathsf{init}}}
+\newcommand{\thrdstep}[1]{\xrightarrow{#1}}
+\newcommand{\esstep}[1]{\xhookrightarrow{#1}}
+\newcommand{\fullstep}[1]{\xRightarrow{#1}}
+
+% some math notations for event structures
+\newcommand{\eventSet}{E}
+\newcommand{\eventSeq}{\mathcal{E}}
+\newcommand{\caOrd}{\leqslant}
+\newcommand{\cfRel}{\#}
+\newcommand{\primcfRel}{\sim_{\#}}
+\newcommand{\identOrd}{\prec}
+\newcommand{\identOrdDual}{\succ}
+\newcommand{\identOrdRefl}{\preceq}
+
+\newcommand{\first}{\mathsf{first}}
+\newcommand{\fresh}{\mathsf{fresh}}
+
+% some predefined relations
+\colorlet{colorPO}{gray!60!black}
+\colorlet{colorRF}{green!60!black}
+\colorlet{colorCF}{red!60!black}
+\colorlet{colorMO}{orange!60!black}
+\colorlet{colorRB}{purple}
+\colorlet{colorECO}{red!80!black}
+\colorlet{colorRSEQ}{cyan}
+\colorlet{colorRELP}{cyan}
+\colorlet{colorSW}{blue!40!black}
+\colorlet{colorHB}{blue}
+\colorlet{colorSCB}{violet}
+\colorlet{colorPSC}{violet}
+\colorlet{colorFSC}{violet}
+\colorlet{colorSC}{violet}
+\colorlet{colorCA}{gray!60!black}
+\colorlet{colorDEPS}{violet!60!black}
+
+\newcommand{\lPO}{{\color{colorPO}\mathtt{po}}}
+\newcommand{\lRF}{{\color{colorRF}\mathtt{rf}}}
+\newcommand{\lCF}{{\color{colorCF}\mathtt{cf}}}
+\newcommand{\lMO}{{\color{colorMO}\mathtt{mo}}}
+\newcommand{\lRB}{{\color{colorRB}\mathtt{rb}}}
+\newcommand{\lECO}{{\color{colorECO}\mathtt{eco}}}
+\newcommand{\lRSEQ}{{\color{colorRSEQ}\mathtt{rseq}}}
+\newcommand{\lRELP}{{\color{colorRELP}\mathtt{relp}}}
+\newcommand{\lSW}{{\color{colorSW}\mathtt{sw}}}
+\newcommand{\lHB}{{\color{colorHB}\mathtt{hb}}}
+\newcommand{\lSCB}{{\color{colorSCB} \mathtt{scb}}}
+\newcommand{\lPSCB}{\lPSC_{\rm base}}
+\newcommand{\lPSCF}{\lPSC_\lF}
+\newcommand{\lFSC}{{\color{colorFSC}\mathtt{fsc}}}
+\newcommand{\lPSC}{{\color{colorPSC}\mathtt{psc}}}
+\newcommand{\lSC}{{\color{colorSC}\mathtt{sc}}}
+\newcommand{\lCA}{{\color{colorCA}\mathtt{ca}}}
+\newcommand{\lCTRL}{{{\color{colorDEPS}\mathtt{ctrl}}}}
+\newcommand{\lDATA}{{{\color{colorDEPS}\mathtt{data}}}}
+\newcommand{\lADDR}{{{\color{colorDEPS}\mathtt{addr}}}}
+\newcommand{\lCASDEP}{{{\color{colorDEPS}\mathtt{casdep}}}}
+\newcommand{\lDEPS}{{\color{colorDEPS}\mathtt{dep}}}
+
+\newcommand{\lmakeE}[1]{#1\mathtt{e}}
+\newcommand{\lRFE}{\lmakeE{\lRF}}
+\newcommand{\lMOE}{\lmakeE{\lMO}}
+\newcommand{\lRBE}{\lmakeE{\lRB}}
+
+\newcommand{\lmakeI}[1]{#1\mathtt{i}}
+\newcommand{\lRFI}{\lmakeI{\lRF}}
+\newcommand{\lMOI}{\lmakeI{\lMO}}
+\newcommand{\lRBI}{\lmakeI{\lRB}}
+
+\newcommand{\lmakeLoc}[1]{#1_{|loc}}
+
+%% functional versions of relations
+\newcommand{\lfPO}{f_{\lPO}}
+\newcommand{\lfRF}{f_{\lRF}}
+
+%% memory orders
+\newcommand{\na}{\mathtt{na}}
+\newcommand{\pln}{\mathtt{pln}}
+\newcommand{\rlx}{\mathtt{rlx}}
+\newcommand{\rel}{{\mathtt{rel}}}
+\newcommand{\acq}{{\mathtt{acq}}}
+\newcommand{\con}{{\mathtt{con}}}
+\newcommand{\acqrel}{{\mathtt{acqrel}}}
+\newcommand{\relAcq}{\acqrel}
+\newcommand{\sco}{{\mathtt{sc}}}
+
+%% tikz stuff
+\newcommand{\event}[3]{#1#2#3}
+\tikzset{
+   every path/.style={>=stealth},
+   po/.style={->,color=colorPO,,shorten >=-0.5mm,shorten <=-0.5mm},
+   por/.style={->,color=red,shorten >=-0.5mm,shorten <=-0.5mm},
+   ppo/.style={->,color=colorPPO,,shorten >=-0.5mm,shorten <=-0.5mm},
+   cf/.style={-,snake=zigzag,segment amplitude=1pt,segment length=3pt,colorCF},
+   rmw/.style={->,color=colorRMW,,shorten >=-0.5mm,shorten <=-0.5mm},
+   ca/.style={->,color=colorPO,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   rf/.style={->,color=colorRF,dashed,,shorten >=-0.5mm,shorten <=-0.5mm},
+   rfs/.style={->,color=colorRF,thick,dashed,,shorten >=-0.5mm,shorten <=-0.5mm},
+   rb/.style={->,color=colorRB,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   cc/.style={->,color=colorCC,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   ew/.style={<->,color=colorEW,dotted,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   mo/.style={->,color=colorMO,dotted,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   sw/.style={->,color=colorSW,dashed,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   obs/.style={->,color=colorOBS,dashed,,shorten >=-0.5mm,shorten <=-0.5mm},
+   no/.style={->,dotted,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   deps/.style={->,color=colorDEPS,dotted,thick,shorten >=-0.5mm,shorten <=-0.5mm},
+   wgr/.style={fill=colorWGR, opacity=0.1},
+   then/.style={->,snake=zigzag,segment amplitude=1pt,segment length=3pt},
+   esrect/.style={rectangle,dotted},
+}
+
+% arrows
+\newcommand{\arrowCA}{{\color{colorCA}\rightarrow}}
+\newcommand{\arrowCF}{{\color{colorCF}\leftrightsquigarrow}}
+
+% definitions/lemmas/theorems etc
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}[section]
+
+%% parallel threads listings
+\newcommand{\inarr}[1]{\begin{array}{@{}l@{}}#1\end{array}}
+\newcommand{\inarrII}[2]{\begin{array}{@{}l@{~~}||@{~~}l@{}}\inarr{#1}&\inarr{#2}\end{array}}
+\newcommand{\inarrIII}[3]{\begin{array}{@{}l@{~~}||@{~~}l@{~~}||@{~~}l@{}}\inarr{#1}&\inarr{#2}&\inarr{#3}\end{array}}
+\newcommand{\inarrIV}[4]{\begin{array}{@{}l@{~~}||@{~~}l@{~~}||@{~~}l@{~~}||@{~~}l@{}}\inarr{#1}&\inarr{#2}&\inarr{#3}&\inarr{#4}\end{array}}
+\newcommand{\inarrV}[5]{\begin{array}{@{}l@{~~}||@{~~}l@{~~}||@{~~}l@{~~}||@{~~}l@{~~}||@{~~}l@{}}\inarr{#1}&\inarr{#2}&\inarr{#3}&\inarr{#4}&\inarr{#5}\end{array}}
+
+%% instructions for listings
+\newcommand{\textcode}[1]{\texorpdfstring{\texttt{#1}}{#1}}
+\newcommand{\kw}[1]{\textbf{\textcode{#1}}}
+
+\newcommand{\assignInst}[2]{#1 := #2}
+\newcommand{\opInst}[4]{#2 := #3 #1 #4}
+\newcommand{\jumpInst}[2]{\kw{if}~ #1~ \kw{jump}~ #2}
+\newcommand{\exitInst}{\kw{exit}}
+
+\newcommand{\readInst}[2]{#1 := #2}
+\newcommand{\writeInst}[2]{#1 := #2}
+\newcommand{\fenceInst}{\kw{fence}}
+
+%% axiom labels
+% \newcounter{mylabelcounter}
+
+% \makeatletter
+% \newcommand{\labelAxiom}[2]{%
+% \hfill{\normalfont\textsc{(#1)}}\refstepcounter{mylabelcounter}
+% \immediate\write\@auxout{%
+%   \string\newlabel{#2}{{\unexpanded{\normalfont\textsc{#1}}}{\thepage}{{\unexpanded{\normalfont\textsc{#1}}}}{mylabelcounter.\number\value{mylabelcounter}}{}}
+% }%
+% }
+% \makeatother
+
+%% proof assistants 
+\newcommand{\coq}{\textsc{Coq}\xspace}
+\newcommand{\mathcomp}{\textsc{MathComp}\xspace}
+\newcommand{\finmap}{\textsc{finmap}\xspace}
+\newcommand{\relationalgebra}{\textsc{relation-algebra}\xspace}
+\newcommand{\ssreflect}{\textsc{SSReflect}\xspace}
+\newcommand{\equations}{\textsc{Equations}\xspace}
+
+\newcommand{\agda}{\textsc{Agda}\xspace}
+\newcommand{\arend}{\textsc{Arend}\xspace}
+\newcommand{\idris}{\textsc{Idris}\xspace}
+\newcommand{\isabelle}{\textsc{Isabelle/HOL}\xspace}
+
+%% memory models 
+\newcommand{\weakestmo}{\textsc{Weakestmo}\xspace}
+
+%% comments
+\newcommand{\eupp}[1]{{\color{blue}\textbf{Evgenii: #1}}}
+\newcommand{\todo}[1]{{\color{red}\textbf{TODO: #1}}}
+

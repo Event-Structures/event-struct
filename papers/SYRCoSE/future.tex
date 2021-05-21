@@ -1,0 +1,25 @@
+\section{Future Work}
+
+There are several directions for future work. 
+
+First, we plan to apply our library to a wider range of problems. 
+We are going to develop a mechanised semantics of some long-established
+languages used to model concurrency, in particular,
+the calculus of communicating systems~(CCS)~\cite{Milner:80} and 
+$\pi$-calculus~\cite{Milner:99}.      
+We also plan to continue our work on 
+expressing various relaxed models 
+of shared memory~\cite{Lahav-al:POPL16, Lahav-al:PLDI17, Podkopaev-al:POPL19}
+in terms of event structures.  
+
+Second, we want to cover other classes of event structures in our library, 
+in particular, bundle~\cite{Langerak:91}, flow~\cite{Boudol-Castellani:1991},
+and stable~\cite{Winskel:82, Winskel:86} event structures.
+We plan to use them to develop mechanised \emph{denotational} semantics 
+of concurrent languages and relaxed shared memory models~\cite{Dodds-al:ESOP18}.  
+
+Finally, we plan to mechanise in \coq classical results 
+that connect various classes of event structures%  
+~\cite{Nielsen-al:1981, Boudol-Castellani:1991}. 
+It would allow us to easily establish the connection between operational and denotational 
+semantics of concurrent languages.

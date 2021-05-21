@@ -1,0 +1,52 @@
+\subsection{Transitive Closure of Covering Function}
+
+\todo{Sketch the problem of transitive closure termination 
+and our solution if we'll have space and time}
+
+% Initially, we used $\mathtt{nat}$ type to model event structures,
+% but later we realised that using an arbirary well-founded set as a 
+% domain of our model is a good generalisation for our results. 
+
+% However, here arises one problem: we need the operation of 
+% reflexive-transitive closure on binary relations over 
+% general well-founded type, but $\mathtt{mathcomp}$ doesn't
+% have it for them.
+
+% So, we introduce our definition of transitive closure for a 
+% decreasing function:
+
+% \begin{definition}
+%   Let $f : T \to \mathtt{seq} \ T$ be a decreasing function from 
+%   well-founded set $T$ to lists of elements of $T$. Then the 
+%   transitive closure of this function is the function 
+%   $(\mathtt{suffix} \ f)$ from $T$ to lists of elements 
+%   of $T$ such that for any $x : T$ the list $\mathtt{suffix} \ f \ x$
+%   contain $f \ x$ and all elements of closures of elements of $f \ x$.
+% \end{definition}
+
+% Here, well-foundedness of $T$ guarantees that the process of the 
+% calculation of the closure is finite for every element.
+
+% Also, from this definition it is easy to see, that we can easily 
+% generate binary relation on $T$, that corresponds to the closure:
+% $$x \leq y \Leftrightarrow x \in \mathtt{suffix} \ f \ y.$$
+
+% We also introduce a reflexive-transitive closure definition by 
+% addition of element itself to its $\mathtt{suffix}$ list.
+
+% For these definition we proved their correctness, i.e. we proved
+% that the relation generated from our definition can be reflected 
+% to the traditional \coq's inductive definition of the closure.
+
+% Currently, we are working on the generalisation of the initial 
+% function for $\mathtt{seq}$ to an arbitrary function 
+% $f : T \to M \ T$, where M is such a monad, that there is a monad 
+% morphism from $M$ to the list monad.
+
+% This monad morphism allows us to use $\texttt{in}$ notation for
+% monads by passing values to lists.
+
+% For this problem we use $\mathtt{monae}$ \coq library, that 
+% contains a hierarchy of monads. Using this library we defined
+% monad morphisms for arbitrary monads and its special case for 
+% failure monads.

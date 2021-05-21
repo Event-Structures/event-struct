@@ -1,0 +1,50 @@
+\begin{figure}[h]
+\footnotesize
+
+\newcommand{\XScale}{0.75}
+\newcommand{\YScale}{0.75}
+
+  \begin{center}
+    \begin{tikzpicture}[xscale=\XScale, yscale=\YScale]
+      % \node (TS1) at (0,5) {$\text{TS}$};
+
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\tup{1, \bot}$};
+        \node (id2) at (3,4.5) {$\tup{2, \bot}$};
+        \node (id3) at (6,4.5) {$\tup{3, \bot}$};
+        
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3  ) {$\tup{4, \bot}$};
+
+        \draw[ca] (id1) -- (wx1);
+
+        \node (wx2) at (6,3.5) {$\wlab{x}{2}$};
+        \node (id4) at (6,3  ) {$\tup{4, \bot}$};
+
+        \draw[ca] (id3) -- (wx2);
+
+        \node (rx1) at (1.8,3.5) {$\rlab{x}{1}$};
+        \node (id4) at (1.8,3  ) {$\tup{4, r \mapsto 1}$};
+
+        \draw[ca] (wx1) -- (rx1);
+        \draw[ca] (id2) -- (rx1);
+
+        \node (rx2) at (4.2,3.5) {$\rlab{x}{2}$};
+        \node (id4) at (4.2,3  ) {$\tup{4, r \mapsto 2}$};
+
+        \draw[ca] (wx2) -- (rx2);
+        \draw[ca] (id2) -- (rx2);
+
+        \draw[cf] (rx1) -- (rx2);
+
+        % \draw[esrect] (-1,5.5) rectangle (7,2.5);
+        
+    \end{tikzpicture}
+  \end{center}
+
+  \caption{Example of the prime event structure}
+  \label{fig:eventstruct-example}
+\end{figure}

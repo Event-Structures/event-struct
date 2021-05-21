@@ -1,0 +1,94 @@
+\section{Overview of Our Library}
+
+In this section, we sketch the design principles of our library. 
+
+We build our mechanisation on top of the \mathcomp~\cite{Mahboubi-Tassi:MATHCOMP17} library 
+which is an extensive and coherent repository of formalized mathematical theories,
+whose implementation is based on the \ssreflect~\cite{Gonthier-al:SSR2016} extension of the \coq system.
+By using \mathcomp, we draw on the large corpus of already formalised algorithms and mathematical results:
+its core modules feature support for a range of useful data structures,
+e.g. numbers, sequences, finite graphs,
+and also interfaces: types with decidable equality, subtypes, finite types, and so on.
+
+We also use the \emph{small-scale reflection} 
+methodology~\cite{Gonthier-Assia:SSR2010, Gonthier-al:SSR2016}, 
+a key ingredient of \ssreflect. 
+
+The small-scale reflection approach is based on 
+the pervasive use of symbolic representations \emph{intermixed}
+with logical ones within the confines of the same proof goal,
+as opposed to large-scale reflection which does not allow such mixing.
+Symbolic representations are connected to the corresponding logical ones
+via user-defined \emph{reflect predicates}.
+The symbolic representation can be manipulated 
+by the computational engine of the language, 
+allowing the user to automate low-level routine 
+proof management by using various decision 
+and simplification procedures.
+Whenever the user needs to guide the proof 
+they can switch to the logical representation
+and perform some proof steps manually. 
+
+To achieve better automation and e.g. get \emph{proof irrelevance}
+for free, one is encouraged
+to use \emph{decision} procedures whenever possible.
+For example, in the context of our library, 
+we encode the binary relations of the event structures
+as decidable \texttt{bool}-valued relations, 
+\ie $\caOrd, \cfRel : E \fun E \fun \texttt{bool}$,
+as opposed to \emph{propositional} 
+relations of type $E \fun E \fun \texttt{Prop}$.
+
+Encoding computable relations in \coq,
+especially their (computable) transitive closures,
+can be quite challenging since \coq is a total language and
+its termination checker only understands termination patterns
+going slightly beyond simple structural recursion.
+To make it easier, we employ the \equations function definition plugin~%
+\cite{Sozeau-Mangin:ICFP2019}
+which provides both notations for writing programs by dependent pattern-matching
+and good support for well-founded recursion.
+
+In fact, binary relations are omnipresent in our formalization.
+This quickly manifested in a substantial amount of proof overhead and
+we seeked for tools to automate our proofs.
+Since binary relations form a \emph{Kleene Algebra with Tests}~(KAT)~\cite{Kozen:TOPLAS:1997},
+we have chosen to use the \relationalgebra%
+\footnote{\url{https://github.com/damien-pous/relation-algebra}}~%
+\cite{Pous-ITP2013} package 
+which provides a number of tactics to solve goals using
+decision procedures for a number of theories, such as
+partially ordered monoids, lattices, residuated Kleene allegories and KATs.
+
+We also favour the computational encoding of semantics. 
+Similar to the recent related works on mechanisation 
+of operational semantics~\cite{Xia-al:POPL2019, Letan-al:CPP2020, Affeldt-al:ICMPC2019}, 
+we encode the semantics as monadic interpreters.  
+This allows us to extract~\cite{Letouzey:CCE2008} 
+the semantics as a functional program and run it. 
+We believe that the possibility to run the semantics 
+is a very useful feature, as it allows 
+to debug the formal semantics
+and helps to develop better intuition about it.
+
+To facilitate computable semantics, we define a subclass of
+finitely supported event structures as a finite sequence of events
+combined with a finitely supported function which enhances events with 
+additional information, such as their labels, causality predecessors, \etc 
+Encoding finitely supported functions is not a trivial endeavor in
+a proof assistant and for this task we use the \finmap~%
+\footnote{\url{https://github.com/math-comp/finmap}}
+library which is an extension of \mathcomp providing finite sets and
+finite maps on types with a choice operator (rather than on finite types).
+
+Finally, to encode the algebraic hierarchy of various classes of event structures
+we use yet another feature of \mathcomp~--- 
+\emph{packed classes}~\cite{Garillot-al:ICTPHOL2009},
+which is a design pattern providing multiple inheritance,
+maximal sharing of notations and theories,
+and automated structure inference. % and it also deals with performance issues.
+
+% TODO
+% The relation-algebra package and lattice theory
+% well-foundedness and transitive closure for boolean relations
+% identType and how to fight quadratic time complexity

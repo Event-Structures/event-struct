@@ -2,7 +2,7 @@
 
 ![GitHub Actions][github-actions-badge]
 
-[github-actions-badge]: https://github.com/volodeyka/event-struct/workflows/CI/badge.svg
+[github-actions-badge]: https://github.com/event-structures/event-struct/workflows/CI/badge.svg
 
 A Coq library of formalized theory of event structures with applications to concurrency semantics.
 Includes a theory of prime event structures and 

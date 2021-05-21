@@ -1,0 +1,83 @@
+\section{Introduction}
+
+Event structures is a mathematical formalism introduced 
+by Winskel~\cite{Winskel:86} as a semantic domain of concurrent programs.
+In recent years there has been renewed interest in event structures, 
+with the applications of the theory ranging from relaxed memory models%
+~\cite{Jeffrey-Riely:LICS16, PichonPharabod-Sewell:POPL16, Chakraborty-Vafeiadis:POPL19}
+to model-based mutation testing~\cite{Fellner-al:VMCAI2020}.
+% \eupp{perhaps, we could add more citations once the related work is ready.}
+
+The main advantage of event structures
+compared to traditional interleaving semantics 
+is that they give a more compact and concise 
+representation of programs' behaviours.
+For example, consider the following code snippet
+of a simple parallel program.
+
+\input{fig/intro-prog.tex}
+
+\input{fig/intro-traces.tex}
+
+Under the interleaving semantics,
+it has $3! = 6$ traces with each trace consisting of $4$ events,
+as depicted in \cref{fig:intro-traces}.
+Events themselves represent atomic side-effects produced by instruction executions.
+In our case, an event is either a \emph{write} of a value $a$ to a shared variable $x$ denoted as $\wlab{x}{a}$,
+or a \emph{read} of a value $a$ from a shared variable $x$ denoted as $\rlab{x}{a}$.  
+
+The same information can be encoded in a single 
+event structure containing $6$ events in total
+(see \cref{fig:intro-es}). 
+In the event structure, there are two types of edges 
+between the events. The grey arrows $e_1 \arrowCA e_2$ 
+represent the \emph{causality relation}, a 
+partial order reflecting the causal relationship
+between the atomic events of computation.
+The red edges $e_1 \arrowCF e_2$ represent 
+the \emph{conflict relation} which is 
+a symmetric and irreflexive relation 
+encoding mutually exclusive events.
+Each particular trace can be extracted from the event structure
+as a linearisation of some \emph{configuration}, 
+that is a causally-closed and conflict-free subset of events,  
+which additionally should satisfy the constraint 
+that each read is preceded by a matching write. 
+
+\input{fig/intro-es.tex}
+
+The programming languages theory and formal semantics research communities 
+are moving to increase the usage of \emph{proof assistants} 
+like \coq~\cite{Coq},
+\agda~\cite{Agda}, 
+\isabelle~\cite{Nipkow-al:Isabelle2002}, 
+\arend~\cite{Arend}, and others,
+to complement theoretical studies with their mechanisation,
+as this process increases the reliability and reproducibility 
+of scientific results.
+Yet, to the best of our knowledge, there is little work on 
+mechanisation of the theory of event structures.
+The present report aims to close the gap.
+
+We have chosen \coq as the proof assistant because it's a mature formal proof management tool
+with a rich ecosystem of libraries, plugins, documentation, and
+existing applications including the certification of properties of programming languages:
+the verified C compiler CompCert~\cite{Leroy-Compcert-CACM:2006},
+the Verified Software Toolchain~\cite{Appel-ESOP2011} for verification of C programs,
+and the Iris framework~\cite{Jung-al:JFP2018} for concurrent separation logic,
+to name a few.
+
+Our end goal is to develop a \coq library containing 
+a comprehensive set of common definitions, lemmas, 
+and tactics that would allow researchers 
+to utilise the theory of event structures 
+for the needs of their domain.
+
+In this work-in-progress report, we sketch 
+the common design principles behind our library
+and give a concrete example of its usage  
+by developing a formal mechanised semantics of a simple 
+register machine with shared memory.
+
+Our library together with the examples of 
+its usage is available online at \url{https://github.com/event-structures/event-struct}.  

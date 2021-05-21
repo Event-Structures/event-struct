@@ -1,0 +1,62 @@
+We would like to thank the reviewers for their valuable comments. 
+We also thank the Reviewer #2 for the reference to the interesting paper relevant to our work.
+We proceed with answering the Reviewer #3 questions.   
+
+> The Coq proof assistant should be correctly cited, not only particular Coq libraries
+
+We will cite the relevant papers in camera-ready version of the paper. 
+
+> Unfortunately, the Event Structure (ES) of Fig2 does not correspond exactly to the set of executions of Fig1: Fig1 suggests that the read operation is carried out after all write actions; this cannot be concluded from the ES of Fig2.
+
+> Fig 9: the prime event structure forgets the difference between the green and the black preorder, therefore it does not express the requirement that in order R(x,2) to occur it must be "immediately preceded" by W(x,2) (in the sense "last write of x before the read"). If you consider this as a prime event structure an execution W(x,2) . W(x,1) . R(x,2) is not forbidden, as W(1,x) and W(2,x) are independent
+
+We answer both of this questions below, as they are connected to each other. 
+
+The requirement that the "read is preceded by the last write to the same location" 
+in fact corresponds to the sequentially consistent memory model. 
+In other models (e.g. total store order TSO, or release/acquire RA) this condition is relaxed
+(these models do not require an existence of total order on all events within a single execution (configuration)
+and thus in general there is no unique "last" write to read-from).
+ 
+Our construction of event structure guarantees only the basic condition --- 
+acyclicity of program order and reads from. It is, however, a necessary 
+precondition for a wide class of memory models, including sequential consistency,
+total store order, release/acquire, etc. 
+
+Whenever the configuration is extracted from the event structure
+it can be checked to additionally satisfy the consistency predicate 
+of a particular memory model 
+(we briefly mention this in the paper, at the end of Section V). 
+
+Moreover, a po+rf acyclic prime event structure together with 
+a consistency predicate for a particular memory model 
+can be seen as a prime event structure with general (non-binary) conflict. 
+In other words, a consistency predicate induces another notion of the conflict.
+We are currently working on the theory of prime event structures with 
+general conflict that would give us a more solid theoretical background 
+for expressing various memory consistency models in the framework of event structures. 
+
+As for Fig.1 and Fig.2, you are right here. 
+Fig.1. corresponds to sequentially consistent executions of the program,
+but the Fig.2 presents po+rf acyclic event structure.
+We will try to address this problem and remove the confusion.
+ 
+> A bit more information about the Coq libraries you use, and why yo use them would be welcome. 
+> There is space to say a bit more on the approach, may be also for those not "fluent in Coq".
+> The library is not presented at all, only the application. One would like to get some information about the library itself
+
+We will try to address this problem and give more detailed description
+of both our library itself and its dependencies. 
+
+> Fig 7: the program example suggests that there is a third behavior of the read thread which runs fully in parallel with the right threads: it should also be possible to "read too early", that is, to observe R(4,\bottom) or get an error ... depending on the semantic choices (the rules of Fig 6 suggest the 1st option, as "errors" are not foreseen) 
+
+Yes, you are right. The event structure on Fig.7 is incomplete (i.e. it does not contain the read R(4,\bottom). 
+We omit it only for presentation purposes. We will consider to add the missing event to avoid the confusion. 
+
+> Fig 8, Store rule: I suppose here e_rf is an error
+
+Yes, it is a typo. 
+
+> Theorem 1: did you use Coq to make this proof ? It should be done
+
+Yes, we have a proof in Coq.

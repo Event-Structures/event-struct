@@ -1,0 +1,67 @@
+\begin{figure*}[t]
+
+  \begin{subfigure}{0.5\linewidth}
+  \begin{center}
+
+  \AXC{$P[\ip{i}] =\ \assignInst{r}{v}$}
+  \RightLabel{\texttt{Assign}}
+  \UIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \updmap{\regmap}{r}{v}}$}
+  \DisplayProof
+  
+  \rulevspace
+  
+  \AXC{$P[\ip{i}] =\ \writeInst{x}{v}$}
+  \RightLabel{\texttt{Store}}
+  \UIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\wlab{x}{v}} \tup{\ip{i}+1, \regmap}$}
+  \DisplayProof
+   
+  \rulevspace
+  
+  \AXC{$P[\ip{i}] =\ \readInst{r}{x}$}
+  \RightLabel{\texttt{Load}}
+  \UIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\rlab{x}{v}} \tup{\ip{i+1}, \updmap{\regmap}{r}{v}}$}
+  \DisplayProof
+
+  \end{center}
+  \end{subfigure}
+  %
+  \begin{subfigure}{0.5\linewidth}
+  \begin{center}
+    
+  \AXC{$P[\ip{i}] =\ \opInst{\otimes}{r_1}{r_2}{r_3}$}
+  \AXC{$v = \appmap{\regmap}{r_2} \otimes \appmap{\regmap}{r_3}$}
+  \RightLabel{\texttt{Binop}}
+  \BIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \updmap{\regmap}{r_1}{v}}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$P[\ip{i}] =\ \exitInst$}
+  \AXC{$\len(P) = n$}
+  \RightLabel{\texttt{Exit}}
+  \BIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{n}, \regmap}$}
+  \DisplayProof
+
+  \rulevspace
+
+  \AXC{$P[\ip{i}] =\ \jumpInst{r}{\ip{j}}$}
+  \AXC{$\appmap{\regmap}{r} = 0$}
+  \RightLabel{\texttt{CJump}$_z$}
+  \BIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{i+1}, \regmap}$}
+  \DisplayProof
+  
+  \rulevspace
+  
+  \AXC{$P[\ip{i}] =\ \jumpInst{r}{\ip{j}}$}
+  \AXC{$\appmap{\regmap}{r} \neq 0$}
+  \RightLabel{\texttt{CJump}$_{nz}$}
+  \BIC{$P \vdash \tup{\ip{i}, \regmap} \thrdstep{\eps} \tup{\ip{j}, \regmap}$}
+  \DisplayProof
+
+  \end{center}
+  \end{subfigure}
+
+  \caption{Semantics of register machine}
+  \label{fig:regmachine-thrdsem}
+\end{figure*}
+

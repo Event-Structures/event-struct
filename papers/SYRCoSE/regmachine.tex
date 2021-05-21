@@ -1,0 +1,88 @@
+\subsection{Register Machine}
+
+For our case study, we use a simple idealised model 
+of a register machine, which consists of a finite 
+sequence of instructions, an instruction pointer,
+and an infinite set of registers. 
+The syntax of the machine's language is 
+shown in~\cref{fig:regmachine-syntax}.
+
+\begin{figure}[h!]
+\[
+\begin{array}{rclclll}
+  P &\in& \Prog   &::=& i_1 \seq \dots \seq i_n           & \text{program}                 \\
+
+  I &\in& \Inst     &::=&                                 & \text{instruction}             \\
+              & &   & | & \assignInst{r}{v}               & \text{assign to register}      \\
+              & &   & | & \opInst{\otimes}{r_1}{r_2}{r_3}  & \text{apply binary operation}  \\
+              & &   & | & \jumpInst{r}{\ip{i}}            & \text{conditional jump}        \\
+              & &   & | & \exitInst                       & \text{exit}                    \\
+              & &   & | & \readInst{r}{x}                 & \text{read from memory}        \\
+              & &   & | & \writeInst{x}{v}                & \text{write to memory}         \\
+
+  r      &\in& \Reg     &   &                    & \text{thread-local register} \\ 
+  x      &\in& \Loc     &   &                    & \text{shared memory }        \\
+         &   &          &   &                    & \qquad  \text{location}      \\
+  v      &\in& \Z       &   &                    & \text{value}                 \\
+  \otimes&\in& \BinOp   &   &                    & \text{binary operation}      \\
+  \ip{i} &\in& \N       &   &                    & \text{instruction label}     \\ 
+
+\end{array}
+\] 
+
+\caption{Syntax of the register machine}
+\label{fig:regmachine-syntax}
+\end{figure}
+
+We first present the semantics of a single-threaded program.
+Under this semantics, memory access instructions 
+do not operate on shared memory
+but rather produce a \emph{label}
+denoting the side-effect of the operation 
+(see \cref{fig:label-syntax}).
+This encoding allows us to decouple 
+the semantics of the register machine 
+from a \emph{memory model}.
+
+\begin{figure}[h!]
+\[
+\begin{array}{rclclll}
+
+  \ell &\in& \Lab  &::=&                                & \text{}             \\
+              & &  & | & \rlab{x}{v}                    & \text{read of value $v$ from location $x$}   \\
+              & &  & | & \wlab{x}{v}                    & \text{write of value $v$ to location $x$}    \\
+
+\end{array}
+\] 
+\caption{Syntax of Labels}
+\label{fig:label-syntax}
+\end{figure}
+
+The semantics is given in the form of a
+\emph{labelled transition system}:~%
+\footnote{As we have mentioned, in our \coq development we actually use 
+the monadic encoding of the operational semantics. 
+The labelled transition system can be derived from this encoding.}
+$P \vdash s \thrdstep{l} s'$,
+where $P$ is a program, $l$ is a label, $s$ and $s'$ are states of the machine. 
+The state of the machine itself consists of an instruction pointer $\ip{i}$
+and a map from registers to their values $\regmap$, 
+as shown in \cref{fig:regmachine-thrdstate}. 
+The rules of the semantics are standard 
+(see \cref{fig:regmachine-thrdsem}).
+
+\begin{figure}[h!]
+\[
+\begin{array}{rclclll}
+
+  s          &\in& \ThrdState    &::=& \tup{\ip{i}, \regmap} &                         \\
+  \ip{i}     &\in& \N            &   &                    & \text{instruction pointer} \\
+  \regmap    &\in& \Reg \fun \Z  &   &                    & \text{register mapping}   \\
+
+\end{array}
+\] 
+\caption{Thread state of register machine}
+\label{fig:regmachine-thrdstate}
+\end{figure}
+
+\input{fig/regmachine-thrdsem.tex}

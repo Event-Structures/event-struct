@@ -1,0 +1,20 @@
+\section{Related Work}
+
+Event structures were introduced by Winskel to study the semantics of 
+the calculus of communicating systems~\cite{Winskel:86, Winskel:82}. 
+Several modifications of event structures~\cite{Langerak:91, Boudol-Castellani:1991}
+were later proposed to tackle similar problems.  
+ 
+More recently, event structures were applied 
+in the context of relaxed memory models~%
+\cite{Jeffrey-Riely:LICS16, PichonPharabod-Sewell:POPL16, Chakraborty-Vafeiadis:POPL19, Moiseenko-al:ECOOP20}.
+Among this line of work, we are aware of only one paper~\cite{Moiseenko-al:ECOOP20}
+that was accompanied by a mechanisation in a proof assistant. 
+The authors formalised the \weakestmo~\cite{Chakraborty-Vafeiadis:POPL19} 
+memory model in \coq. However, this memory model uses 
+a custom variant of event structures, that does not 
+obey the axioms of any conventional class of 
+event structures~\cite{Winskel:82, Langerak:91, Boudol-Castellani:1991}. 
+This fact makes it harder to reuse and adapt it 
+to other applications of the theory. 
+

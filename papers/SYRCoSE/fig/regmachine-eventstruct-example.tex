@@ -1,0 +1,144 @@
+\begin{figure}[H]
+\footnotesize
+
+\newcommand{\XScale}{0.75}
+\newcommand{\YScale}{0.75}
+
+  \begin{center}
+    %
+    \begin{tikzpicture}[xscale=\XScale, yscale=\YScale]
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\tup{1, \bot}$};
+        \node (id2) at (3,4.5) {$\tup{2, \bot}$};
+        \node (id3) at (6,4.5) {$\tup{3, \bot}$};
+        
+        \draw[esrect] (-1,5.5) rectangle (7,4);
+
+        \node[rotate=270] (step) at (3,3.5) {\Large$\leadsto$};
+
+        % \draw[then] (3,4) -- (3,3.5);
+    \end{tikzpicture}
+    %
+    \begin{tikzpicture}[xscale=\XScale, yscale=\YScale]
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\tup{1, \bot}$};
+        \node (id2) at (3,4.5) {$\tup{2, \bot}$};
+        \node (id3) at (6,4.5) {$\tup{3, \bot}$};
+
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3  ) {$\tup{4, \bot}$};
+
+        \draw[po] (wx1) -- (id1);
+
+        \draw[esrect] (-1,5.5) rectangle (7,2.5);
+
+        \node[rotate=270] (step) at (3,2) {\Large$\leadsto$};
+
+        % \draw[then] (3, 2.5) -- (3, 2);
+    \end{tikzpicture}
+    %
+    \begin{tikzpicture}[xscale=\XScale, yscale=\YScale]
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\tup{1, \bot}$};
+        \node (id2) at (3,4.5) {$\tup{2, \bot}$};
+        \node (id3) at (6,4.5) {$\tup{3, \bot}$};
+        
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3  ) {$\tup{4, \bot}$};
+        
+        \draw[po] (wx1) -- (id1);
+        
+        \node (wx2) at (6,3.5) {$\wlab{x}{2}$};
+        \node (id4) at (6,3  ) {$\tup{4, \bot}$};
+
+        \draw[po] (wx2) -- (id3);
+
+        \draw[esrect] (-1,5.5) rectangle (7,2.5);
+
+        \node[rotate=270] (step) at (3,2) {\Large$\leadsto$};
+
+        % \draw[then] (3, 2.5) -- (3, 2);
+    \end{tikzpicture}
+    %
+    \begin{tikzpicture}[xscale=\XScale, yscale=\YScale]
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\tup{1, \bot}$};
+        \node (id2) at (3,4.5) {$\tup{2, \bot}$};
+        \node (id3) at (6,4.5) {$\tup{3, \bot}$};
+        
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3  ) {$\tup{4, \bot}$};
+
+        \draw[po] (wx1) -- (id1);
+
+        \node (wx2) at (6,3.5) {$\wlab{x}{2}$};
+        \node (id4) at (6,3  ) {$\tup{4, \bot}$};
+
+        \draw[po] (wx2) -- (id3);
+
+        \node (rx1) at (1.8,3.5) {$\rlab{x}{1}$};
+        \node (id4) at (1.8,3  ) {$\tup{4, r \mapsto 1}$};
+
+        \draw[rf] (rx1) -- (wx1);
+        \draw[po] (rx1) -- (id2);
+
+        \draw[esrect] (-1,5.5) rectangle (7,2.5);
+
+        \node[rotate=270] (step) at (3,2) {\Large$\leadsto$};
+
+        % \draw[then] (3, 2.5) -- (3, 2);
+    \end{tikzpicture}
+    %
+    \begin{tikzpicture}[xscale=\XScale, yscale=\YScale]
+      % \node (TS1) at (0,5) {$\text{TS}$};
+
+        \node (TS1) at (0,5) {$\text{TS}$};
+        \node (TS2) at (3,5) {$\text{TS}$};
+        \node (TS3) at (6,5) {$\text{TS}$};
+    
+        \node (id1) at (0,4.5) {$\tup{1, \bot}$};
+        \node (id2) at (3,4.5) {$\tup{2, \bot}$};
+        \node (id3) at (6,4.5) {$\tup{3, \bot}$};
+        
+        \node (wx1) at (0,3.5) {$\wlab{x}{1}$};
+        \node (id4) at (0,3  ) {$\tup{4, \bot}$};
+
+        \draw[po] (wx1) -- (id1);
+
+        \node (wx2) at (6,3.5) {$\wlab{x}{2}$};
+        \node (id4) at (6,3  ) {$\tup{4, \bot}$};
+
+        \draw[po] (wx2) -- (id3);
+
+        \node (rx1) at (1.8,3.5) {$\rlab{x}{1}$};
+        \node (id4) at (1.8,3  ) {$\tup{4, r \mapsto 1}$};
+
+        \draw[rf] (rx1) -- (wx1);
+        \draw[po] (rx1) -- (id2);
+
+        \node (rx2) at (4.2,3.5) {$\rlab{x}{2}$};
+        \node (id4) at (4.2,3  ) {$\tup{4, r \mapsto 2}$};
+
+        \draw[rf] (rx2) -- (wx2);
+        \draw[po] (rx2) -- (id2);
+
+        \draw[esrect] (-1,5.5) rectangle (7,2.5);
+        
+    \end{tikzpicture}
+  \end{center}
+
+  \caption{Example of the event structure construction}
+  \label{fig:regmachine-eventstruct-example}
+\end{figure}

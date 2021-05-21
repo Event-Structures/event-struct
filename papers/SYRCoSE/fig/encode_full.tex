@@ -1,0 +1,31 @@
+\begin{figure}[!h]
+  \begin{center}
+    \begin{tikzpicture}
+      \node (ts1) at (-3,1.2) {ThreadStart};
+      \node (ts2) at (-1, 1.2) {ThreadStart};
+      \node (wxo) at (-3,0.2) {$\wlab{x}{1}$};
+      \node (wxt) at (-1,0.2) {$\wlab{x}{2}$};
+      \node (rxt) at (-2, -1.2) {$\rlab{x}{2}$};
+      \node (rxo) at (-4, -1.2) {$\rlab{x}{1}$};
+      \node (wyo) at (-4, -2.2) {$\wlab{y}{1}$};
+      \node (wyt) at (-2, -2.2) {$\wlab{y}{2}$};
+      \node (ryo) at (-4, -3.2) {$\rlab{y}{1}$};
+      \node (ryt) at (-2, -3.2) {$\rlab{y}{2}$};
+      \draw[po] (wxo)  --  (ts1);
+      \draw[po] (wxt)  --  (ts2);
+      \draw[po] (rxt)  --  (wxo);
+      \draw[rf] (rxt)  --  (wxt);
+      \draw[po] (rxo)  --  (wxo);
+      \draw[rf] (rxo)  edge[bend left] (wxo);
+      \draw[cf] (rxo)  -- node[above]{$\#$}  (rxt);
+      \draw[po] (wyo) -- (rxo);
+      \draw[po] (wyt) -- (rxt);
+      \draw[po] (ryo) -- (wyo);
+      \draw[rf] (ryo) edge[bend left] (wyo);
+      \draw[po] (ryt) -- (wyt);
+      \draw[rf] (ryt) edge[bend right] (wyt);
+    \end{tikzpicture}
+  \end{center}
+  \caption{}
+  \label{fig:full}
+\end{figure}

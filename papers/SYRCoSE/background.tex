@@ -1,0 +1,89 @@
+\section{Background}
+
+% In this section we give some background on event structures. 
+There exist several modifications of event structures.
+Currently, we have implemented only 
+the \emph{prime event structures}~\cite{Winskel:86} in our library. 
+We give some background on this class of event structures below.
+
+\begin{definition} 
+\label{es_def}
+A prime event structure (PES) is a triple $(\eventSet, \caOrd, \cfRel)$, where
+\begin{itemize}
+  \item E is a set of events
+  \item $\caOrd$ is a causality relation on E such that 
+  \begin{itemize}
+    \item $ (\eventSet, \caOrd) $ is a partial order;
+    \item for every $e \in \eventSet$ its causality prefix ${\prefix{e} := \{ e' : e' \caOrd e \}}$ 
+      is finite, \ie every event is caused by a finite set of events.
+  \end{itemize}
+  \item $\#$ is a conflict relation on $E$ such that:
+  \begin{itemize}
+    \item $\#$ is irreflexive and symmetric;
+    \item it satisfies the \emph{hereditary} condition:
+    $$ \forall e_1, e_2, e_3 \in E \ldotp \ e_1 \cfRel e_2 \land e_2 \caOrd e_3 \Rightarrow e_1 \cfRel e_3 $$
+      That is, if two events are in conflict, then all their causal successors 
+      are necessarily in conflict.
+  \end{itemize}
+\end{itemize}
+\end{definition}
+
+A single prime event structure can encode multiple runs of a program.
+Each individual run can be extracted as a \emph{configuration}. 
+In other words, configurations are used to model 
+a history of computation up to a certain point.
+
+\begin{definition}
+A configuration of PES $(E, \caOrd, \cfRel)$ is a set of events $X \subseteq E$ such that
+\begin{itemize}
+  \item it is causally closed 
+    $$ \forall e_1, e_2 \in E \ldotp e_2 \in X \land e_1 \caOrd e_2 \Rightarrow e_1 \in X $$
+  \item and conflict-free 
+    $$ \forall e_1, e_2 \in X \ldotp \neg (e_1 \cfRel e_2) $$
+\end{itemize}
+\end{definition}
+
+% We will also need a subclass of prime event structures --- 
+% \emph{confusion-free} event structures~\cite{Nielsen-al:1981}. 
+% In a confusion-free structure the conflict relation is generated from 
+% a simpler \emph{primitive conflict} relation $\primcfRel$,
+% which denotes pairs of events at which the computation
+% diverges into two conflicting branches. 
+
+% \begin{definition}
+% Confusion-free event structures (CES) is a triple $(E, \caOrd, \primcfRel)$, where
+% \begin{itemize}
+%   \item $\caOrd$ obeys the same laws as for prime event structures;
+%   \item $\primcfRel$ is a primitive conflict relation, such that
+%   \begin{itemize}
+%     \item it is irreflexive, symmetric and transitive;
+%     \item it does not violate the hereditary condition:
+%     $$ \forall e_1, e_2, e_3 \in E \ldotp 
+%        e_1 \primcfRel e_2 \land e_2 \caOrd e_3 \Rightarrow \neg (e_1 \caOrd e_3) $$
+%     \item it satisfies the axiom of \emph{choice locality}
+%   \end{itemize}
+%     $$ \forall e_1, e_2, e_3 \in E \ldotp e_1 \caOrd e_2 \land e_2 \primcfRel e_3 \Rightarrow e_1 \caOrd e_3 $$
+% \end{itemize}
+% \end{definition}
+
+% From a confusion-free event structure one can construct a prime event structure
+% by defining $\cfRel$ as follows:
+% $$ e_1 \cfRel e_2 \iff 
+%    \exists e'_1, e'_2 \in \eventSet \ldotp e'_1 \primcfRel e'_2 \land
+%    e'_1 \caOrd e_1 \land e'_2 \caOrd e_2 $$
+
+% It can be shown that the conflict relation defined in this way 
+% satisfies the axioms of prime event structure.
+
+% The following simple facts about prime event structures:
+
+% \begin{lemma}
+%   A set $\lceil e \rceil$ is conflict-free for any $e \in E$.
+% \end{lemma}
+
+% And a more general one:
+
+% \begin{lemma}
+%   A set $\lceil e \rceil$ is a configuration for any $e \in E$.
+% \end{lemma}
+

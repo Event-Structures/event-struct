@@ -1,0 +1,76 @@
+\begin{figure}[h]
+\footnotesize
+\begin{center}
+\begin{tikzpicture}[xscale=1.5, yscale=0.7]
+    \node (wxaa) at (0,3) {$\wlab{x}{1}$};
+    \node (wxab) at (0,2) {$\wlab{x}{2}$};
+    \node (wxac) at (0,1) {$\wlab{x}{3}$};
+    \node (rxa)  at (0,0) {$\rlab{x}{3}$};
+
+    \draw[ca] (wxaa) -- (wxab);
+    \draw[ca] (wxab) -- (wxac);
+    \draw[ca] (wxac) -- (rxa);
+
+    \draw ($(wxaa.north east) + (0.1,0)$) -- ($(rxa.south east) + (0.1,0)$);
+
+
+    \node (wxba) at (1,3) {$\wlab{x}{1}$};
+    \node (wxbb) at (1,2) {$\wlab{x}{3}$};
+    \node (wxbc) at (1,1) {$\wlab{x}{2}$};
+    \node (rxb)  at (1,0) {$\rlab{x}{2}$};
+
+    \draw[ca] (wxba) -- (wxbb);
+    \draw[ca] (wxbb) -- (wxbc);
+    \draw[ca] (wxbc) -- (rxb);
+
+    \draw ($(wxba.north east) + (0.1,0)$) -- ($(rxb.south east) + (0.1,0)$);
+
+    \node (wxca) at (2,3) {$\wlab{x}{2}$};
+    \node (wxcb) at (2,2) {$\wlab{x}{1}$};
+    \node (wxcc) at (2,1) {$\wlab{x}{3}$};
+    \node (rxc)  at (2,0) {$\rlab{x}{3}$};
+
+    \draw[ca] (wxca) -- (wxcb);
+    \draw[ca] (wxcb) -- (wxcc);
+    \draw[ca] (wxcc) -- (rxc);
+
+    \draw ($(wxca.north east) + (0.1,0)$) -- ($(rxc.south east) + (0.1,0)$);
+
+    \node (wxda) at (3,3) {$\wlab{x}{2}$};
+    \node (wxdb) at (3,2) {$\wlab{x}{3}$};
+    \node (wxdc) at (3,1) {$\wlab{x}{1}$};
+    \node (rxd)  at (3,0) {$\rlab{x}{1}$};
+
+    \draw[ca] (wxda) -- (wxdb);
+    \draw[ca] (wxdb) -- (wxdc);
+    \draw[ca] (wxdc) -- (rxd);
+
+    \draw ($(wxda.north east) + (0.1,0)$) -- ($(rxd.south east) + (0.1,0)$);
+
+    \node (wxea) at (4,3) {$\wlab{x}{3}$};
+    \node (wxeb) at (4,2) {$\wlab{x}{1}$};
+    \node (wxec) at (4,1) {$\wlab{x}{2}$};
+    \node (rxe)  at (4,0) {$\rlab{x}{2}$};
+
+    \draw[ca] (wxea) -- (wxeb);
+    \draw[ca] (wxeb) -- (wxec);
+    \draw[ca] (wxec) -- (rxe);
+
+    \draw ($(wxea.north east) + (0.1,0)$) -- ($(rxe.south east) + (0.1,0)$);
+
+    \node (wxfa) at (5,3) {$\wlab{x}{3}$};
+    \node (wxfb) at (5,2) {$\wlab{x}{2}$};
+    \node (wxfc) at (5,1) {$\wlab{x}{1}$};
+    \node (rxf)  at (5,0) {$\rlab{x}{1}$};
+
+    \draw[ca] (wxfa) -- (wxfb);
+    \draw[ca] (wxfb) -- (wxfc);
+    \draw[ca] (wxfc) -- (rxf);
+
+    % \draw ($(wxfa.north east) + (0.1,0)$) -- ($(rxf.south east) + (0.1,0)$);
+
+\end{tikzpicture}
+\caption{}
+\label{fig:intro-traces}
+\end{center}
+\end{figure}

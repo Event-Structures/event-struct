@@ -1,0 +1,50 @@
+\subsection{Construction small-step semantics}
+Consider we have some Execution Event Structure $es = \la E, \ffun{lab}, \fpred, \frf \ra$, $pr \in E$ ~--- the $es$'s event and some fresh identifier $e = fresh(E)$. Let's define expansion $es$ with $e$ depending on it's label:
+\begin{definition}[Add event]
+  \begin{itemize}
+    \item $es + \la \wlab{x}{i}, \ pr \ra \ \triangleq \vspace{1mm} \\ \ 
+    \la E \cup \{e\}, \
+        \ffun{lab}[e \leftarrow \wlab{x}{i}], \
+        \fpred[e \leftarrow pr], \
+        \frf \ra\ $
+        \vspace{1mm}
+    \item $es + \la \text{ThreadStart} \ra \ \triangleq \vspace{1mm} \\
+    \la E \cup \{e\}, \
+    \ffun{lab}[e \leftarrow \text{ThreadStart}], \
+    \fpred, \
+    \frf \ra\ $
+    \vspace{1mm}
+    \item $es + \la \rlab{x}{i}, \ pr, \ wr \ra \ \triangleq$
+    $$\la E \cup \{e\}, \
+    \ffun{lab}[e \leftarrow \rlab{x}{i}], \
+    \fpred[e \leftarrow pr], \
+    \frf[e \leftarrow wr] \ra\ $$
+  \end{itemize}
+
+\end{definition}
+Then we define program configuration:
+\begin{definition}[configuration]
+  $$config \ \triangleq \ \la \es, \tmap \ra$$
+  where
+  \begin{itemize}
+    \item $\es$ ~--- our current consistent Execution Event Structure
+    \item $\tmap$ ~--- map that takes event $e$ from $\es$ and returns some pair. First component of this pair is a state of some thread after execution of $e$'s memory-side-effect. Our program contains several threads, so we need to specify number of thread (where everything is going on) in the second component
+  \end{itemize}
+\end{definition}
+So program configuration describes current Execution Event Structure, where we map each event to corresponding thread state. Thus, to make our semantics step we should select some event and make progress in it's thread state. Before putting it formally we will need some notations:
+
+By $\es.E$, $\es.\ffun{lab}$, $\es.fr$ we denote $E$, $\ffun{lab}$ and $fresh(E)$ respectively, where $\es = \la E, \ffun{lab}, \fpred, \frf \ra$. Also by $\es.tid$ we denote the smallest number of thread that wasn't started yet. \\
+If we have some $p : \texttt{P}$, and $t \in \mathbb{N}$ ~--- thread number, $p[t] :=$ $t$'s thread of program $p$. 
+
+Also we will need 'can-read-from relation':
+\begin{definition}[Can-read-from relation]
+  If $l, l' \in \lb$ we can define
+  $$ l \ll l' \ \triangleq \ l = \rlab{x}{i} \ \text{and} \ l' = \wlab{x}{i}$$
+\end{definition}
+
+One can find definition of small-step semantics in \cref{fig:smallstep} \\
+First look at $\to$ThreadStart rule. In this rule we are starting a new thread by adding some fresh identifier to $\es.E$ with label -- ThreadStart. \\
+If we proceeded in thread state of some event $e$ without any memory-side-effect, we should just update $e$'s thread state (see $\to\_$). \\
+Another possibility of memory-side-effect is write to some shared-memory location. In this case we should just add a new write-event to our Execution Event Structure, and map it to the thread state after our side-effect (see $\to\wlab{x}{i}$). \\
+We observe the most interesting situation when our side-effect was $\rlab{x}{\_}$ (see $\to\rlab{x}{i}$). That means that we wanted to read from some shared-memory location. We need to choose some write-event $w \in \es.E$ and read value from it. It's clear that $w$ should have label $\wlab{x}{i}$, for some $i$. \\
+Unfortunately, in the last step we could read from conflicting event $w$. So after making $\to$ step, it is necessary to check if our final $\es'$ is consistent (see small-step rule). After all, we obtain one-step relation $\Rightarrow$.
