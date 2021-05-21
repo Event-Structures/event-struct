@@ -1,4 +1,4 @@
--Q . event_struct
+-R theory event_struct
 
 -arg -w -arg -notation-overridden
 -arg -w -arg -non-reversible-notation
@@ -9,16 +9,19 @@
 -arg -w -arg -deprecated-ssr-search
 -arg -w -arg -ambiguous-paths
 
-utilities.v
-monoid.v
-inhtype.v
-wftype.v
-monad.v
-relations.v
-ident.v
-pomset.v
-prime_eventstruct.v
-eventstructure.v
-transitionsystem.v
-regmachine.v
-rewriting_system.v
+theory/common/utilities.v
+theory/common/wftype.v
+theory/common/inhtype.v
+theory/common/ident.v
+theory/common/relations.v
+theory/common/monoid.v
+theory/common/monad.v
+theory/common/rewriting_system.v
+
+theory/concur/pomset.v
+theory/concur/prime_eventstruct.v
+theory/concur/eventstructure.v
+theory/concur/transitionsystem.v
+
+theory/lang/regmachine.v
+
