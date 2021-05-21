@@ -42,12 +42,12 @@ Lemma join_morph (M N : monad) (η: M ≈> N) :
     η a (Join m) = Join (η (N a) ((M # (η a)) m)).
 Proof. case: η => cpmm; by case. Qed.
 
-Lemma bind_morph (T : Type) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> M T) :
-  η T (m >>= k) = (η T m) >>= (fun x => η T (k x)).
+Lemma bind_morph (T T' : Type) (M N : monad) (η : M ≈> N) (m : M T) (k : T -> M T') :
+  η T' (m >>= k) = (η T m) >>= (fun x => η T' (k x)).
 Proof.
   rewrite /Bind join_morph.
   rewrite <- monad_lib.fmap_oE.
-  fold (comp (η (N T)) (M # (η T \o k)) m).
+  fold (comp (η (N T')) (M # (η T' \o k)) m).
   by rewrite -natural. 
 Qed.
 
@@ -103,7 +103,7 @@ Section ListMonadMorphismTheory.
 Import NDMonadMorphism.Syntax.
 Import ModelNondet ModelMonad ListMonad.
 
-Context {T : eqType}.
+Context {T T' : eqType}.
 Variable (M : nondetMonad) (η : M ≈> ModelNondet.list).
 
 Lemma ret_morph_list (x : T) :
@@ -136,8 +136,8 @@ Lemma mem_alt (x : T) (m n : M T) :
   x \in η T (Alt m n) = (x \in η T m) || (x \in η T n).
 Proof. by rewrite alt_morph mem_cat. Qed.
 
-Lemma mem_bindP (s : M T) (k : T -> M T) (y : T) :
-  reflect (exists2 x, x \in η T s & y \in η T (k x)) (y \in η T (s >>= k)).
+Lemma mem_bindP (s : M T) (k : T -> M T') (y : T') :
+  reflect (exists2 x, x \in η T s & y \in η T' (k x)) (y \in η T' (s >>= k)).
 Proof.
   apply /(iffP idP).
   { rewrite bind_morph => /flatten_mapP.
@@ -145,7 +145,7 @@ Proof.
     rewrite mem_seq1 => /eqP -> ymx.
     by exists x. }
   move => [] x xs ymx. rewrite bind_morph.
-  apply /flatten_mapP. exists (η T (k x)) => //.
+  apply /flatten_mapP. exists (η T' (k x)) => //.
   apply /flatten_mapP. exists x => //. exact: mem_head.
 Qed.
 

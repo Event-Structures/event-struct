@@ -57,22 +57,25 @@ Definition sfrel {M : nondetMonad} {η : M ≈> List}
 
 Section Strictify.
 
-Context (T : eqType).
-Variable  (M : nondetMonad) (η : M ≈> List).
-Implicit Type (f : T -> M T).
+Context {disp : unit} {T : wfType disp}.
+Variable  (M : nondetMonad) (f : forall (x : T), M {y : T | y < x}) (η : M ≈> List).
+Implicit Type (f : forall (x : T), M {y : T | y < x}).
 
-Definition strictify f : T -> M T :=
-  fun x => mfilter M (f x) (fun y => x != y).
+Definition f_ : T -> M T :=
+  fun x => (M # val) (f x).
 
-Lemma strictify_weq f :
-  @sfrel M η T (strictify f) ≡ (@sfrel M η T f \ eq_op).
+Definition strictify (g : T -> M T) : T -> M T :=
+  fun x => mfilter M (g x) (fun y => x != y).
+
+Lemma strictify_weq (g : T -> M T) :
+  @sfrel M η T (strictify g) ≡ (@sfrel M η T g \ eq_op).
 Proof. 
   move=> x y; rewrite /sfrel /strictify /mfilter /=.
   by rewrite mem_mfilter andbC. 
 Qed.
 
-Lemma strictify_leq f : 
-  @sfrel M η T (strictify f) ≦ @sfrel M η T f.
+Lemma strictify_leq g :
+  @sfrel M η T (strictify g) ≦ @sfrel M η T g.
 Proof. by rewrite strictify_weq; lattice. Qed.
 
 End Strictify. 
@@ -83,10 +86,12 @@ Section WfRTClosure.
 
 Context {disp : unit} {T : wfType disp}.
 
-Variable (M : nondetMonad) (η : M ≈> List) (f : T -> M T).
+Variable (M : nondetMonad) (η : M ≈> List) (f : forall (x : T), M {y : T | y < x}).
 
 (* Hypothesis descend : forall x y, y \in f x -> y < x. *)
-Hypothesis descend : @sfrel M η T f ≦ (>%O).
+(* Hypothesis descend : @sfrel M η T f ≦ (>%O). *)
+
+
 
 (* A hack to get around a bug in Equations 
  * (see https://github.com/mattam82/Coq-Equations/issues/241).
@@ -97,12 +102,7 @@ Hypothesis descend : @sfrel M η T f ≦ (>%O).
  Definition suffix_aux (x : T) (rec : forall y : T, y < x -> M T) := 
   let ys := f x in 
   let ps := ys >>= (fun x => 
-    if x \in η T ys =P true is ReflectT pf then
-      rec x (descend _ _ pf)
-    else
-      Fail
-  ) in 
-  Alt ys ps.
+    rec (val x) (valP x)) in Alt ((M # val) ys) ps.
 
 (* strict suffix of an element `x`, i.e. a set { y | x R y } *)
 Equations suffix (x : T) : M T by wf x (<%O : rel T) := 
@@ -124,32 +124,65 @@ Definition rt_closure : {dhrel T & T} :=
 (*       THEORY                                                               *)
 (* ************************************************************************** *)
 
+Import monad_lib.Monad_of_ret_bind ModelMonad.ListMonad.
+
+Lemma dec x y : x \in η T (f_ _ f y) -> x < y.
+Proof.
+  have H: η T ((M # val) (f y)) = ((η T) \o (M # val)) (f y) by [].
+  have: (x \in η T (f_ M f y)) = (x \in map val (η _ (f y))).
+  { rewrite /f_ H -natural /= /Actm /= /Map /bind /ret /= /ret_component /comp.
+    by rewrite flatten_map1. }
+  by move=> ->=> /mapP [z]; case z=> {}z Hz /= _ ->.
+Qed.
+
+Lemma strict_lt n k : k \in η T (strictify M (f_ _ f) n) -> k < n.
+Proof. rewrite mem_mfilter => /andP[] ??. by rewrite dec. Qed.
+
+Lemma val_mem y x : x \in η _ (f y) -> val x \in η T (f_ _ f y).
+Proof.
+  have HH: η T ((M # val) (f y)) = ((η T) \o (M # val)) (f y) by [].
+  rewrite HH -natural /= /Actm /= /Map /bind /ret /= /ret_component /comp.
+  rewrite flatten_map1 => H. by apply map_f.
+Qed.
+
+Lemma mon_in x y (p : x < y) :
+  x \in η _ (f_ _ f y) -> exist _ x p \in η _ (f y).
+Proof.
+  move=> H. rewrite /=.
+  have: η {y0 : T | y0 < y} (f y) = pmap insub (η T (f_ M f y)).
+  { have: η T ((M # val) (f y)) = (η T \o (M # val)) (f y) by [].
+    rewrite /f_ => ->. rewrite -natural /Actm /= /Map /bind /comp flatten_map1.
+    elim: (η {y0 : T | y0 < y} (f y))=> //= z s IHs.
+    by rewrite -IHs /oapp valK. }
+  move=> ->. by rewrite mem_pmap_sub.
+Qed.
+
 Lemma t_closure_1nP x y : 
-  reflect (clos_trans_1n T (@sfrel M η T f) x y) (t_closure x y).
+  reflect (clos_trans_1n T (@sfrel M η _ (f_ _ f)) x y) (t_closure x y).
 Proof.
   rewrite /t_closure. funelim (suffix x)=> /=. 
   apply /(iffP idP); rewrite mem_alt /sfrel /=.
-  { move=> /orP[|/mem_bindP[z]] //; first exact: t1n_step.
-    case: eqP=> // S /descend yz /X tr. 
-    move: (tr yz) => H.
-    by apply: t1n_trans; first exact: S. }
+  { move=> /orP[|/mem_bindP[z PP]] //; first exact: t1n_step.
+    move: (val_mem x z PP) => S /X H. apply: t1n_trans; first exact: S.
+    by apply: H; exact: dec. }
   move: X=> /[swap] [[?->//|{}y ? /[dup] ? L /[swap]]].
   move=> /[apply] H; apply/orP; right; apply/mem_bindP.
-  exists y=> //. case: eqP => // /descend yz. exact: H.
+  eexists; first by apply: mon_in (L); exact: (dec y x L).
+  move=> /=. by apply: H; first exact: (dec y x L).
 Qed.
 
 Lemma t_closureP x y :
-  reflect (clos_trans T (@sfrel M η T f) x y) (t_closure x y).
+  reflect (clos_trans T (@sfrel M η _ (f_ _ f)) x y) (t_closure x y).
 Proof.
   apply /(equivP (t_closure_1nP x y)).
   symmetry; exact: clos_trans_t1n_iff.
 Qed.
 
 Lemma clos_trans_gt : 
-  clos_trans T (@sfrel M η T f) ≦ (>%O : rel T).
+  clos_trans T (@sfrel M η _ (f_ _ f)) ≦ (>%O : rel T).
 Proof. 
   move=> ??; rewrite/sfrel /=.
-  elim=> [y z /descend | x y z _ ] //=.
+  elim=> [y z /dec | x y z _ ] //=.
   move=> /[swap] _ /[swap]; exact: lt_trans.
 Qed.
 
@@ -169,7 +202,7 @@ Proof.
 Qed.
 
 Lemma rt_closureP x y :
-  reflect (clos_refl_trans T (@sfrel M η T f) x y) (rt_closure x y).
+  reflect (clos_refl_trans T (@sfrel M η _ (f_ _ f)) x y) (rt_closure x y).
 Proof.
   apply /equivP; last first.
   { rewrite clos_refl_transE clos_refl_hrel_qmk. 

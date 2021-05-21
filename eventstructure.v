@@ -3,7 +3,7 @@ From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
 From monae Require Import hierarchy monad_model.
-From event_struct Require Import utilities relations wftype ident inhtype.
+From event_struct Require Import utilities relations wftype ident inhtype monad.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
@@ -575,7 +575,7 @@ Qed.
 
 (* TODO: consider to generalize this lemma and move to `relations.v` *)
 Lemma fica_gt :
-  (@sfrel _ monad.id_ndmorph E (strictify E _ fica)) ≦ (>%O : rel E).
+  (@sfrel _ monad.id_ndmorph E (strictify _ fica)) ≦ (>%O : rel E).
 Proof. 
   rewrite strictify_weq.
   (* TODO: can ssreflect rewrite do setoid rewrites? *)
@@ -594,8 +594,19 @@ Proof. by []. Qed.
 Lemma ica_le e1 e2 : ica e1 e2 -> e1 <= e2.
 Proof. exact: fica_ge. Qed.
 
+Definition sica e1 e2 := e1 \in (strictify _ fica e2).
+
+Lemma sica_lt e1 e2 : sica e1 e2 -> e1 < e2.
+Proof. exact: fica_gt. Qed.
+
+Definition dep_fica (e1 : E) : ModelNondet.list {e : E | e < e1} :=
+  map (fun e => eqtype.Sub (val e) (@sica_lt (val e) e1 (valP e)))
+    (seq_in ((strictify _ fica) e1)).
+
+Import monad_lib.Monad_of_ret_bind ModelMonad.ListMonad.
+
 (* Causality relation *)
-Definition ca : rel E := (rt_closure fica_gt)°.
+Definition ca : rel E := (rt_closure id_ndmorph dep_fica)°.
 
 Lemma closureP e1 e2 :
   reflect (clos_refl_trans _ ica e1 e2) (ca e1 e2).
@@ -614,8 +625,25 @@ Proof.
     by apply /rel_weq_m; rewrite -strictify_weq.
   rewrite rel_qmk_m.
   rewrite -itr_qmk -str_itr.
-  rewrite -clos_refl_trans_hrel_str.
-  apply /reflect_weq/rt_closureP.
+  rewrite -clos_refl_trans_hrel_str /= /hrel_cnv /dhrel_cnv.
+  have: (strictify ModelNondet.list fica) =1 f_ _ dep_fica.
+  { move=> ?.
+    rewrite /dep_fica /f_ /= /Actm /= /Map /bind /comp /ret /= /ret_component.
+    by rewrite -seq.map_comp flatten_map1 val_seq_in. }
+  move=> DH.
+  have: forall x y, clos_refl_trans E
+      (@sfrel _ id_ndmorph _ (strictify _ fica)) x y <->
+    clos_refl_trans E (@sfrel _ id_ndmorph _ (f_ _ dep_fica)) x y.
+  { move=> x y. split.
+    { elim=> //=.
+      { rewrite /sfrel /=. move=> z h H. apply: rt_step. by rewrite -DH. }
+      move=> z h l ? IHzh ? IHhl. apply: rt_trans. exact: IHzh. done. }
+    elim=> //=.
+    { rewrite /sfrel /=. move=> z h H. apply: rt_step. by rewrite DH. }
+    move=> z h l ? IHzh ? IHhl. apply: rt_trans. exact: IHzh. done. }
+  move=> H x y. split.
+  { move=> HH. by apply /rt_closureP/H. }
+  by move=> /rt_closureP /H.
 Qed.
 
 Lemma closure_n1P e1 e2 :
@@ -708,7 +736,7 @@ Proof.
   by apply/H/ica0.
 Qed.
 
-Definition seqpred_ca := wsuffix fica_gt.
+Definition seqpred_ca := wsuffix _ dep_fica.
 
 Lemma seqpred_ca_in e1 e2 : e1 \in seqpred_ca e2 = ca e1 e2.
 Proof. by []. Qed.
