@@ -156,14 +156,7 @@ Qed.
 
 Lemma add_fed0 : 
   add_fed ident0 = {| lab_prj := Init; fpo_prj := ident0; frf_prj := ident0 |}.
-Proof. 
-  rewrite add_fedE.
-  (* TODO: make a lemma: `fresh_id != ident0`? *)
-  case: ifP=> [|?]; last exact/fed0.  
-  rewrite lt_eqF=> //.
-  apply/(fresh_seq_lt dom_sorted).
-  exact/dom0.
-Qed.
+Proof. rewrite add_fedE lt_eqF=> //; [ exact/fed0| exact/i0_fresh_seq ]. Qed.
 
 Fact add_fpo_dom :
   [forall e : finsupp add_fed, add_fpo (val e) \in fresh_id :: dom].
