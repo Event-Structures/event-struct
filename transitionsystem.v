@@ -376,22 +376,17 @@ Section IsoDef.
 
 Context (f : E -> E) (es1 es2 : exec_event_struct).
 
-Definition is_morph := 
-  f \i0 = \i0 /\ fed es2 \o f =1 (edescr_map f) \o fed es1.
+Definition is_morph := fed es2 \o f =1 (edescr_map f) \o fed es1.
 
 Definition is_iso := is_morph /\ bijective f.
-
-Lemma iso0 : is_iso -> f \i0 = \i0.
-Proof. by do 2? case. Qed.
 
 Lemma iso_dom : is_iso ->
   map f (dom es1) =i dom es2.
 Proof.
-  move=> [[i l] /[dup] B [g /[dup] c1 /can_inj I c2 x]].
+  move=> [l /[dup] B [g /[dup] c1 /can_inj I c2 x]].
   rewrite -[x]c2 (mem_map I) !fed_dom_mem !mem_finsupp. 
   move: (l (g x))=> /= ->.
-  rewrite -[mk_edescr Eps (f (g x)) (f (g x))]
-          /(edescr_map f (mk_edescr Eps (g x) (g x))).
+  rewrite -[_ _ (f _) _]/(edescr_map f (mk_edescr _ _ _)).
   by rewrite (bij_eq (@edescr_map_bij label E E _ B)).
 Qed.
 
@@ -400,10 +395,10 @@ End IsoDef.
 Lemma eq_is_iso f g es1 es2 : f =1 g ->
   is_iso f es1 es2 <-> is_iso g es1 es2.
 Proof.
-  move=> /[dup] /fsym H1 H2; rewrite /is_iso /is_morph H1.
+  move=> /[dup] /fsym H1 H2; rewrite /is_iso /is_morph.
   have->: bijective f <-> bijective g.
   - by split=> [/eq_bij/(_ _ H2) |/eq_bij/(_ _ H1)]. 
-  apply/(and_iff_compat_r (bijective g))/(and_iff_compat_l (_ = _)).
+  apply/(and_iff_compat_r (bijective g)).
   split=> H x; move: (H x)=> /=; rewrite (H1, H2)=>->;
     by under edescr_map_eqfun=> ? do rewrite (H1, H2) over //.
 Qed.
@@ -420,8 +415,8 @@ Lemma is_iso_comp es1 es2 es3 f g :
   is_iso f es1 es2 -> is_iso g es2 es3 ->
   is_iso (g \o f) es1 es3 .
 Proof.
-  case=> [][] i1 l1 ?[][] i2 l2 /[dup] [[?? c1 ?]] .
-  (do ? split)=>[|x|]; last exact/bij_comp; first by rewrite /= i1 i2. 
+  case=> [] l1 ?[] l2 /[dup] [[?? c1 ?]] .
+  (do ? split)=>[x|]; last exact/bij_comp. 
   by move: (l1 x) (l2 (f x))=> /=; rewrite edescr_map_comp /= => <-.
 Qed.
 
@@ -432,10 +427,9 @@ Lemma is_iso_can es1 es2 f g :
   is_iso f es1 es2 -> cancel f g -> cancel g f -> 
   is_iso g es2 es1.
 Proof.
-  move=> [[] i l b c1 c2].
+  move=> [l b c1 c2].
   have B: bijective g by apply/(bij_can_bij b). 
   split=> //; do ? split; try move=> x /=.
-  - by rewrite -{1}i c1.
   apply/(bij_inj (@edescr_map_bij label _ _ _ b)). 
   move: (l (g x))=> /= <-.
   by rewrite ?(edescr_map_can c2) c2.
@@ -457,11 +451,10 @@ Lemma is_iso_swap es1 es2 f e1 e2 :
   is_iso f es1 es2 -> 
   is_iso (swap f e1 e2) es1 es2.
 Proof.
-  move=> N1 N2 /[dup] I [[i l /[dup] /bij_inj ? b]].
+  move=> N1 N2 /[dup] I [ l /[dup] /bij_inj ? b].
   case: (e1 =P e2)=> /= [->|/eqP/negbTE e12].
   - by under eq_is_iso=> ? do rewrite swapxx over //.
-  (do ? split)=> [|x/=|]; last exact/bij_swap.
-  by rewrite -swap_not_eq //; move: (memPn N1 _ dom0) (memPn N2 _ dom0).
+  (do ? split)=> [x/=|]; last exact/bij_swap.
   have H: forall e es, e \notin dom es -> fed es e = mk_edescr Eps e e.
   - by move=> ?? D; rewrite fsfun_dflt // fed_dom D.
   rewrite /swap; case: ifP=> [/eqP->|].
@@ -490,7 +483,7 @@ Proof.
     exact/dom_sorted.
   move/(is_iso_swap (fresh_seq_notin dom_sorted) NI): I.
   set h := (swap f (fresh_id1 es) (g (fresh_id1 es3))).
-  move=> /[dup] I [[] i l /[dup] /bij_inj ? b].
+  move=> /[dup] I [ l /[dup] /bij_inj ? b].
   have H: forall e, e \in dom es -> h e \in dom es3=> [e|].
   by rewrite -(iso_dom I) mem_map.
   have [: a1 a2 a3] @s4: add_label es3 := Add al (h ap) (h aw) a1 a2 a3.
@@ -535,7 +528,6 @@ Proof.
   case: al1 al3 al2 al4=> ??????[/=???+++] [??????[/=???+++ E1 E2]].
   case: E1 E2; do 3? case:_/; case; (do 3? case:_/)=>*.
   do ? split; last exact/bij_swap/inv_bij.
-  - by rewrite -swap_not_eq // lt_eqF // i0_fresh_seq.
   move=> x /=; rewrite /comp !fed_add_eventE /=.
   have: fresh_id1 es <> fresh_id2 es by move/(@fresh_iter _ _ 1 2).
   move/eqP/negbTE=>F; case: (x =P fresh_id1 es)=> [->|/eqP/[dup] ? /negbTE N1].
