@@ -236,6 +236,34 @@ Qed.
 
 End EqvLabRewriting.
 
+Section EqRewritng.
+
+Context {S : Type} (r1 r1' r2 r2' e e' : hrel S S).
+
+Global Instance dcomm_weq: Proper 
+  ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
+  diamond_commute.
+Proof.
+  move=> ?? E1 ?? E2; split=> D ???.
+  - rewrite -(E1 _ _) -(E2 _ _)=> /D/[apply][[s]].
+    rewrite (E1 _ _) (E2 _ _); by exists s.
+  rewrite (E1 _ _) (E2 _ _)=> /D/[apply][[s]].
+  rewrite -(E1 _ _) -(E2 _ _); by exists s.
+Qed.
+
+Global Instance eq_confl_weq: Proper
+  ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
+  eqv_confluent.
+Proof.
+  move=> ?? E ?? E'; split=> D ???.
+  - rewrite -?(kleene.itr_weq E _ _)=> /D/[apply][[s1 [s2]]].
+    rewrite ?(kleene.itr_weq E _ _) (E' _ _); by exists s1, s2.
+  rewrite ?(kleene.itr_weq E _ _)=> /D/[apply][[s1 [s2]]].
+  rewrite -?(kleene.itr_weq E _ _) -(E' _ _); by exists s1, s2.
+Qed.
+
+End EqRewritng.
+
 Section SubRewriting.
 
 Local Open Scope ra_terms.
@@ -243,6 +271,12 @@ Local Open Scope ra_terms.
 Context {S L : Type} {p : rel.dset S}.
 
 Definition sub (r : hrel S S) : hrel S S := r ⊓ (p × p).
+
+Lemma sub_p r x1 x2 : sub r x1 x2 -> p x2.
+Proof. by case=> ?/andP[]. Qed.
+
+Lemma sub_itr_p r x1 x2 : (sub r)^+ x1 x2 -> p x2.
+Proof. by rewrite itr_str_r=> [[??/sub_p]]. Qed.
 
 Context (r : L -> hrel S S) (e : hrel S S).
 
@@ -268,8 +302,12 @@ Hypothesis eqv_r : r_respect_p.
 Lemma r_exlab l: r l ≦ exlab r.
 Proof. by exists l. Qed.
 
-Theorem sub_eqv_comm_union : eqv_confluent (exlab (sub \o r)) e.
+Lemma sub_exlab : sub (exlab r) ≡ exlab (sub \o r).
+Proof. by move=> ??; split=> [[[l]]|[l[]]] /=; last split=> //; exists l. Qed.
+
+Theorem sub_eqv_comm_union : eqv_confluent (sub (exlab r)) e.
 Proof.
+  rewrite sub_exlab.
   apply/eqv_comm_union=> //.
   - move=> ????? /= /[dup] /eqv_r R[/ledrr] E /andP[??] /[dup]/R P[/E[s4 [x]]].
     case=> /[dup] /P ps4 ?? /[dup] ?.
@@ -283,33 +321,48 @@ Qed.
 
 End SubRewriting.
 
-Section EqRewritng.
+Section SubTypeRewriting.
 
-Context {S : Type} (r1 r1' r2 r2' e e' : hrel S S).
+Context {L : Type}.
 
-Instance dcomm_weq: Proper 
-  ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
-  diamond_commute.
+Context {S : Type} (r1 : hrel S S) (e1 : hrel S S) (p : rel.dset S).
+
+Context {T : Type} (r2 : hrel T T) (e2 : hrel T T) (f : T -> S).
+
+Definition relpreim r : hrel T T :=
+  fun x y => r (f x) (f y).
+
+Hypothesis (morph_f_e1 : e2 ≡ relpreim e1).
+Hypothesis (morph_f_r1 : r2 ≡ relpreim (sub p r1)).
+Hypothesis (im : forall x, p x -> exists y, f y = x).
+
+Hypothesis (confl : eqv_confluent (sub p r1) e1).
+
+Lemma relpreim_itr: (relpreim (sub p r1))^+ ≡ relpreim (sub p r1)^+.
 Proof.
-  move=> ?? E1 ?? E2; split=> D ???.
-  - rewrite -(E1 _ _) -(E2 _ _)=> /D/[apply][[s]].
-    rewrite (E1 _ _) (E2 _ _); by exists s.
-  rewrite (E1 _ _) (E2 _ _)=> /D/[apply][[s]].
-  rewrite -(E1 _ _) -(E2 _ _); by exists s.
+  apply/(antisym ((relpreim (sub p r1))^+)); rewrite /relpreim.
+  - apply/itr_ind_l1; move=> ??; first exact/(itr_ext (sub p r1)).
+    by case=> x ??; apply/(itr_cons (sub p r1)); exists (f x).
+  move=> a b H. move: {-2}(f b) {-2}(f a) H (erefl (f a)) (erefl (f b))=> f1 f2.
+  move: a=> /[swap].
+  suff: (sub p r1)^+ ≦ 
+  (fun f2 f1 => forall a, f a = f2 -> f b = f1 -> ((relpreim (sub p r1))^+ a b)).
+  - exact.
+  apply/itr_ind_l1=> [??/[swap]?/[swap]<-/[swap]<-|??[? /[dup]/(sub_p _)]].
+  - exact/(itr_ext (relpreim(sub p r1))).
+  case/im=> x <- ? /(_ _ erefl) H ? E /H ?; apply/(itr_cons (relpreim (sub p r1))).
+  by exists x=> //; rewrite /relpreim E.
 Qed.
 
-Instance eq_confl_weq: Proper
-  ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
-  eqv_confluent.
+Lemma confl_sub : eqv_confluent r2 e2.
 Proof.
-  move=> ?? E ?? E'; split=> D ???.
-  - rewrite -?(kleene.itr_weq E _ _)=> /D/[apply][[s1 [s2]]].
-    rewrite ?(kleene.itr_weq E _ _) (E' _ _); by exists s1, s2.
-  rewrite ?(kleene.itr_weq E _ _)=> /D/[apply][[s1 [s2]]].
-  rewrite -?(kleene.itr_weq E _ _) -(E' _ _); by exists s1, s2.
+  rewrite morph_f_e1 morph_f_r1 => ??? /=.
+  rewrite ?(relpreim_itr _ _) /relpreim=> /confl/[apply].
+  case=> ? [?[/[dup]]] /(sub_itr_p _)/im[s4<- ?].
+  move/[dup]/(sub_itr_p _)/im=>[s4'<- ?].
+  exists s4, s4'; split=> //=; by rewrite relpreim_itr.
 Qed.
 
-End EqRewritng.
-
+End SubTypeRewriting.
 
 
