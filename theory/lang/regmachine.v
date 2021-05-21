@@ -1,8 +1,8 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice finfun finmap tuple.
 From monae Require Import hierarchy monad_model.
-From event_struct Require Import utilities eventstructure inhtype.
-From event_struct Require Import transitionsystem ident.
+From eventstruct Require Import utilities eventstructure inhtype.
+From eventstruct Require Import transitionsystem ident.
 
 (******************************************************************************)
 (* Here we want to define big-step semaintics of simple register machine in   *)

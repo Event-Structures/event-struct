@@ -1,7 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq eqtype choice. 
 From RelationAlgebra Require Import monoid.
-
-From event_struct Require Import utilities.
+From eventstruct Require Import utilities.
 
 (******************************************************************************)
 (* This file provides a theory of (homogeneous) monoids and partial monoids.  *)

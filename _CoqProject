@@ -1,4 +1,4 @@
--R theory event_struct
+-R theory eventstruct
 
 -arg -w -arg -notation-overridden
 -arg -w -arg -non-reversible-notation
