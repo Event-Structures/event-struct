@@ -25,9 +25,9 @@ From event_struct Require Import rewriting_system.
 (*                    structure                                               *)
 (*         tr_add_event e1 e2 == we can add some event to e1 and obtain e2    *)
 (*         ltr_add_event e1 al e2 == we can add al to e1 and obtain e2        *)
-(*         add_label_of_Nread == takes non-read label and predcessor and      *)
+(*         add_label_of_nread == takes non-read label and predcessor and      *)
 (*                    returns corresponding add_label structure               *)
-(*         consist_Nread == lemma that ensures consistency of event structures*)
+(*         consist_nread == lemma that ensures consistency of event structures*)
 (*                    obtained by add_label_of_Nread                          *)
 (*         contain al es == checks if event that we want to add (al) is       *)
 (*                    already in es                                           *)
@@ -35,7 +35,7 @@ From event_struct Require Import rewriting_system.
 (*                    is not contained there                                  *)
 (*         consist_add_new_event == statement about consistance of our new    *)
 (*                    structure obtained with add_new_event                   *)
-(*         consist_new_Nread== lemma that ensures consistency of event        *)
+(*         consist_new_nread== lemma that ensures consistency of event        *)
 (*                structures obtained by add_label_of_Nread of a new event    *)
 (******************************************************************************)
 
@@ -49,10 +49,11 @@ Open Scope fset_scope.
 
 Import Label.Syntax.
 
-Definition add_wr {E V : eqType} e1 e2 (lab : E -> @Lab V V) l :=
-  (e1 == e2) && (~~ Label.is_read l) || ((lab e1) \>> l).
+(* Definition add_wr {E V : eqType} e1 e2 (lab : E -> @Lab V V) l := *)
+(*   (e1 == e2) && (~~ Label.is_read l) || ((lab e1) \>> l). *)
 
-Arguments add_wr /.
+(* Arguments add_wr /. *)
+
 Arguments dom0 {_ _ _ _}.
 
 Section TransitionSystem.
@@ -72,28 +73,26 @@ Section AddEvent.
 (* execution graph in which we want to add l *)
 Context (es : exec_event_struct).
 
-Notation dom := (dom es).
-Notation flprf := (lprf es).
+Notation dom  := (dom es).
+Notation ffed := (fed es).
 Notation flab := (lab es).
-Notation ffpred := (fpred es).
+Notation ffpo := (fpo es).
 Notation ffrf := (frf es).
-Notation fresh_id := (fresh_seq dom).
 
-Definition wr (lab : E -> label) :=
-  [rel r w : E | (w <= r) && add_wr w r lab (lab r)].
+Notation fresh_id := (fresh_seq dom).
 
 Structure add_label := Add {
   add_lb            : label;
-  add_pred          : E;
+  add_po            : E;
   add_write         : E;
 
-  add_pred_in_dom   : add_pred \in dom;
+  add_pred_in_dom   : add_po \in dom;
   add_write_in_dom  : add_write \in dom;
-  add_write_consist : add_wr add_write \i0 flab add_lb;
+  add_write_consist : flab add_write \>> add_lb ;
 }.
 
 Coercion of_add_label := fun
-  '(Add l p w _ _ _) => Lprf l p w.
+  '(Add l p w _ _ _) => mk_edescr l p w.
 
 Lemma of_add_label_inj : injective of_add_label.
 Proof.
@@ -101,24 +100,13 @@ Proof.
   move: le pe we; (do ? case :_ /)=> *; congr Add; exact/eq_irrelevance.
 Qed.
 
-Fact add_write_consist_of_fresh l : ~~ Label.is_read l ->
-  add_wr \i0 \i0 flab l.
-Proof. by move=> /= ->; rewrite eq_refl lab0. Qed.
-
-Definition add_label_of_Nread l {p}
-           (p_mem : p \in dom) (nr : ~~ Label.is_read l) : add_label :=
-  Add
-    p_mem
-    dom0
-    (add_write_consist_of_fresh nr).
-
 Variable al : add_label.
 
 (* label of an event to add *)
 Notation lb := (add_lb al).
 
 (* predecessor of the new event (if it exists) *)
-Notation pred := (add_pred al).
+Notation pred := (add_po al).
 
 (* if our event is `Read` then we should provide the corresponding `Write`
    event *)
@@ -131,93 +119,115 @@ Lemma write_fresh_id : write < fresh_id.
 Proof. by move/add_write_in_dom/(fresh_seq_lt dom_sorted): al. Qed.
 
 Definition contain := 
-  has (fun e => (flab e == lb) && (ffrf e == write) && (ffpred e == pred)) dom.
+  has (fun e => (flab e == lb) && (ffrf e == write) && (ffpo e == pred)) dom.
 
-Definition add_lprf :=
-  [ fsfun flprf with fresh_id |->
-                    {| lab_prj := lb; fpred_prj := pred; frf_prj := write |} ].
+Definition add_fed :=
+  [ fsfun ffed with fresh_id |->
+                    {| lab_prj := lb; fpo_prj := pred; frf_prj := write |} ].
 
-Definition add_lab := fun e : E => lab_prj (add_lprf e).
-Definition add_fpred := fun e : E => fpred_prj (add_lprf e).
-Definition add_frf := fun e : E => frf_prj (add_lprf e).
+Definition add_lab := fun e : E => lab_prj (add_fed e).
+Definition add_fpo := fun e : E => fpo_prj (add_fed e).
+Definition add_frf := fun e : E => frf_prj (add_fed e).
 
 Arguments i0_fresh {_ _ _ _}.
 
-Fact add_lprf_finsupp : finsupp add_lprf == (seq_fset tt (fresh_id :: dom) `\ \i0).
+Lemma add_fedE e :
+  add_fed e = if e == fresh_id then mk_edescr lb pred write else fed es e.
+Proof. by rewrite /= fsfun_withE /=; case: ifP. Qed.
+
+Lemma add_labE e :
+  add_lab e = if e == fresh_id then lb else lab es e.
+Proof. by rewrite /add_lab /add_fed /= fsfun_withE /=; case: ifP. Qed.
+
+Lemma add_fpoE e :
+  add_fpo e = if e == fresh_id then pred else fpo es e.
+Proof. by rewrite /add_fpo /add_fed /= fsfun_withE /=; case: ifP. Qed.
+
+Lemma add_frfE e :
+  add_frf e = if e == fresh_id then write else frf es e.
+Proof. by rewrite /add_frf /add_fed /= fsfun_withE; case: ifP. Qed.
+
+Fact add_fed_finsupp : finsupp add_fed == (seq_fset tt (fresh_id :: dom)).
 Proof.
   apply/fset_eqP=> x; rewrite ?inE seq_fsetE finsupp_with.
-  case: ifP; rewrite ?inE lprf_dom // mem_filter.
-  - move: pred_fresh_id=> /[swap]/eqP[?->]; by rewrite ltxx.
-  case: (x =P fresh_id)=> //=-> ?; rewrite andbT eq_sym.
-  exact/esym/negbT/lt_eqF/i0_fresh.
+  case: ifP; rewrite ?inE fed_dom //.
+  move: pred_fresh_id=> /[swap]/eqP[?->]; by rewrite ltxx.
 Qed.
 
-Fact add_fpred_le : 
-  [forall e : finsupp add_lprf, add_fpred (val e) < val e].
-Proof.
-  apply/forallP=> [[/=]] e; rewrite (eqP add_lprf_finsupp) ?inE seq_fsetE ?inE.
-  rewrite /add_fpred /add_lprf fsfun_withE; case: ifP=> /= [/eqP-> _|??].
-  - exact/pred_fresh_id.
-  by apply/fpred_dom_lt; rewrite lprf_dom mem_filter.
-Qed.
+Lemma add_fed0 : 
+  add_fed ident0 = {| lab_prj := Init; fpo_prj := ident0; frf_prj := ident0 |}.
+Proof. rewrite add_fedE lt_eqF=> //; [ exact/fed0| exact/i0_fresh_seq ]. Qed.
 
-Fact add_fpred_dom :
-  [forall e : finsupp add_lprf, add_fpred (val e) \in fresh_id :: dom].
+Fact add_fpo_dom :
+  [forall e : finsupp add_fed, add_fpo (val e) \in fresh_id :: dom].
 Proof.
   apply/forallP=> [[/= x]].
-  rewrite (eqP add_lprf_finsupp) ?inE seq_fsetE ?inE /add_fpred fsfun_withE.
-  case: (x =P fresh_id)=> /= [->|]; first by rewrite (add_pred_in_dom al).
-  by move=> ? /andP[? /fpred_dom->].
-Qed.
-
-Fact add_frf_le : 
-  [forall e : finsupp add_lprf, add_frf (val e) < val e].
-Proof.
-  apply/forallP=> [[/=]] e; rewrite (eqP add_lprf_finsupp) ?inE seq_fsetE ?inE.
-  rewrite /add_frf /add_lprf fsfun_withE; case: ifP=> /= [/eqP-> _|??].
-  - exact/write_fresh_id.
-  by apply/frf_dom_lt; rewrite lprf_dom mem_filter.
+  rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE /add_fpo fsfun_withE.
+  case: (x =P fresh_id) => /=; first by rewrite (add_pred_in_dom al).
+  by move=> ? /fpo_dom->.
 Qed.
 
 Fact add_frf_dom :
-  [forall e : finsupp add_lprf, add_frf (val e) \in fresh_id :: dom].
+  [forall e : finsupp add_fed, add_frf (val e) \in fresh_id :: dom].
 Proof.
   apply/forallP=> [[/= x]].
-  rewrite (eqP add_lprf_finsupp) ?inE seq_fsetE ?inE /add_frf fsfun_withE.
-  case: (x =P fresh_id)=> /= [->|]; first by rewrite (add_write_in_dom al).
-  by move=> ? /andP[? /frf_dom->].
+  rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE /add_frf fsfun_withE.
+  case: (x =P fresh_id)=> /=; first by rewrite (add_write_in_dom al).
+  by move=> ? /frf_dom->.
 Qed.
 
-Fact add_frf_prop :
-  [forall rs : seq_fset tt (fresh_id :: dom),
-    let r := val rs in
-    let w := add_frf r in
-    (w == \i0) && ~~ Label.is_read (add_lab r) || (add_lab w) \>> (add_lab r)].
+Fact add_fpo_le : 
+  [forall e : finsupp add_fed, add_fpo (val e) <= val e].
 Proof.
-  apply/forallP=> [[r /=]]; rewrite (@seq_fsetE tt).
-  rewrite /add_frf /add_lab /add_lprf !fsfun_withE /= ?inE.
-  case: ifP=> /= [/eqP|?/[dup]/frf_cond /[swap]].
-  - case: ifP=> [/eqP|*]; last exact/add_write_consist.
-    - move/lt_eqF/eqP: write_fresh_id; exact.
-  by move/(fresh_seq_lt dom_sorted)/(le_lt_trans (frf_le _ _))/lt_eqF->.
+  apply/forallP=> [[/=]] e. 
+  rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE.
+  rewrite add_fpoE; case: ifP=> /= [/eqP-> _|??].
+  - apply/ltW/pred_fresh_id.
+  exact/fpo_le. 
 Qed.
 
-Lemma Nfresh_dom0 : 
+Fact add_frf_le : 
+  [forall e : finsupp add_fed, add_frf (val e) <= val e].
+Proof.
+  apply/forallP=> [[/=]] e. 
+  rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE.
+  rewrite add_frfE; case: ifP=> /= [/eqP-> _|??].
+  - exact/ltW/write_fresh_id.
+  exact/frf_le. 
+Qed.
+
+Fact add_frf_sync :
+  [forall e : finsupp add_fed, add_lab (add_frf (val e)) \>> add_lab (val e)].
+Proof.
+  apply/forallP=> [[/=]] e. 
+  rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE.
+  rewrite !add_labE !add_frfE.
+  case: (e == fresh_id).
+  - case: ifP; first by rewrite lt_eqF=> //; exact/write_fresh_id.
+    move=> ??; exact/add_write_consist. 
+  rewrite orFb; case: ifP=> /[swap] H. 
+  - rewrite lt_eqF=> //. apply/le_lt_trans; first exact/frf_le. 
+    exact/(fresh_seq_lt dom_sorted).
+  move=> ?; exact/frf_sync.
+Qed.
+
+Lemma nfresh_dom0 : 
   \i0 \in fresh_id :: dom.
 Proof. by rewrite ?inE dom0. Qed.
 
 Definition add_event :=
   @Pack _ _ _
         (fresh_id :: dom)
-        add_lprf
+        add_fed
+        add_fed_finsupp
         (path_fresh_seq dom_sorted)
-        Nfresh_dom0
-        add_lprf_finsupp
-        add_fpred_le
-        add_fpred_dom
-        add_frf_le
+        nfresh_dom0
+        add_fed0
+        add_fpo_dom
         add_frf_dom
-        add_frf_prop.
+        add_fpo_le
+        add_frf_le
+        add_frf_sync.
 
 Definition add_new_event := if contain then es else add_event.
 
@@ -226,21 +236,23 @@ Hypothesis ncf_rf : ~~ (cf add_event fresh_id write).
 
 Import Relation_Operators.
 
-Lemma lprf_add_eventE e :
-  lprf add_event e = if e == fresh_id then Lprf lb pred write else lprf es e.
-Proof. by rewrite /add_event /= fsfun_withE /=; case: ifP. Qed.
+(* TODO: remove duplicate lemmas `add_fedE`, `add_labE`, etc *)
+
+Lemma fed_add_eventE e :
+  fed add_event e = if e == fresh_id then mk_edescr lb pred write else fed es e.
+Proof. exact: add_fedE. Qed.
 
 Lemma lab_add_eventE e :
   lab add_event e = if e == fresh_id then lb else lab es e.
-Proof. by rewrite /lab /add_event /= fsfun_withE /=; case: ifP. Qed.
+Proof. exact: add_labE. Qed.
 
-Lemma fpred_add_eventE e :
-  fpred add_event e = if e == fresh_id then pred else fpred es e.
-Proof. by rewrite /fpred /add_event /= fsfun_withE /=; case: ifP. Qed.
+Lemma fpo_add_eventE e :
+  fpo add_event e = if e == fresh_id then pred else fpo es e.
+Proof. exact: add_fpoE. Qed.
 
 Lemma frf_add_eventE e :
   frf add_event e = if e == fresh_id then write else frf es e.
-Proof. by rewrite /frf /add_event /= fsfun_withE; case: ifP. Qed.
+Proof. exact: add_frfE. Qed. 
 
 Lemma ica_add_eventE e1 e2 :
   ica add_event e1 e2 =
@@ -248,7 +260,7 @@ Lemma ica_add_eventE e1 e2 :
     (pred == e1) || (write == e1)
   else ica es e1 e2.
 Proof.
-  rewrite icaE /= /fica frf_add_eventE fpred_add_eventE.
+  rewrite icaE /= /fica frf_add_eventE fpo_add_eventE.
   by case: ifP=> ?; rewrite ?(andTb, andFb) ?orbF // ?inE eq_sym orbC eq_sym.
 Qed.
 
@@ -270,7 +282,7 @@ Qed.
 Lemma icf_add_eventE e1 e2 :
   e1 != fresh_id -> e2 != fresh_id ->
   icf es e1 e2 = icf add_event e1 e2.
-Proof. by rewrite /icf !fpred_add_eventE=> /negbTE->/negbTE->. Qed.
+Proof. by rewrite /icf !fpo_add_eventE=> /negbTE->/negbTE->. Qed.
 
 Lemma cf_add_eventE e1 e2 :
   e1 != fresh_id -> e2 != fresh_id ->
@@ -300,32 +312,39 @@ Proof. rewrite /add_new_event; case: ifP=> // _; exact: consist_add_event. Qed.
 
 End AddEvent.
 
-Section Nread_Consist.
+Section NreadConsist.
 
 Context (ces : cexec_event_struct) (pr : E) (l : label).
 
 Notation domain := (dom ces).
 Notation fresh_id := (fresh_seq domain).
 
-Hypothesis nr     : ~~ Label.is_read l.
 Hypothesis pr_mem : pr \in domain.
+Hypothesis nr     : ~~ Label.is_read l.
 
-Lemma consist_Nread :
-   dom_consistency (add_event (add_label_of_Nread pr_mem nr)).
+Fact add_nread_synch : lab ces ident0 \>> l. 
+Proof. 
+  rewrite lab0 /Label.synch. 
+  case H: l=> //; symmetry; apply/contraPF.
+  - move=> x; apply/negP; exact/nr.
+  by rewrite /Label.is_read H.
+Qed. 
+
+Let add_label_nread := Add pr_mem dom0 add_nread_synch.
+
+Lemma consist_nread :
+   dom_consistency (add_event add_label_nread).
+Proof. apply/consist_add_event=> //=; first (by case: ces); exact/cf0. Qed.
+
+Lemma consist_new_nread : 
+  dom_consistency (add_new_event add_label_nread).
 Proof.
-  apply/consist_add_event=> //; first by case: ces.
-  set ae := add_event (add_label_of_Nread pr_mem nr).
-  exact/cfx0.
+  rewrite /add_new_event; case: ifP=> // _.
+  - by case ces.
+  by rewrite ?consist_nread //.
 Qed.
 
-Lemma consist_new_Nread : 
-  dom_consistency (add_new_event (add_label_of_Nread pr_mem nr)).
-Proof.
-  rewrite /add_new_event. case: ifP=> // _; rewrite ?consist_Nread //.
-  by case: ces.
-Qed.
-
-End Nread_Consist.
+End NreadConsist.
 
 End TransitionSystem.
 
@@ -342,13 +361,12 @@ Notation label := (@Lab V V).
 
 Implicit Types (x : Loc) (a : V) (es : exec_event_struct).
 
-
 Definition tr es1 es2 := exists al, es2 = @add_event disp _ V es1 al.
 
 Notation "es1 '~>' es2" := (tr es1 es2) (at level 0).
 
-Definition ltr (l : lab_pred_rfrom E V) es1 es2 := 
-  exists2 al, es2 = @add_event disp _ V es1 al & l = al.
+Definition ltr (ed : edescr E label) es1 es2 := 
+  exists2 al, es2 = @add_event disp _ V es1 al & ed = al.
 
 Notation "es1 '~(' l ')~>' es2" := (ltr es2 es2) (at level 0).
 
@@ -359,7 +377,7 @@ Section IsoDef.
 Context (f : E -> E) (es1 es2 : exec_event_struct).
 
 Definition is_morph := 
-  f \i0 = \i0 /\ lprf es2 \o f =1 (ext f) \o lprf es1.
+  f \i0 = \i0 /\ fed es2 \o f =1 (edescr_map f) \o fed es1.
 
 Definition is_iso := is_morph /\ bijective f.
 
@@ -370,11 +388,11 @@ Lemma iso_dom : is_iso ->
   map f (dom es1) =i dom es2.
 Proof.
   move=> [[i l] /[dup] B [g /[dup] c1 /can_inj I c2 x]].
-  rewrite -[x]c2 (mem_map I) ?lprf_finsupp -(bij_eq B) c2 i.
-  case: (boolP (x == \i0))=> //=. rewrite -{-2}[x]c2 -i (bij_eq B).
-  set y := g x; rewrite ?mem_finsupp; move: (l y)=> /=->.
-  rewrite -[Lprf ThreadEnd (f y) (f y)]/(ext f (Lprf ThreadEnd y y)).
-  by rewrite (bij_eq (bij_ext _ B)).
+  rewrite -[x]c2 (mem_map I) !fed_dom_mem !mem_finsupp. 
+  move: (l (g x))=> /= ->.
+  rewrite -[mk_edescr Eps (f (g x)) (f (g x))]
+          /(edescr_map f (mk_edescr Eps (g x) (g x))).
+  by rewrite (bij_eq (@edescr_map_bij label E E _ B)).
 Qed.
 
 End IsoDef.
@@ -387,7 +405,7 @@ Proof.
   - by split=> [/eq_bij/(_ _ H2) |/eq_bij/(_ _ H1)]. 
   apply/(and_iff_compat_r (bijective g))/(and_iff_compat_l (_ = _)).
   split=> H x; move: (H x)=> /=; rewrite (H1, H2)=>->;
-  by under eq_ext=> ? do rewrite (H1, H2) over //.
+    by under edescr_map_eqfun=> ? do rewrite (H1, H2) over //.
 Qed.
 
 Definition eqv := exlab is_iso.
@@ -395,7 +413,7 @@ Definition eqv := exlab is_iso.
 Lemma eqv_refl : 1 ≦ eqv.
 Proof. 
   move=> ??->. exists id; do ? split=> //; last exact/inv_bij;
-  rewrite ?map_id // => ? /=; by rewrite  ext_id.
+  rewrite ?map_id // => ? /=; by rewrite edescr_map_id.
 Qed.
 
 Lemma is_iso_comp es1 es2 es3 f g : 
@@ -403,8 +421,8 @@ Lemma is_iso_comp es1 es2 es3 f g :
   is_iso (g \o f) es1 es3 .
 Proof.
   case=> [][] i1 l1 ?[][] i2 l2 /[dup] [[?? c1 ?]] .
-  (do ? split)=>[|x|]; last exact/bij_comp; first by  rewrite /= i1 i2. 
-  by move: (l1 x) (l2 (f x))=> /=; rewrite ext_comp /= => <-.
+  (do ? split)=>[|x|]; last exact/bij_comp; first by rewrite /= i1 i2. 
+  by move: (l1 x) (l2 (f x))=> /=; rewrite edescr_map_comp /= => <-.
 Qed.
 
 Lemma eqv_trans : Transitive eqv.
@@ -418,8 +436,9 @@ Proof.
   have B: bijective g by apply/(bij_can_bij b). 
   split=> //; do ? split; try move=> x /=.
   - by rewrite -{1}i c1.
-  apply/(bij_inj (bij_ext _ b)); move: (l (g x))=> /= <-.
-  by rewrite ?(ext_can c2) c2.
+  apply/(bij_inj (@edescr_map_bij label _ _ _ b)). 
+  move: (l (g x))=> /= <-.
+  by rewrite ?(edescr_map_can c2) c2.
 Qed.
 
 Lemma eqv_symm : Symmetric eqv.
@@ -443,16 +462,19 @@ Proof.
   - by under eq_is_iso=> ? do rewrite swapxx over //.
   (do ? split)=> [|x/=|]; last exact/bij_swap.
   by rewrite -swap_not_eq //; move: (memPn N1 _ dom0) (memPn N2 _ dom0).
-  have H: forall e es, e \notin dom es -> lprf es e = Lprf ThreadEnd e e.
-  - by move=> ?? D; rewrite fsfun_dflt // lprf_dom mem_filter negb_and D.
+  have H: forall e es, e \notin dom es -> fed es e = mk_edescr Eps e e.
+  - by move=> ?? D; rewrite fsfun_dflt // fed_dom D.
   rewrite /swap; case: ifP=> [/eqP->|].
   - rewrite ?H /= ?eq_refl // -?(iso_dom I) mem_map //.
   case: ifP=> [/eqP-> N|F1 F2].
   rewrite ?H //= ?N ?eq_refl // -?(iso_dom I) mem_map //.
-  case: (boolP (x \in dom es1))=> [/[dup]/fpred_dom I1 /frf_dom I2|?].
-  - apply/eqP; rewrite lab_pred_rfromE lab_prj_ext fpred_prj_ext frf_prj_ext.
-    rewrite ?(negbTE (memPn _ _ I1)) ?(negbTE (memPn _ _ I2)) //; move: (l x).
-    by move=>/=->; rewrite lab_prj_ext fpred_prj_ext frf_prj_ext ?eq_refl.
+  case: (boolP (x \in dom es1))=> [/[dup]/fpo_dom I1 /frf_dom I2|?].
+  - apply/eqP; rewrite edescr_eq.
+    rewrite lab_prj_edescr_map fpo_prj_edescr_map frf_prj_edescr_map.
+    rewrite ?(negbTE (memPn _ _ I1)) ?(negbTE (memPn _ _ I2)) //.
+    move: (l x)=> /=->.
+    rewrite lab_prj_edescr_map fpo_prj_edescr_map frf_prj_edescr_map. 
+    by rewrite !eq_refl.
   by rewrite ?H //= ?F1 ?F2 //  -?(iso_dom I) mem_map.
 Qed.
 
@@ -473,18 +495,18 @@ Proof.
   by rewrite -(iso_dom I) mem_map.
   have [: a1 a2 a3] @s4: add_label es3 := Add al (h ap) (h aw) a1 a2 a3.
   1,2: by apply/H; rewrite (apd, awd).
-  - move: awc; rewrite /add_wr -{2}(iso0 I) bij_eq // /lab; move: (l aw)=> /=.
-    case L: (lprf _ aw)=> /=; case L': (lprf es3 (f aw))=> /=; by move=>->.
+  - move: awc; move: (l aw)=> /=; rewrite /lab.
+    by case L1: (fed _ aw)=> /=; case L2: (fed es3 (f aw))=> -> /=. 
   exists (add_event s4); [by exists s4 | exists h].
   (do ? split)=> // x /=.
-  rewrite ?lprf_add_eventE /= -[fresh_id1 _]c -(swap1 f (fresh_id1 es)).
+  rewrite ?fed_add_eventE /= -[fresh_id1 _]c -(swap1 f (fresh_id1 es)).
   rewrite -/h (bij_eq b); case: ifP=> // ?; exact/l. 
 Qed.
 
-Lemma swap_dom es d e : e <= d -> d \in dom es -> 
+Lemma swap_dom es e : e \in dom es -> 
   swap id (fresh_id1 es) (fresh_id2 es) e = e.
 Proof.
-  move/le_lt_trans=> L /(fresh_seq_lt (dom_sorted)) /L /[dup]. 
+  move=> /(fresh_seq_lt (dom_sorted)) /[dup]. 
   move/lt_trans/(_ (fresh_lt _))/lt_eqF/negbT=> ? /lt_eqF/negbT ?.
   by rewrite -swap_not_eq.
 Qed.
@@ -492,7 +514,7 @@ Qed.
 Lemma add_add (es : exec_event_struct) 
   (al1 al2 : add_label es) : 
   exists al : add_label (add_event al1), 
-  al = al2 :> lab_pred_rfrom E V.
+  al = al2 :> edescr E label.
 Proof.
   case: al2=> l p w ap aw ?.
   have [:a1 a2 a3] @al : add_label (add_event al1) := 
@@ -505,8 +527,8 @@ Lemma swap_add es
   (al1 al2 : add_label es)
   (al3 : add_label (add_event al1))
   (al4 : add_label (add_event al2)) : 
-  al1 = al4 :> lab_pred_rfrom E V ->
-  al2 = al3 :> lab_pred_rfrom E V ->
+  al1 = al4 :> edescr E label ->
+  al2 = al3 :> edescr E label ->
   is_iso (swap id (fresh_id1 es) (fresh_id2 es))
     (add_event al3) (add_event al4) .
 Proof.
@@ -514,18 +536,18 @@ Proof.
   case: E1 E2; do 3? case:_/; case; (do 3? case:_/)=>*.
   do ? split; last exact/bij_swap/inv_bij.
   - by rewrite -swap_not_eq // lt_eqF // i0_fresh_seq.
-  move=> x /=; rewrite /comp ?lprf_add_eventE /=.
+  move=> x /=; rewrite /comp !fed_add_eventE /=.
   have: fresh_id1 es <> fresh_id2 es by move/(@fresh_iter _ _ 1 2).
   move/eqP/negbTE=>F; case: (x =P fresh_id1 es)=> [->|/eqP/[dup] ? /negbTE N1].
-  - rewrite swap1 eq_refl F /= ?(swap_dom (lexx _)) //.
+  - rewrite swap1 eq_refl F /= !swap_dom //.
   rewrite ?inv_eq ?swap1 ?swap2 ?N1; try exact/swap_inv.
-  case: ifP=> //=; first rewrite ?(swap_dom (lexx _)) //.
+  case: ifP=> //=; first by rewrite !swap_dom=> //.
   move/negbT=> ?; rewrite -swap_not_eq //.
   case: (boolP (x \in dom es))=> [|I]. 
-  - case L: (lprf _ x)=> [l p r] I /=; apply/congr2; rewrite (swap_dom _ I) //.
-    - by rewrite -[p]/(fpred_prj (Lprf l p r)) -L fpred_le.
-    by rewrite -[r]/(frf_prj (Lprf l p r)) -L frf_le.
-  by rewrite fsfun_dflt /= -?swap_not_eq // lprf_dom mem_filter negb_and I.
+  - case L: (fed _ x)=> [l p r] I /=; apply/congr2; rewrite swap_dom //.
+    - by rewrite -[p]/(fpo_prj (mk_edescr l p r)) -L fpo_dom.
+    by rewrite -[r]/(frf_prj (mk_edescr l p r)) -L frf_dom.
+  by rewrite fsfun_dflt /= -?swap_not_eq // fed_dom I.
 Qed.
 
 Lemma comm_ltr l1 l2 : 

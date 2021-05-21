@@ -55,6 +55,8 @@ Open Scope fmap_scope.
 Open Scope do_notation.
 Open Scope exec_eventstruct_scope.
 
+Import Label.Syntax.
+
 Local Notation M := ModelMonad.ListMonad.t.
 
 Context {disp} {E : identType disp} {Val : inhType}.
@@ -141,11 +143,11 @@ Definition ltr_thrd_sem (l : option (@Lab Val Val)) pgm st1 st2 : bool :=
   end.
 
 Variable (es : cexec_event_struct).
-Notation ffpred   := (fpred es).
+Notation ffpo     := (fpo es).
 Notation ffrf     := (frf es).
 Notation fresh_id := (fresh_seq (dom es)).
 
-Arguments add_label_of_Nread {_ _ _ _} _ {_}.
+(* Arguments add_label_of_Nread {_ _ _ _} _ {_}. *)
 
 Lemma ws_mem x w : 
   w \in [events of es | is_write & with_loc x] -> w \in dom es.
@@ -153,7 +155,7 @@ Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
 
 Lemma ws_wpred x w :
   w \in [events of es | is_write & with_loc x] ->
-  add_wr w \i0 (lab es) (Read x (odflt inh (value es w))).
+  (lab es w) \>> (Read x (odflt inh (value es w))).
 Proof.
   rewrite mem_filter=> /andP[] /=.
   rewrite /is_write /with_loc /loc /value.
@@ -199,10 +201,10 @@ Definition ces_seq x pr :=
     let: ces_w    := sval ces_w_mem in
     let: (ces, w) := ces_w in
     let: ces_mem  := valP ces_w_mem in 
-    (Consist (mem_ces_seq_aux ces_mem), odflt inh (value es w)) | 
+    (Consist _ (mem_ces_seq_aux ces_mem), odflt inh (value es w)) | 
     ces_w_mem <- seq_in (@ces_seq_aux x pr)].
 
-Arguments consist_new_Nread {_ _ _}.
+Arguments consist_new_nread {_ _ _}.
 
 Definition add_hole
   (l : @Lab unit Val) pr :
@@ -210,9 +212,9 @@ Definition add_hole
   if pr \in dom es =P true is ReflectT pr_mem then
     match l with
     | Write x v => 
-      [:: (Consist (consist_new_Nread es pr (Write x v) erefl pr_mem), v)]  
+      [:: (Consist _ (consist_new_nread es pr (Write x v) pr_mem erefl), v)]  
     | ThreadStart =>
-      [:: (Consist (consist_new_Nread es pr ThreadStart erefl pr_mem), inh)]
+      [:: (Consist _ (consist_new_nread es pr ThreadStart pr_mem erefl), inh)]
     | Read x __ => ces_seq x pr
     | _         => [::]
     end
@@ -236,5 +238,4 @@ Definition eval_step (c : config) pr : seq config :=
       [:: Config es [fsfun c with pr |-> (cont_st inh, tid)]].
 
 End RegMachine.
-
 
