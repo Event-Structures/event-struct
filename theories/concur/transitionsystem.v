@@ -643,6 +643,47 @@ Qed.
 Lemma exlab_tr : tr ≡ exlab ltr.
 Proof. by move=> ??; split=> [[l ->]|[?[l ->]]]; do ? exists l. Qed.
 
+Arguments isoE {_ _ _ _ _}.
+
+Lemma dom_consist_eqv es1 es2 :
+  es1 ~~ es2 -> dom_consistency es1 ->
+  dom_consistency es2.
+Proof.
+  rewrite /dom_consistency=> [[f /[dup] If]] [L ? /allP H]; apply/allP.
+  move=> x; rewrite -(iso_dom If)=> /mapP[y /H ?->].
+  move/(congr1 (@frf_prj _ _)): (L y)=> /=; rewrite -frfE=>->.
+  by rewrite frf_prj_edescr_map bij_eq // (isoE If).
+Qed.
+
+Lemma dom_consist_add l1 l2 
+  (es1 es2 es3 es4 : exec_event_struct) :
+  dom_consistency es1 ->
+  es1 ~(l1)~> es2 -> dom_consistency es2 -> 
+  es1 ~(l2)~> es3 -> dom_consistency es3 ->
+  es2 ~(l2)~> es4 -> dom_consistency es4.
+Proof.
+  move=> ?; case=> [[la1 p1 w1 ap1 aw1 ac1 ->]].
+  set al1 := Add _ _ _ ap1 aw1 ac1=> e2; move=> C'.
+  case=> [[l p w ap aw ac]]+->; set al2 := Add _ _ _ ap aw ac=> -> C.
+  case=> [[l' p' ap' +++-> [le pe we]]].
+  move: le pe we; (do ? case: _/).
+  move=> ap2 aw2 ac2; set al2' := Add _ _ _ ap2 aw2 ac2.
+  apply/consist_add_event=> //=.
+  set f := swap id (fresh_id1 es1) (fresh_id2 es1).
+  have P : f p1 = p1 by rewrite /f (swap_dom ap1).
+  have W : f w1 = w1 by rewrite /f (swap_dom aw1).
+  have [: a1 a2 a3] @al3 : add_label (add_event al2) 
+    := Add la1 (f p1) (f w1) a1 a2 a3=> /=.
+  1,2: rewrite ?inE (P, W) (ap1, aw1); lattice.
+  - by rewrite W  lab_add_eventE (lt_eqF (write_fresh_id al1)).
+  have E1: al1 = al3 :> edescr _ _ by rewrite /= W P.
+  have E2: al2 = al2' :> edescr _ _ by [].
+  rewrite -(isoE (swap_add E1 E2)) swap2 (swap_dom aw) //.
+  rewrite -cf_add_eventE; first exact/consist_add_event.
+  - by apply/eqP=> /(@fresh_iter _ _ 1 2).
+  by rewrite (lt_eqF (write_fresh_id al2')).
+Qed.
+
 End Confluence.
 
 End AddEvent.
