@@ -268,14 +268,14 @@ Section SubRewriting.
 
 Local Open Scope ra_terms.
 
-Context {S L : Type} {p : rel.dset S}.
+Context {S L : Type} (p : rel.dset S).
 
 Definition sub (r : hrel S S) : hrel S S := r ⊓ (p × p).
 
-Lemma sub_p r x1 x2 : sub r x1 x2 -> p x2.
+Lemma sub_p {r x1 x2} : sub r x1 x2 -> p x2.
 Proof. by case=> ?/andP[]. Qed.
 
-Lemma sub_itr_p r x1 x2 : (sub r)^+ x1 x2 -> p x2.
+Lemma sub_itr_p {r x1 x2} : (sub r)^+ x1 x2 -> p x2.
 Proof. by rewrite itr_str_r=> [[??/sub_p]]. Qed.
 
 Context (r : L -> hrel S S) (e : hrel S S).
