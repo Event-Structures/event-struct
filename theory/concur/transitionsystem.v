@@ -1,8 +1,8 @@
 From RelationAlgebra Require Import lattice monoid rel kat_tac kleene.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice seq path.
 From mathcomp Require Import order finmap fintype ssrnat.
-From event_struct Require Import utilities eventstructure ident.
-From event_struct Require Import rewriting_system.
+From eventstruct Require Import utils eventstructure ident.
+From eventstruct Require Import rewriting_system.
 
 (******************************************************************************)
 (* Here we want to make function that by event and event structure creates a  *)

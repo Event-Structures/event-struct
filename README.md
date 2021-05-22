@@ -9,36 +9,29 @@ Includes a theory of prime event structures and
 operational small-step semantics for their incremental construction.
 
 ## Description of Files
+
 All files include a more detailed description of their contents.
 
-##### `utilities.v`
-Utility lemmas and tactics. Includes `lia` analogue for ssreflect --
-`ssrnatlia`, extracted from https://github.com/amahboubi/lia4mathcomp by Assia
-Mahboubi.
+- `common` - common definitions, lemmas, and notations  
 
-##### `inhtype.v`
-Interface for inhabited type, that is a type with one distinguished inhabitant. 
+    - `utils.v` - miscellaneous 
+    - `relalg.v` - variuos additions to relation-algebra package
+    - `ssrnatlia.v` - lia analogue for ssreflect
+    - `wftype.v` - interface for types with well-founded partial order
+    - `inhtype.v` - interface for inhabited type, that is a type with one distinguished inhabitant
+    - `ident.v` - interface for types that can be used as identifiers
+    - `rel.v` - additional facts about decidable binary relations
+    - `monoid.v` - theory of monoids and partial monoids
+    - `monad.v` - additional facts about monads
+    - `rewriting_system.v` - some bits of the theory of rewrite systems
 
-##### `wftype.v`
-Interface for types with well-founded partial order.
+- `concur` - semantic domains for concurrency
 
-##### `ident.v`
-Interface for types that can be used as identifiers.
-We require the following properties.
-1) `\i0` -- first identifier.
-2) `fresh : T -> T` -- function that returns a fresh identifier.
-3) `forall x, x < fresh x` -- freshness axiom. 
-   We require `<` to be well-founded order.  
+    - `pomset.v` - pomsets (WIP)
+    - `prime_eventstruct.v` - prime event structures (WIP)
+    - `eventstructure.v` - prime event structure built from program-order and reads-from relations
+    - `transitionsystem.v` - incremental construction of event structure
 
-##### `relations.v`
-Theory of computable transitive closure of well-founded relations.
+- `lang` - syntax and semantics of concurrent languages and systems
 
-##### `eventstructure.v`
-Theory of finite prime event structures.
-
-##### `transitionsystem.v`
-Labeled transition system defined on prime event structures.
-The transition relation adds a single event to the event structure.
-
-##### `regmachine.v`
-Operational small-step semantics for a simple register machine.
+    - `regmachine.v` - simple parallel register machine with shared memory

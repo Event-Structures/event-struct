@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
 From mathcomp Require Import order choice.
-From event_struct Require Import utilities wftype.
+From eventstruct Require Import utils wftype.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)

@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype fingraph path. 
-From event_struct Require Import utilities.
+From eventstruct Require Import utils.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order choice.
 From mathcomp Require Import finmap fingraph fintype finfun ssrnat path.
 From Equations Require Import Equations.
 From monae Require Import hierarchy monad_model.
-From event_struct Require Import utilities wftype monad.
+From eventstruct Require Import utils relalg wftype monad.
 
 (******************************************************************************)
 (* Auxiliary definitions and lemmas about binary decidable relations.         *)
