@@ -1,12 +1,12 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice finfun finmap tuple.
 From monae Require Import hierarchy monad_model.
-From eventstruct Require Import utils eventstructure inhtype.
+From eventstruct Require Import utils porf_eventstruct inhtype.
 From eventstruct Require Import transitionsystem ident.
 
 (******************************************************************************)
 (* Here we want to define big-step semaintics of simple register machine in   *)
-(* terms of fin_exec_event_structures                                         *)
+(* terms of porf_eventstruct                                                  *)
 (* This file contains definition of:                                          *)
 (*       instr == regmachine instructions                                     *)
 (*     seqprog == sequence on instructions ie. one thread of program          *)
@@ -15,7 +15,7 @@ From eventstruct Require Import transitionsystem ident.
 (*            number) and map from registers to values                        *)
 (*  init_state == initial state of one thread : pair of 0 default map that    *)
 (*     maps all registers to default value                                    *)
-(*      config == configuration of program: pair of fin_exec_event_structure  *)
+(*      config == configuration of program: pair of porf_eventstruct          *)
 (*           corresponding to our program in current state and map form       *)
 (*           elements of this event structure to corresponding thread states  *)
 (*  thrd_sem == if we are in some thread state we can make one step in program*)
@@ -62,8 +62,8 @@ Local Notation M := ModelMonad.ListMonad.t.
 Context {disp} {E : identType disp} {Val : inhType}.
 
 (*Notation n := (@n val).*)
-Notation exec_event_struct := (fin_exec_event_struct E Val).
-Notation cexec_event_struct := (cexec_event_struct E Val).
+Notation porf_event_struct := (porf_eventstruct E Val).
+Notation prime_porf_event_struct := (prime_porf_eventstruct E Val).
 
 (*Notation lab := (@lab val).*)
 Notation __ := (tt).
@@ -105,7 +105,7 @@ Canonical thrd_state_eqType :=
 Definition init_state : thrd_state := {| ip := 0; regmap := [fsfun with inh] |}.
 
 Record config := Config {
-  evstr    : cexec_event_struct;
+  evstr    : porf_event_struct;
   trhdmap  :> {fsfun E -> (thrd_state * nat)%type with (init_state, 0)}
 }.
 
@@ -142,7 +142,7 @@ Definition ltr_thrd_sem (l : option (@Lab Val Val)) pgm st1 st2 : bool :=
   | _, _                                     => false
   end.
 
-Variable (es : cexec_event_struct).
+Variable (es : prime_porf_event_struct).
 Notation ffpo     := (fpo es).
 Notation ffrf     := (frf es).
 Notation fresh_id := (fresh_seq (dom es)).
@@ -165,7 +165,7 @@ Proof.
   by rewrite !eq_refl.
 Qed.
 
-Definition es_seq x {pr} : (seq (exec_event_struct * E)) :=
+Definition es_seq x {pr} : (seq (porf_event_struct * E)) :=
   if pr \in dom es =P true is ReflectT pr_mem then
     [seq
       let: wr       := sval w in
@@ -187,12 +187,12 @@ Definition ces_seq_aux x pr :=
    ~~ (cf estr fresh_id w)].
 
 Lemma mem_ces_seq_aux x pr ces: 
-  ces \in (@ces_seq_aux x pr) -> dom_consistency ces.1.
+  ces \in (@ces_seq_aux x pr) -> rf_ncf_dom ces.1.
 Proof.
   case: ces => ces w; rewrite mem_filter /= /es_seq => /andP[?].
   case: eqP=> // ? /mapP[?? [/[dup] C -> ws]].
   move: C. rewrite /add_new_event; case: ifP=> _ C; first by case: es.
-  apply/consist_add_event=> /=; first by case: es.
+  apply/rf_ncf_add_event=> /=; first by case: es.
   by rewrite -C -ws.
 Qed.
 
@@ -201,20 +201,20 @@ Definition ces_seq x pr :=
     let: ces_w    := sval ces_w_mem in
     let: (ces, w) := ces_w in
     let: ces_mem  := valP ces_w_mem in 
-    (Consist _ (mem_ces_seq_aux ces_mem), odflt inh (value es w)) | 
+    (PrimeES _ (mem_ces_seq_aux ces_mem), odflt inh (value es w)) | 
     ces_w_mem <- seq_in (@ces_seq_aux x pr)].
 
-Arguments consist_new_nread {_ _ _}.
+Arguments rf_ncf_new_nread {_ _ _}.
 
 Definition add_hole
   (l : @Lab unit Val) pr :
-  seq (cexec_event_struct * Val) :=
+  seq (prime_porf_event_struct * Val) :=
   if pr \in dom es =P true is ReflectT pr_mem then
     match l with
     | Write x v => 
-      [:: (Consist _ (consist_new_nread es pr (Write x v) pr_mem erefl), v)]  
+      [:: (PrimeES _ (rf_ncf_new_nread es pr (Write x v) pr_mem erefl), v)]  
     | ThreadStart =>
-      [:: (Consist _ (consist_new_nread es pr ThreadStart pr_mem erefl), inh)]
+      [:: (PrimeES _ (rf_ncf_new_nread es pr ThreadStart pr_mem erefl), inh)]
     | Read x __ => ces_seq x pr
     | _         => [::]
     end

@@ -13,8 +13,9 @@ From eventstruct Require Import utils relalg rel wftype ident inhtype.
 (* l1 \>> l2 == synchronization relation on labels                            *)
 (*                                                                            *)
 (* Finite execution event structures:                                         *)
-(*   fin_exec_event_structure d E == definition of a finite execution event   *)
-(*                                   structure where E : identType d          *)
+(*   porf_eventstruct d E == definition of a event structure built of         *)
+(*                           program-order and reads-from relations,          *)
+(*                           where E : identType d                            *)
 (*     dom == the sorted sequences of events of the event structure. It is    *)
 (*            sorted in the descending order to make issuing fresh events     *)
 (*            a constant time operation.                                      *)
@@ -30,12 +31,13 @@ From eventstruct Require Import utils relalg rel wftype ident inhtype.
 (*            immediate causality relation.                                   *)
 (*      ca == non-strict casuality relation, i.e. the reflexive-transitive    *)
 (*              closure of ica.                                               *)
-(* e1 # e2 == e1 and e2 are conflicting events.                               *)
+(*      cf == conflicting relation.                                           *)
 (*                                                                            *)
 (* One can prove irreflexivity of the conflict relation under the assumption  *)
 (* that reads are not in conflict with the writes they read from:             *)
-(*   cexec_event_structure == a subtype of finite execution event structures  *)
-(*                            with irreflexive conflict relation              *)
+(*   prime_porf_eventstruct == a subtype of porf event structures             *)
+(*                             with irreflexive conflict relation,            *)
+(*                             i.e. those that form prime event structure.    *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -43,9 +45,11 @@ Unset Printing Implicit Defensive.
 Set Equations Transparent.
 
 Import Order.LTheory.
-Open Scope order_scope.
-
 Import WfClosure.
+
+Local Open Scope order_scope.
+Local Open Scope fset_scope.
+Local Open Scope fmap_scope.
 
 Declare Scope exec_eventstruct_scope.
 Delimit Scope exec_eventstruct_scope with exec_es.
@@ -237,22 +241,7 @@ Proof. by case. Qed.
 Definition edescr_eqMixin := CanEqMixin prod_of_edescrK.
 Canonical edescr_eqType := Eval hnf in EqType (edescr E L) edescr_eqMixin.
 
-End EDescrEq.
-
-(* ************************************************************************* *)
-(*     Exec Event Structure                                                  *)
-(* ************************************************************************* *)
-
-Section ExecEventStructureDef.
-
-Context {disp : unit} (E : identType disp) (V : eqType).
-
-Local Notation Lab := (@Lab V V).
-Local Notation edescr := (edescr E Lab).
-
-Implicit Type l : Lab.
-
-Lemma edescr_eq (ed1 ed2 : edescr) : 
+Lemma edescr_eq (ed1 ed2 : edescr E L) : 
   ed1 == ed2 = [&& lab_prj ed1 == lab_prj ed2
                  , fpo_prj ed1 == fpo_prj ed2 
                  & frf_prj ed1 == frf_prj ed2].
@@ -262,65 +251,61 @@ Proof.
   by rewrite andbA.
 Qed.
 
-Local Open Scope fset_scope.
+End EDescrEq.
 
-Structure fin_exec_event_struct := Pack {
-  dom        : seq E;
-  fed        : { fsfun for fun e =>
-                   {| lab_prj := Eps;
-                      fpo_prj := e;
-                      frf_prj := e; 
-                   |} : edescr
-               };
+(* ************************************************************************* *)
+(*     Exec Event Structure                                                  *)
+(* ************************************************************************* *)
 
-  lab e      := lab_prj (fed e);
-  fpo e      := fpo_prj (fed e);
-  frf e      := frf_prj (fed e);
+Section PORFEventStructureDef.
 
-  _          : finsupp fed == (seq_fset tt dom);
-  dom_sorted : sorted (>%O) dom;
-  dom0       : \i0 \in dom;
+Context {disp : unit} (E : identType disp) (V : eqType).
 
-  _          : fed \i0 = {| lab_prj := Init   ; 
-                            fpo_prj := ident0 ;
-                            frf_prj := ident0 ;
-                         |};
+Local Notation Lab := (@Lab V V).
+Local Notation edescr := (edescr E Lab).
 
-  _          : [forall e : finsupp fed, fpo (val e) \in dom];
-  _          : [forall e : finsupp fed, frf (val e) \in dom];
+Structure porf_eventstruct := Pack {
+  dom    : seq E;
+  fed    : { fsfun for fun e =>
+               {| lab_prj := Eps;
+                  fpo_prj := e;
+                  frf_prj := e; 
+               |} : edescr
+           };
 
-  _          : [forall e : finsupp fed, fpo (val e) <= val e];
-  _          : [forall e : finsupp fed, frf (val e) <= val e];
+  lab e  := lab_prj (fed e);
+  fpo e  := fpo_prj (fed e);
+  frf e  := frf_prj (fed e);
 
-  _          : [forall e : finsupp fed, lab (frf (val e)) \>> lab (val e)]; 
+  _      : finsupp fed == (seq_fset tt dom);
+  _      : sorted (>%O) dom;
+  _      : \i0 \in dom;
+
+  _      : fed \i0 = {| lab_prj := Init   ; 
+                        fpo_prj := ident0 ;
+                        frf_prj := ident0 ;
+                     |};
+
+  _      : [forall e : finsupp fed, fpo (val e) \in dom];
+  _      : [forall e : finsupp fed, frf (val e) \in dom];
+
+  _      : [forall e : finsupp fed, fpo (val e) <= val e];
+  _      : [forall e : finsupp fed, frf (val e) <= val e];
+
+  _      : [forall e : finsupp fed, lab (frf (val e)) \>> lab (val e)]; 
 }.
 
-Open Scope fmap_scope.
+End PORFEventStructureDef.
 
-Lemma inh_exec_event_structure : fin_exec_event_struct.
-Proof.
-  pose dom0 := ([:: \i0] : seq E).
-  pose fed0 := [fsfun [fsfun] with ident0 |-> mk_edescr Init \i0 \i0] :
-    {fsfun for fun e => mk_edescr Eps e e : edescr}.
-  have S: finsupp fed0 =i [:: \i0] => [?|].
-  - by rewrite /fed0 finsupp_with /= finsupp0 ?inE orbF.
-  have F: fed0 \i0 = mk_edescr Init \i0 \i0 by rewrite ?fsfun_with.
-  have [: a1 a2 a3 a4 a5 a6 a7 a8 a9] @evstr : 
-  fin_exec_event_struct := Pack dom0 fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9;
-  rewrite /dom0 ?inE ?eq_refl //.
-  - by apply/eqP/fsetP=> ?; rewrite S seq_fsetE.
-  all: by apply/forallP=> [[/= x]]; rewrite S ?inE=> /eqP-> /[! F]/=.
-Defined.
+(* ************************************************************************* *)
+(*     Canonical instances for event structure                               *)
+(* ************************************************************************* *)
 
-End ExecEventStructureDef.
-
-Arguments dom_sorted {_ _ _ _}.
-
-Section ExecEventStructEq. 
+Section PORFEventStructEq. 
 
 Context {disp} {E : identType disp} {Val : eqType}.
 
-Definition eq_es (es es' : fin_exec_event_struct E Val) : bool :=
+Definition eq_es (es es' : porf_eventstruct E Val) : bool :=
   [&& dom es == dom es' & fed es == fed es'].
 
 Lemma eqesP : Equality.axiom eq_es.
@@ -337,24 +322,58 @@ Proof.
   move=> *; congr Pack; exact/eq_irrelevance.
 Qed.
 
-End ExecEventStructEq. 
+End PORFEventStructEq. 
+
+Canonical es_eqMixin disp E V := EqMixin (@eqesP disp E V).
+Canonical es_eqType disp E V := 
+  Eval hnf in EqType (@porf_eventstruct disp E V) (es_eqMixin E V).
+
+
+Section PORFEventStructInh. 
+
+Context {disp} {E : identType disp} {Val : eqType}.
+
+Local Notation Lab := (@Lab Val Val).
+Local Notation edescr := (edescr E Lab).
+
+Lemma inh_exec_eventstructure : porf_eventstruct E Val.
+Proof.
+  pose dom0 := ([:: \i0] : seq E).
+  pose fed0 := [fsfun [fsfun] with ident0 |-> mk_edescr Init \i0 \i0] :
+    {fsfun for fun e => mk_edescr Eps e e : edescr}.
+  have S: finsupp fed0 =i [:: \i0] => [?|].
+  - by rewrite /fed0 finsupp_with /= finsupp0 ?inE orbF.
+  have F: fed0 \i0 = mk_edescr Init \i0 \i0 by rewrite ?fsfun_with.
+  have [: a1 a2 a3 a4 a5 a6 a7 a8 a9] @evstr : 
+  porf_eventstruct E Val := Pack dom0 fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9;
+  rewrite /dom0 ?inE ?eq_refl //.
+  - by apply/eqP/fsetP=> ?; rewrite S seq_fsetE.
+  all: by apply/forallP=> [[/= x]]; rewrite S ?inE=> /eqP-> /[! F]/=.
+Defined.
+
+End PORFEventStructInh. 
+
+Canonical es_inhMixin {disp E V} := 
+  @Inhabitant.Mixin (@porf_eventstruct disp E V) _ 
+    inh_exec_eventstructure.
+Canonical es_inhType disp E V := 
+  Eval hnf in Inhabitant (@porf_eventstruct disp E V) es_inhMixin.
 
 (* ************************************************************************* *)
 (*     Label related functions, predicates and relations on events           *)
 (* ************************************************************************* *)
 
-Section ExecEventStructLab. 
+Section PORFEventStructLab. 
+
 Context {disp} {E : identType disp} {Val : eqType}.
 Context (x : Loc) (v : Val).
-Context (es : fin_exec_event_struct E Val).
-
-Notation lab := (lab es).
+Context (es : porf_eventstruct E Val).
 
 Definition loc : E -> option Loc := 
-  Label.loc \o lab. 
+  Label.loc \o lab es. 
 
 Definition value : E -> option Val := 
-  Label.value \o lab. 
+  Label.value \o lab es. 
 
 Definition with_loc : pred E := 
   opreim loc (eq_op x).
@@ -363,27 +382,27 @@ Definition with_value : pred E :=
   opreim value (eq_op v).
 
 Definition is_read : pred E := 
-  Label.is_read \o lab. 
+  Label.is_read \o lab es. 
 
 Definition is_write : pred E := 
-  Label.is_write \o lab. 
+  Label.is_write \o lab es. 
 
 Definition is_thrdstart : pred E := 
-  Label.is_thrdstart \o lab. 
+  Label.is_thrdstart \o lab es. 
 
 Definition is_thrdend : pred E := 
-  Label.is_thrdend \o lab. 
+  Label.is_thrdend \o lab es. 
 
 Definition eq_lab : rel E :=
-  relpre lab Label.eq_lab.  
+  relpre (lab es) Label.eq_lab.  
 
 Definition eq_loc : rel E := 
-  relpre lab Label.eq_loc.  
+  relpre (lab es) Label.eq_loc.  
 
 Definition eq_value : rel E := 
-  relpre lab Label.eq_value.
+  relpre (lab es) Label.eq_value.
 
-End ExecEventStructLab. 
+End PORFEventStructLab. 
 
 (* ************************************************************************* *)
 (*     Notations to filter out events of an event structure                  *)
@@ -406,11 +425,10 @@ Notation "[ 'events' e <- S | C1 & C2 ]" :=
     (at level 0) : exec_eventstruct_scope.
 
 
-Section ExecEventStructure.
-Context {disp} {E : identType disp} {Val : eqType}.
-Context (es : fin_exec_event_struct E Val).
+Section PORFEventStructureTheory.
 
-Local Open Scope fset_scope.
+Context {disp} {E : identType disp} {Val : eqType}.
+Context (es : porf_eventstruct E Val).
 
 Local Notation Lab := (@Lab Val Val).
 
@@ -420,20 +438,23 @@ Local Notation lab := (lab es).
 Local Notation fpo := (fpo es).
 Local Notation frf := (frf es).
 
+Notation fresh_id := (fresh_seq dom).
+
 (* ************************************************************************* *)
-(*     Auxiliary lemmas                                                      *)
+(*     Domain and event descriptor mapping                                   *)
 (* ************************************************************************* *)
 
-Lemma fed_dom : (finsupp fed) =i dom.
+Lemma fed_supp : (finsupp fed) =i dom.
 Proof. 
   case: es=> ????? /[dup] /fset_eqP + * x /=.
   by move/(_ x)=>->; rewrite ?inE seq_fsetE. 
 Qed.
 
-Lemma fed_dom_mem x: 
-  x \in dom = (x \in finsupp fed).
+(* TODO: rewrite with `fed_supp` under `\in`? *)
+Lemma fed_supp_mem x: 
+  (x \in finsupp fed) = (x \in dom).
 Proof.
-  rewrite fed_dom /=.
+  rewrite fed_supp /=.
   case: (boolP (x == \i0))=> // /eqP->; exact/dom0.
 Qed.
 
@@ -443,60 +464,54 @@ Proof. by case es. Qed.
 
 Lemma fed_ndom e: e \notin dom ->
   fed e = mk_edescr Eps e e.
-Proof. by rewrite fed_dom_mem=> ?; rewrite fsfun_dflt. Qed.
+Proof. by rewrite -fed_supp_mem=> ?; rewrite fsfun_dflt. Qed.
+
+Lemma dom0 : \i0 \in dom. 
+Proof. by case: es. Qed.
+
+Lemma dom_sorted : sorted (>%O) dom. 
+Proof. by case: es. Qed.
+
+(* ************************************************************************* *)
+(*     Label mapping                                                         *)
+(* ************************************************************************* *)
 
 Lemma labE e : lab e = lab_prj (fed e).
 Proof. by []. Qed.
 
-Lemma fpoE e : fpo e = fpo_prj (fed e).
-Proof. by []. Qed.
+Lemma lab0 : lab ident0 = Init.
+Proof. by rewrite labE fed0. Qed.
 
-Lemma frfE e : frf e = frf_prj (fed e).
-Proof. by []. Qed.
+Lemma lab_ndom e : e \notin dom -> lab e = Eps.
+Proof. by move=> ?; rewrite labE fed_ndom. Qed.
+
+Lemma lab_fresh : lab fresh_id = Eps.
+Proof. by rewrite lab_ndom //; apply /fresh_seq_notin/dom_sorted. Qed.
 
 Lemma lab_prj_edescr_map f e : 
   @lab_prj E Lab (edescr_map f (fed e)) = lab e.
 Proof. by rewrite /lab; case: (fed e). Qed.
 
-Lemma fpo_prj_edescr_map f e : 
-  @fpo_prj E Lab (edescr_map f (fed e)) = f (fpo e).
-Proof. by rewrite /fpo; case: (fed e). Qed.
-
-Lemma frf_prj_edescr_map f e : 
-  @frf_prj E Lab (edescr_map f (fed e)) = f (frf e).
-Proof. by rewrite /frf; case: (fed e). Qed.
-
-Notation fresh_id := (fresh_seq dom).
-
-Lemma lab0 : lab ident0 = Init.
-Proof. by rewrite labE; case es=> ???????? H ??? /=; rewrite H. Qed.
-
-Lemma lab_fresh : lab fresh_id = Eps.
-Proof. 
-  rewrite /lab fsfun_dflt // fed_dom fresh_seq_notin //.
-  exact/dom_sorted.
-Qed.
-
-Lemma i0_fresh : \i0 < fresh_id.
-Proof. exact/i0_fresh_seq. Qed.
-
 (* ************************************************************************* *)
 (*     Program Order                                                         *)
 (* ************************************************************************* *)
 
+Lemma fpoE e : fpo e = fpo_prj (fed e).
+Proof. by []. Qed.
+
 Lemma fpo0 : fpo \i0 = \i0.
 Proof. by rewrite /fpo fed0. Qed.
 
-Lemma fpo_dom e: 
+Lemma fpo_dom e : 
   e \in dom -> fpo e \in dom.
 Proof.
-  rewrite fed_dom_mem.
-  case: es=> /=; rewrite /eventstructure.fpo /==>> ???? /forallP H ???? L.
+  rewrite -fed_supp_mem.
+  case: es=> /=; rewrite /porf_eventstruct.fpo /==>> ???? /forallP H ???? L.
   exact/(H [` L]).
 Qed.
 
 Lemma fpo_ndom e : e \notin dom -> fpo e = e.
-Proof. by move=> ndom; rewrite /fpo fsfun_dflt // fed_dom ndom. Qed.
+Proof. by move=> ndom; rewrite /fpo fsfun_dflt // fed_supp ndom. Qed.
 
 Lemma fpo_le e : fpo e <= e.
 Proof.
@@ -507,30 +522,37 @@ Proof.
   by move=> ndom; rewrite fsfun_dflt.  
 Qed.
 
-Lemma fpo_fresh e: 
+Lemma fpo_fresh e : 
   fpo e = fresh_id -> e = fresh_id.
 Proof.
   case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/fpo_ndom->//].
   by move/le_lt_trans: (fpo_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
 Qed.
 
+Lemma fpo_prj_edescr_map f e : 
+  @fpo_prj E Lab (edescr_map f (fed e)) = f (fpo e).
+Proof. by rewrite /fpo; case: (fed e). Qed.
+
 (* ************************************************************************* *)
 (*     Reads-From                                                            *)
 (* ************************************************************************* *)
 
+Lemma frfE e : frf e = frf_prj (fed e).
+Proof. by []. Qed.
+
 Lemma frf0 : frf \i0 = \i0.
 Proof. by rewrite /frf fed0. Qed.
 
-Lemma frf_dom e: 
+Lemma frf_dom e : 
   e \in dom -> frf e \in dom.
 Proof.
-  rewrite fed_dom_mem.
-  case: es=> /=; rewrite /eventstructure.frf /==>> ????? /forallP H ??? L.
+  rewrite -fed_supp_mem.
+  case: es=> /=; rewrite /porf_eventstruct.frf /==>> ????? /forallP H ??? L.
   exact/(H [` L]).
 Qed.
 
 Lemma frf_ndom e : e \notin dom -> frf e = e.
-Proof. by move=> ndom; rewrite /frf fsfun_dflt // fed_dom ndom. Qed.
+Proof. by move=> ndom; rewrite /frf fsfun_dflt // fed_supp ndom. Qed.
 
 Lemma frf_le e : frf e <= e.
 Proof.
@@ -539,6 +561,13 @@ Proof.
     rewrite -[e]/(fsval [` eI]).
     move: H=> /forallP H; exact: H.
   by move=> ndom; rewrite fsfun_dflt.  
+Qed.
+
+Lemma frf_fresh e : 
+  frf e = fresh_id -> e = fresh_id.
+Proof.
+  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/frf_ndom->//].
+  by move/le_lt_trans: (frf_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
 Qed.
 
 Lemma frf_sync e : lab (frf e) \>> lab e. 
@@ -550,52 +579,87 @@ Proof.
   by move=> ndom; rewrite !fsfun_dflt.
 Qed.
 
-Lemma frf_fresh e: 
-  frf e = fresh_id -> e = fresh_id.
+Lemma frf_prj_edescr_map f e : 
+  @frf_prj E Lab (edescr_map f (fed e)) = f (frf e).
+Proof. by rewrite /frf; case: (fed e). Qed.
+
+(* ************************************************************************* *)
+(*     Immediate Causality                                                   *)
+(* ************************************************************************* *)
+
+Definition fca e : ModelNondet.list E := [:: fpo e; frf e].
+
+(* TODO: `sfrel` - infer [canonical] instance automatically, 
+ *   then get rid of `ica` and use `sfrel fca` inplace
+ *)
+Definition ica : {dhrel E & E} := 
+  (@sfrel _ monad.id_ndmorph E fca)°.
+
+Lemma fca0 : fca \i0 = [:: \i0 ; \i0].
+Proof. by rewrite /fca fpo0 frf0. Qed.
+
+Lemma fca_dom e e' : 
+  e \in dom -> e' \in fca e -> e' \in dom.
 Proof.
-  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/frf_ndom->//].
-  by move/le_lt_trans: (frf_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
+  rewrite /fca !inE.
+  move=> ? /orP[/eqP->|/eqP->]; 
+    [exact/fpo_dom | exact/frf_dom].
+Qed.
+
+Lemma fca_ndom e : e \notin dom -> fca e = [:: e; e].
+Proof. by move=> ndom; rewrite /fca (fpo_ndom e ndom) (frf_ndom e ndom). Qed.
+
+Lemma fca_ge : (@sfrel _ monad.id_ndmorph E) fca ≦ (>=%O : rel E).
+Proof. 
+  move=> ?? /=; red; rewrite /sfrel /=.
+  rewrite ?inE=> /orP[]/eqP->; [exact: fpo_le | exact: frf_le]. 
+Qed.
+
+(* TODO: consider to generalize this lemma and move to `relations.v` *)
+Lemma fca_gt :
+  (@sfrel _ monad.id_ndmorph E (strictify E _ fca)) ≦ (>%O : rel E).
+Proof. 
+  rewrite strictify_weq.
+  (* TODO: can ssreflect rewrite do setoid rewrites? *)
+  rewrite -> fca_ge.
+  move=> x y //=; red.
+  by rewrite lt_def andbC eq_sym.
+Qed.
+
+
+Lemma icaE : ica =2 [rel e1 e2 | e1 \in fca e2].
+Proof. by []. Qed.
+
+Lemma ica0 e1 :
+  ica e1 ident0 -> e1 == ident0.
+Proof. by rewrite icaE /= fca0 !inE orbb. Qed.
+
+Lemma ica_fpo e : ica (fpo e) e.
+Proof. by rewrite icaE /= !inE eqxx. Qed.
+
+Lemma ica_frf e : ica (frf e) e.
+Proof. by rewrite icaE /= !inE eqxx. Qed.
+
+Lemma ica_ndom e1 e2 :
+  ica e1 e2 -> e2 \notin dom -> e1 == e2.
+Proof. by move=> /[swap] ?; rewrite icaE /= fca_ndom // !inE orbb. Qed.
+
+Lemma ica_le e1 e2 : ica e1 e2 -> e1 <= e2.
+Proof. exact: fca_ge. Qed.
+
+Lemma ica_fresh e : ica fresh_id e -> e = fresh_id.
+Proof.
+  move/[dup]/ica_ndom/[swap]/fca_ge.
+  rewrite /ica ?inE.
+  case I: (e \in dom); last by move=> ?/(_ erefl)/eqP->.
+  by move: (fresh_seq_lt dom_sorted I)=> /= /lt_geF ->. 
 Qed.
 
 (* ************************************************************************* *)
 (*     Causality                                                             *)
 (* ************************************************************************* *)
 
-Definition fica e : ModelNondet.list E := [:: frf e; fpo e].
-
-Lemma fica_ndom e :
-  e \notin dom -> fica e = [:: e; e].
-Proof. by move=> nI; rewrite /fica frf_ndom // fpo_ndom. Qed.
-
-Lemma fica_ge : (@sfrel _ monad.id_ndmorph E) fica ≦ (>=%O : rel E).
-Proof. 
-  move=> ?? /=; red; rewrite /sfrel /=.
-  rewrite ?inE=> /orP[]/eqP->; [exact: frf_le | exact: fpo_le]. 
-Qed.
-
-(* TODO: consider to generalize this lemma and move to `relations.v` *)
-Lemma fica_gt :
-  (@sfrel _ monad.id_ndmorph E (strictify E _ fica)) ≦ (>%O : rel E).
-Proof. 
-  rewrite strictify_weq.
-  (* TODO: can ssreflect rewrite do setoid rewrites? *)
-  rewrite -> fica_ge.
-  move=> x y //=; red.
-  by rewrite lt_def andbC eq_sym.
-Qed.
-
-(* Immediate causality relation *)
-Definition ica : {dhrel E & E} := 
-  (@sfrel _ monad.id_ndmorph E fica : {dhrel E & E})°.
-
-Lemma icaE : ica =2 [rel e1 e2 | e1 \in fica e2].
-Proof. by []. Qed.
-
-Lemma ica_le e1 e2 : ica e1 e2 -> e1 <= e2.
-Proof. exact: fica_ge. Qed.
-
-(* Causality relation *)
-Definition ca : rel E := (rt_closure fica_gt)°.
+Definition ca : rel E := (rt_closure fca_gt)°.
 
 Lemma closureP e1 e2 :
   reflect (clos_refl_trans _ ica e1 e2) (ca e1 e2).
@@ -628,73 +692,6 @@ Qed.
 Lemma ica_ca : ica ≦ ca.
 Proof. by move=> x y H; apply /closureP /rt_step. Qed.
 
-(* Lemma ica_ca e1 e2 : ica e1 e2 -> ca e1 e2. *)
-(* Proof. exact: rt_closure_subrel. Qed. *)
-
-Lemma ica_fpo {e} : ica (fpo e) e.
-Proof. by rewrite icaE /= !inE eqxx. Qed.
-
-Lemma ica_ndom e1 e2 :
-  e2 \notin dom ->
-  ica e1 e2 ->
-  e1 == e2.
-Proof. by move=> ?; rewrite icaE /= fica_ndom // !inE orbb. Qed.
-
-Lemma ica0 e1 :
-  ica e1 ident0 -> e1 == ident0.
-Proof. by rewrite icaE /fica /= fpo0 frf0 !inE orbb. Qed.
-
-Lemma ca_refl {e} : ca e e.
-Proof. exact: rt_closure_refl. Qed.
-
-Hint Resolve ca_refl : core.
-
-Lemma ca_trans : transitive ca.
-Proof. 
-  (* TODO: generalize lemma *)
-  rewrite /ca /transitive /= /dhrel_cnv. 
-  move=> x y z /[swap]. apply rt_closure_trans.
-Qed.
-
-Arguments ca_trans {_ _ _}.
-
-Lemma ca_anti : antisymmetric ca.
-Proof. 
-  (* TODO: generalize lemma *)
-  rewrite /ca /antisymmetric /= /dhrel_cnv. 
-  move=> x y. rewrite andbC. apply /rt_closure_antisym. 
-Qed.
-
-Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
-Proof. 
-  rewrite /ca /= /dhrel_cnv. 
-  apply /rt_closure_ge.
-Qed.
-
-Lemma ca_step_last e1 e3 :
-  e1 != e3 ->
-  ca e1 e3 ->
-  exists e2, [&& ca e1 e2, ica e2 e3 & e2 < e3].
-Proof.
-  move/[swap]/closure_n1P; elim=> [/eqP//|] e2 {}e3.
-  case: (eqVneq e2 e3)=> [-> _ //| neq23 I23 /closure_n1P C12 _ neq13].
-  by exists e2; rewrite C12 I23 lt_neqAle neq23 ica_le.
-Qed.
-
-Lemma ca_fpo_l {e} : ca (fpo e) e.
-Proof. exact/ica_ca/ica_fpo. Qed.
-
-Lemma ca_fpo_r e1 e2 : ca e1 (fpo e2) -> ca e1 e2.
-Proof. by move/ca_trans/(_ ca_fpo_l). Qed.
-
-Lemma ca_ndom e1 e2 :
-  ca e1 e2 -> e2 \notin dom ->
-  e1 == e2.
-Proof.
-  move/closure_n1P; elim=> // {}e2 e3 + _ + N3.
-  by move=> /(ica_ndom e2 e3 N3) /eqP-> /(_ N3).
-Qed.
-
 Lemma ca0 e1 :
   ca e1 ident0 -> e1 == ident0.
 Proof.
@@ -708,36 +705,67 @@ Proof.
   by apply/H/ica0.
 Qed.
 
-Definition seqpred_ca := wsuffix fica_gt.
+Lemma ca_fpo e : ca (fpo e) e.
+Proof. exact/ica_ca/ica_fpo. Qed.
 
-Lemma seqpred_ca_in e1 e2 : e1 \in seqpred_ca e2 = ca e1 e2.
-Proof. by []. Qed.
+Lemma ca_frf e : ca (frf e) e.
+Proof. exact/ica_ca/ica_frf. Qed.
 
-(***** Causality and Freshness *****)
-Section CausalityFresh.
-
-Notation fresh_id := (fresh_seq dom).
-
-Lemma ica_fresh e : ica fresh_id e -> e = fresh_id.
+Lemma ca_ndom e1 e2 :
+  ca e1 e2 -> e2 \notin dom -> e1 == e2.
 Proof.
-  move/[dup]/ica_ca/ca_ndom/[swap]/fica_ge.
-  rewrite /ica ?inE.
-  case I: (e \in dom); last by move=> ?/(_ erefl)/eqP->.
-  by move: (fresh_seq_lt dom_sorted I)=> /= /lt_geF ->. 
+  move/closure_n1P; elim=> // {}e2 e3 + _. 
+  move=> /[swap] + /(ica_ndom e2 e3)=> H1 H2 /[dup].
+  by move/H2=> /eqP<- /H1.
+Qed.
+
+Lemma ca_le e1 e2 : ca e1 e2 -> e1 <= e2.
+Proof. 
+  rewrite /ca /= /dhrel_cnv. 
+  apply /rt_closure_ge.
+Qed.
+
+Lemma ca_refl {e} : ca e e.
+Proof. exact: rt_closure_refl. Qed.
+
+Hint Resolve ca_refl : core.
+
+Lemma ca_anti : antisymmetric ca.
+Proof. 
+  (* TODO: generalize lemma *)
+  rewrite /ca /antisymmetric /= /dhrel_cnv. 
+  move=> x y. rewrite andbC. apply /rt_closure_antisym. 
+Qed.
+
+Lemma ca_trans : transitive ca.
+Proof. 
+  (* TODO: generalize lemma *)
+  rewrite /ca /transitive /= /dhrel_cnv. 
+  move=> x y z /[swap]. apply rt_closure_trans.
+Qed.
+
+Arguments ca_trans {_ _ _}.
+
+(* TODO: reformulate using notations of relation-algebra? *)
+Lemma ca_po e1 e2 : ca e1 (fpo e2) -> ca e1 e2.
+Proof. by move/ca_trans/(_ (ca_fpo _)). Qed.
+
+Lemma ca_stepR e1 e3 :
+  e1 != e3 ->
+  ca e1 e3 ->
+  exists e2, [&& ca e1 e2, ica e2 e3 & e2 < e3].
+Proof.
+  move/[swap]/closure_n1P; elim=> [/eqP//|] e2 {}e3.
+  case: (eqVneq e2 e3)=> [-> _ //| neq23 I23 /closure_n1P C12 _ neq13].
+  by exists e2; rewrite C12 I23 lt_neqAle neq23 ica_le.
 Qed.
 
 Lemma ca_fresh e : ca fresh_id e -> e = fresh_id.
 Proof. by move/closure_n1P; elim=> // ?? /[swap] ? /[swap]-> /ica_fresh. Qed.
 
-Lemma ca_fresh2 e1 e2 :
-  ca e1 e2 -> e1 = fresh_id -> e2 = fresh_id.
-Proof. by move/[swap]->; apply: ca_fresh. Qed.
-
 Lemma ca_fresh_contra e1 e2 :
-  e2 != fresh_id -> ca e1 e2 -> e1 != fresh_id.
-Proof. by move=> nfr2 /ca_fresh2/contra_neq->. Qed.
-
-End CausalityFresh.
+  ca e1 e2 -> e2 != fresh_id -> e1 != fresh_id.
+Proof. by move=> H; apply /contra_neq; move: H=> /[swap] -> /ca_fresh. Qed.
 
 (*Lemma ca_dom e1 e2: ca e1 e2 -> (e1 \in dom) = false ->
   e1 = e2.
@@ -745,7 +773,6 @@ Proof.
   move/closureP; elim=> // x y I /closureP ? IH /[dup]/IH.
   move: I=> /[swap] .
 Qed.*)
-
 
 (* Strict (irreflexive) causality *)
 (*Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
@@ -760,173 +787,151 @@ Canonical predorderType := POrderType ev_display E orderMixin.
 Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 0).*)
 
 (* ************************************************************************* *)
-(*     Conflict                                                              *)
+(*     Immediate Conflict                                                    *)
 (* ************************************************************************* *)
 
-(* Immediate conflict relation *)
 Definition icf (e1 e2 : E) : bool :=
   [&& e1 != e2,
       fpo e1 == fpo e2,
       fpo e1 < e1 &
       fpo e2 < e2].
 
-Lemma icfxx x : icf x x = false.
-Proof. by apply/and4P; case; rewrite eq_refl. Qed.
-
-Definition icf_irrefl : irreflexive icf := icfxx.
-
-Hint Resolve icfxx : core.
-
-Lemma icf_sym : symmetric icf.
-Proof.
-  by move=> e1 e2; apply/and4P/and4P; case=>*; split=> //; rewrite 1?eq_sym.
-Qed.
-
 Lemma icf0 e : ~~ icf e \i0.
 Proof. rewrite /icf fpo0 ltxx !andbF //=. Qed.
 
-(* Conflict relation *)
-Definition cf e1 e2 : bool :=
-  has id [seq icf x y | x <- seqpred_ca e1, y <- seqpred_ca e2].
+Lemma icfxx x : icf x x = false.
+Proof. by apply/and4P; case; rewrite eq_refl. Qed.
 
-Notation "a \# b" := (cf a b) (at level 10).
+Hint Resolve icfxx : core.
+
+Definition icf_irrefl : irreflexive icf := icfxx.
+
+Lemma icf_sym : symmetric icf.
+Proof. by move=> ??; apply/and4P/and4P; case=>*; split=>//; rewrite eq_sym. Qed.
+
+(* ************************************************************************* *)
+(*     Conflict                                                              *)
+(* ************************************************************************* *)
+
+Definition cf e1 e2 : bool :=
+  has id [seq icf x y | x <- wsuffix fca_gt e1, y <- wsuffix fca_gt e2].
 
 Lemma cfP {e1 e2} :
-  reflect (exists e1' e2', (ca e1' e1 * ca e2' e2 * icf e1' e2')%type) (e1 \# e2).
+  reflect (exists e1' e2', [/\ ca e1' e1, ca e2' e2 & icf e1' e2']) (cf e1 e2).
 Proof.
-  apply/(iffP hasP)=> [[? /allpairsPdep[x[y[]]]]|[x [y [[]]]]].
-  - by rewrite 2!seqpred_ca_in=> ?? -> /= ?; exists x, y.
-    by exists (icf x y)=> //; rewrite allpairs_f.
-Qed.
-
-Lemma cf_sym : symmetric cf.
-Proof.
-  apply: symmetric_from_pre=> e1 e2 /cfP [e1' [e2'] Cf].
-  by apply/cfP; exists e2', e1'; rewrite icf_sym !Cf.
-Qed.
-
-Lemma cf_consist2 e1 e2 e3 e4 :
-  e1 \# e2 -> ca e1 e3 -> ca e2 e4 -> e3 \# e4.
-Proof.
-  move=> /cfP[e1' [e2'] [[/ca_trans C1] /ca_trans C2 *]].
-  by apply/cfP; exists e1', e2'; rewrite C1 // C2.
-Qed.
-
-Lemma cf_consistl e1 e2 e3 :
-  ca e1 e3 -> e1 \# e2 -> e2 \# e3.
-Proof. by move=> C13 /cf_consist2 /(_ C13); rewrite cf_sym=>->. Qed.
-
-Lemma cf_consistr e1 e2 e3 :
-  ca e2 e3 -> e1 \# e2 -> e1 \# e3.
-Proof. by rewrite cf_sym; apply: cf_consistl. Qed.
-
-Lemma icf_cf e1 e2 : icf e1 e2 -> e1 \# e2.
-Proof. by move=> I; apply/cfP; exists e1, e2; rewrite !ca_refl I. Qed.
-
-Notation cf_step e1 e2 :=
-  [|| icf e1 e2,
-      has (cf e1) (filter (fun x => e2 != x) (fica e2)) |
-      has (cf e2) (filter (fun x => e1 != x) (fica e1))].
-
-Lemma cf_step_cf e1 e2 : cf_step e1 e2 -> e1 \# e2.
-Proof.
-  case/or3P=> [/icf_cf //||] /hasP[e]; rewrite mem_filter => /andP[_ /ica_ca].
-  - by apply: cf_consistr.
-  by move=> /cf_consistr /[apply]; rewrite cf_sym.
-Qed.
-
-
-(* TODO: refactor proof *)
-Lemma cfE e1 e2 : e1 \# e2 = cf_step e1 e2.
-Proof.
-  apply/idP/idP; last by apply: cf_step_cf.
-  case/cfP=> e1' [e2' [[]]].
-  case: (boolP (e1' == e1))=> [/eqP-> _|].
-  - case: (boolP (e2' == e2))=> [/eqP->_->|]; first (apply/orP; by left).
-    move/ca_step_last/[apply] => [[x /and3P[/cf_consistr H N + /icf_cf/H]]].
-    rewrite lt_neqAle=> /andP[] *.
-    have-> //: has (cf e1) [seq x0 <- fica e2 | e2 != x0].
-    apply/hasP; exists x=> //; rewrite mem_filter; apply/andP; split=> //.
-    by rewrite eq_sym.
-  move/ca_step_last/[apply] => [[x /and3P[++++ /icf_cf/cf_consist2 H]]].
-  rewrite lt_neqAle eq_sym; move/H => C ? /andP[? _] /C ?.
-  have-> //: has (cf e2) [seq x0 <- fica e1 | e1 != x0].
-  apply/hasP; exists x=> //; rewrite ?mem_filter 1?cf_sym //; exact/andP. 
+  rewrite /ca /rt_closure /= /dhrel_cnv.
+  apply/(iffP hasP) => [[? /allpairsPdep[x[y[]]]] | [x [y []]]].
+  - by move=> ?? -> /= ?; exists x, y. 
+  by exists (icf x y)=> //; rewrite allpairs_f.
 Qed.
 
 Lemma cf0 e : ~~ cf e \i0.
 Proof.
-  apply/negP. move=> /cfP [e1 [e2 [[]]]].
+  apply/negP. move=> /cfP [e1 [e2 []]].
   move=> /[swap] /ca0 /eqP -> ?. 
   by move /(elimN idP)=> H; apply /H/icf0. 
 Qed.
 
+Lemma cf_sym : symmetric cf.
+Proof.
+  apply: symmetric_from_pre=> e1 e2 /cfP [e1' [e2'] []].
+  by move=> ???; apply/cfP; exists e2', e1'; rewrite icf_sym. 
+Qed.
+
+Lemma cf_hereditary e1 e2 e3 e4 :
+  cf e1 e2 -> ca e1 e3 -> ca e2 e4 -> cf e3 e4.
+Proof.
+  move=> /cfP[e1' [e2'] [/ca_trans C1] /ca_trans C2 *].
+  by apply/cfP; exists e1', e2'; rewrite C1 // C2.
+Qed.
+
+Lemma cf_hereditaryL e1 e2 e3 :
+  cf e1 e2 -> ca e1 e3 -> cf e2 e3.
+Proof. by move=> /cf_hereditary /[apply]; rewrite cf_sym=>->. Qed.
+
+Lemma cf_hereditaryR e1 e2 e3 :
+  cf e1 e2 -> ca e2 e3 -> cf e1 e3.
+Proof. by rewrite cf_sym; apply: cf_hereditaryL. Qed.
+
+Lemma icf_cf e1 e2 : icf e1 e2 -> cf e1 e2.
+Proof. by move=> I; apply/cfP; exists e1, e2; rewrite !ca_refl I. Qed.
+
+(* TODO: refactor proof *)
+Lemma cfE e1 e2 : 
+  cf e1 e2 = [|| icf e1 e2,
+                 has (cf e1) (filter (fun x => e2 != x) (fca e2)) |
+                 has (cf e2) (filter (fun x => e1 != x) (fca e1)) ].
+Proof.
+  apply/idP/idP; last first. 
+  - case/or3P=> [/icf_cf //||] /hasP[e]; rewrite mem_filter=> /andP[_ /ica_ca].
+    - by move/[swap]; apply: cf_hereditaryR.
+    by move=> /[swap] /cf_hereditaryR /[apply]; rewrite cf_sym.
+  case/cfP=> e1' [e2' []].
+  case: (boolP (e1' == e1))=> [/eqP-> _|].
+  - case: (boolP (e2' == e2))=> [/eqP->_->|]; first (apply/orP; by left).
+    move/ca_stepR/[apply] => [[x /and3P[/cf_hereditaryR H N + /icf_cf/H]]].
+    rewrite lt_neqAle=> /andP[] *.
+    have-> //: has (cf e1) [seq x0 <- fca e2 | e2 != x0].
+    apply/hasP; exists x=> //; rewrite mem_filter; apply/andP; split=> //.
+    by rewrite eq_sym.
+  move/ca_stepR/[apply] => [[x /and3P[++++ /icf_cf/cf_hereditary H]]].
+  rewrite lt_neqAle eq_sym; move/H=> C ? /andP[? _] /C ?.
+  have-> //: has (cf e2) [seq x0 <- fca e1 | e1 != x0].
+  apply/hasP; exists x=> //; rewrite ?mem_filter 1?cf_sym //; exact/andP. 
+Qed.
+
 (* ************************************************************************* *)
-(*     Reads-From Consistency                                                *)
+(*     Read events read-from non-conflicting writes                          *)
 (* ************************************************************************* *)
 
-Definition dom_consistency := 
-  all (fun e => (frf e != e) ==> ~~ (e \# (frf e))) dom.
+Definition rf_ncf_dom := 
+  all (fun e => (frf e != e) ==> ~~ (cf e (frf e))) dom.
 
-Hypothesis Consistent : dom_consistency.
+Hypothesis RFnCFd : rf_ncf_dom.
 
-Lemma rff_consist e : (frf e) != e -> e \# (frf e) = false.
+Lemma rf_ncf e : frf e != e -> cf e (frf e) = false.
 Proof.
   move=> N. apply/negbTE/negP; case: (boolP (e \in dom)) => [D|nD].
-  - move/allP/(_ _ D)/negP: Consistent; rewrite N; by apply/contra_not=>->.
-  rewrite frf_ndom // => /cfP[e1 [e2 [[]]]]; do 2 move/ca_ndom/(_ nD)/eqP->.
+  - move/allP/(_ _ D)/negP: RFnCFd; rewrite N; by apply/contra_not=>->.
+  rewrite frf_ndom // => /cfP[e1 [e2 []]]; do 2 move/ca_ndom/(_ nD)/eqP->.
   by rewrite icfxx.
 Qed.
 
 Lemma cf_irrelf : irreflexive cf.
 Proof.
   move=> m; apply/negbTE/negP; elim/(@wfb_ind disp E): m=> m IHm.
-  suff C: ~ m \# (fpo m).
-  case: (boolP (frf m == m))=> [/eqP fE|?].
-  - rewrite cfE => /orP; rewrite orbb icfxx => [[]] //=.
-  rewrite fE; case: ifP=> [/eqP//|_]; case: ifP=>//= _; by rewrite orbF => /C.
-  rewrite cfE icfxx orbb=> /hasP[? /(mem_subseq (filter_subseq _ _))] /=.
-  by rewrite ?inE=> /orP[/eqP->|/eqP->/C]//; rewrite rff_consist.
-  move=> /cfP[x [y [[]]]]; case: (eqVneq x m)=> [-> _|].
+  suff: ~ cf m (fpo m).
+  - move=> /negP /(contraNF id) C. 
+    rewrite cfE. rewrite orbb icfxx //=. 
+    case: ifP; case: ifP=>//=; try rewrite C=> //;  
+      move=> ?; rewrite rf_ncf eq_sym //=. 
+  move=> /cfP[x [y []]]; case: (eqVneq x m)=> [-> _|].
   - by move=> /ca_le L /and4P[_ /eqP<- _ /(le_lt_trans L)]; rewrite ltxx.
-  move/ca_step_last=> /[apply] [[z /and3P[/[swap]]]].
-  rewrite icaE /= !inE=> /pred2P[]-> Cx L.
-  - move=> /ca_fpo_r Cy /icf_cf/cf_consist2/(_ Cx Cy).
-    rewrite cf_sym rff_consist //=. 
-    apply/eqP=> fE; by rewrite fE ltxx in L.
-  by move=> Cy /icf_cf/cf_consist2/(_ Cx Cy); exact/IHm.
+  move/ca_stepR=> /[apply] [[z /and3P[/[swap]]]].
+  rewrite icaE /= !inE => /pred2P[]-> Cx L.
+  - by move=> Cy /icf_cf/cf_hereditary/(_ Cx Cy); exact/IHm.
+  move=> /ca_po Cy /icf_cf/cf_hereditary/(_ Cx Cy).
+  rewrite cf_sym rf_ncf //=. 
+  apply/eqP=> fE; by rewrite fE ltxx in L.
 Qed.
 
-End ExecEventStructure.
+End PORFEventStructureTheory.
 
-Canonical es_eqMixin disp E V := EqMixin (@eqesP disp E V).
-Canonical es_eqType disp E V := 
-  Eval hnf in EqType (@fin_exec_event_struct disp E V) (es_eqMixin E V).
-
-Definition es_inhMixin {disp E V} := 
-  @Inhabitant.Mixin (@fin_exec_event_struct disp E V) _ 
-    (inh_exec_event_structure _ _).
-Canonical es_inhType disp E V := 
-  Eval hnf in Inhabitant (@fin_exec_event_struct disp E V) es_inhMixin.
-
-Section Consistency.
+Section PrimePORFEventStruct.
 
 Context {disp : unit} (E : identType disp) (V : eqType).
-Implicit Type es : (@fin_exec_event_struct disp E V).
+Implicit Type es : (@porf_eventstruct disp E V).
 
-Inductive cexec_event_struct := Consist es of (dom_consistency es).
+Inductive prime_porf_eventstruct := PrimeES es of (rf_ncf_dom es).
 
-Arguments Consist {_}.
+Arguments PrimeES {_}.
 
-Coercion ev_struct_of (ces : cexec_event_struct) :=
-  let '(Consist es _) := ces in es.
+Coercion porf_eventstruct_of (pes : prime_porf_eventstruct) :=
+  let '(PrimeES es _) := pes in es.
 
-Canonical consist_subType := [subType for ev_struct_of].
+Canonical prime_subType := [subType for porf_eventstruct_of].
 
-Lemma consist_inj : injective (ev_struct_of).
+Lemma prime_inj : injective (porf_eventstruct_of).
 Proof. exact: val_inj. Qed.
 
-End Consistency.
-
-(*Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 10).*)
-Notation "e '|-' a # b" := (cf e a b) (at level 10).
+End PrimePORFEventStruct.

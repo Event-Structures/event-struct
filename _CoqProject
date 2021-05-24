@@ -20,10 +20,10 @@ theories/common/monoid.v
 theories/common/monad.v
 theories/common/rewriting_system.v
 
-theories/concur/pomset.v
-theories/concur/prime_eventstruct.v
-theories/concur/eventstructure.v
-theories/concur/transitionsystem.v
+theory/concur/pomset.v
+theory/concur/prime_eventstruct.v
+theory/concur/porf_eventstruct.v
+theory/concur/transitionsystem.v
 
 theories/lang/regmachine.v
 
