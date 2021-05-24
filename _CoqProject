@@ -1,4 +1,4 @@
--R theory eventstruct
+-R theories eventstruct
 
 -arg -w -arg -notation-overridden
 -arg -w -arg -non-reversible-notation
@@ -9,21 +9,21 @@
 -arg -w -arg -deprecated-ssr-search
 -arg -w -arg -ambiguous-paths
 
-theory/common/utils.v
-theory/common/relalg.v
-theory/common/ssrnatlia.v
-theory/common/wftype.v
-theory/common/inhtype.v
-theory/common/ident.v
-theory/common/rel.v
-theory/common/monoid.v
-theory/common/monad.v
-theory/common/rewriting_system.v
+theories/common/utils.v
+theories/common/relalg.v
+theories/common/ssrnatlia.v
+theories/common/wftype.v
+theories/common/inhtype.v
+theories/common/ident.v
+theories/common/rel.v
+theories/common/monoid.v
+theories/common/monad.v
+theories/common/rewriting_system.v
 
-theory/concur/pomset.v
-theory/concur/prime_eventstruct.v
-theory/concur/eventstructure.v
-theory/concur/transitionsystem.v
+theories/concur/pomset.v
+theories/concur/prime_eventstruct.v
+theories/concur/eventstructure.v
+theories/concur/transitionsystem.v
 
-theory/lang/regmachine.v
+theories/lang/regmachine.v
 
