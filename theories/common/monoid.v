@@ -122,8 +122,17 @@ End Theory.
 
 End Monoid.
 
+(* Unfortunately, the following Export does not achive the goal.
+ * The notations `Monoid.m` and `Monoid.mType` are undefined 
+ * if one imports the `monoid.v` from another file. 
+ * Thus we have to resort to some copypaste.
+ *)
+
+(* Export Monoid.Types. *)
+Notation m     := Monoid.class_of.
+Notation mType := Monoid.type.
+
 Export Monoid.Exports.
-Export Monoid.Types.
 Export Monoid.Def.
 Export Monoid.Syntax.
 Export Monoid.Theory.
@@ -189,8 +198,11 @@ End Theory.
 
 End CommutativeMonoid.
 
+(* Export CommutativeMonoid.Types. *)
+Notation cm     := CommutativeMonoid.class_of.
+Notation cmType := CommutativeMonoid.type.
+
 Export CommutativeMonoid.Exports.
-Export CommutativeMonoid.Types.
 Export CommutativeMonoid.Theory.
 
 
@@ -252,8 +264,6 @@ Section Def.
 
 Context {disp : unit} {M : pcmType disp}.
 
-Print Coercions.
-
 Definition orth : rel M := 
   PartialCommutativeMonoid.orth (PartialCommutativeMonoid.class M).
 
@@ -304,6 +314,15 @@ End Theory.
 End Theory.
 
 End PartialCommutativeMonoid.
+
+(* Export PartialCommutativeMonoid.Types. *)
+Notation pcm     := PartialCommutativeMonoid.class_of.
+Notation pcmType := PartialCommutativeMonoid.type.
+
+Export PartialCommutativeMonoid.Exports.
+Export PartialCommutativeMonoid.Def.
+Export PartialCommutativeMonoid.Syntax.
+Export PartialCommutativeMonoid.Theory.
 
 End Monoid.
 
