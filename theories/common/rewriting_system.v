@@ -333,17 +333,13 @@ End SubRewriting.
 
 Section SubTypeRewriting.
 
-Context {L : Type}.
+Context {L S T : Type}.
 
-Context {S : Type} (p : rel.dset S) (r1 : hrel S S) (e1 : hrel S S).
-
-Context {T : Type} (f : T -> S) (r2 : hrel T T) (e2 : hrel T T) .
+Context (p : rel.dset S) (r1 : hrel S S) (e1 : hrel S S) (f : T -> S).
 
 Definition relpreim r : hrel T T :=
   fun x y => r (f x) (f y).
 
-Hypothesis (morph_f_e1 : e2 ≡ relpreim e1).
-Hypothesis (morph_f_r1 : r2 ≡ relpreim (rst p r1)).
 Hypothesis (im : forall x, p x -> exists y, f y = x).
 
 Hypothesis (confl : eqv_confluent (rst p r1) e1).
@@ -365,9 +361,9 @@ Proof.
   by exists x=> //; rewrite /relpreim E.
 Qed.
 
-Lemma confl_sub : eqv_confluent r2 e2.
+Lemma confl_sub : eqv_confluent (relpreim (rst p r1)) (relpreim e1).
 Proof.
-  rewrite morph_f_e1 morph_f_r1 => ??? /=.
+  move=> ??? /=. 
   rewrite ?(relpreim_itr _ _) /relpreim=> /confl/[apply].
   case=> ? [?[/[dup]]] /(@rst_itr_p _ p)/im[s4<- ?].
   move/[dup]/(@rst_itr_p _ p)/im=>[s4'<- ?].
@@ -375,5 +371,3 @@ Proof.
 Qed.
 
 End SubTypeRewriting.
-
-
