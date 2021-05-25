@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq eqtype choice. 
 From RelationAlgebra Require Import monoid.
-From eventstruct Require Import utils.
+From eventstruct Require Import utils relalg.
 
 (******************************************************************************)
 (* This file provides a theory of (homogeneous) monoids and partial monoids.  *)
@@ -269,6 +269,8 @@ Definition orth : rel M :=
 
 Definition valid : pred M := fun x => orth x zero.
 
+Definition invalid : pred M := fun x => negb (orth x zero).
+
 End Def.
 End Def.
 
@@ -309,6 +311,18 @@ Proof. by move: x y z; case: M=> ? [? []]. Qed.
 Lemma orth_valid_plus (x y : M) : 
   x ⟂ y = valid (x \+ y). 
 Proof. by rewrite /valid -[y in LHS]plusm0 orthA. Qed.
+
+(* TODO: find a nicer way to reconcile `pred` with relation-algebra *)
+Lemma invalidE : 
+  (invalid : rel.dset M) ≡ !(valid : rel.dset M). 
+Proof. by rewrite /invalid. Qed.
+
+Lemma invalid_plus (x y : M) : 
+  invalid x -> invalid (x \+ y). 
+Proof. 
+  rewrite /invalid=> /negP; apply contra_notN.
+  by rewrite orthA plusm0=> /orth_valid []. 
+Qed.
 
 End Theory.
 End Theory.

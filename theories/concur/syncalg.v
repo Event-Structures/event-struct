@@ -110,17 +110,48 @@ Section Theory.
 
 Context {disp : unit} {L : labType disp}.
 
-Lemma inverse0L (x y : L) : 
+Implicit Types (x y z : L).
+
+Lemma inverse0 x y : 
   x \+ y = \0 -> x = \0.
 Proof. by move: x y; case: L=> ? [? []]. Qed.
 
-Lemma inverse0R (x y : L) : 
-  x \+ y = \0 -> y = \0.
-Proof. by rewrite plusC; exact/inverse0L. Qed.
-
-Lemma syncP (x y : L) : 
+Lemma syncP x y : 
   reflect (exists z, x \+ z = y) (sync x y). 
 Proof. by move: x y; case: L=> ? [? []]. Qed.
+
+Lemma sync0 x : 
+  x \>> \0 -> x = \0. 
+Proof. by move /syncP=> [] ? /inverse0. Qed.
+
+Lemma sync_invalid x y : 
+  x \>> y -> invalid x -> invalid y. 
+Proof. by move /syncP=> [] z <-; exact/invalid_plus. Qed.
+
+Lemma sync_refl x : 
+  x \>> x.
+Proof. by apply /syncP; exists \0; exact /plusm0. Qed.
+
+Lemma sync_trans x y z : 
+  x \>> y -> y \>> z -> x \>> z.
+Proof. 
+  move=> /syncP [] u <-  /syncP [] v <-.
+  by apply /syncP; exists (u \+ v); rewrite plusA.
+Qed.
+
+Lemma sync_plus (x1 x2 y1 y2 : L) : 
+  x1 \>> y1 -> x2 \>> y2 -> (x1 \+ x2) \>> (y1 \+ y2).
+Proof. 
+  move=> /syncP [] z1 <- /syncP [] z2 <-.
+  apply /syncP; exists (z1 \+ z2).
+  (* TODO: use some tools to deal with associativity and commutativity, 
+   *   e.g. aac_rewrite library 
+   *)
+  rewrite !plusA.
+  rewrite -[z1 \+ (x2 \+ z2)]plusA.  
+  rewrite -[z1 \+ x2]plusC.  
+  by rewrite !plusA.
+Qed.
 
 End Theory.
 End Theory.
