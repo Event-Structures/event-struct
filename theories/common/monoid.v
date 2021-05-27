@@ -35,6 +35,7 @@ Delimit Scope monoid_scope with monoid.
 Local Open Scope monoid_scope.
 
 Reserved Notation "\0" (at level 0).
+Reserved Notation "\u" (at level 0).
 Reserved Notation "x \+ y" (at level 40, left associativity).
 Reserved Notation "x ⟂ y" (at level 20, no associativity).
 
@@ -47,7 +48,7 @@ Record mixin_of (T : Type) := Mixin {
   zero : T;
   plus : T -> T -> T;
   _    : associative plus;
-  _    : left_id zero plus;
+  _    : left_id  zero plus;
   _    : right_id zero plus;
 }.
 
@@ -285,6 +286,8 @@ Section Theory.
 
 Context {disp : unit} {M : pcmType disp}.
 
+Implicit Types (x y z : M).
+
 Lemma orth0 : 
   orth \0 (\0 : M). 
 Proof. by case: M=> ? [? []]. Qed.
@@ -293,22 +296,22 @@ Lemma valid0 :
   valid (\0 : M). 
 Proof. by case: M=> ? [? []]. Qed.
 
-Lemma orth_sym (x y : M) :
+Lemma orth_sym x y :
   x ⟂ y = y ⟂ x.
 Proof. by move: x y; case: M=> ? [? []]. Qed.
 
-Lemma orth_valid (x y : M) : 
-  x ⟂ y -> valid x * valid y. 
-Proof. 
+Lemma orth_valid x y :
+  x ⟂ y -> valid x * valid y.
+Proof.
   move=> /[dup]; rewrite {2}orth_sym.
-  by move: x y; case: M=> ? [? [??? H ???]] /H + /H. 
+  by move: x y; case: M=> ? [? [??? H ???]] /H + /H.
 Qed.
 
-Lemma orthA (x y z : M) : 
+Lemma orthA x y z : 
   (x \+ y) ⟂ z = x ⟂ (y \+ z).
 Proof. by move: x y z; case: M=> ? [? []]. Qed.
 
-Lemma orth_valid_plus (x y : M) : 
+Lemma orth_valid_plus x y : 
   x ⟂ y = valid (x \+ y). 
 Proof. by rewrite /valid -[y in LHS]plusm0 orthA. Qed.
 
@@ -317,7 +320,7 @@ Lemma invalidE :
   (invalid : rel.dset M) ≡ !(valid : rel.dset M). 
 Proof. by rewrite /invalid. Qed.
 
-Lemma invalid_plus (x y : M) : 
+Lemma invalid_plus x y : 
   invalid x -> invalid (x \+ y). 
 Proof. 
   rewrite /invalid=> /negP; apply contra_notN.
@@ -338,6 +341,159 @@ Export PartialCommutativeMonoid.Def.
 Export PartialCommutativeMonoid.Syntax.
 Export PartialCommutativeMonoid.Theory.
 
+Module AbsorbingPartialCommutativeMonoid.
+Section ClassDef. 
+
+Record mixin_of (T0 : Type) (b : CommutativeMonoid.class_of T0)
+                (T := CommutativeMonoid.Pack tt b) := Mixin {
+  undef    : T;
+  is_undef : pred T;
+  _    : undef <> zero;
+  _    : forall x, plus x undef = undef; 
+  _    : forall x, reflect (x = undef) (is_undef x);
+}.
+
+Set Primitive Projections.
+Record class_of (T : Type) := Class {
+  base  : CommutativeMonoid.class_of T;
+  mixin : mixin_of base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> CommutativeMonoid.class_of.
+
+Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (T : Type) (disp : unit) (cT : type disp).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
+
+Definition pack :=
+  fun bE b & phant_id (@CommutativeMonoid.class disp bE) b =>
+  fun m => Pack disp (@Class T b m).
+
+Definition as_mType   := @Monoid.Pack disp cT class.
+Definition as_cmType  := @CommutativeMonoid.Pack disp cT class.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> CommutativeMonoid.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion as_mType : type >-> Monoid.type.
+Coercion as_cmType : type >-> CommutativeMonoid.type.
+Canonical as_mType.
+Canonical as_cmType.
+End Exports.
+
+Module Export Types.
+Notation apcm     := AbsorbingPartialCommutativeMonoid.class_of.
+Notation apcmType := AbsorbingPartialCommutativeMonoid.type.
+End Types.
+
+Module Export Def.
+Section Def.
+
+Context {disp : unit} {M : apcmType disp}.
+
+Definition undef : M := 
+  AbsorbingPartialCommutativeMonoid.undef 
+    (AbsorbingPartialCommutativeMonoid.class M).
+
+Definition is_undef : pred M := 
+  AbsorbingPartialCommutativeMonoid.is_undef 
+    (AbsorbingPartialCommutativeMonoid.class M).
+
+Definition is_def : pred M := 
+  fun x => ~~ is_undef x.
+
+End Def.
+End Def.
+
+Prenex Implicits undef is_undef.
+
+Module Export Syntax.
+Notation "\u" := undef : monoid_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory.
+
+Context {disp : unit} {M : apcmType disp}.
+
+Implicit Types (x y z : M).
+
+Lemma undef0 : \u <> (\0 : M). 
+Proof. by case: M=> ? [? []]. Qed.
+
+Lemma plusmU x : x \+ \u = \u. 
+Proof. by move: x; case: M=> ? [? []]. Qed.
+
+Lemma plusUm x : \u \+ x = \u. 
+Proof. by rewrite plusC plusmU. Qed. 
+
+Lemma is_undefP x : reflect (x = \u) (is_undef x).
+Proof. by move: x; case: M=> ? [? []]. Qed.
+
+Lemma is_def0 : is_def (\0 : M). 
+Proof. 
+  apply /negP=> /is_undefP. 
+  by move: undef0=> /[swap] ->. 
+Qed.
+
+Lemma is_def_plus00 : is_def (\0 \+ (\0 : M)). 
+Proof. by rewrite plus0m; exact is_def0. Qed.
+
+Lemma is_def_plus_sym x y : is_def (x \+ y) = is_def (y \+ x). 
+Proof. by rewrite plusC. Qed.
+ 
+Lemma is_def_plus_def x y : is_def (x \+ y) -> is_def x.
+Proof.
+  case H: (is_def x); move: H=> /is_undefP //.
+  by move=> ->; rewrite plusUm=> /is_undefP.
+Qed.
+
+Lemma is_def_plus_def0 x y : is_def (x \+ y) -> is_def (x \+ \0).
+Proof. rewrite plusm0; exact/is_def_plus_def. Qed.
+
+Lemma is_def_plusA x y z : 
+  is_def (x \+ y \+ z) = is_def (x \+ (y \+ z)).
+Proof. by rewrite plusA. Qed.
+
+End Theory.
+End Theory.
+
+Definition pcmMixin (disp : unit) (M : apcmType disp) := 
+  @PartialCommutativeMonoid.Mixin M (class M)
+    (fun x y => is_def (x \+ y))
+    is_def_plus00
+    is_def_plus_sym
+    is_def_plus_def0
+    is_def_plusA.
+
+Definition as_pcmType (disp : unit) (M : apcmType disp) := 
+  @PartialCommutativeMonoid.Pack disp M 
+    (PartialCommutativeMonoid.Class (pcmMixin M)). 
+
+Module Export ExportsExtra.
+Coercion as_pcmType : type >-> PartialCommutativeMonoid.type.
+Canonical as_pcmType.
+End ExportsExtra.
+
+End AbsorbingPartialCommutativeMonoid.
+
+(* Export AbsorbingPartialCommutativeMonoid.Types. *)
+Notation apcm     := AbsorbingPartialCommutativeMonoid.class_of.
+Notation apcmType := AbsorbingPartialCommutativeMonoid.type.
+
+Export AbsorbingPartialCommutativeMonoid.Exports.
+Export AbsorbingPartialCommutativeMonoid.Def.
+Export AbsorbingPartialCommutativeMonoid.Syntax.
+Export AbsorbingPartialCommutativeMonoid.Theory.
+
 End Monoid.
 
 (* TODO: do not import `Def`, `Syntax`, and `Theory` modules by default (?) *)
@@ -354,3 +510,10 @@ Export Monoid.PartialCommutativeMonoid.Exports.
 Export Monoid.PartialCommutativeMonoid.Def.
 Export Monoid.PartialCommutativeMonoid.Syntax.
 Export Monoid.PartialCommutativeMonoid.Theory.
+
+Export Monoid.AbsorbingPartialCommutativeMonoid.Exports.
+Export Monoid.AbsorbingPartialCommutativeMonoid.ExportsExtra.
+Export Monoid.AbsorbingPartialCommutativeMonoid.Def.
+Export Monoid.AbsorbingPartialCommutativeMonoid.Syntax.
+Export Monoid.AbsorbingPartialCommutativeMonoid.Theory.
+
