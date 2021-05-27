@@ -138,7 +138,7 @@ Export Monoid.Def.
 Export Monoid.Syntax.
 Export Monoid.Theory.
 
-Module CommutativeMonoid.
+Module Commutative.
 Section ClassDef. 
 
 Record mixin_of (T0 : Type) (b : Monoid.class_of T0)
@@ -181,8 +181,8 @@ Canonical as_mType.
 End Exports.
 
 Module Import Types.
-Notation cm     := CommutativeMonoid.class_of.
-Notation cmType := CommutativeMonoid.type.
+Notation cm     := Commutative.class_of.
+Notation cmType := Commutative.type.
 End Types.
 
 Module Export Theory.
@@ -197,21 +197,21 @@ Proof. by case: M x y=> ? [[]] ? /= []. Qed.
 End Theory.
 End Theory.
 
-End CommutativeMonoid.
+End Commutative.
 
-(* Export CommutativeMonoid.Types. *)
-Notation cm     := CommutativeMonoid.class_of.
-Notation cmType := CommutativeMonoid.type.
+(* Export Commutative.Types. *)
+Notation cm     := Commutative.class_of.
+Notation cmType := Commutative.type.
 
-Export CommutativeMonoid.Exports.
-Export CommutativeMonoid.Theory.
+Export Commutative.Exports.
+Export Commutative.Theory.
 
 
-Module PartialCommutativeMonoid.
+Module PartialCommutative.
 Section ClassDef. 
 
-Record mixin_of (T0 : Type) (b : CommutativeMonoid.class_of T0)
-                (T := CommutativeMonoid.Pack tt b) := Mixin {
+Record mixin_of (T0 : Type) (b : Commutative.class_of T0)
+                (T := Commutative.Pack tt b) := Mixin {
   orth : rel T;
   _    : orth zero zero;
   _    : forall x y, orth x y = orth y x;
@@ -221,12 +221,12 @@ Record mixin_of (T0 : Type) (b : CommutativeMonoid.class_of T0)
 
 Set Primitive Projections.
 Record class_of (T : Type) := Class {
-  base  : CommutativeMonoid.class_of T;
+  base  : Commutative.class_of T;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> CommutativeMonoid.class_of.
+Local Coercion base : class_of >-> Commutative.class_of.
 
 Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
 
@@ -237,27 +237,27 @@ Variables (T : Type) (disp : unit) (cT : type disp).
 Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
 
 Definition pack :=
-  fun bE b & phant_id (@CommutativeMonoid.class disp bE) b =>
+  fun bE b & phant_id (@Commutative.class disp bE) b =>
   fun m => Pack disp (@Class T b m).
 
 Definition as_mType := @Monoid.Pack disp cT class.
-Definition as_cmType := @CommutativeMonoid.Pack disp cT class.
+Definition as_cmType := @Commutative.Pack disp cT class.
 
 End ClassDef.
 
 Module Import Exports.
-Coercion base : class_of >-> CommutativeMonoid.class_of.
+Coercion base : class_of >-> Commutative.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion as_mType : type >-> Monoid.type.
-Coercion as_cmType : type >-> CommutativeMonoid.type.
+Coercion as_cmType : type >-> Commutative.type.
 Canonical as_mType.
 Canonical as_cmType.
 End Exports.
 
 Module Import Types.
-Notation pcm     := PartialCommutativeMonoid.class_of.
-Notation pcmType := PartialCommutativeMonoid.type.
+Notation pcm     := PartialCommutative.class_of.
+Notation pcmType := PartialCommutative.type.
 End Types.
 
 Module Import Def.
@@ -266,7 +266,7 @@ Section Def.
 Context {disp : unit} {M : pcmType disp}.
 
 Definition orth : rel M := 
-  PartialCommutativeMonoid.orth (PartialCommutativeMonoid.class M).
+  PartialCommutative.orth (PartialCommutative.class M).
 
 Definition valid : pred M := fun x => orth x zero.
 
@@ -330,22 +330,22 @@ Qed.
 End Theory.
 End Theory.
 
-End PartialCommutativeMonoid.
+End PartialCommutative.
 
-(* Export PartialCommutativeMonoid.Types. *)
-Notation pcm     := PartialCommutativeMonoid.class_of.
-Notation pcmType := PartialCommutativeMonoid.type.
+(* Export PartialCommutative.Types. *)
+Notation pcm     := PartialCommutative.class_of.
+Notation pcmType := PartialCommutative.type.
 
-Export PartialCommutativeMonoid.Exports.
-Export PartialCommutativeMonoid.Def.
-Export PartialCommutativeMonoid.Syntax.
-Export PartialCommutativeMonoid.Theory.
+Export PartialCommutative.Exports.
+Export PartialCommutative.Def.
+Export PartialCommutative.Syntax.
+Export PartialCommutative.Theory.
 
-Module AbsorbingPartialCommutativeMonoid.
+Module Absorbing.
 Section ClassDef. 
 
-Record mixin_of (T0 : Type) (b : CommutativeMonoid.class_of T0)
-                (T := CommutativeMonoid.Pack tt b) := Mixin {
+Record mixin_of (T0 : Type) (b : Commutative.class_of T0)
+                (T := Commutative.Pack tt b) := Mixin {
   undef    : T;
   is_undef : pred T;
   _    : undef <> zero;
@@ -355,12 +355,12 @@ Record mixin_of (T0 : Type) (b : CommutativeMonoid.class_of T0)
 
 Set Primitive Projections.
 Record class_of (T : Type) := Class {
-  base  : CommutativeMonoid.class_of T;
+  base  : Commutative.class_of T;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> CommutativeMonoid.class_of.
+Local Coercion base : class_of >-> Commutative.class_of.
 
 Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
 
@@ -371,27 +371,27 @@ Variables (T : Type) (disp : unit) (cT : type disp).
 Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
 
 Definition pack :=
-  fun bE b & phant_id (@CommutativeMonoid.class disp bE) b =>
+  fun bE b & phant_id (@Commutative.class disp bE) b =>
   fun m => Pack disp (@Class T b m).
 
-Definition as_mType   := @Monoid.Pack disp cT class.
-Definition as_cmType  := @CommutativeMonoid.Pack disp cT class.
+Definition as_mType  := @Monoid.Pack disp cT class.
+Definition as_cmType := @Commutative.Pack disp cT class.
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> CommutativeMonoid.class_of.
+Coercion base : class_of >-> Commutative.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion as_mType : type >-> Monoid.type.
-Coercion as_cmType : type >-> CommutativeMonoid.type.
+Coercion as_cmType : type >-> Commutative.type.
 Canonical as_mType.
 Canonical as_cmType.
 End Exports.
 
 Module Export Types.
-Notation apcm     := AbsorbingPartialCommutativeMonoid.class_of.
-Notation apcmType := AbsorbingPartialCommutativeMonoid.type.
+Notation apcm     := Absorbing.class_of.
+Notation apcmType := Absorbing.type.
 End Types.
 
 Module Export Def.
@@ -400,12 +400,12 @@ Section Def.
 Context {disp : unit} {M : apcmType disp}.
 
 Definition undef : M := 
-  AbsorbingPartialCommutativeMonoid.undef 
-    (AbsorbingPartialCommutativeMonoid.class M).
+  Absorbing.undef 
+    (Absorbing.class M).
 
 Definition is_undef : pred M := 
-  AbsorbingPartialCommutativeMonoid.is_undef 
-    (AbsorbingPartialCommutativeMonoid.class M).
+  Absorbing.is_undef 
+    (Absorbing.class M).
 
 Definition is_def : pred M := 
   fun x => ~~ is_undef x.
@@ -467,7 +467,7 @@ End Theory.
 End Theory.
 
 Definition pcmMixin (disp : unit) (M : apcmType disp) := 
-  @PartialCommutativeMonoid.Mixin M (class M)
+  @PartialCommutative.Mixin M (class M)
     (fun x y => is_def (x \+ y))
     is_def_plus00
     is_def_plus_sym
@@ -475,24 +475,24 @@ Definition pcmMixin (disp : unit) (M : apcmType disp) :=
     is_def_plusA.
 
 Definition as_pcmType (disp : unit) (M : apcmType disp) := 
-  @PartialCommutativeMonoid.Pack disp M 
-    (PartialCommutativeMonoid.Class (pcmMixin M)). 
+  @PartialCommutative.Pack disp M 
+    (PartialCommutative.Class (pcmMixin M)). 
 
 Module Export ExportsExtra.
-Coercion as_pcmType : type >-> PartialCommutativeMonoid.type.
+Coercion as_pcmType : type >-> PartialCommutative.type.
 Canonical as_pcmType.
 End ExportsExtra.
 
-End AbsorbingPartialCommutativeMonoid.
+End Absorbing.
 
-(* Export AbsorbingPartialCommutativeMonoid.Types. *)
-Notation apcm     := AbsorbingPartialCommutativeMonoid.class_of.
-Notation apcmType := AbsorbingPartialCommutativeMonoid.type.
+(* Export Absorbing.Types. *)
+Notation apcm     := Absorbing.class_of.
+Notation apcmType := Absorbing.type.
 
-Export AbsorbingPartialCommutativeMonoid.Exports.
-Export AbsorbingPartialCommutativeMonoid.Def.
-Export AbsorbingPartialCommutativeMonoid.Syntax.
-Export AbsorbingPartialCommutativeMonoid.Theory.
+Export Absorbing.Exports.
+Export Absorbing.Def.
+Export Absorbing.Syntax.
+Export Absorbing.Theory.
 
 End Monoid.
 
@@ -503,17 +503,17 @@ Export Monoid.Monoid.Def.
 Export Monoid.Monoid.Syntax.
 Export Monoid.Monoid.Theory.
 
-Export Monoid.CommutativeMonoid.Exports.
-Export Monoid.CommutativeMonoid.Theory.
+Export Monoid.Commutative.Exports.
+Export Monoid.Commutative.Theory.
 
-Export Monoid.PartialCommutativeMonoid.Exports.
-Export Monoid.PartialCommutativeMonoid.Def.
-Export Monoid.PartialCommutativeMonoid.Syntax.
-Export Monoid.PartialCommutativeMonoid.Theory.
+Export Monoid.PartialCommutative.Exports.
+Export Monoid.PartialCommutative.Def.
+Export Monoid.PartialCommutative.Syntax.
+Export Monoid.PartialCommutative.Theory.
 
-Export Monoid.AbsorbingPartialCommutativeMonoid.Exports.
-Export Monoid.AbsorbingPartialCommutativeMonoid.ExportsExtra.
-Export Monoid.AbsorbingPartialCommutativeMonoid.Def.
-Export Monoid.AbsorbingPartialCommutativeMonoid.Syntax.
-Export Monoid.AbsorbingPartialCommutativeMonoid.Theory.
+Export Monoid.Absorbing.Exports.
+Export Monoid.Absorbing.ExportsExtra.
+Export Monoid.Absorbing.Def.
+Export Monoid.Absorbing.Syntax.
+Export Monoid.Absorbing.Theory.
 
