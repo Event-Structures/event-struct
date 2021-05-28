@@ -32,17 +32,17 @@ Delimit Scope syncalg_scope with syncalg.
 
 Local Open Scope syncalg_scope.
 
-(* Reserved Notation "x :- y" (at level 25, no associativity). *)
-Reserved Notation "x \>> y" (at level 25, no associativity).
+Reserved Notation "x :- y" (at level 25, no associativity).
+(* Reserved Notation "x \>> y" (at level 25, no associativity). *)
 
 Module SyncAlgebra. 
 Section ClassDef.
 
 Record mixin_of (T0 : Type) (b : Monoid.PartialCommutative.class_of T0)
                 (T := Monoid.PartialCommutative.Pack tt b) := Mixin {
-  sync : rel T;
+  dvr  : rel T;
   _    : forall (x y : T), x \+ y = \0 -> x = \0; 
-  _    : forall (x y : T), reflect (exists z, x \+ z = y) (sync x y); 
+  _    : forall (x y : T), reflect (exists z, x \+ z = y) (dvr x y); 
 }.
 
 Set Primitive Projections.
@@ -95,16 +95,16 @@ Section Def.
 
 Context {disp : unit} {L : labType disp}.
 
-Definition sync : rel L := 
-  SyncAlgebra.sync (SyncAlgebra.class L). 
+Definition dvr : rel L := 
+  SyncAlgebra.dvr (SyncAlgebra.class L). 
 
 End Def.
 End Def.
 
-Prenex Implicits sync.
+Prenex Implicits dvr.
 
 Module Export Syntax.
-Notation "x \>> y" := (sync x y) : syncalg_scope.
+Notation "x :- y" := (dvr x y) : syncalg_scope.
 End Syntax.
 
 Module Export Theory.
@@ -114,38 +114,38 @@ Context {disp : unit} {L : labType disp}.
 
 Implicit Types (x y z : L).
 
-Lemma inverse0 x y : 
+Lemma indiv0 x y : 
   x \+ y = \0 -> x = \0.
 Proof. by move: x y; case: L=> ? [? []]. Qed.
 
-Lemma syncP x y : 
-  reflect (exists z, x \+ z = y) (sync x y). 
+Lemma dvrP x y : 
+  reflect (exists z, x \+ z = y) (dvr x y). 
 Proof. by move: x y; case: L=> ? [? []]. Qed.
 
-Lemma sync0 x : 
-  x \>> \0 -> x = \0. 
-Proof. by move /syncP=> [] ? /inverse0. Qed.
+Lemma dvr0 x : 
+  x :- \0 -> x = \0. 
+Proof. by move /dvrP=> [] ? /indiv0. Qed.
 
-Lemma sync_invalid x y : 
-  x \>> y -> invalid x -> invalid y. 
-Proof. by move /syncP=> [] z <-; exact/invalid_plus. Qed.
+Lemma dvr_invalid x y : 
+  x :- y -> invalid x -> invalid y. 
+Proof. by move /dvrP=> [] z <-; exact/invalid_plus. Qed.
 
-Lemma sync_refl x : 
-  x \>> x.
-Proof. by apply /syncP; exists \0; exact/plusm0. Qed.
+Lemma dvr_refl x : 
+  x :- x.
+Proof. by apply /dvrP; exists \0; exact/plusm0. Qed.
 
-Lemma sync_trans x y z : 
-  x \>> y -> y \>> z -> x \>> z.
+Lemma dvr_trans x y z : 
+  x :- y -> y :- z -> x :- z.
 Proof. 
-  move=> /syncP [] u <-  /syncP [] v <-.
-  by apply /syncP; exists (u \+ v); rewrite plusA.
+  move=> /dvrP [] u <-  /dvrP [] v <-.
+  by apply /dvrP; exists (u \+ v); rewrite plusA.
 Qed.
 
-Lemma sync_plus (x1 x2 y1 y2 : L) : 
-  x1 \>> y1 -> x2 \>> y2 -> (x1 \+ x2) \>> (y1 \+ y2).
+Lemma dvr_plus (x1 x2 y1 y2 : L) : 
+  x1 :- y1 -> x2 :- y2 -> (x1 \+ x2) :- (y1 \+ y2).
 Proof. 
-  move=> /syncP [] z1 <- /syncP [] z2 <-.
-  apply /syncP; exists (z1 \+ z2).
+  move=> /dvrP [] z1 <- /dvrP [] z2 <-.
+  apply /dvrP; exists (z1 \+ z2).
   (* TODO: use some tools to deal with associativity and commutativity, 
    *   e.g. aac_rewrite library 
    *)
@@ -239,6 +239,19 @@ Definition merge : Lab -> Lab -> Lab :=
     | _        , _         => Bot
     end.
 
+(* merge divisor relation *)
+Definition merge_dvr : Lab -> Lab -> bool := 
+  fun l1 l2 => 
+    match l1, l2 with
+    | Write x a, Read  y b =>
+      [&& (x == y) & (b == Some a)]
+    | Read x None    , Read y (Some a) =>
+      (x == y)
+    | Emp, _   => true
+    | _  , Bot => true
+    | _ , _    => eq_lab l1 l2
+    end.
+
 Section Theory. 
 
 Lemma eq_labP : Equality.axiom eq_lab.
@@ -285,6 +298,43 @@ Proof.
     rewrite ?merge0l ?mergeUl ?mergel0 ?mergelU /merge //.
 Qed.
 
+Lemma merge_indiv0 l1 l2 : 
+  merge l1 l2 = Emp -> l1 = Emp. 
+Proof. rewrite /merge; case: l1; case: l2 => // ????; case: ifP=> //. Qed.
+
+Lemma merge_dvrP l1 l2 : 
+  reflect (exists l3, merge l1 l3 = l2) (merge_dvr l1 l2).
+Proof. 
+  apply /(equivP idP).
+  (* TODO: a lot of trivial case analysis --- 
+   *   would be nice to have some bruteforce tactic for this *)
+  rewrite /merge /merge_dvr; case: l1; last 2 first.
+  - by split=> //; exists l2; case: l2. 
+  - split; [case: l2|]; try by exists Bot.
+    by move=> [l3] <-; rewrite /eq_lab; case: l3. 
+  - move=> x a; case: l2=> [y b| y b||]; split=>//; try (by move=> /eq_labP //).
+    * by move=> /eq_labP <-; exists Emp.
+    * move=> [l3]; case: l3=> // [??|<-]; try case: ifP=> //.
+      by rewrite /eq_lab !eq_refl.
+    * move=> /andP [] /eqP -> /eqP ->. 
+      by exists (Read y None); rewrite !eq_refl /=.
+    * move=> [l3]; case: l3=> // z c; case: ifP=> //.
+      by move=> ?; case=> -> ->; rewrite !eq_refl. 
+    * move=> [l3]; case: l3=> // z c; case: ifP=> //.
+    * by move=> ?; exists Bot. 
+  move=> x a; case: l2=> [y b| y b||]; split; try (by case: a); last 2 first.
+  - by move=> [l3]; case: l3=> // ??; case: ifP=> //.
+  - by move=> ?; exists Bot.  
+  - move=> [l3]; case: l3=> // ??; case: ifP=> //.
+  - case: a=> [a|]; last case: b=> [b|].
+    * by move=> /eq_labP [] <- <-; exists Emp.
+    * by move=> /eqP <-; exists (Write x b); rewrite !eq_refl.
+    by move=> /eq_labP [] <-; exists Emp.
+  move=> [l3]; case: l3=> //; last first.
+  - by move=> [] <- <-; rewrite /eq_lab !eq_refl; case: a.
+  by move=> ??; case: ifP=> // /andP [] /eqP -> /eqP -> [] ->; case: b.
+Qed.
+
 End Theory.
 
 (* TODO: shorten declaration of instances (use `phand_id` tricks?) *)
@@ -312,6 +362,12 @@ Coercion to_pcmType (l : Lab) : pcmType := l.
 
 (* Context (l1 l2 : Lab). *)
 (* Check (l1 ⟂ l2 : bool). *)
+
+Definition syncalgMixin := 
+  @SyncAlgebra.Mixin Lab (Monoid.PartialCommutative.class pcmType) 
+  merge_dvr merge_indiv0 merge_dvrP.
+Canonical syncalgType := 
+  @SyncAlgebra.pack Lab tt (SyncAlgebra.Class syncalgMixin). 
 
 End SharedMemory.
 End SharedMemory. 
