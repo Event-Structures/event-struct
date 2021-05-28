@@ -20,6 +20,7 @@ theories/common/monoid.v
 theories/common/monad.v
 theories/common/rewriting_system.v
 
+theories/concur/syncalg.v
 theories/concur/pomset.v
 theories/concur/prime_eventstruct.v
 theories/concur/eventstructure.v
