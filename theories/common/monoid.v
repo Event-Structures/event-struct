@@ -490,6 +490,7 @@ Notation apcm     := Absorbing.class_of.
 Notation apcmType := Absorbing.type.
 
 Export Absorbing.Exports.
+Export Absorbing.ExportsExtra.
 Export Absorbing.Def.
 Export Absorbing.Syntax.
 Export Absorbing.Theory.

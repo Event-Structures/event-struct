@@ -1,6 +1,7 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq eqtype choice. 
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice.
+From mathcomp Require Import ssrnat ssrint.
 From RelationAlgebra Require Import monoid.
-From eventstruct Require Import utils monoid.
+From eventstruct Require Import utils inhtype monoid.
 
 (******************************************************************************)
 (* This file provides a theory of synchronization algebras.                   *)
@@ -31,13 +32,14 @@ Delimit Scope syncalg_scope with syncalg.
 
 Local Open Scope syncalg_scope.
 
+(* Reserved Notation "x :- y" (at level 25, no associativity). *)
 Reserved Notation "x \>> y" (at level 25, no associativity).
 
 Module SyncAlgebra. 
 Section ClassDef.
 
-Record mixin_of (T0 : Type) (b : Monoid.PartialCommutativeMonoid.class_of T0)
-                (T := Monoid.PartialCommutativeMonoid.Pack tt b) := Mixin {
+Record mixin_of (T0 : Type) (b : Monoid.PartialCommutative.class_of T0)
+                (T := Monoid.PartialCommutative.Pack tt b) := Mixin {
   sync : rel T;
   _    : forall (x y : T), x \+ y = \0 -> x = \0; 
   _    : forall (x y : T), reflect (exists z, x \+ z = y) (sync x y); 
@@ -45,14 +47,14 @@ Record mixin_of (T0 : Type) (b : Monoid.PartialCommutativeMonoid.class_of T0)
 
 Set Primitive Projections.
 Record class_of (T : Type) := Class {
-  base  : Monoid.PartialCommutativeMonoid.class_of T;
+  base  : Monoid.PartialCommutative.class_of T;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
 Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
 
-Local Coercion base : class_of >-> Monoid.PartialCommutativeMonoid.class_of.
+Local Coercion base : class_of >-> Monoid.PartialCommutative.class_of.
 
 Local Coercion sort : type >-> Sortclass.
 
@@ -66,13 +68,13 @@ Definition clone c of phant_id class c := @Pack disp T c.
 Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
 
 Definition as_mType := @Monoid.Monoid.Pack disp cT class.
-Definition as_cmType := @Monoid.CommutativeMonoid.Pack disp cT class.
-Definition as_pcmType := @Monoid.PartialCommutativeMonoid.Pack disp cT class.
+Definition as_cmType := @Monoid.Commutative.Pack disp cT class.
+Definition as_pcmType := @Monoid.PartialCommutative.Pack disp cT class.
 
 End ClassDef. 
 
 Module Export Exports.
-Coercion base : class_of >-> Monoid.PartialCommutativeMonoid.class_of.
+Coercion base : class_of >-> Monoid.PartialCommutative.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion as_mType : type >-> Monoid.mType.
@@ -130,7 +132,7 @@ Proof. by move /syncP=> [] z <-; exact/invalid_plus. Qed.
 
 Lemma sync_refl x : 
   x \>> x.
-Proof. by apply /syncP; exists \0; exact /plusm0. Qed.
+Proof. by apply /syncP; exists \0; exact/plusm0. Qed.
 
 Lemma sync_trans x y z : 
   x \>> y -> y \>> z -> x \>> z.
@@ -166,4 +168,151 @@ Export SyncAlgebra.Exports.
 Export SyncAlgebra.Def.
 Export SyncAlgebra.Syntax.
 Export SyncAlgebra.Theory.
+
+Module SharedMemory.
+Section SharedMemory. 
+
+Context {Addr : eqType} {Val : eqType}.
+
+Inductive Lab :=
+| Write of Addr & Val
+| Read  of Addr & option Val
+| Emp
+| Bot.
+
+Definition addr : Lab -> option Addr := 
+  fun lab =>
+    match lab with
+    | Write x _ => Some x
+    | Read  x _ => Some x
+    | _         => None
+    end.
+
+Definition value : Lab -> option Val := 
+  fun lab =>
+    match lab with
+    | Write _ v => Some v
+    | Read  _ v => v
+    | _         => None
+    end.
+
+Definition is_read : pred Lab := 
+  fun l => if l is (Read _ _) then true else false.
+
+Definition is_write : pred Lab := 
+  fun l => if l is (Write _ _) then true else false.
+
+Definition is_emp : pred Lab := 
+  fun l => if l is Emp then true else false.
+
+Definition is_bot : pred Lab := 
+  fun l => if l is Bot then true else false.
+
+Definition eq_lab : rel Lab :=
+  fun l1 l2 => 
+    match l1, l2 with
+    | Read  x a  , Read  y b     => [&& a == b & x == y]
+    | Write x a  , Write y b     => [&& a == b & x == y]
+    | Emp        , Emp           => true
+    | Bot        , Bot           => true
+    | _          , _             => false
+    end.
+
+Definition eq_addr : rel Lab := 
+  orelpre addr eq_op.
+
+Definition eq_value : rel Lab := 
+  orelpre value eq_op.
+
+(* for a lack of a better name the monoidal operation 
+ * on labels is called merge *)
+Definition merge : Lab -> Lab -> Lab := 
+  fun l1 l2 => 
+    match l1, l2 with 
+    | Write x a, Read  y b
+    | Read  y b, Write x a =>
+      if [&& (x == y) & (b == None)] then 
+        Read x (Some a) 
+      else Bot
+    | _        , Emp       => l1
+    | Emp      , _         => l2
+    | _        , _         => Bot
+    end.
+
+Section Theory. 
+
+Lemma eq_labP : Equality.axiom eq_lab.
+Proof.
+  move=> l1 l2; case: l1; case: l2=> /= *;
+    (try by constructor);
+    (try by apply: (iffP andP); move=> [] /eqP-> /eqP->).
+Qed.
+
+Lemma neq_U0 : Bot <> Emp.
+Proof. done. Qed.
+
+Lemma is_botP l : reflect (l = Bot) (is_bot l).
+Proof. by case: l; constructor. Qed.
+
+Lemma merge0l l : merge Emp l = l.
+Proof. by case l. Qed.
+
+Lemma mergel0 l : merge l Emp = l.
+Proof. by case l. Qed.
+
+Lemma mergeUl l : merge Bot l = Bot.
+Proof. by case l. Qed.
+
+Lemma mergelU l : merge l Bot = Bot.
+Proof. by case l. Qed.
+
+Lemma merge_inverse0 l1 l2 : 
+  merge l1 l2 = Emp -> l1 = Emp.
+Proof. rewrite /merge; case: l1; case: l2=> // ????; case: ifP=> //. Qed.
+
+Lemma mergeA : associative merge.
+Proof. 
+  move=> l1 l2 l3.
+  case H1: l1=> *; case H2: l2=> *; case H3: l3=> *;
+    rewrite ?merge0l ?mergeUl ?mergel0 ?mergelU /merge //;
+    repeat (case: eqP)=> //=; congruence.
+Qed.
+
+Lemma mergeC : commutative merge.
+Proof. 
+  move=> l1 l2.
+  case H1: l1=> *; case H2: l2=> *; 
+    rewrite ?merge0l ?mergeUl ?mergel0 ?mergelU /merge //.
+Qed.
+
+End Theory.
+
+(* TODO: shorten declaration of instances (use `phand_id` tricks?) *)
+
+Definition mMixin := 
+  @Monoid.Monoid.Mixin Lab Emp merge mergeA merge0l mergel0.
+Canonical mType := 
+  @Monoid.Monoid.pack Lab tt (Monoid.Monoid.Class mMixin). 
+
+Definition cmMixin := 
+  @Monoid.Commutative.Mixin Lab (Monoid.Monoid.class mType) mergeC. 
+Canonical cmType := 
+  @Monoid.Commutative.pack Lab tt (Monoid.Commutative.Class cmMixin). 
+
+Definition apcmMixin := 
+  @Monoid.Absorbing.Mixin Lab (Monoid.Commutative.class cmType) 
+  Bot is_bot neq_U0 mergelU is_botP. 
+Canonical apcmType := 
+  Eval hnf in @Monoid.Absorbing.pack Lab tt _ _ id apcmMixin. 
+
+(* TODO: for some reason, pcm notations do not work 
+ *   without the following boilerplate.  *)
+Canonical pcmType := Monoid.Absorbing.as_pcmType apcmType.
+Coercion to_pcmType (l : Lab) : pcmType := l.
+
+(* Context (l1 l2 : Lab). *)
+(* Check (l1 ⟂ l2 : bool). *)
+
+End SharedMemory.
+End SharedMemory. 
 
