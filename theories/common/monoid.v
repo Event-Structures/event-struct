@@ -38,6 +38,7 @@ Reserved Notation "\0" (at level 0).
 Reserved Notation "\u" (at level 0).
 Reserved Notation "x \+ y" (at level 40, left associativity).
 Reserved Notation "x ⟂ y" (at level 20, no associativity).
+Reserved Notation "x :- y" (at level 20, no associativity).
 
 Module Monoid.
 
@@ -495,6 +496,145 @@ Export Absorbing.Def.
 Export Absorbing.Syntax.
 Export Absorbing.Theory.
 
+
+Module Divisible.
+Section ClassDef. 
+
+(* TODO: currently we fuse together the decidable `divides` 
+ *   relation with the axiom of indivisible unit. 
+ *   However, in general, this axiom is independent from `divides` relation. 
+ *   We fuse them only for convinience, and we might revisit 
+ *   this decision in future.
+ *)
+Record mixin_of (T0 : Type) (b : PartialCommutative.class_of T0)
+                (T := Commutative.Pack tt b) := Mixin {
+  dvr  : rel T;
+  _    : forall (x y : T), x \+ y = \0 -> x = \0; 
+  _    : forall (x y : T), reflect (exists z, x \+ z = y) (dvr x y); 
+}.
+
+Set Primitive Projections.
+Record class_of (T : Type) := Class {
+  base  : PartialCommutative.class_of T;
+  mixin : mixin_of base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> PartialCommutative.class_of.
+
+Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (T : Type) (disp : unit) (cT : type disp).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
+
+Definition pack :=
+  fun bE b & phant_id (@PartialCommutative.class disp bE) b =>
+  fun m => Pack disp (@Class T b m).
+
+Definition as_mType := @Monoid.Pack disp cT class.
+Definition as_cmType := @Commutative.Pack disp cT class.
+Definition as_pcmType := @PartialCommutative.Pack disp cT class.
+
+End ClassDef.
+
+Module Import Exports.
+Coercion base : class_of >-> PartialCommutative.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion as_mType : type >-> Monoid.type.
+Coercion as_cmType : type >-> Commutative.type.
+Coercion as_pcmType : type >-> PartialCommutative.type.
+Canonical as_mType.
+Canonical as_cmType.
+Canonical as_pcmType.
+End Exports.
+
+Module Export Types.
+Notation dpcm     := Divisible.class_of.
+Notation dpcmType := Divisible.type.
+End Types.
+
+Module Export Def.
+Section Def.
+
+Context {disp : unit} {M : dpcmType disp}.
+
+Definition dvr : rel M := 
+  Divisible.dvr (Divisible.class M). 
+
+End Def.
+End Def.
+
+Prenex Implicits dvr.
+
+Module Export Syntax.
+Notation "x :- y" := (dvr x y) : monoid_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory.
+
+Context {disp : unit} {M : dpcmType disp}.
+
+Implicit Types (x y z : M).
+
+Lemma indiv0 x y : 
+  x \+ y = \0 -> x = \0.
+Proof. by move: x y; case: M=> ? [? []]. Qed.
+
+Lemma dvrP x y : 
+  reflect (exists z, x \+ z = y) (dvr x y). 
+Proof. by move: x y; case: M=> ? [? []]. Qed.
+
+Lemma dvr0 x : 
+  x :- \0 -> x = \0. 
+Proof. by move /dvrP=> [] ? /indiv0. Qed.
+
+Lemma dvr_invalid x y :
+  x :- y -> invalid x -> invalid y.
+Proof. by move /dvrP=> [] z <-; exact/invalid_plus. Qed.
+
+Lemma dvr_refl x : 
+  x :- x.
+Proof. by apply /dvrP; exists \0; exact/plusm0. Qed.
+
+Lemma dvr_trans x y z : 
+  x :- y -> y :- z -> x :- z.
+Proof. 
+  move=> /dvrP [] u <-  /dvrP [] v <-.
+  by apply /dvrP; exists (u \+ v); rewrite plusA.
+Qed.
+
+Lemma dvr_plus (x1 x2 y1 y2 : M) : 
+  x1 :- y1 -> x2 :- y2 -> (x1 \+ x2) :- (y1 \+ y2).
+Proof. 
+  move=> /dvrP [] z1 <- /dvrP [] z2 <-.
+  apply /dvrP; exists (z1 \+ z2).
+  (* TODO: use some tools to deal with associativity and commutativity, 
+   *   e.g. aac_rewrite library 
+   *)
+  rewrite !plusA.
+  rewrite -[z1 \+ (x2 \+ z2)]plusA.  
+  rewrite -[z1 \+ x2]plusC.  
+  by rewrite !plusA.
+Qed.
+
+End Theory.
+End Theory.
+
+End Divisible.
+
+(* Export Divisible.Types. *)
+Notation dpcm     := Divisible.class_of.
+Notation dpcmType := Divisible.type.
+
+Export Divisible.Exports.
+Export Divisible.Def.
+Export Divisible.Syntax.
+Export Divisible.Theory.
 End Monoid.
 
 (* TODO: do not import `Def`, `Syntax`, and `Theory` modules by default (?) *)
@@ -517,4 +657,9 @@ Export Monoid.Absorbing.ExportsExtra.
 Export Monoid.Absorbing.Def.
 Export Monoid.Absorbing.Syntax.
 Export Monoid.Absorbing.Theory.
+
+Export Monoid.Divisible.Exports.
+Export Monoid.Divisible.Def.
+Export Monoid.Divisible.Syntax.
+Export Monoid.Divisible.Theory.
 
