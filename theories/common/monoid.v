@@ -586,12 +586,16 @@ Lemma indiv0 x y :
 Proof. by move: x y; case: M=> ? [? []]. Qed.
 
 Lemma dvrP x y : 
-  reflect (exists z, x \+ z = y) (dvr x y). 
+  reflect (exists z, x \+ z = y) (x :- y). 
 Proof. by move: x y; case: M=> ? [? []]. Qed.
 
-Lemma dvr0 x : 
+Lemma dvrm0 x : 
   x :- \0 -> x = \0. 
 Proof. by move /dvrP=> [] ? /indiv0. Qed.
+
+Lemma dvr0m x : 
+  \0 :- x. 
+Proof. by apply /dvrP; exists x; rewrite plus0m. Qed.
 
 Lemma dvr_invalid x y :
   x :- y -> invalid x -> invalid y.
