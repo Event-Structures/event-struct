@@ -25,6 +25,12 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(* a hack to bypass a shadowing problem caused by relation-algebra import *)
+Local Notation reflexive   := Coq.ssr.ssrbool.reflexive.
+Local Notation irreflexive := Coq.ssr.ssrbool.irreflexive.
+Local Notation symmetric   := Coq.ssr.ssrbool.symmetric.
+Local Notation transitive  := Coq.ssr.ssrbool.transitive.
+
 Local Open Scope monoid_scope.
 
 Declare Scope syncalg_scope.
@@ -32,29 +38,37 @@ Delimit Scope syncalg_scope with syncalg.
 
 Local Open Scope syncalg_scope.
 
-Reserved Notation "x :- y" (at level 25, no associativity).
-(* Reserved Notation "x \>> y" (at level 25, no associativity). *)
+Reserved Notation "x \>> y" (at level 20, no associativity).
 
 Module SyncAlgebra. 
 Section ClassDef.
 
-Record mixin_of (T0 : Type) (b : Monoid.PartialCommutative.class_of T0)
-                (T := Monoid.PartialCommutative.Pack tt b) := Mixin {
-  dvr  : rel T;
-  _    : forall (x y : T), x \+ y = \0 -> x = \0; 
-  _    : forall (x y : T), reflect (exists z, x \+ z = y) (dvr x y); 
+Record mixin_of (T0 : Type) (b : Monoid.Divisible.class_of T0)
+                (T := Monoid.Divisible.Pack tt b) := Mixin {
+  sync        : rel T;
+  is_initator : pred T;
+  is_producer : pred T;
+  is_consumer : pred T;
+
+  _ : irreflexive sync; (* ??? *)
+  _ : transitive sync;
+  _ : forall x y, sync x y -> dvr x y; 
+  _ : forall x y, sync x y -> valid y; 
+  _ : forall x, reflect (x <> zero /\ sync zero x)        (is_initator x);
+  _ : forall x, reflect (exists y, x <> zero /\ sync x y) (is_producer x);
+  _ : forall x, reflect (exists y, y <> zero /\ sync y x) (is_consumer x);
 }.
 
 Set Primitive Projections.
 Record class_of (T : Type) := Class {
-  base  : Monoid.PartialCommutative.class_of T;
+  base  : Monoid.Divisible.class_of T;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
 Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
 
-Local Coercion base : class_of >-> Monoid.PartialCommutative.class_of.
+Local Coercion base : class_of >-> Monoid.Divisible.class_of.
 
 Local Coercion sort : type >-> Sortclass.
 
@@ -70,19 +84,22 @@ Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
 Definition as_mType := @Monoid.Monoid.Pack disp cT class.
 Definition as_cmType := @Monoid.Commutative.Pack disp cT class.
 Definition as_pcmType := @Monoid.PartialCommutative.Pack disp cT class.
+Definition as_dpcmType := @Monoid.Divisible.Pack disp cT class.
 
 End ClassDef. 
 
 Module Export Exports.
-Coercion base : class_of >-> Monoid.PartialCommutative.class_of.
+Coercion base : class_of >-> Monoid.Divisible.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion as_mType : type >-> Monoid.mType.
 Coercion as_cmType : type >-> Monoid.cmType.
 Coercion as_pcmType : type >-> Monoid.pcmType.
+Coercion as_dpcmType : type >-> Monoid.Divisible.type.
 Canonical as_mType.
 Canonical as_cmType.
 Canonical as_pcmType.
+Canonical as_dpcmType.
 End Exports.
 
 Module Export Types.
@@ -95,16 +112,27 @@ Section Def.
 
 Context {disp : unit} {L : labType disp}.
 
-Definition dvr : rel L := 
-  SyncAlgebra.dvr (SyncAlgebra.class L). 
+Definition sync : rel L := 
+  SyncAlgebra.sync (SyncAlgebra.class L). 
+
+Definition is_initator : pred L := 
+  SyncAlgebra.is_initator (SyncAlgebra.class L). 
+
+Definition is_producer : pred L := 
+  SyncAlgebra.is_producer (SyncAlgebra.class L). 
+
+Definition is_consumer : pred L := 
+  SyncAlgebra.is_consumer (SyncAlgebra.class L). 
 
 End Def.
 End Def.
 
-Prenex Implicits dvr.
+Prenex Implicits sync.
+Prenex Implicits is_producer.
+Prenex Implicits is_consumer.
 
 Module Export Syntax.
-Notation "x :- y" := (dvr x y) : syncalg_scope.
+Notation "x \>> y" := (sync x y) : syncalg_scope.
 End Syntax.
 
 Module Export Theory.
@@ -114,46 +142,61 @@ Context {disp : unit} {L : labType disp}.
 
 Implicit Types (x y z : L).
 
-Lemma indiv0 x y : 
-  x \+ y = \0 -> x = \0.
-Proof. by move: x y; case: L=> ? [? []]. Qed.
+Lemma sync_irrefl : 
+  irreflexive (sync : rel L).
+Proof. by case: L=> ? [? []]. Qed.
 
-Lemma dvrP x y : 
-  reflect (exists z, x \+ z = y) (dvr x y). 
-Proof. by move: x y; case: L=> ? [? []]. Qed.
+Lemma sync_dvr x y : 
+  x \>> y -> x :- y.
+Proof. by move: x y ; case: L=> ? [? []]. Qed.
 
-Lemma dvr0 x : 
-  x :- \0 -> x = \0. 
-Proof. by move /dvrP=> [] ? /indiv0. Qed.
+Lemma sync_valid x y : 
+  x \>> y -> valid y.
+Proof. by move: x y ; case: L=> ? [? []]. Qed.
 
-Lemma dvr_invalid x y : 
-  x :- y -> invalid x -> invalid y. 
-Proof. by move /dvrP=> [] z <-; exact/invalid_plus. Qed.
+Lemma syncl0 x : 
+  ~ x \>> \0.
+Proof. by move=> /[dup] /sync_dvr /dvrm0 <-; rewrite sync_irrefl. Qed.
 
-Lemma dvr_refl x : 
-  x :- x.
-Proof. by apply /dvrP; exists \0; exact/plusm0. Qed.
+Lemma is_initatorP x : 
+  reflect (x <> \0 /\ \0 \>> x) (is_initator x).
+Proof. by move: x; case: L=> ? [? []]. Qed.
 
-Lemma dvr_trans x y z : 
-  x :- y -> y :- z -> x :- z.
+Lemma is_initator0 : 
+  ~ is_initator (\0 : L).
+Proof. by move /is_initatorP=> []. Qed.
+
+Lemma is_initator_valid x : 
+  is_initator x -> valid x.
+Proof. by move /is_initatorP=> [] ? /sync_valid. Qed.
+
+Lemma is_producerP x : 
+  reflect (exists y, x <> \0 /\ x \>> y) (is_producer x).
+Proof. by move: x; case: L=> ? [? []]. Qed.
+
+Lemma is_producer0 x : 
+  ~ is_producer (\0 : L).
+Proof. by move /is_producerP=> [] ? []. Qed.
+
+Lemma is_producer_valid x :
+  is_producer x -> valid x.
 Proof. 
-  move=> /dvrP [] u <-  /dvrP [] v <-.
-  by apply /dvrP; exists (u \+ v); rewrite plusA.
+  move /is_producerP=> [] ? [] ?. 
+  move=> /[dup] /sync_valid /[swap].
+  move=> /sync_dvr; exact /dvr_valid.
 Qed.
 
-Lemma dvr_plus (x1 x2 y1 y2 : L) : 
-  x1 :- y1 -> x2 :- y2 -> (x1 \+ x2) :- (y1 \+ y2).
-Proof. 
-  move=> /dvrP [] z1 <- /dvrP [] z2 <-.
-  apply /dvrP; exists (z1 \+ z2).
-  (* TODO: use some tools to deal with associativity and commutativity, 
-   *   e.g. aac_rewrite library 
-   *)
-  rewrite !plusA.
-  rewrite -[z1 \+ (x2 \+ z2)]plusA.  
-  rewrite -[z1 \+ x2]plusC.  
-  by rewrite !plusA.
-Qed.
+Lemma is_consumerP x : 
+  reflect (exists y, y <> \0 /\ y \>> x) (is_consumer x).
+Proof. by move: x; case: L=> ? [? []]. Qed.
+
+Lemma is_consumer0 x : 
+  ~ is_consumer (\0 : L).
+Proof. by move /is_consumerP=> [] ? [] ? /syncl0. Qed.
+
+Lemma is_consumer_valid x : 
+  is_consumer x -> valid x.
+Proof. by move /is_consumerP=> [] ? [] ? /sync_valid. Qed.
 
 End Theory.
 End Theory.
