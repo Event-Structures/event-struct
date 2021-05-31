@@ -635,6 +635,130 @@ Export Divisible.Exports.
 Export Divisible.Def.
 Export Divisible.Syntax.
 Export Divisible.Theory.
+
+
+Module Splittable.
+Section ClassDef. 
+
+(* TODO: what we call `splittable` monoid is not a convential 
+ *   `splittable` monoid, as in e.g. [1]. 
+ *   It is because we mainly interested in (canonical) split operation 
+ *   in order to define notions of producers and consumers in
+ *   synchronization algebras (a questionable design decision by itself).
+ *   A producer is an element which canonical split consists of 
+ *   an element itself and the zero element. 
+ *   A consurem is an element which canonical split consists of 
+ *   a pair of non-zero elements.  
+ *
+ *   Conventional splittable monoids can be implemented as 
+ *   a subclass of our splittable monoids with additional axiom
+ *   stating that any non-zero element should be splitted into 
+ *   a pair of non-zero elements.
+ * 
+ *   Besides that, currenlt we inherent from divisible monoids only 
+ *   for simplicity. Obviously, splittable and divisible monoids are 
+ *   orthogonal concepts. 
+ *  
+ *   [1] Modular Labelled Sequent Calculi for Abstract Separation Logics
+ *       https://arxiv.org/pdf/1710.10805.pdf
+ *)
+Record mixin_of (T0 : Type) (b : Divisible.class_of T0)
+                (T := Divisible.Pack tt b) := Mixin {
+  split   : T -> T * T;
+  _       : forall (x : T), snd (split x) = zero -> x = zero; 
+  _       : forall (x : T), x = plus (fst (split x)) (snd (split x));
+}.
+
+Set Primitive Projections.
+Record class_of (T : Type) := Class {
+  base  : Divisible.class_of T;
+  mixin : mixin_of base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Divisible.class_of.
+
+Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (T : Type) (disp : unit) (cT : type disp).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
+
+Definition pack :=
+  fun bE b & phant_id (@Divisible.class disp bE) b =>
+  fun m => Pack disp (@Class T b m).
+
+Definition as_mType := @Monoid.Pack disp cT class.
+Definition as_cmType := @Commutative.Pack disp cT class.
+Definition as_pcmType := @PartialCommutative.Pack disp cT class.
+Definition as_dpcmType := @Divisible.Pack disp cT class.
+
+End ClassDef.
+
+Module Import Exports.
+Coercion base : class_of >-> Divisible.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion as_mType : type >-> Monoid.type.
+Coercion as_cmType : type >-> Commutative.type.
+Coercion as_pcmType : type >-> PartialCommutative.type.
+Coercion as_dpcmType : type >-> Divisible.type.
+Canonical as_mType.
+Canonical as_cmType.
+Canonical as_pcmType.
+Canonical as_dpcmType.
+End Exports.
+
+Module Export Types.
+Notation sdpcm     := Splittable.class_of.
+Notation sdpcmType := Splittable.type.
+End Types.
+
+Module Export Def.
+Section Def.
+
+Context {disp : unit} {M : sdpcmType disp}.
+
+Definition split : M -> M * M := 
+  Splittable.split (Splittable.class M). 
+
+(* TODO: invent a better name? *)
+Definition lsplit : M -> M := 
+  fun x => fst (split x).
+
+(* TODO: invent a better name? *)
+Definition rsplit : M -> M := 
+  fun x => snd (split x).
+
+(* TODO: invent fancy notations for slit functions? *)
+  
+End Def.
+End Def.
+
+Prenex Implicits split lsplit rsplit.
+
+Module Export Theory.
+Section Theory.
+
+Context {disp : unit} {M : sdpcmType disp}.
+
+Implicit Types (x y z : M).
+
+Lemma rsplit0 x : 
+  rsplit x = \0 -> x = \0.
+Proof. by rewrite /rsplit; move: x; case: M=> ? [? []]. Qed.
+
+Lemma split_plus x : 
+  x = lsplit x \+ rsplit x.
+Proof. by rewrite /rsplit /lsplit; move: x; case: M=> ? [? []]. Qed.
+
+End Theory.
+End Theory.
+
+End Splittable.
+
 End Monoid.
 
 (* TODO: do not import `Def`, `Syntax`, and `Theory` modules by default (?) *)
@@ -662,4 +786,9 @@ Export Monoid.Divisible.Exports.
 Export Monoid.Divisible.Def.
 Export Monoid.Divisible.Syntax.
 Export Monoid.Divisible.Theory.
+
+Export Monoid.Splittable.Exports.
+Export Monoid.Splittable.Def.
+(* Export Monoid.Splittable.Syntax. *)
+Export Monoid.Splittable.Theory.
 
