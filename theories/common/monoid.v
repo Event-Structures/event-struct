@@ -321,6 +321,10 @@ Lemma invalidE :
   (invalid : rel.dset M) ≡ !(valid : rel.dset M). 
 Proof. by rewrite /invalid. Qed.
 
+Lemma valid_plus x y : 
+  valid (x \+ y) -> valid x. 
+Proof. by rewrite /valid orthA plusm0; apply orth_valid. Qed.
+
 Lemma invalid_plus x y : 
   invalid x -> invalid (x \+ y). 
 Proof. 
@@ -596,6 +600,10 @@ Proof. by move /dvrP=> [] ? /indiv0. Qed.
 Lemma dvr0m x : 
   \0 :- x. 
 Proof. by apply /dvrP; exists x; rewrite plus0m. Qed.
+
+Lemma dvr_valid x y :
+  x :- y -> valid y -> valid x.
+Proof. move /dvrP=> [] z <-; exact /valid_plus. Qed.
 
 Lemma dvr_invalid x y :
   x :- y -> invalid x -> invalid y.
