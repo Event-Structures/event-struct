@@ -67,6 +67,24 @@ Inductive Lab {RVal WVal : Type} :=
 | Init
 | Eps.
 
+Definition eqlab (RVal WVal : eqType) : rel (@Lab RVal WVal) :=
+  fun l1 l2 => 
+    match l1, l2 with
+    | Read  x a  , Read  y b     => [&& a == b & x == y]
+    | Write x a  , Write y b     => [&& a == b & x == y]
+    | ThreadEnd  , ThreadEnd     => true
+    | ThreadStart, ThreadStart   => true
+    | Init       , Init          => true
+    | Eps        , Eps           => true
+    | _, _                       => false
+    end.
+
+Lemma eq_labP (RVal WVal : eqType) : Equality.axiom (eqlab RVal WVal).
+Proof.
+  case=> [v x [] * /=|v x []* /=|[]|[]|[]|[]]; try constructor=>//;
+  by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
+Qed.
+
 Module Label.
 Section Label. 
 
@@ -108,24 +126,6 @@ Definition is_init : pred Lab :=
 Definition is_eps : pred Lab := 
   fun l => if l is Eps then true else false.
 
-Definition eq_lab : rel Lab :=
-  fun l1 l2 => 
-    match l1, l2 with
-    | Read  x a  , Read  y b     => [&& a == b & x == y]
-    | Write x a  , Write y b     => [&& a == b & x == y]
-    | ThreadEnd  , ThreadEnd     => true
-    | ThreadStart, ThreadStart   => true
-    | Init       , Init          => true
-    | Eps        , Eps           => true
-    | _, _                       => false
-    end.
-
-Lemma eq_labP : Equality.axiom eq_lab.
-Proof.
-  case=> [v x [] * /=|v x []* /=|[]|[]|[]|[]]; try constructor=>//;
-  by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
-Qed.
-
 Definition eq_loc : rel Lab := 
   orelpre loc eq_op.
 
@@ -149,16 +149,13 @@ Definition synch (l1 l2 : Lab) :=
   | _, _ => false
   end.
 
-(* Lemma rf_thrdend w : write_read_from w ThreadEnd = false. *)
-(* Proof. by case: w. Qed. *)
-
 End Label.
 
 Module Exports.
 Section Label.
-Context {V : eqType}.
-Canonical Lab_eqMixin := EqMixin (@eq_labP V).
-Canonical Lab_eqType  := Eval hnf in EqType (@Lab V V) Lab_eqMixin.
+Context {RVal WVal : eqType}.
+Canonical Lab_eqMixin := EqMixin (eq_labP RVal WVal).
+Canonical Lab_eqType  := Eval hnf in EqType (@Lab RVal WVal) Lab_eqMixin.
 End Label.
 End Exports. 
 
@@ -170,6 +167,10 @@ End Label.
 
 Export Label.Exports. 
 Import Label.Syntax. 
+
+Lemma synch_val Val l x v : 
+  l \>> (Read x v) -> Label.value (Val := Val) l = Some v.
+Proof. by case: l=> //=> /andP[?/eqP->]. Qed.
 
 (* ************************************************************************* *)
 (*     Event Descriptor                                                      *)
@@ -285,7 +286,10 @@ Structure fin_exec_event_struct := Pack {
                             fpo_prj := ident0 ;
                             frf_prj := ident0 ;
                          |};
-
+  _          : [forall e : finsupp fed,
+                 (lab (val e) == Init) ==> ((val e) == \i0)];
+  
+  _          : [forall e : finsupp fed, lab (val e) != Eps];
   _          : [forall e : finsupp fed, fpo (val e) \in dom];
   _          : [forall e : finsupp fed, frf (val e) \in dom];
 
@@ -305,8 +309,8 @@ Proof.
   have S: finsupp fed0 =i [:: \i0] => [?|].
   - by rewrite /fed0 finsupp_with /= finsupp0 ?inE orbF.
   have F: fed0 \i0 = mk_edescr Init \i0 \i0 by rewrite ?fsfun_with.
-  have [: a1 a2 a3 a4 a5 a6 a7 a8 a9] @evstr : 
-  fin_exec_event_struct := Pack dom0 fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9;
+  have [: a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11] @evstr : 
+  fin_exec_event_struct := Pack dom0 fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11;
   rewrite /dom0 ?inE ?eq_refl //.
   - by apply/eqP/fsetP=> ?; rewrite S seq_fsetE.
   all: by apply/forallP=> [[/= x]]; rewrite S ?inE=> /eqP-> /[! F]/=.
@@ -326,13 +330,13 @@ Definition eq_es (es es' : fin_exec_event_struct E Val) : bool :=
 Lemma eqesP : Equality.axiom eq_es.
 Proof.
   move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
-  case: x=> dom1 fed1 lab1 fpo1 frf1 df1 ds1 di1. 
-  rewrite {}/lab1 {}/fpo1 {}/frf1=> li1 pc1 f1 g1 rc1 rc1'.
-  case: y=> dom2 fed2 lab2 fpo2 frf2 df2 ds2 di2.
-  rewrite {}/lab2 {}/fpo2 {}/frf2=> li2 pc2 f2 g2 rc2 rc2'.
+  case: x=> dom1 fed1 lab1 fpo1 frf1 df1 ds1 di1 dii1. 
+  rewrite {}/lab1 {}/fpo1 {}/frf1=> li1 pc1 f1 g1 l1 rc1 rc1'.
+  case: y=> dom2 fed2 lab2 fpo2 frf2 df2 ds2 di2 dii2.
+  rewrite {}/lab2 {}/fpo2 {}/frf2=> li2 pc2 f2 g2 l2 rc2 rc2'.
   case/andP=> /= /eqP E1 /eqP E2. 
-  move: df1 ds1 di1 li1 pc1 f1 g1 rc1 rc1'. 
-  move: df2 ds2 di2 li2 pc2 f2 g2 rc2 rc2'. 
+  move: df1 ds1 di1 li1 pc1 f1 g1 l1 rc1 rc1' dii1. 
+  move: df2 ds2 di2 li2 pc2 f2 g2 l2 rc2 rc2' dii2. 
   move: E1 E2; do 2 (case: _ /). 
   move=> *; congr Pack; exact/eq_irrelevance.
 Qed.
@@ -375,7 +379,7 @@ Definition is_thrdend : pred E :=
   Label.is_thrdend \o lab. 
 
 Definition eq_lab : rel E :=
-  relpre lab Label.eq_lab.  
+  relpre lab (eqlab Val Val).  
 
 Definition eq_loc : rel E := 
   relpre lab Label.eq_loc.  
@@ -471,10 +475,25 @@ Notation fresh_id := (fresh_seq dom).
 Lemma lab0 : lab ident0 = Init.
 Proof. by rewrite labE; case es=> ???????? H ??? /=; rewrite H. Qed.
 
+Lemma lab_Init e : lab e = Init -> e = \i0.
+Proof.
+  rewrite labE; case es=> ? fed ??????? /= /forallP H ?????? /eqP.
+  case: (boolP (e \in finsupp fed))=> [L|?].
+  - by move/implyP: (H [` L])=> /[apply] /eqP.
+  by rewrite fsfun_dflt.
+Qed.
+
 Lemma lab_fresh : lab fresh_id = Eps.
 Proof. 
   rewrite /lab fsfun_dflt // fed_dom fresh_seq_notin //.
   exact/dom_sorted.
+Qed.
+
+Lemma lab_Eps e : e \in dom -> lab e != Eps.
+Proof.
+  case: es=> ????? I ???? /=; rewrite /eventstructure.lab /=.
+  move/forallP; rewrite -(@seq_fsetE tt) -(eqP I)=> + ????? L.
+  by move/(_ [` L]).
 Qed.
 
 Lemma i0_fresh : \i0 < fresh_id.
@@ -491,7 +510,7 @@ Lemma fpo_dom e:
   e \in dom -> fpo e \in dom.
 Proof.
   rewrite fed_dom_mem.
-  case: es=> /=; rewrite /eventstructure.fpo /==>> ???? /forallP H ???? L.
+  case: es=> /=; rewrite /eventstructure.fpo /==>> ?????? /forallP H ???? L.
   exact/(H [` L]).
 Qed.
 
@@ -501,7 +520,7 @@ Proof. by move=> ndom; rewrite /fpo fsfun_dflt // fed_dom ndom. Qed.
 Lemma fpo_le e : fpo e <= e.
 Proof.
   rewrite /fpo; case (boolP (e \in finsupp fed)).
-  - case: es=> ??????????? H ?? /= eI. 
+  - case: es=> ????????????? H ?? /= eI. 
     rewrite -[e]/(fsval [` eI]).
     move: H=> /forallP H; exact: H.
   by move=> ndom; rewrite fsfun_dflt.  
@@ -525,7 +544,7 @@ Lemma frf_dom e:
   e \in dom -> frf e \in dom.
 Proof.
   rewrite fed_dom_mem.
-  case: es=> /=; rewrite /eventstructure.frf /==>> ????? /forallP H ??? L.
+  case: es=> /=; rewrite /eventstructure.frf /==>> ??????? /forallP H ??? L.
   exact/(H [` L]).
 Qed.
 
@@ -535,7 +554,7 @@ Proof. by move=> ndom; rewrite /frf fsfun_dflt // fed_dom ndom. Qed.
 Lemma frf_le e : frf e <= e.
 Proof.
   rewrite /frf; case (boolP (e \in finsupp fed)).
-  - case: es=> ???????????? H ? /= eI. 
+  - case: es=> ?????????????? H ? /= eI. 
     rewrite -[e]/(fsval [` eI]).
     move: H=> /forallP H; exact: H.
   by move=> ndom; rewrite fsfun_dflt.  
@@ -544,7 +563,7 @@ Qed.
 Lemma frf_sync e : lab (frf e) \>> lab e. 
 Proof.
   rewrite /lab /fed /frf; case (boolP (e \in finsupp fed)).
-  - case: es=> ????????????? H /= eI. 
+  - case: es=> ??????????????? H /= eI. 
     rewrite -[e]/(fsval [` eI]).
     move: H=> /forallP H; exact: H.
   by move=> ndom; rewrite !fsfun_dflt.

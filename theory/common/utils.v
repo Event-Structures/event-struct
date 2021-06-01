@@ -1,6 +1,7 @@
 From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
+From monae Require Import hierarchy monad_model.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -235,3 +236,25 @@ Definition orelpre (f : T -> option rT) (r : rel rT) : simpl_rel T :=
   [rel x y | match f x, f y with Some x, Some y => r x y | _, _ => false end].
 
 End OptionUtils.
+
+Open Scope do_notation.
+Local Notation M := ModelMonad.ListMonad.t.
+
+Lemma do_mem (T S : eqType) (x : S) (s : M T) (f : T -> M S) : 
+  reflect (exists2 y, y \in s & x \in f y) 
+  (x \in do y <- s; f y).
+Proof.
+  apply: (iffP idP)=> //=;
+    rewrite /Bind /= /ModelMonad.ListMonad.bind /Actm /=;
+    rewrite /monad_lib.Monad_of_ret_bind.Map /ModelMonad.ListMonad.ret /=;
+    rewrite /ModelMonad.ListMonad.bind /= /ModelMonad.ListMonad.ret_component;
+    have->: 
+     flatten [seq (cons^~ [::] \o [eta f]) i | i <- s] 
+     = map f s by (elim: s=> //= ??->).
+    all: by rewrite ?map_id // => /flatten_mapP.
+Qed.
+
+Lemma do_cons (T S : Type) (s : T) (ss : M T) (f : T -> seq S) : 
+  (do y <- (s :: ss : M _); f y) = (f s ++ do y <- ss; f y).
+Proof. by []. Qed.
+

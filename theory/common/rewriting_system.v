@@ -208,6 +208,45 @@ Qed.
 
 End EqvRewriting. 
 
+Section EqvRRewriting.
+
+Context {S : Type} (r e : hrel S S).
+
+Hypothesis eqv_trans : Transitive e.
+Hypothesis eqv_symm  : Symmetric e.
+Hypothesis eqv_refl  : 1 ≦ e.
+
+Definition eqv_rdiamond_confluent := forall s1 s2 s3, 
+  r s1 s2 -> r s1 s3 -> 
+  exists s4 s4', [/\ r^? s2 s4, r^? s3 s4' & e s4 s4'].
+
+Definition eqv_rconfluent := forall s1 s2 s3,
+  r^* s1 s2 -> r^* s1 s3 -> 
+  exists s4 s4', [/\ r^* s2 s4, r^* s3 s4' & e s4 s4'].
+
+Hypothesis edconfl : eqv_rdiamond_confluent.
+Hypothesis edcomm : diamond_commute e r.
+
+Theorem rconfl_eqv : eqv_rconfluent.
+Proof.
+  suff: eqv_confluent (r^?) e.
+  - move=> C ???; rewrite ?(str_itr r _ _) ?(itr_qmk r _ _).
+    move=>/C/[apply][[s4 [s4' [*]]]]; exists s4, s4'.
+    by split=> //; rewrite ?(str_itr r _ _) ?(itr_qmk r _ _).
+  apply/confl_eqv=> //.
+  - move=> s1 s2 s3 [-> [->| ?]|R [<-|/(edconfl _ _ _ R)]] //.
+    - exists s3, s3; split; by [left|left|apply/eqv_refl].
+    - exists s3, s3; split; by [right|left|apply/eqv_refl].
+    exists s2, s2; split; by [left|right|apply/eqv_refl].
+  move=> ? s2 ? E [<-|/edcomm-/(_ _ E)[s4 *]].
+  - exists s2=> //; by left.
+  exists s4=> //; by right.
+Qed.
+
+
+End EqvRRewriting.
+
+
 Definition exlab {T L : Type} (r : L -> hrel T T) : hrel T T := 
   fun t1 t2 => exists l, r l t1 t2.
 
@@ -220,18 +259,32 @@ Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
+Definition eqv_rdiamond_commute (r1 r2 e : hrel S S) := forall s1 s2 s3, 
+   r1 s1 s2 -> r2 s1 s3 -> 
+   exists s4 s4', [/\ r2^? s2 s4, r1^? s3 s4' & e s4 s4'].
+
 Definition eqv_diamond_commute (r1 r2 e : hrel S S) := forall s1 s2 s3, 
    r1 s1 s2 -> r2 s1 s3 -> 
    exists s4 s4', [/\ r2 s2 s4, r1 s3 s4' & e s4 s4'].
 
+Lemma diamond_rdiamod r1 r2 : 
+  eqv_diamond_commute r1 r2 e -> eqv_rdiamond_commute r1 r2 e.
+Proof.
+  move=> D ??? /D/[apply][[s4 [s4' [*]]]].
+  exists s4, s4'; split=> //; by right.
+Qed.
 
-Hypothesis ledrr : forall l1 l2, (eqv_diamond_commute (r l1) (r l2) e).
+Hypothesis ledrr : forall l1 l2, (eqv_rdiamond_commute (r l1) (r l2) e).
 Hypothesis leder  : diamond_commute e (exlab r).
 
-Theorem eqv_comm_union : eqv_confluent (exlab r) e.
+Lemma rexlab : exlab (fun l => (r l)^?) ≦ (exlab r)^?.
+Proof. move=> ?? /= [l [->|]]; [left|right] =>//; by exists l. Qed.
+
+
+Theorem eqv_comm_union : eqv_rconfluent (exlab r) e.
 Proof.
-  apply/confl_eqv => // ???[l1 /ledrr C [l2 /C [s4 [s4' [*]]]]].
-  - exists s4, s4'; do ? split=> //; by [exists l2| exists l1].
+  apply/rconfl_eqv => // ???[l1 /ledrr C [l2 /C [s4 [s4' [*]]]]].
+  - exists s4, s4'; do ? split=> //; apply/rexlab; by [exists l2| exists l1].
 Qed.
 
 End EqvLabRewriting.
@@ -252,7 +305,7 @@ Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
-Hypothesis ledrr : forall l1 l2, eqv_diamond_commute (r l1) (r l2) e.
+Hypothesis ledrr : forall l1 l2, eqv_rdiamond_commute (r l1) (r l2) e.
 Hypothesis leder : diamond_commute e (exlab r).
 
 Definition eqv_respect_p := [p] ⋅ e ≦ e ⋅ [p].
@@ -268,13 +321,22 @@ Hypothesis eqv_r : r_respect_p.
 Lemma r_exlab l: r l ≦ exlab r.
 Proof. by exists l. Qed.
 
-Theorem sub_eqv_comm_union : eqv_confluent (exlab (sub \o r)) e.
+Lemma rsub l : sub ((r l)^?) ≦ ((sub \o r) l)^? .
+Proof. by move=> ?? [[-> ?|??]]; (left + right). Qed.
+
+Lemma eqv_rr l1 l2 s1 s2 s3 s: 
+  sub (r l1) s1 s2 -> 
+  sub (r l2) s1 s3 ->
+  (r l2)^? s2 s -> p s.
+Proof. by move=> /[dup][[/=? /andP[?? /eqv_r/[apply] H [<-|/H]]]]. Qed.
+
+Theorem sub_eqv_comm_union : eqv_rconfluent (exlab (sub \o r)) e.
 Proof.
   apply/eqv_comm_union=> //.
-  - move=> ????? /= /[dup] /eqv_r R[/ledrr] E /andP[??] /[dup]/R P[/E[s4 [x]]].
+  - move=> ????? /[dup] /eqv_rr R[/ledrr] E /andP[??] /[dup]/R P[/E[s4 [x]]].
     case=> /[dup] /P ps4 ?? /[dup] ?.
     have/eqv_p[??[->??/andP[??]]]: ([p] ⋅ e) s4 x by exists s4.
-    exists s4, x; do ? split=> //; exact/andP.
+    exists s4, x; do ? split=> //; apply/rsub; split=> //; exact/andP.
   move=> s1 s2 s /= /[dup] ? /leder E [? [/r_exlab /E [x [l ?? /andP[??]]]]].
   have/eqv_p[??[->?]]: ([p] ⋅ e) s  x  by exists s.
   have/eqv_p[??[->?]]: ([p] ⋅ e) s1 s2 by exists s1.
