@@ -51,7 +51,7 @@ Record mixin_of (T0 : Type) (b : Monoid.Divisible.class_of T0)
   is_consumer : pred T;
 
   _ : irreflexive sync; (* ??? *)
-  _ : transitive sync;
+  (* _ : transitive sync; *)
   _ : forall x y, sync x y -> dvr x y; 
   _ : forall x y, sync x y -> valid y; 
   _ : forall x, reflect (x <> zero /\ sync zero x)        (is_initator x);
@@ -283,7 +283,7 @@ Definition merge : Lab -> Lab -> Lab :=
     end.
 
 (* merge divisor relation *)
-Definition merge_dvr : Lab -> Lab -> bool := 
+Definition merge_dvr : rel Lab := 
   fun l1 l2 => 
     match l1, l2 with
     | Write x a, Read  y b =>
@@ -293,6 +293,39 @@ Definition merge_dvr : Lab -> Lab -> bool :=
     | Emp, _   => true
     | _  , Bot => true
     | _ , _    => eq_lab l1 l2
+    end.
+
+(* sync relation *)
+Definition sync : rel Lab := 
+  fun l1 l2 => 
+    match l1, l2 with
+    | Write x a, Read  y b =>
+      [&& (x == y) & (b == Some a)]
+    | Emp, Write _ _       => true
+    | Emp, Read  _ None    => true
+    | _  , _               => false
+    end.
+
+Definition is_initator : pred Lab := 
+  fun l => 
+    match l with 
+    | Write _ _
+    | Read  _ None => true
+    | _            => false
+    end.
+
+Definition is_producer : pred Lab := 
+  fun l => 
+    match l with 
+    | Write _ _  => true
+    | _          => false
+    end.
+
+Definition is_consumer : pred Lab := 
+  fun l => 
+    match l with 
+    | Read _ (Some _) => true
+    | _               => false
     end.
 
 Section Theory. 
@@ -406,11 +439,64 @@ Coercion to_pcmType (l : Lab) : pcmType := l.
 (* Context (l1 l2 : Lab). *)
 (* Check (l1 ⟂ l2 : bool). *)
 
-Definition syncalgMixin := 
-  @SyncAlgebra.Mixin Lab (Monoid.PartialCommutative.class pcmType) 
+Definition dpcmMixin := 
+  @Monoid.Divisible.Mixin Lab (Monoid.PartialCommutative.class pcmType) 
   merge_dvr merge_indiv0 merge_dvrP.
-Canonical syncalgType := 
-  @SyncAlgebra.pack Lab tt (SyncAlgebra.Class syncalgMixin). 
+Canonical dpcmType := 
+  @Monoid.Divisible.pack Lab tt (Monoid.Divisible.Class dpcmMixin). 
+
+Section SyncAlgebra. 
+
+Lemma sync_irrefl :
+  irreflexive sync.
+Proof. by move=> l; rewrite /sync; case: l=> //. Qed.
+
+Lemma sync_merge_dvr l1 l2 :
+  sync l1 l2 -> merge_dvr l1 l2. 
+Proof. by rewrite /sync /merge_dvr; case: l1; case: l2=> //. Qed.
+
+Lemma sync_valid l1 l2 :
+  sync l1 l2 -> valid l2. 
+Proof. by rewrite /sync /is_bot; case: l1; case: l2=> //. Qed.
+
+Lemma is_initatorP l :
+  reflect (l <> Emp /\ sync Emp l) (is_initator l).
+Proof. 
+  rewrite /sync /is_initator. 
+  case: l; try constructor=> //; try by move=> [].
+  by move=> x [v|]; constructor; try move=> [].
+Qed.
+
+Lemma is_producerP l :
+  reflect (exists l', l <> Emp /\ sync l l') (is_producer l).
+Proof. 
+  rewrite /sync /is_producer; case: l;
+    try by move=> *; constructor=> [[? []]]. 
+  move=> x v; constructor. 
+  exists (Read x (Some v)); split=> //.
+  by rewrite !eq_refl.
+Qed.
+  
+Lemma is_consumerP l :
+  reflect (exists l', l' <> Emp /\ sync l' l) (is_consumer l).
+Proof. 
+  rewrite /sync /is_consumer; case: l;
+    try by constructor=> [[]] l' []; case: l'=> //.
+  move=> x [v|]; constructor. 
+  - by exists (Write x v); rewrite !eq_refl.
+  move=> [] l' []; case: l'=> //.
+  by move=> ??? /andP [] ? /eqP.
+Qed.
+
+End SyncAlgebra.
+
+Definition syncMixin := 
+  @SyncAlgebra.Mixin Lab (Monoid.Divisible.class dpcmType) 
+  sync is_initator is_producer is_consumer 
+  sync_irrefl sync_merge_dvr sync_valid is_initatorP is_producerP is_consumerP.
+
+Canonical labType := 
+  @SyncAlgebra.pack Lab tt (SyncAlgebra.Class syncMixin). 
 
 End SharedMemory.
 End SharedMemory. 

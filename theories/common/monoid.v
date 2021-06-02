@@ -534,9 +534,11 @@ Variables (T : Type) (disp : unit) (cT : type disp).
 
 Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
 
-Definition pack :=
-  fun bE b & phant_id (@PartialCommutative.class disp bE) b =>
-  fun m => Pack disp (@Class T b m).
+Definition pack c := @Pack disp T c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@PartialCommutative.class disp bE) b => *)
+(*   fun m => Pack disp (@Class T b m). *)
 
 Definition as_mType := @Monoid.Pack disp cT class.
 Definition as_cmType := @Commutative.Pack disp cT class.
