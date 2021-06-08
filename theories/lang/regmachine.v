@@ -71,14 +71,18 @@ Notation __ := (tt).
 (* Registers --- thread local variables *)
 Definition Reg := nat.
 
+(* Thread identifiers *)
+Definition Tid := nat.
+
+
 (* Instruction Set *)
 Inductive instr :=
 | WriteReg of Val & Reg
 | ReadLoc  of Reg & Loc
 | WriteLoc of Val & Loc
 | CJmp     of Reg & Addr
-| Fork     of nat & Addr
-| Join     of nat
+| Fork     of Tid & Addr
+| Join     of Tid
 | Exit.
 
 Definition prog := seq instr.
