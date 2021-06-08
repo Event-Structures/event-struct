@@ -2,7 +2,7 @@ From RelationAlgebra Require Import lattice monoid rel kat_tac kleene.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice seq path.
 From mathcomp Require Import order finmap fintype ssrnat.
 From eventstruct Require Import utils porf_eventstruct ident.
-From eventstruct Require Import rewriting_system.
+From eventstruct Require Import rewriting_system inhtype.
 
 (******************************************************************************)
 (* Here we want to make function that by event and event structure creates a  *)
@@ -73,14 +73,14 @@ Notation ffrf := (frf es).
 Notation fresh_id := (fresh_seq dom).
 
 Structure add_label := Add {
-  add_lb            : Lab;
-  add_po            : E;
-  add_write         : E;
+  add_lb         : Lab;
+  add_po         : E;
+  add_rf         : E;
 
-  add_pred_in_dom   : add_po \in dom;
-  add_write_in_dom  : add_write \in dom;
-  add_write_consist : flab add_write (rf)>> add_lb;
-  add_pred_consist  : flab add_po    (po)>> add_lb;
+  add_po_in_dom  : add_po \in dom;
+  add_rf_in_dom  : add_rf \in dom;
+  add_po_consist : flab add_po (po)>> add_lb;
+  add_rf_consist : flab add_rf (rf)>> add_lb;
 }.
 
 Coercion of_add_label := fun
@@ -102,13 +102,13 @@ Notation pred := (add_po al).
 
 (* if our event is `Read` then we should provide the corresponding `Write`
    event *)
-Notation write := (add_write al).
+Notation write := (add_rf al).
 
 Lemma pred_fresh_id : pred < fresh_id.
-Proof. by move/add_pred_in_dom/(fresh_seq_lt (dom_sorted _)): al. Qed.
+Proof. by move/add_po_in_dom/(fresh_seq_lt (dom_sorted _)): al. Qed.
 
 Lemma write_fresh_id : write < fresh_id.
-Proof. by move/add_write_in_dom/(fresh_seq_lt (dom_sorted _)): al. Qed.
+Proof. by move/add_rf_in_dom/(fresh_seq_lt (dom_sorted _)): al. Qed.
 
 Definition contain :=
   has (fun e => (flab e == lb) && (ffrf e == write) && (ffpo e == pred)) dom.
@@ -155,7 +155,7 @@ Fact add_fpo_dom :
 Proof.
   apply/forallP=> [[/= x]].
   rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE /add_fpo fsfun_withE.
-  case: (x =P fresh_id) => /=; first by rewrite (add_pred_in_dom al).
+  case: (x =P fresh_id) => /=; first by rewrite (add_po_in_dom al).
   by move=> ? /fpo_dom->.
 Qed.
 
@@ -164,7 +164,7 @@ Fact add_frf_dom :
 Proof.
   apply/forallP=> [[/= x]].
   rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE /add_frf fsfun_withE.
-  case: (x =P fresh_id)=> /=; first by rewrite (add_write_in_dom al).
+  case: (x =P fresh_id)=> /=; first by rewrite (add_rf_in_dom al).
   by move=> ? /frf_dom->.
 Qed.
 
@@ -197,7 +197,7 @@ Proof.
   rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE.
   rewrite !add_labE !add_frfE.
   case: (e =P fresh_id)=> /= [|? /frf_dom /(fresh_seq_lt dom_sorted)/lt_eqF->].
-  - by rewrite (lt_eqF write_fresh_id) (add_write_consist al).
+  - by rewrite (lt_eqF write_fresh_id) (add_rf_consist al).
   exact/frf_sync.
 Qed.
 
@@ -208,7 +208,7 @@ Proof.
   rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE.
   rewrite !add_labE !add_fpoE.
   case: (e =P fresh_id)=> /= [|? /fpo_dom /(fresh_seq_lt dom_sorted)/lt_eqF->].
-  - by rewrite (lt_eqF pred_fresh_id) (add_pred_consist al).
+  - by rewrite (lt_eqF pred_fresh_id) (add_po_consist al).
   exact/fpo_sync.
 Qed.
 
@@ -228,8 +228,8 @@ Definition add_event :=
         add_frf_dom
         add_fpo_le
         add_frf_le
-        add_frf_sync
-        add_fpo_sync.
+        add_fpo_sync
+        add_frf_sync.
 
 Definition add_new_event := if contain then es else add_event.
 
@@ -562,7 +562,7 @@ Arguments Add {_ _ _ _} _ _ _.
 Lemma comm_eqv_tr :
   diamond_commute eqv tr.
 Proof.
-  move=> es es3 ? /[swap][][[al ap aw apd awd awc apc]]->.
+  move=> es es3 ? /[swap][][[al ap aw apd awd apc awc]]->.
   case=> f /[dup][[_ [g? c]]] I.
   have NI: g (fresh_id1 es3) \notin dom es.
   - rewrite -(mem_map (bij_inj (proj2 I))) c (iso_dom I) fresh_seq_notin //.
@@ -574,10 +574,10 @@ Proof.
   by rewrite -(iso_dom I) mem_map.
   have [: a1 a2 a3 a4] @s4: add_label es3 := Add al (h ap) (h aw) a1 a2 a3 a4.
   1,2: by apply/H; rewrite (apd, awd).
-  - move: awc; move: (l aw)=> /=; rewrite /lab.
-    by case L1: (fed _ aw)=> /=; case L2: (fed es3 (f aw))=> -> /=. 
   - move: apc; move: (l ap)=> /=; rewrite /lab.
     by case L1: (fed _ ap)=> /=; case L2: (fed es3 (f ap))=> -> /=. 
+  - move: awc; move: (l aw)=> /=; rewrite /lab.
+    by case L1: (fed _ aw)=> /=; case L2: (fed es3 (f aw))=> -> /=. 
   exists (add_event s4); [by exists s4 | exists h].
   (do ? split)=> // x /=.
   rewrite ?fed_add_eventE /= -[fresh_id1 _]c -(swap1 f (fresh_id1 es)).
@@ -600,8 +600,8 @@ Proof.
   case: al2=> l p w ap aw ??.
   have [:a1 a2 a3 a4] @al : add_label (add_event al1) := 
     Add l p w a1 a2 a3 a4; try by rewrite ?inE (ap, aw) orbT.
-  - by rewrite /= lab_add_eventE (lt_eqF (fresh_seq_lt (dom_sorted _) aw)).
   - by rewrite /= lab_add_eventE (lt_eqF (fresh_seq_lt (dom_sorted _) ap)).
+  - by rewrite /= lab_add_eventE (lt_eqF (fresh_seq_lt (dom_sorted _) aw)).
   by exists al; rewrite ?(swap_dom (lexx _)).
 Qed.
 
@@ -689,3 +689,4 @@ Qed.
 End Confluence.
 
 End AddEvent.
+

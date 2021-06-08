@@ -56,6 +56,8 @@ Delimit Scope exec_eventstruct_scope with exec_es.
 
 Local Open Scope exec_eventstruct_scope.
 
+Definition Addr := nat.
+
 (* ************************************************************************* *)
 (*     Label                                                                 *)
 (* ************************************************************************* *)
@@ -74,8 +76,8 @@ Record mixin_of (T0 : Type) (b : Equality.class_of T0)
   _ : init != eps;
   _ : po_synch init init;
   _ : rf_synch init init;
-  _ : rf_synch eps  eps;
   _ : po_synch eps  eps;
+  _ : rf_synch eps  eps;
 }.
 
 Set Primitive Projections.
@@ -99,8 +101,7 @@ Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
 Definition clone c of phant_id class c := @Pack T c.
 
 Definition pack :=
-  fun bT b & phant_id (@Order.POrder.class bT) b =>
-  fun m => Pack (@Class T b m).
+  fun b bT & phant_id (Equality.class bT) b => fun m => Pack (@Class T b m).
 
 Definition eqType := @Equality.Pack cT class.
 End ClassDef.
@@ -154,11 +155,14 @@ End LabelTheory.
 Definition Loc := nat.
 
 Inductive Lab {RVal WVal : Type} :=
-| Read  of Loc & RVal
-| Write of Loc & WVal
-| ThreadStart
-| ThreadEnd
+| Read        of Loc & RVal
+| Write       of Loc & WVal
+| ThreadFork  of nat & Addr
+| ThreadJoin  of nat
+| ThreadStart of nat & Addr
+| ThreadEnd   of nat
 | Init
+| Idle
 | Eps.
 
 Module Label.
@@ -191,10 +195,10 @@ Definition is_write : pred Lab :=
   fun l => if l is (Write _ _) then true else false.
 
 Definition is_thrdstart : pred Lab := 
-  fun l => if l is ThreadStart then true else false.
+  fun l => if l is ThreadStart _ _ then true else false.
 
 Definition is_thrdend : pred Lab := 
-  fun l => if l is ThreadEnd then true else false.
+  fun l => if l is ThreadEnd _ then true else false.
 
 Definition is_init : pred Lab := 
   fun l => if l is Init then true else false.
@@ -205,19 +209,23 @@ Definition is_eps : pred Lab :=
 Definition eq_lab : rel Lab :=
   fun l1 l2 => 
     match l1, l2 with
-    | Read  x a  , Read  y b     => [&& a == b & x == y]
-    | Write x a  , Write y b     => [&& a == b & x == y]
-    | ThreadEnd  , ThreadEnd     => true
-    | ThreadStart, ThreadStart   => true
+    | Read        x a, Read        y b => [&& a == b & x == y]
+    | Write       x a, Write       y b => [&& a == b & x == y]
+    | ThreadFork  i n, ThreadFork  j m => [&& i == j & n == m]
+    | ThreadJoin  i  , ThreadJoin  j   => i == j
+    | ThreadStart i n, ThreadStart j m => [&& i == j & n == m]
+    | ThreadEnd   i  , ThreadEnd   j   => i == j
     | Init       , Init          => true
     | Eps        , Eps           => true
+    | Idle       , Idle          => true
     | _, _                       => false
     end.
 
 Lemma eq_labP : Equality.axiom eq_lab.
 Proof.
-  case=> [v x [] * /=|v x []* /=|[]|[]|[]|[]]; try constructor=>//;
-  by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
+  case=> [??[]*|??[]*|??[]*|?[]*|??[]*|?[]*|[]|[]|[]] /=; try constructor=>//;
+  try by apply: (iffP andP)=> [[/eqP->/eqP->]|[->->]].
+  all: by apply: (iffP idP)=> [/eqP->|[->]].
 Qed.
 
 Definition eq_loc : rel Lab := 
@@ -239,6 +247,10 @@ Definition synch (l1 l2 : Lab) :=
   | Init, _        => true
   (* epsilon synchronizes with itself *)
   | Eps, Eps => true
+  (* thread start synchronizes with a thread fork with the matching value *)
+  | ThreadFork i n, ThreadStart j m => (i == j) && (n == m)
+  (* thread join synchronizes with a thread end with the matching value *)
+  | ThreadEnd i, ThreadJoin j => i == j
   (* otherwise there is no synchronization *)
   | _, _ => false
   end.
@@ -381,9 +393,14 @@ Structure porf_eventstruct := Pack {
   _      : [forall e : finsupp fed, (val e != \i0) ==> (fpo (val e) < val e)];
   _      : [forall e : finsupp fed, (val e != \i0) ==> (frf (val e) < val e)];
 
-  _      : [forall e : finsupp fed, lab (frf (val e)) (rf)>> lab (val e)]; 
   _      : [forall e : finsupp fed, lab (fpo (val e)) (po)>> lab (val e)]; 
+  _      : [forall e : finsupp fed, lab (frf (val e)) (rf)>> lab (val e)]; 
 }.
+
+(*
+  (st1, l, st2) (po)>> (st1', l', st2')
+  1) st2 == st1'
+*)
 
 End PORFEventStructureDef.
 
@@ -624,7 +641,7 @@ Qed.
 Lemma fpo_sync e : lab (fpo e) (po)>> lab e. 
 Proof.
   rewrite /lab /fed /fpo; case (boolP (e \in finsupp fed)).
-  - case: es=> ?????????????? H /= eI. 
+  - case: es=> ????????????? H ? /= eI. 
     rewrite -[e]/(fsval [` eI]).
     move: H=> /forallP H; exact: H.
   by move=> ndom; rewrite !fsfun_dflt //= synch.
@@ -678,7 +695,7 @@ Qed.
 Lemma frf_sync e : lab (frf e) (rf)>> lab e. 
 Proof.
   rewrite /lab /fed /frf; case (boolP (e \in finsupp fed)).
-  - case: es=> ????????????? H ? /= eI. 
+  - case: es=> ?????????????? H /= eI. 
     rewrite -[e]/(fsval [` eI]).
     move: H=> /forallP H; exact: H.
   by move=> ndom; rewrite !fsfun_dflt //= synch.

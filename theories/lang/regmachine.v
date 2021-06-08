@@ -62,8 +62,8 @@ Local Notation M := ModelMonad.ListMonad.t.
 Context {disp} {E : identType disp} {Val : inhType}.
 
 (*Notation n := (@n val).*)
-Notation porf_event_struct := (porf_eventstruct E Val).
-Notation prime_porf_event_struct := (prime_porf_eventstruct E Val).
+(*Notation porf_event_struct := (porf_eventstruct E Val).
+Notation prime_porf_event_struct := (prime_porf_eventstruct E Val).*)
 
 (*Notation lab := (@lab val).*)
 Notation __ := (tt).
@@ -73,17 +73,19 @@ Definition Reg := nat.
 
 (* Instruction Set *)
 Inductive instr :=
-| WriteReg of Val & Reg 
+| WriteReg of Val & Reg
 | ReadLoc  of Reg & Loc
-| WriteLoc of Val & Loc 
-| CJmp     of Reg & nat 
-| Stop.
+| WriteLoc of Val & Loc
+| CJmp     of Reg & Addr
+| Fork     of nat & Addr
+| Join     of nat
+| Exit.
 
-Definition seqprog := seq instr.
+Definition prog := seq instr.
 
-Definition empty_prog : seqprog := [::].
+Context (pgm : prog).
 
-Definition parprog := seq seqprog.
+Definition empty_prog : prog := [::].
 
 Record thrd_state := Thrd_state {
   ip     : nat;
@@ -102,140 +104,93 @@ Canonical thrd_state_eqMixin := EqMixin eqthrd_stateP.
 Canonical thrd_state_eqType :=
   Eval hnf in EqType thrd_state thrd_state_eqMixin.
 
-Definition init_state : thrd_state := {| ip := 0; regmap := [fsfun with inh] |}.
+Definition state0 : thrd_state := {| ip := 0; regmap := [fsfun with inh] |}.
 
-Record config := Config {
-  evstr    : porf_event_struct;
-  trhdmap  :> {fsfun E -> (thrd_state * nat)%type with (init_state, 0)}
-}.
+Import Label.Syntax.
 
-Notation inth := (nth Stop).
+Notation Lab := (@Lab Val Val).
 
-Definition thrd_sem (pgm : seqprog) (st : thrd_state) :
-  (option (@Lab unit Val) * (Val -> thrd_state))%type :=
-  let: {| ip := ip; regmap := rmap |} := st in
-  if ip == 0 then
-    (Some ThreadStart, fun=> {| ip := 1; regmap := rmap |})
-  else
-    match inth pgm ip.-1 with
-    | WriteReg v r => (None,
-                      fun _ => {| ip     := ip.+1;
-                                  regmap := [fsfun rmap with r |-> v] |})
-    | ReadLoc  r x => (Some (Read x __),
-                      fun v => {| ip     := ip.+1;
-                                  regmap := [fsfun rmap with r |-> v] |})
-    | WriteLoc v x => (Some (Write x v),
-                      fun _ => {| ip     := ip.+1;
-                                  regmap := rmap |})
-    | CJmp     r n => (None,
-                      fun _ => {| ip     := if rmap r != inh then n.+1 else ip.+1;
-                                  regmap := rmap |} )
-    | Stop         => (None, fun=> st)
+Definition ltr_thrd_sem (l : Lab) st1 st2 : bool :=
+  let ip1 := ip     st1 in
+  let ip2 := ip     st2 in
+  let r1  := regmap st1 in
+  let r2  := regmap st1 in
+    (ip1 <= size pgm) &&
+    match l, nth Exit pgm (ip st1) with
+    | Idle          , WriteReg v r  => 
+      [&& ip2 == ip1.+1 & r2 == [fsfun r1 with r |-> v]]
+    | Read  x a     , ReadLoc  r y  =>
+      [&& ip2 == ip1.+1, x == y & r2 == [fsfun r1 with r |-> a]]
+    | Write x a     , WriteLoc b y  =>
+      [&& ip2 == ip1.+1, x == y, a == b & r2 == r1]
+    | Idle          , CJmp r n      =>
+      [&& ip2 == if r1 r != inh then n else ip1.+1 & r2 == r1]
+    | ThreadEnd _   , Exit          =>
+      [&& ip2 == size pgm & r2 == r1]
+    | ThreadFork j m, Fork i n      =>
+      [&& ip2 == ip1.+1, i == j, n == m & r2 == r1]
+    | ThreadStart _ n, _            =>
+      [&& ip2 == n & r2 == r1]
+    | ThreadJoin j  , Join i        =>
+      [&& ip2 == ip1.+1, i == j & r2 == r1]
+    | Eps           , _             => st2 == st1
+    | Init          , _             => st2 == st1
+    | _        , _ => false
     end.
 
-Definition ltr_thrd_sem (l : option (@Lab Val Val)) pgm st1 st2 : bool :=
-  match thrd_sem pgm st1, l with
-  | (Some (Write x v), st), Some (Write y u) => [&& x == y, v == u & st inh == st2]
-  | (Some (Read  x _), st), Some (Read  y u) => (x == y) && (st u == st2)
-  | (Some ThreadStart, st), Some ThreadStart => st inh == st2
-  | (None            , st), None             => st inh == st2
-  | _, _                                     => false
-  end.
+Definition label := (Lab * thrd_state * thrd_state)%type.
 
-Variable (es : prime_porf_event_struct).
-Notation ffpo     := (fpo es).
-Notation ffrf     := (frf es).
-Notation fresh_id := (fresh_seq (dom es)).
+Inductive tr_label := Tr st of ltr_thrd_sem st.1.1 st.1.2 st.2.
 
-(* Arguments add_label_of_Nread {_ _ _ _} _ {_}. *)
+Arguments Tr {_}.
 
-Lemma ws_mem x w : 
-  w \in [events of es | is_write & with_loc x] -> w \in dom es.
-Proof. by rewrite ?inE mem_filter => /andP[?->]. Qed.
+Coercion label_of (l : tr_label) :=
+  let '(Tr st _) := l in st.
 
-Lemma ws_wpred x w :
-  w \in [events of es | is_write & with_loc x] ->
-  (lab es w) \>> (Read x (odflt inh (value es w))).
-Proof.
-  rewrite mem_filter=> /andP[] /=.
-  rewrite /is_write /with_loc /loc /value.
-  rewrite /Label.synch /Label.is_write /Label.value /Label.loc /=. 
-  case: (lab es w)=> l v //=. 
-  move=> /[swap] ? /eqP ->. 
-  by rewrite !eq_refl.
-Qed.
+Canonical tr_subType := [subType for label_of].
 
-Definition es_seq x {pr} : (seq (porf_event_struct * E)) :=
-  if pr \in dom es =P true is ReflectT pr_mem then
-    [seq
-      let: wr       := sval w in
-      let: w_in     := valP w in
-      let: read_lab := Read x (odflt inh (value es wr)) in
-      (
-        add_new_event
-          {| add_lb            := read_lab;
-             add_pred_in_dom   := pr_mem;
-             add_write_in_dom  := ws_mem   w_in;
-             add_write_consist := ws_wpred w_in; |},
-        wr
-      ) | w <- seq_in [events of es | is_write & with_loc x]]
-  else [::].
+Definition tr_eqMixin := Eval hnf in [eqMixin of tr_label by <:].
+Canonical tr_eqType := Eval hnf in EqType tr_label tr_eqMixin.
 
-Definition ces_seq_aux x pr := 
-  [seq estr_w <- @es_seq x pr | 
-    let: (estr, w) := estr_w in
-   ~~ (cf estr fresh_id w)].
+Lemma label_inj : injective (label_of).
+Proof. exact: val_inj. Qed.
 
-Lemma mem_ces_seq_aux x pr ces: 
-  ces \in (@ces_seq_aux x pr) -> rf_ncf_dom ces.1.
-Proof.
-  case: ces => ces w; rewrite mem_filter /= /es_seq => /andP[?].
-  case: eqP=> // ? /mapP[?? [/[dup] C -> ws]].
-  move: C. rewrite /add_new_event; case: ifP=> _ C; first by case: es.
-  apply/rf_ncf_add_event=> /=; first by case: es.
-  by rewrite -C -ws.
-Qed.
+Definition lab_po_synch : rel tr_label := 
+  fun (l1 l2 : tr_label) => l1.2 == l2.1.2.
 
-Definition ces_seq x pr := 
-  [seq 
-    let: ces_w    := sval ces_w_mem in
-    let: (ces, w) := ces_w in
-    let: ces_mem  := valP ces_w_mem in 
-    (PrimeES _ (mem_ces_seq_aux ces_mem), odflt inh (value es w)) | 
-    ces_w_mem <- seq_in (@ces_seq_aux x pr)].
+Definition lab_rf_synch : rel tr_label := 
+  fun (l1 l2 : tr_label) =>
+    let: (lb1, st1, _) := val l1 in
+    let: (lb2, st2, _) := val l2 in
+    (lb1 \>> lb2) &&
+    if lb1 is ThreadFork _ _ then
+      st1 == st2
+    else true.
 
-Arguments rf_ncf_new_nread {_ _ _}.
+Lemma ltr_sem_eps : ltr_thrd_sem Eps state0 state0.
+Proof. exact/eq_refl. Qed.
 
-Definition add_hole
-  (l : @Lab unit Val) pr :
-  seq (prime_porf_event_struct * Val) :=
-  if pr \in dom es =P true is ReflectT pr_mem then
-    match l with
-    | Write x v => 
-      [:: (PrimeES _ (rf_ncf_new_nread es pr (Write x v) pr_mem erefl), v)]  
-    | ThreadStart =>
-      [:: (PrimeES _ (rf_ncf_new_nread es pr ThreadStart pr_mem erefl), inh)]
-    | Read x __ => ces_seq x pr
-    | _         => [::]
-    end
-  else [::].
+Lemma ltr_sem_init : ltr_thrd_sem Init state0 state0.
+Proof. exact/eq_refl. Qed.
 
-Variable prog : parprog.
+Definition label_labMixin :=
+  @Lab.Mixin
+    tr_label
+    _
+    lab_po_synch
+    lab_rf_synch
+    (@Tr (Eps, state0, state0) ltr_sem_eps)
+    (@Tr (Init, state0, state0) ltr_sem_eps)
+    erefl 
+    (eq_refl _) 
+    erefl 
+    (eq_refl _)
+    erefl.
 
-Definition fresh_tid (c : config) := 
-  foldr maxn 0 [seq (snd x).+1 | x <- fgraph (fmap_of_fsfun c)].
+Canonical label_labType := Eval hnf in LabType tr_label label_labMixin.
 
-Definition eval_step (c : config) pr : seq config := 
-  let: Config es tmap := c in
-  let: (conf, tid)    := tmap pr in
-  let: tid            := if pr \in dom es then tid else fresh_tid c in
-  let: (l, cont_st)   := thrd_sem (nth empty_prog prog tid) conf in
-    if l is Some l then do 
-      ev <- add_hole l pr : M _;
-      let '(e, v) := ev in
-        [:: Config e  [fsfun c with fresh_id |-> (cont_st v, tid)]]
-    else
-      [:: Config es [fsfun c with pr |-> (cont_st inh, tid)]].
+Notation porf_eventstruct := (@porf_eventstruct disp E label_labType).
+Notation prime_porf_eventstruct := (@prime_porf_eventstruct disp E label_labType).
 
 End RegMachine.
 

@@ -25,5 +25,5 @@ theories/concur/prime_eventstruct.v
 theories/concur/porf_eventstruct.v
 theories/concur/transitionsystem.v
 
-#theories/lang/regmachine.v
+theories/lang/regmachine.v
 
