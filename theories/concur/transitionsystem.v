@@ -391,21 +391,21 @@ Section Morphism.
 Hypothesis morph: is_morph.
 
 Lemma is_morph_lab e :
-  lab es2 (f e) = lab es1 e.
+   lab es1 e = lab es2 (f e).
 Proof.
   move/(congr1 (@lab_prj _ _)): (morph e).
   by rewrite /lab /=; case: (fed es1 e).
 Qed.
 
 Lemma is_morph_po e :
-  fpo es2 (f e) = f (fpo es1 e).
+  f (fpo es1 e) = fpo es2 (f e).
 Proof.
   move/(congr1 (@fpo_prj _ _)): (morph e).
   by rewrite fpo_prj_edescr_map.
 Qed.
 
 Lemma is_morph_rf e :
-  frf es2 (f e) = f (frf es1 e).
+  f (frf es1 e) = frf es2 (f e).
 Proof.
   move/(congr1 (@frf_prj _ _)): (morph e).
   by rewrite frf_prj_edescr_map.
@@ -414,7 +414,7 @@ Qed.
 Lemma is_morph_ica e1 e2 : 
   ica es1 e1 e2 -> ica es2 (f e1) (f e2).
 Proof.
-  rewrite ?icaE /fica /= ?inE is_morph_po is_morph_rf=> /orP[]/eqP->;
+  rewrite ?icaE /fica /= ?inE -is_morph_po -is_morph_rf=> /orP[]/eqP->;
   by rewrite eq_refl.
 Qed.
 
@@ -448,7 +448,7 @@ Lemma f_icf e1 e2 :
   icf es1 e1 e2 -> icf es2 (f e1) (f e2).
 Proof.
   case: iso=> ??.
-  by rewrite/icf ?lt_neqAle ?fpo_le ?andbT ?is_morph_po ?(bij_eq (f := f)).
+  by rewrite/icf ?lt_neqAle ?fpo_le ?andbT -?is_morph_po ?(bij_eq (f := f)).
 Qed.
 
 Lemma f_cf e1 e2 :
@@ -476,19 +476,19 @@ Qed.
 
 Lemma isoE f e1 e2 es1 es2: is_iso f es1 es2 -> 
   ( 
-    (lab es2 (f e1) = lab es1 e1) *
-    ((fpo es2 (f e1) = f (fpo es1 e1)) *
-    (frf es2 (f e1) = f (frf es1 e1))) *
-    ((ca es2 (f e1) (f e2) = ca es1 e1 e2) *
-    (cf es2 (f e1) (f e2) = cf es1 e1 e2))
+    (lab es1 e1 = lab es2 (f e1)) *
+    ((f (fpo es1 e1) = fpo es2 (f e1)) *
+    (f (frf es1 e1) = frf es2 (f e1))) *
+    ((ca es1 e1 e2 = ca es2 (f e1) (f e2)) *
+    (cf es1 e1 e2 = cf es2 (f e1) (f e2)))
   )%type.
 Proof.
   move=> /[dup] If [M []? /[dup] c /(is_iso_can If) /[apply] Ig].
   do ? split; rewrite ?(is_morph_po M) ?(is_morph_lab M) ?(is_morph_rf M) //.
   - apply/(sameP idP)/(equivP idP).
-    split=> [/(is_morph_ca M)//|/(is_morph_ca Ig.1)]; by rewrite ?c.
+    split=> [/(is_morph_ca Ig.1)|/(is_morph_ca M)//]; by rewrite ?c.
   apply/(sameP idP)/(equivP idP).
-  split=> [/(f_cf If)//|/(f_cf Ig)]; by rewrite ?c.
+  split=> [/(f_cf Ig)|/(f_cf If)//]; by rewrite ?c.
 Qed.
 
 Lemma eq_is_iso f g es1 es2 : f =1 g ->
@@ -652,7 +652,7 @@ Proof.
   rewrite /dom_consistency=> [[f /[dup] If]] [L ? /allP H]; apply/allP.
   move=> x; rewrite -(iso_dom If)=> /mapP[y /H ?->].
   move/(congr1 (@frf_prj _ _)): (L y)=> /=; rewrite -frfE=>->.
-  by rewrite frf_prj_edescr_map bij_eq // (isoE If).
+  by rewrite frf_prj_edescr_map bij_eq // -(isoE If).
 Qed.
 
 Lemma dom_consist_add l1 l2 
@@ -678,7 +678,7 @@ Proof.
   - by rewrite W  lab_add_eventE (lt_eqF (write_fresh_id al1)).
   have E1: al1 = al3 :> edescr _ _ by rewrite /= W P.
   have E2: al2 = al2' :> edescr _ _ by [].
-  rewrite -(isoE (swap_add E1 E2)) swap2 (swap_dom aw) //.
+  rewrite (isoE (swap_add E1 E2)) swap2 (swap_dom aw) //.
   rewrite -cf_add_eventE; first exact/consist_add_event.
   - by apply/eqP=> /(@fresh_iter _ _ 1 2).
   by rewrite (lt_eqF (write_fresh_id al2')).
