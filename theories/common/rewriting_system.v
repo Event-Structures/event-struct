@@ -366,7 +366,7 @@ Lemma rst_exlab : rst p (exlab r) ≡ exlab (rst p \o r).
 Proof. by move=> ??; split=> [[[l]]|[l[]]] /=; last split=> //; exists l. Qed.
 
 Lemma rsub l : rst p ((r l)^?) ≦ ((rst p \o r) l)^? .
-Proof. by move=> ?? [[-> ?|??]]; (left + right). Qed.
+Proof. by move=> ?? [[-> ?|??]]; [left | right]. Qed.
 
 Lemma eqv_rr {l1 l2 s1 s2 s3 s}: 
   s2 != s3 ->
