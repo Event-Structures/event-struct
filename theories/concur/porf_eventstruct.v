@@ -1051,6 +1051,15 @@ Proof.
   apply/eqP=> fE; by rewrite fE ltxx in Le.
 Qed.
 
+Definition dup_free := 
+  injectiveb [ffun x : finsupp fed => fed (val x)].
+
+Lemma dup_freeP : reflect {in dom &, injective fed} dup_free.
+Proof.
+  apply/(iffP (fsfun_injective_inP _ _))=> H ??;
+  [rewrite -?fed_supp_mem|rewrite ?fed_supp_mem]; by move/H/[apply].
+Qed.
+
 End PORFEventStructureTheory.
 
 Section PrimePORFEventStruct.
@@ -1058,7 +1067,8 @@ Section PrimePORFEventStruct.
 Context {disp : unit} (E : identType disp) (L : labType).
 Implicit Type es : (@porf_eventstruct disp E L).
 
-Inductive prime_porf_eventstruct := PrimeES es of (rf_ncf_dom es).
+Inductive prime_porf_eventstruct := 
+  PrimeES es of (rf_ncf_dom es && dup_free es).
 
 Arguments PrimeES {_}.
 

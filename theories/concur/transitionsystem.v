@@ -110,7 +110,7 @@ Proof. by move/add_po_in_dom/(fresh_seq_lt (dom_sorted _)): al. Qed.
 Lemma rf_fresh_id : write < fresh_id.
 Proof. by move/add_rf_in_dom/(fresh_seq_lt (dom_sorted _)): al. Qed.
 
-Definition contain :=
+Definition contain := 
   has (fun e => (flab e == lb) && (ffrf e == write) && (ffpo e == pred)) dom.
 
 Definition add_fed :=
@@ -615,7 +615,7 @@ Qed.
 Lemma swap_add es 
   (al1 al2 : add_label es)
   (al3 : add_label (add_event al1))
-  (al4 : add_label (add_event al2)) :
+  (al4 : add_label (add_event al2)) : 
   al1 = al4 :> edescr E label ->
   al2 = al3 :> edescr E label ->
   is_iso (swap id (fresh_id1 es) (fresh_id2 es))
@@ -693,6 +693,66 @@ Proof.
   - by apply/eqP=> /(@fresh_iter _ _ 1 2).
   by rewrite (lt_eqF (rf_fresh_id al2')).
 Qed.
+
+Definition dup_free (es : exec_eventstruct) := 
+  injectiveb [ffun x : finsupp (fed es) => fed es (val x)].
+
+Lemma dup_freeP es : 
+  reflect {in dom es &, injective (fed es)}
+  (dup_free es).
+Proof.
+  apply/(iffP (fsfun_injective_inP _ _))=> H ??;
+  [rewrite -?fed_supp_mem|rewrite ?fed_supp_mem]; by move/H/[apply].
+Qed.
+
+Lemma dup_free_eqv es1 es2 :
+  es1 ~~ es2 -> dup_free es1 -> dup_free es2.
+Proof.
+  case=> f /[dup] If [M /[dup][[g c1 c2]] b /dup_freeP I].
+  apply/dup_freeP=> x y.
+  rewrite -?(iso_dom If) -[x]c2 -[y]c2 ?(mem_map (bij_inj b)).
+  move: (M (g x)) (M (g y)).
+  by move=> /=->-> /I/[apply] Eq /(bij_inj (edescr_map_bij b))/Eq->.
+Qed.
+
+Lemma fresh_id12 es : 
+  fresh_id1 es == fresh_id2 es = false.
+Proof. by apply/negbTE/eqP=> /(@fresh_iter _ _ 1 2). Qed.
+
+Lemma dup_free_add l1 l2 
+  (es1 es2 es3 es4 : exec_eventstruct) :
+  es2 != es3 ->
+  dup_free es1 ->
+  es1 ~(l1)~> es2 -> dup_free es2 -> 
+  es1 ~(l2)~> es3 -> dup_free es3 ->
+  es2 ~(l2)~> es4 -> dup_free es4.
+Proof.
+  move=> + /dup_freeP I1 [al1] + ? => /[swap]->.
+  move=> + /dup_freeP I2 [al2] + -> => /[swap]-> /negP N.
+  have {N} ?: al1 <> al2 :> edescr _ _ by move: N=>/[swap]/of_add_label_inj->.
+  move/dup_freeP=> I3 [al3] -> Eq.
+  have N: al1 <> al3 :> edescr _ _ by rewrite -Eq=> /of_add_label_inj //.
+  apply/dup_freeP=> x y /=.
+  move: (I1 x y) (I2 x y)=> /=. rewrite ?add_fedE ?inE /=.
+  case: ifP=> /= [/eqP->|].
+  - rewrite fresh_id12 /=; case: ifP=> [/eqP->|].
+    - by rewrite fresh_id12.
+    case: ifP=> /= [/eqP->|???/[apply]/[apply]//].
+    move=> ????? []; case: (al1) (al3) N=> /= ??????? [/=].
+    by move=>> ???? /[swap]->/[swap]->/[swap]->.
+  case: ifP=> /= [/eqP->|].
+  - rewrite fresh_id12 /=; case: ifP=> /= // ?????? /esym.
+    by case: (al1) (al3) N=> /= ??????? [].
+  case: ifP=> /= [/eqP->|]; case: ifP=> [/eqP->|] //=.
+  - move=> ? /[dup] EN + ???? D Ef; move: (I3 (fresh_id1 es1) y)=> /=.
+    rewrite ?inE ?add_fedE {-3}EN -Ef ?eqxx D /==> /(_ erefl erefl) L.
+    have->: fresh_id1 es1 = y by apply/L; case: (al2) (al3) Eq=> ??????? [].
+    by rewrite eqxx.
+  move=> ?? /[dup] EN + ?? D ? Ef; move: (I3 x (fresh_id1 es1))=> /=.
+  rewrite ?inE ?add_fedE {-3}EN Ef ?eqxx D /==> /(_ erefl erefl) L.
+  have->: x = fresh_id1 es1 by apply/L; case: (al2) (al3) Eq=> ??????? [].
+  by rewrite eqxx.
+Qed. 
 
 End Confluence.
 
