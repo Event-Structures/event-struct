@@ -1070,3 +1070,5 @@ Lemma prime_inj : injective (porf_eventstruct_of).
 Proof. exact: val_inj. Qed.
 
 End PrimePORFEventStruct.
+
+Notation "e '|-' a # b" := (cf e a b) (at level 10).
