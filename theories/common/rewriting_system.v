@@ -93,22 +93,22 @@ From eventstruct Require Import utils relalg.
 
 Section Commutation.
 
-Context {S : Type} (r1 r2 : hrel S S).
+Context {S : Type} (r r2 : hrel S S).
 
 Definition diamond_commute := forall s1 s2 s3,
-  r1 s1 s2 -> r2 s1 s3 -> exists2 s4, r2 s2 s4 & r1 s3 s4.
+  r s1 s2 -> r2 s1 s3 -> exists2 s4, r2 s2 s4 & r s3 s4.
 
 Definition strong_commute := forall s1 s2 s3,
-  r1 s1 s2 -> r2^+ s1 s3 -> exists2 s4 : S, r2^+ s2 s4 & r1 s3 s4.
+  r s1 s2 -> r2^+ s1 s3 -> exists2 s4 : S, r2^+ s2 s4 & r s3 s4.
 
 Definition commute := forall s1 s2 s3,
-  r1^+ s1 s2 -> r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r1^+ s3 s4.
+  r^+ s1 s2 -> r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r^+ s3 s4.
 
 Lemma dcomm_scomm : 
   diamond_commute -> strong_commute.
 Proof.
   move=> diamond s1 s2 s3 + str; move: str s2.
-  suff: (r2^+ ≦ (fun s1 s3 => forall s2 : S, r1 s1 s2 -> exists2 s4 : S, r2^+ s2 s4 & r1 s3 s4)).
+  suff: (r2^+ ≦ (fun s1 s3 => forall s2 : S, r s1 s2 -> exists2 s4 : S, r2^+ s2 s4 & r s3 s4)).
   - exact.
   apply/itr_ind_l1=> {s1 s3} [?? /diamond d ? /d[x /(itr_ext r2) *]|s1 s3 /=].
   - by exists x.
@@ -121,11 +121,11 @@ Lemma dcomm_comm :
 Proof.
   move=> d s1 s2 s3.
   move: s3=> /[swap].
-  suff: (r1^+ ≦ (fun s1 s2 => forall s3, r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r1^+ s3 s4)).
+  suff: (r^+ ≦ (fun s1 s2 => forall s3, r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r^+ s3 s4)).
   - exact.
   apply/itr_ind_l1=> {s1 s2} [?? s?|s1 s2 /= [s5 /(dcomm_scomm d) c IH s3 /c]].
-  - case/(dcomm_scomm d _ _ _ s)=> x ? /(itr_ext r1) ?; by exists x.
-  case=> s6 /IH[s4 *]; exists s4=> //; apply/(itr_cons r1); by exists s6.
+  - case/(dcomm_scomm d _ _ _ s)=> x ? /(itr_ext r) ?; by exists x.
+  case=> s6 /IH[s4 *]; exists s4=> //; apply/(itr_cons r); by exists s6.
 Qed.
 
 End Commutation.
@@ -258,13 +258,13 @@ Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
-Definition eqv_diamond_commute (r1 r2 e : hrel S S) := forall s1 s2 s3, 
-   r1 s1 s2 -> r2 s1 s3 -> 
-   exists s4 s4', [/\ r2 s2 s4, r1 s3 s4' & e s4 s4'].
+Definition eqv_diamond_commute (r r2 e : hrel S S) := forall s1 s2 s3, 
+   r s1 s2 -> r2 s1 s3 -> 
+   exists s4 s4', [/\ r2 s2 s4, r s3 s4' & e s4 s4'].
 
-Definition eqv_rdiamond_commute (r1 r2 e : hrel S S) := forall s1 s2 s3, 
-   r1 s1 s2 -> r2 s1 s3 -> 
-   exists s4 s4', [/\ r2^? s2 s4, r1^? s3 s4' & e s4 s4'].
+Definition eqv_rdiamond_commute (r r2 e : hrel S S) := forall s1 s2 s3, 
+   r s1 s2 -> r2 s1 s3 -> 
+   exists s4 s4', [/\ r2^? s2 s4, r^? s3 s4' & e s4 s4'].
 
 
 Hypothesis ledrr : forall l1 l2, (eqv_rdiamond_commute (r l1) (r l2) e).
@@ -284,7 +284,7 @@ End EqvLabRewriting.
 
 Section EqRewritng.
 
-Context {S : Type} (r1 r1' r2 r2' e e' : hrel S S).
+Context {S : Type} (r r' r2 r2' e e' : hrel S S).
 
 Global Instance dcomm_weq: Proper 
   ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
@@ -314,7 +314,7 @@ Section SubRewriting.
 
 Local Open Scope ra_terms.
 
-Context {S L : Type}.
+Context {S: eqType} {L : Type}.
 
 (* rst --- restriction of a relation to a subset *)
 Definition rst (p : rel.dset S) (r : hrel S S) : hrel S S := 
@@ -351,6 +351,7 @@ Hypothesis leder : diamond_commute e (exlab r).
 Definition eqv_respect_p := [p] ⋅ e ≦ e ⋅ [p].
 
 Definition r_respect_p := forall l1 l2 s1 s2 s3 s,
+  s2 != s3 ->
   rst p (r l1) s1 s2 -> 
   rst p (r l2) s1 s3 ->
   r l2 s2 s -> p s.
@@ -367,17 +368,20 @@ Proof. by move=> ??; split=> [[[l]]|[l[]]] /=; last split=> //; exists l. Qed.
 Lemma rsub l : rst p ((r l)^?) ≦ ((rst p \o r) l)^? .
 Proof. by move=> ?? [[-> ?|??]]; (left + right). Qed.
 
- Lemma eqv_rr l1 l2 s1 s2 s3 s: 
-   rst p (r l1) s1 s2 -> 
-   rst p (r l2) s1 s3 ->
-   (r l2)^? s2 s -> p s.
- Proof. by move=> /[dup][[/=? /andP[?? /eqv_r/[apply] H [<-|/H]]]]. Qed.
+Lemma eqv_rr {l1 l2 s1 s2 s3 s}: 
+  s2 != s3 ->
+  rst p (r l1) s1 s2 -> 
+  rst p (r l2) s1 s3 ->
+  (r l2)^? s2 s -> p s.
+Proof. by move=> N /[dup][[? /andP[?? /eqv_r/[apply] H [<-|/(H _ N)]]]]. Qed.
 
 Theorem sub_eqv_comm_union : eqv_rconfluent (rst p (exlab r)) e.
 Proof.
   rewrite rst_exlab.
   apply/eqv_comm_union=> //.
-  - move=> ????? /[dup] /eqv_rr R[/ledrr] E /andP[??] /[dup]/R P[/E[s4 [x]]].
+  - move=> l1 l2 ? s2 s3; case: (boolP (s2 == s3))=> [/eqP->|N].
+    - exists s3, s3; split; [| |exact/eqv_refl]; by left.
+   move=> /[dup] /(eqv_rr N) R[/ledrr] E /andP[??] /[dup]/R P[/E[s4 [x]]].
     case=> /[dup] /P ps4 ?? /[dup] ?.
     have/eqv_p[??[->??/andP[??]]]: ([p] ⋅ e) s4 x by exists s4.
     exists s4, x; do ? split=> //; apply/rsub; split=> //; exact/andP.
@@ -391,40 +395,42 @@ End SubRewriting.
 
 Section SubTypeRewriting.
 
-Context {L S T : Type}.
-
-Context (p : rel.dset S) (r1 : hrel S S) (e1 : hrel S S) (f : T -> S).
+Context {S : eqType} {L T : Type} (f : T -> S).
 
 Definition relpreim r : hrel T T :=
   fun x y => r (f x) (f y).
 
-Hypothesis (im    : forall x, p x -> exists y, f y = x).
-Hypothesis (p_f   : forall x, p (f x)).
-Hypothesis (f_inj : injective f).
-Hypothesis (confl : eqv_rconfluent (rst p r1) e1).
+Context (p : rel.dset S) (r : hrel S S) (e : hrel S S) .
 
-Lemma relpreim_itr: (relpreim (rst p r1))^* ≡ relpreim (rst p r1)^*.
+Hypothesis im    : forall x, p x -> exists y, f y = x.
+Hypothesis p_f   : forall x, p (f x).
+Hypothesis f_inj : injective f.
+Hypothesis confl : eqv_rconfluent (rst p r) e.
+
+Lemma relpreim_itr: (relpreim (rst p r))^* ≡ relpreim (rst p r)^*.
 Proof.
-  apply/(antisym ((relpreim (rst p r1))^*)); rewrite /relpreim.
-  - apply/str_ind_l1=> [??->|??]; first exact/(str_refl (rst p r1)).
-    by case=> x ??; apply/(str_cons (rst p r1)); exists (f x).
+  apply/(antisym ((relpreim (rst p r))^*)); rewrite /relpreim.
+  - apply/str_ind_l1=> [??->|??]; first exact/(str_refl (rst p r)).
+    by case=> x ??; apply/(str_cons (rst p r)); exists (f x).
   move=> a b H. move: {-2}(f b) {-2}(f a) H (erefl (f a)) (erefl (f b))=> f1 f2.
   move: a=> /[swap].
-  suff: (rst p r1)^* ≦ 
-  (fun f2 f1 => forall a, f a = f2 -> f b = f1 -> ((relpreim (rst p r1))^* a b)).
+  suff: (rst p r)^* ≦ 
+  (fun f2 f1 => forall a, f a = f2 -> f b = f1 -> ((relpreim (rst p r))^* a b)).
   - exact.
   apply/str_ind_l1=> [??-> ? <- /f_inj->|??[? /[dup]]].
-  - exact/(str_refl (relpreim(rst p r1))).
+  - exact/(str_refl (relpreim(rst p r))).
   move/(@rst_p _ p); case/im=> x <- ? /(_ _ erefl) H ? E /H ?. 
-  apply/(str_cons (relpreim (rst p r1))).
+  apply/(str_cons (relpreim (rst p r))).
   by exists x=> //; rewrite /relpreim E.
 Qed.
 
 Arguments p_f {_}.
 
-Lemma confl_sub : eqv_rconfluent (relpreim (rst p r1)) (relpreim e1).
+Lemma confl_sub : eqv_rconfluent (relpreim r) (relpreim e).
 Proof.
-  move=> ??? /=. 
+  have->: relpreim r ≡ relpreim (rst p r).
+  - by move=> ?? /=; rewrite /rst /relpreim /= ?p_f; split=> // [[]].
+  move=> ??? /=.
   rewrite ?(relpreim_itr _ _) /relpreim=> /confl/[apply].
   case=> ? [?[/[dup] /(rst_str_p)/(_ p_f)/im[s4 <- ?]]].
   move/[dup]/(rst_str_p)/(_ p_f)/im=>[s4'<- ?].
