@@ -1039,9 +1039,10 @@ Proof.
     case: ifP; case: ifP=>//=; try rewrite C=> //;  
       move=> ?; rewrite rf_ncf eq_sym //=. 
   move=> /cfP[x [y []]]; case: (eqVneq x m)=> [-> _|].
-  - move=> + /[dup]/icf_dom /fpo_n0; case: (y =P \i0)=> [->|_ /(_ erefl)].
+  - move=> C /[dup]/icf_dom /fpo_n0; case: (y =P \i0)=> [->|_ /(_ erefl)].
     - by rewrite (negbTE (icf0 _)).
-    by move=> /lt_le_trans Le /and3P[? /eqP-> ? /ca_le /Le /[! (@ltxx _ E)]].
+    move/lt_le_trans/(_ (ca_le _ _ C))/[swap]/and3P.
+    by case=> ? /eqP-> ? /[! (@ltxx _ E)].
   move/ca_stepR=> /[apply] [[z /and3P[/[swap]]]].
   rewrite icaE /= !inE => /pred2P[]-> Cx Le.
   - by move=> Cy /icf_cf/cf_hereditary/(_ Cx Cy); exact/IHm.
