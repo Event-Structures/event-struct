@@ -118,7 +118,7 @@ Proof. by move/add_pred_in_dom/(fresh_seq_lt dom_sorted): al. Qed.
 Lemma write_fresh_id : write < fresh_id.
 Proof. by move/add_write_in_dom/(fresh_seq_lt dom_sorted): al. Qed.
 
-Definition contain := 
+Definition contain :=
   has (fun e => (flab e == lb) && (ffrf e == write) && (ffpo e == pred)) dom.
 
 Definition add_fed :=
@@ -176,7 +176,7 @@ Proof.
   by move=> ? /frf_dom->.
 Qed.
 
-Fact add_fpo_le : 
+Fact add_fpo_le :
   [forall e : finsupp add_fed, add_fpo (val e) <= val e].
 Proof.
   apply/forallP=> [[/=]] e. 
@@ -186,7 +186,7 @@ Proof.
   exact/fpo_le. 
 Qed.
 
-Fact add_frf_le : 
+Fact add_frf_le :
   [forall e : finsupp add_fed, add_frf (val e) <= val e].
 Proof.
   apply/forallP=> [[/=]] e. 
@@ -232,7 +232,6 @@ Definition add_event :=
 Definition add_new_event := if contain then es else add_event.
 
 Hypothesis consist : dom_consistency es.
-Hypothesis ncf_rf : ~~ (cf add_event fresh_id write).
 
 Import Relation_Operators.
 
@@ -296,19 +295,28 @@ Proof.
   by rewrite Cnf2 ?C.
 Qed.
 
-Lemma consist_add_event : dom_consistency add_event.
+Lemma consist_add_event :
+  ~~ (cf add_event fresh_id write) <-> dom_consistency add_event.
 Proof.
-  rewrite /dom_consistency; apply /allP=> e1.
-  rewrite /frf /= fsfun_withE ?inE.
-  case: ifP=> /= [/eqP-> _|/negbT N /(allP consist)] //; first exact/implyP.
-  rewrite -cf_add_eventE //.
-  apply/negP=> /eqP Ef.
-  have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
-  by rewrite icaE /= ?inE -Ef eq_refl.
+  split=> [?|].
+  - rewrite /dom_consistency; apply /allP=> e1.
+    rewrite /frf /= fsfun_withE ?inE.
+    case: ifP=> /= [/eqP-> _|/negbT N /(allP consist)] //; first exact/implyP.
+    rewrite -cf_add_eventE //.
+    apply/negP=> /eqP Ef.
+    have /ica_fresh /eqP /(negP N) //: ica es fresh_id e1.
+    by rewrite icaE /= ?inE -Ef eq_refl.
+  case: (boolP (write == fresh_id))=> [/eqP<- /cf_irrelf/(_ write)->|?] //.
+  move/allP/(_ fresh_id)=> /=; rewrite frf_add_eventE inE eq_refl /=.
+  move/(_ erefl)/implyP; exact.
 Qed.
 
-Lemma consist_add_new_event : dom_consistency add_new_event.
-Proof. rewrite /add_new_event; case: ifP=> // _; exact: consist_add_event. Qed.
+Lemma consist_add_new_event : ~~ (cf add_event fresh_id write) -> 
+dom_consistency add_new_event.
+Proof. 
+  rewrite /add_new_event; case: ifP=> // _. 
+  exact: (proj1 consist_add_event). 
+Qed.
 
 End AddEvent.
 
@@ -336,7 +344,7 @@ Lemma consist_nread :
    dom_consistency (add_event add_label_nread).
 Proof. apply/consist_add_event=> //=; first (by case: ces); exact/cf0. Qed.
 
-Lemma consist_new_nread : 
+Lemma consist_new_nread :
   dom_consistency (add_new_event add_label_nread).
 Proof.
   rewrite /add_new_event; case: ifP=> // _.
@@ -368,7 +376,7 @@ Notation "es1 '~>' es2" := (tr es1 es2) (at level 0).
 Definition ltr (ed : edescr E label) es1 es2 := 
   exists2 al, es2 = @add_event disp _ V es1 al & ed = al.
 
-Notation "es1 '~(' l ')~>' es2" := (ltr es2 es2) (at level 0).
+Notation "es1 '~(' l ')~>' es2" := (ltr l es1 es2) (at level 0).
 
 Section Equivalence.
 
@@ -378,19 +386,110 @@ Context (f : E -> E) (es1 es2 : exec_event_struct).
 
 Definition is_morph := fed es2 \o f =1 (edescr_map f) \o fed es1.
 
+Section Morphism.
+
+Hypothesis morph: is_morph.
+
+Lemma is_morph_lab e :
+   lab es1 e = lab es2 (f e).
+Proof.
+  move/(congr1 (@lab_prj _ _)): (morph e).
+  by rewrite /lab /=; case: (fed es1 e).
+Qed.
+
+Lemma is_morph_po e :
+  f (fpo es1 e) = fpo es2 (f e).
+Proof.
+  move/(congr1 (@fpo_prj _ _)): (morph e).
+  by rewrite fpo_prj_edescr_map.
+Qed.
+
+Lemma is_morph_rf e :
+  f (frf es1 e) = frf es2 (f e).
+Proof.
+  move/(congr1 (@frf_prj _ _)): (morph e).
+  by rewrite frf_prj_edescr_map.
+Qed.
+
+Lemma is_morph_ica e1 e2 : 
+  ica es1 e1 e2 -> ica es2 (f e1) (f e2).
+Proof.
+  rewrite ?icaE /fica /= ?inE -is_morph_po -is_morph_rf=> /orP[]/eqP->;
+  by rewrite eq_refl.
+Qed.
+
+Lemma is_morph_ca e1 e2 : 
+  ca es1 e1 e2 -> ca es2 (f e1) (f e2).
+Proof.
+  move/closure_n1P; elim=> [|??/is_morph_ica I ?]; first exact/ca_refl.
+  move/closure_n1P=> ?; apply/closure_n1P.
+  by apply/Relation_Operators.rtn1_trans; first by exact/I.
+Qed.
+
+End Morphism.
+
+
 Definition is_iso := is_morph /\ bijective f.
 
-Lemma iso_dom : is_iso ->
-  map f (dom es1) =i dom es2.
+Section IsoMorphism.
+
+Hypothesis iso : is_iso.
+
+Lemma iso_dom : map f (dom es1) =i dom es2.
 Proof.
-  move=> [l /[dup] B [g /[dup] c1 /can_inj I c2 x]].
+  case: iso=> l /[dup] B [g /[dup] c1 /can_inj I c2 x].
   rewrite -[x]c2 (mem_map I) !fed_dom_mem !mem_finsupp. 
   move: (l (g x))=> /= ->.
   rewrite -[_ _ (f _) _]/(edescr_map f (mk_edescr _ _ _)).
   by rewrite (bij_eq (@edescr_map_bij label E E _ B)).
 Qed.
 
+Lemma f_icf e1 e2 :
+  icf es1 e1 e2 -> icf es2 (f e1) (f e2).
+Proof.
+  case: iso=> ??.
+  by rewrite/icf ?lt_neqAle ?fpo_le ?andbT -?is_morph_po ?(bij_eq (f := f)).
+Qed.
+
+Lemma f_cf e1 e2 :
+  es1 |- e1 # e2 -> es2 |- (f e1) # (f e2).
+Proof.
+  case: iso=> ?? /cfP [x [y H]]; apply/cfP; exists (f x), (f y).
+  by rewrite ?is_morph_ca ?f_icf ?H.
+Qed.
+
+End IsoMorphism.
+
 End IsoDef.
+
+Lemma is_iso_can es1 es2 f g :
+  is_iso f es1 es2 -> cancel f g -> cancel g f -> 
+  is_iso g es2 es1.
+Proof.
+  move=> [l b c1 c2].
+  have B: bijective g by apply/(bij_can_bij b). 
+  split=> //; do ? split; try move=> x /=.
+  apply/(bij_inj (@edescr_map_bij label _ _ _ b)). 
+  move: (l (g x))=> /= <-.
+  by rewrite ?(edescr_map_can c2) c2.
+Qed.
+
+Lemma isoE f e1 e2 es1 es2: is_iso f es1 es2 -> 
+  ( 
+    (lab es1 e1 = lab es2 (f e1)) *
+    ((f (fpo es1 e1) = fpo es2 (f e1)) *
+    (f (frf es1 e1) = frf es2 (f e1))) *
+    ((ca es1 e1 e2 = ca es2 (f e1) (f e2)) *
+    (cf es1 e1 e2 = cf es2 (f e1) (f e2)))
+  )%type.
+Proof.
+  move=> /[dup] If [M []? /[dup] c /(is_iso_can If) /[apply] Ig].
+  do ? split; rewrite ?(is_morph_po M) ?(is_morph_lab M) ?(is_morph_rf M) //.
+  - apply/(sameP idP)/(equivP idP).
+    split=> [/(is_morph_ca Ig.1)|/(is_morph_ca M)//]; by rewrite ?c.
+  apply/(sameP idP)/(equivP idP).
+  split=> [/(f_cf Ig)|/(f_cf If)//]; by rewrite ?c.
+Qed.
 
 Lemma eq_is_iso f g es1 es2 : f =1 g ->
   is_iso f es1 es2 <-> is_iso g es1 es2.
@@ -411,7 +510,7 @@ Proof.
   rewrite ?map_id // => ? /=; by rewrite edescr_map_id.
 Qed.
 
-Lemma is_iso_comp es1 es2 es3 f g : 
+Lemma is_iso_comp es1 es2 es3 f g :
   is_iso f es1 es2 -> is_iso g es2 es3 ->
   is_iso (g \o f) es1 es3 .
 Proof.
@@ -422,18 +521,6 @@ Qed.
 
 Lemma eqv_trans : Transitive eqv.
 Proof. move=> ???[f i [g ?]]; exists (g \o f); exact/(is_iso_comp i). Qed.
-
-Lemma is_iso_can es1 es2 f g : 
-  is_iso f es1 es2 -> cancel f g -> cancel g f -> 
-  is_iso g es2 es1.
-Proof.
-  move=> [l b c1 c2].
-  have B: bijective g by apply/(bij_can_bij b). 
-  split=> //; do ? split; try move=> x /=.
-  apply/(bij_inj (@edescr_map_bij label _ _ _ b)). 
-  move: (l (g x))=> /= <-.
-  by rewrite ?(edescr_map_can c2) c2.
-Qed.
 
 Lemma eqv_symm : Symmetric eqv.
 Proof. move=>> [? /[dup] I [_ [f *]]]; exists f; exact/(is_iso_can I).  Qed.
@@ -519,7 +606,7 @@ Qed.
 Lemma swap_add es 
   (al1 al2 : add_label es)
   (al3 : add_label (add_event al1))
-  (al4 : add_label (add_event al2)) : 
+  (al4 : add_label (add_event al2)) :
   al1 = al4 :> edescr E label ->
   al2 = al3 :> edescr E label ->
   is_iso (swap id (fresh_id1 es) (fresh_id2 es))
@@ -542,7 +629,7 @@ Proof.
   by rewrite fsfun_dflt /= -?swap_not_eq // fed_dom I.
 Qed.
 
-Lemma comm_ltr l1 l2 : 
+Lemma comm_ltr l1 l2 :
   eqv_diamond_commute (ltr l1) (ltr l2) eqv.
 Proof.
   move=> es ?? [al1 -> /[swap][[al2->]]].
@@ -555,6 +642,47 @@ Qed.
 
 Lemma exlab_tr : tr ≡ exlab ltr.
 Proof. by move=> ??; split=> [[l ->]|[?[l ->]]]; do ? exists l. Qed.
+
+Arguments isoE {_ _ _ _ _}.
+
+Lemma dom_consist_eqv es1 es2 :
+  es1 ~~ es2 -> dom_consistency es1 ->
+  dom_consistency es2.
+Proof.
+  rewrite /dom_consistency=> [[f /[dup] If]] [L ? /allP H]; apply/allP.
+  move=> x; rewrite -(iso_dom If)=> /mapP[y /H ?->].
+  move/(congr1 (@frf_prj _ _)): (L y)=> /=; rewrite -frfE=>->.
+  by rewrite frf_prj_edescr_map bij_eq // -(isoE If).
+Qed.
+
+Lemma dom_consist_add l1 l2 
+  (es1 es2 es3 es4 : exec_event_struct) :
+  dom_consistency es1 ->
+  es1 ~(l1)~> es2 -> dom_consistency es2 -> 
+  es1 ~(l2)~> es3 -> dom_consistency es3 ->
+  es2 ~(l2)~> es4 -> dom_consistency es4.
+Proof.
+  move=> ?; case=> [[la1 p1 w1 ap1 aw1 ac1 ->]].
+  set al1 := Add _ _ _ ap1 aw1 ac1=> e2; move=> C'.
+  case=> [[l p w ap aw ac]]+->; set al2 := Add _ _ _ ap aw ac=> -> C.
+  case=> [[l' p' ap' +++-> [le pe we]]].
+  move: le pe we; (do ? case: _/).
+  move=> ap2 aw2 ac2; set al2' := Add _ _ _ ap2 aw2 ac2.
+  apply/consist_add_event=> //=.
+  set f := swap id (fresh_id1 es1) (fresh_id2 es1).
+  have P : f p1 = p1 by rewrite /f (swap_dom ap1).
+  have W : f w1 = w1 by rewrite /f (swap_dom aw1).
+  have [: a1 a2 a3] @al3 : add_label (add_event al2) 
+    := Add la1 (f p1) (f w1) a1 a2 a3=> /=.
+  1,2: rewrite ?inE (P, W) (ap1, aw1); lattice.
+  - by rewrite W  lab_add_eventE (lt_eqF (write_fresh_id al1)).
+  have E1: al1 = al3 :> edescr _ _ by rewrite /= W P.
+  have E2: al2 = al2' :> edescr _ _ by [].
+  rewrite (isoE (swap_add E1 E2)) swap2 (swap_dom aw) //.
+  rewrite -cf_add_eventE; first exact/consist_add_event.
+  - by apply/eqP=> /(@fresh_iter _ _ 1 2).
+  by rewrite (lt_eqF (write_fresh_id al2')).
+Qed.
 
 End Confluence.
 
