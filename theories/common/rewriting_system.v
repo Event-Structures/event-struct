@@ -93,22 +93,22 @@ From eventstruct Require Import utils relalg.
 
 Section Commutation.
 
-Context {S : Type} (r r2 : hrel S S).
+Context {S : Type} (r1 r2 : hrel S S).
 
 Definition diamond_commute := forall s1 s2 s3,
-  r s1 s2 -> r2 s1 s3 -> exists2 s4, r2 s2 s4 & r s3 s4.
+  r1 s1 s2 -> r2 s1 s3 -> exists2 s4, r2 s2 s4 & r1 s3 s4.
 
 Definition strong_commute := forall s1 s2 s3,
-  r s1 s2 -> r2^+ s1 s3 -> exists2 s4 : S, r2^+ s2 s4 & r s3 s4.
+  r1 s1 s2 -> r2^+ s1 s3 -> exists2 s4 : S, r2^+ s2 s4 & r1 s3 s4.
 
 Definition commute := forall s1 s2 s3,
-  r^+ s1 s2 -> r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r^+ s3 s4.
+  r1^+ s1 s2 -> r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r1^+ s3 s4.
 
 Lemma dcomm_scomm : 
   diamond_commute -> strong_commute.
 Proof.
   move=> diamond s1 s2 s3 + str; move: str s2.
-  suff: (r2^+ ≦ (fun s1 s3 => forall s2 : S, r s1 s2 -> exists2 s4 : S, r2^+ s2 s4 & r s3 s4)).
+  suff: (r2^+ ≦ (fun s1 s3 => forall s2 : S, r1 s1 s2 -> exists2 s4 : S, r2^+ s2 s4 & r1 s3 s4)).
   - exact.
   apply/itr_ind_l1=> {s1 s3} [?? /diamond d ? /d[x /(itr_ext r2) *]|s1 s3 /=].
   - by exists x.
@@ -121,11 +121,11 @@ Lemma dcomm_comm :
 Proof.
   move=> d s1 s2 s3.
   move: s3=> /[swap].
-  suff: (r^+ ≦ (fun s1 s2 => forall s3, r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r^+ s3 s4)).
+  suff: (r1^+ ≦ (fun s1 s2 => forall s3, r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r1^+ s3 s4)).
   - exact.
   apply/itr_ind_l1=> {s1 s2} [?? s?|s1 s2 /= [s5 /(dcomm_scomm d) c IH s3 /c]].
-  - case/(dcomm_scomm d _ _ _ s)=> x ? /(itr_ext r) ?; by exists x.
-  case=> s6 /IH[s4 *]; exists s4=> //; apply/(itr_cons r); by exists s6.
+  - case/(dcomm_scomm d _ _ _ s)=> x ? /(itr_ext r1) ?; by exists x.
+  case=> s6 /IH[s4 *]; exists s4=> //; apply/(itr_cons r1); by exists s6.
 Qed.
 
 End Commutation.
