@@ -438,3 +438,37 @@ Proof.
 Qed.
 
 End SubTypeRewriting.
+
+Section Terminate.
+
+Context {S : Type} (r e : hrel S S).
+
+Hypothesis confl : eqv_rconfluent r e.
+Hypothesis edcomm : diamond_commute e r.
+
+Hypothesis eqv_trans : Transitive e.
+Hypothesis eqv_symm  : Symmetric e.
+Hypothesis eqv_refl  : 1 ≦ e.
+
+Hypothesis irr_re : Irreflexive (r^+ ⋅ e).
+Hypothesis e_r     : e ⊓ r^+ ≦ bot.
+
+Definition initial s0 := forall s, r^* s0 s.
+
+Context s0 (init : initial s0).
+
+Definition maximal sm := forall s, r^* sm s -> sm = s.
+
+Definition terminate st := forall s, (r^* ⋅ e) s st.
+
+Lemma terminate_max : maximal ≡ terminate.
+Proof.
+  move=> st; split=> [/[swap] s M|/[swap] s /(_ s) /[swap]].
+  - case: (confl _ _ _ (init st) (init s))=> s' [s'' [/M-> ??]].
+    by exists s''=> //; exact/eqv_symm.
+  rewrite {1}str_itr=> [[]] // /[swap][[s']].
+  rewrite str_itr=> [[-> /eqv_symm *|*]]; exfalso; first exact/(e_r st s').
+  apply/(irr_re st); exists s'=> //; apply/(itr_trans r); by exists s.
+Qed.
+
+End Terminate.
