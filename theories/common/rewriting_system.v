@@ -459,9 +459,9 @@ Context s0 (init : initial s0).
 
 Definition maximal sm := forall s, r^* sm s -> sm = s.
 
-Definition terminate st := forall s, (r^* ⋅ e) s st.
+Definition terminal st := forall s, (r^* ⋅ e) s st.
 
-Lemma terminate_max : maximal ≡ terminate.
+Lemma terminal_max : maximal ≡ terminal.
 Proof.
   move=> st; split=> [/[swap] s M|/[swap] s /(_ s) /[swap]].
   - case: (confl _ _ _ (init st) (init s))=> s' [s'' [/M-> ??]].
