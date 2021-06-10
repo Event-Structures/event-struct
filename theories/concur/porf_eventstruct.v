@@ -4,6 +4,7 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
 From monae Require Import hierarchy monad_model.
 From eventstruct Require Import utils relalg rel wftype ident inhtype.
+From eventstruct Require Import prime_eventstruct pomset.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
@@ -1079,6 +1080,27 @@ Canonical prime_subType := [subType for porf_eventstruct_of].
 
 Lemma prime_inj : injective (porf_eventstruct_of).
 Proof. exact: val_inj. Qed.
+
+Lemma rf_ncf_dom_es (es : prime_porf_eventstruct) : rf_ncf_dom es.
+Proof. by case: es. Qed.
+
+Variable (b : Pomset.Pomset.class_of E) (es : prime_porf_eventstruct).
+
+Lemma hered_porfes :
+  @hereditary (@Pomset.Pomset.Pack tt E b) <=%O (cf es).
+Proof.
+Admitted.
+
+(*Definition prime_porfMixin := 
+  @Prime.PrimeEventStruct.Mixin E b (cf es) (cf_irrelf es (rf_ncf_dom_es es))
+    (cf_sym es) (cf_hereditaryR es).*)
+
+Definition prime_porfMixin := 
+  @Prime.PrimeEventStruct.Mixin E b (cf es) (cf_irrelf es (rf_ncf_dom_es es))
+    (cf_sym es) hered_porfes.
+
+Canonical prime_porfPrime :=
+  Eval hnf in @Prime.PrimeEventStruct.pack E disp E b _ prime_porfMixin.
 
 End PrimePORFEventStruct.
 
