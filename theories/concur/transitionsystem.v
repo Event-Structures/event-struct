@@ -367,12 +367,12 @@ Section Confluence.
 
 Context {disp} (E : identType disp) (Lab : labType).
 
-Notation exec_eventstruct := (@porf_eventstruct disp E Lab).
-Notation cexec_eventstruct := (@prime_porf_eventstruct disp E Lab).
+Notation porf_eventstruct := (@porf_eventstruct disp E Lab).
+Notation prime_porf_eventstruct := (@prime_porf_eventstruct disp E Lab).
 
 Notation label := Lab.
 
-Implicit Types (x : Loc) (es : exec_eventstruct).
+Implicit Types (x : Loc) (es : porf_eventstruct).
 
 Definition tr es1 es2 := exists al, es2 = @add_event disp _ Lab es1 al.
 
@@ -387,7 +387,7 @@ Section Equivalence.
 
 Section IsoDef.
 
-Context (f : E -> E) (es1 es2 : exec_eventstruct).
+Context (f : E -> E) (es1 es2 : porf_eventstruct).
 
 Definition is_morph := fed es2 \o f =1 (edescr_map f) \o fed es1.
 
@@ -600,7 +600,7 @@ Proof.
   by rewrite -swap_not_eq.
 Qed.
 
-Lemma add_add (es : exec_eventstruct) 
+Lemma add_add (es : porf_eventstruct) 
   (al1 al2 : add_label es) : 
   exists al : add_label (add_event al1), 
   al = al2 :> edescr E label.
@@ -665,7 +665,7 @@ Proof.
 Qed.
 
 Lemma dom_consist_add l1 l2 
-  (es1 es2 es3 es4 : exec_eventstruct) :
+  (es1 es2 es3 es4 : porf_eventstruct) :
   rf_ncf_dom es1 ->
   es1 ~(l1)~> es2 -> rf_ncf_dom es2 -> 
   es1 ~(l2)~> es3 -> rf_ncf_dom es3 ->
@@ -694,17 +694,6 @@ Proof.
   by rewrite (lt_eqF (rf_fresh_id al2')).
 Qed.
 
-Definition dup_free (es : exec_eventstruct) := 
-  injectiveb [ffun x : finsupp (fed es) => fed es (val x)].
-
-Lemma dup_freeP es : 
-  reflect {in dom es &, injective (fed es)}
-  (dup_free es).
-Proof.
-  apply/(iffP (fsfun_injective_inP _ _))=> H ??;
-  [rewrite -?fed_supp_mem|rewrite ?fed_supp_mem]; by move/H/[apply].
-Qed.
-
 Lemma dup_free_eqv es1 es2 :
   es1 ~~ es2 -> dup_free es1 -> dup_free es2.
 Proof.
@@ -720,7 +709,7 @@ Lemma fresh_id12 es :
 Proof. by apply/negbTE/eqP=> /(@fresh_iter _ _ 1 2). Qed.
 
 Lemma dup_free_add l1 l2 
-  (es1 es2 es3 es4 : exec_eventstruct) :
+  (es1 es2 es3 es4 : porf_eventstruct) :
   es2 != es3 ->
   dup_free es1 ->
   es1 ~(l1)~> es2 -> dup_free es2 -> 
