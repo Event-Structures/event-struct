@@ -906,36 +906,42 @@ Proof. done. Qed.
 Lemma refl_ca : reflexive ca.
 Proof. done. Qed.
 
-Definition C T : Type := T.
+Definition causal T : Type := T.
 
 Lemma dispC : unit -> unit.
 Proof. done. Qed.
 
-Canonical dual_eqType := EqType E [eqMixin of (C E)].
-Canonical dual_choiceType := [choiceType of (C E)].
-(* Canonical dual_countType := [countType of (dual E)]. *)
-(* Canonical dual_finType (T : finType) := [finType of T^d]. *)
+Notation "E ^c" := (causal E) (at level 2, format "E ^c").
+
+Notation causal_le := ((@Order.le (dispC _) _) : rel E^c).
+Notation causal_ge := ((@Order.ge (dispC _) _) : rel E^c).
+Notation causal_lt := ((@Order.lt (dispC _) _) : rel E^c).
+Notation causal_gt := ((@Order.gt (dispC _) _) : rel E^c).
+
+Notation "<=%C" := causal_le (at level 0).
+Notation ">=%C" := causal_ge (at level 0).
+Notation "<%C" := causal_lt (at level 0).
+Notation ">%C" := causal_gt (at level 0).
+
+Notation "x <=^c y" := (<=%C x y) (at level 0).
+Notation "x >=^c y" := (>=%C x y) (at level 0).
+Notation "x <^c y" := (<%C x y) (at level 0).
+Notation "x >^c y" := (>%C x y) (at level 0).
+
+Notation "x <=^c y :> T" := ((x : T) <=^c (y : T)) (at level 0, y at next level).
+Notation "x >=^c y :> T" := ((x : T) >=^c (y : T)) (at level 0, y at next level).
+Notation "x <^c y :> T" := ((x : T) <^c (y : T)) (at level 0, y at next level).
+Notation "x >^c y :> T" := ((x : T) >^c (y : T)) (at level 0, y at next level).
+
+Canonical dual_eqType := EqType E [eqMixin of (E^c)].
+Canonical dual_choiceType := [choiceType of (E^c)].
 
 Definition dual_orderMixin :=
   @LePOrderMixin _ ca sca sca_def refl_ca ca_anti (@ca_trans).
 
-Canonical predorderType := Eval hnf in @POrderType (dispC disp) (C E) dual_orderMixin.
+Canonical predorderType := @POrderType (dispC disp) E^c dual_orderMixin.
 
-(* Print Canonical Projections. *)
-
-Notation "x <=^c y" := (@Order.le (dispC _) _ x y) (at level 0).
-(* Notation "<=%C" := (@Order.le dispC E) (at level 0). *)
-
-Variable (x y : C E).
-
-Check (x <=^c y : bool).
-
-Notation "<=%C" := ((@Order.le (dispC _) _) : rel (C E)) (at level 0).
-
-Lemma asdjvjn : transitive (<=%C).
-Proof. apply le_trans. Qed. 
-
-Lemma fin_cause_def : @fin_cause (predorderType) (<=%C : rel (C E)).
+Lemma fin_cause_def : @fin_cause (predorderType) (<=%C).
 Proof. 
   rewrite /fin_cause=> e. 
   exists (undup (wsuffix fca_gt e)).
@@ -944,11 +950,10 @@ Proof.
 Qed.
 
 Definition pomsetMixin :=
-  @Pomset.Pomset.Mixin _ _ fin_cause_def.
-Canonical pomsetType := Eval hnf in @Pomset.Pomset.pack (C E) (dispC disp) _ _ _ pomsetMixin.
+  @Pomset.Pomset.Mixin E^c _ fin_cause_def.
 
-Lemma clos e : is_finite (<= (e : C E)).
-Proof. exact: prefix_fin. Qed.
+Canonical pomsetType := 
+  Eval hnf in @Pomset.Pomset.pack E^c (dispC disp) predorderType _ _ pomsetMixin.
 
 (* ************************************************************************* *)
 (*     Immediate Conflict                                                    *)
@@ -1127,21 +1132,18 @@ Proof. by case: es. Qed.
 
 Variable (es : prime_porf_eventstruct).
 
-Lemma hered_porfes :
-  hereditary <=%O (cf es).
-Proof.
-Admitted.
+Notation "E ^c" := (causal E) (at level 2, format "E ^c").
 
-(*Definition prime_porfMixin := 
-  @Prime.PrimeEventStruct.Mixin E b (cf es) (cf_irrelf es (rf_ncf_dom_es es))
-    (cf_sym es) (cf_hereditaryR es).*)
+Lemma hered_porfes :
+  @hereditary (pomsetType es) <=%O (cf es).
+Proof. exact: cf_hereditaryR. Qed.
 
 Definition prime_porfMixin := 
-  @Prime.PrimeEventStruct.Mixin E _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
+  @Prime.PrimeEventStruct.Mixin E^c _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
     (cf_sym es) hered_porfes.
 
 Canonical prime_porfPrime :=
-  Eval hnf in @Prime.PrimeEventStruct.pack E disp E _ _ prime_porfMixin.
+  Eval hnf in @Prime.PrimeEventStruct.pack E^c (dispC disp) _ _ _ prime_porfMixin.
 
 End PrimePORFEventStruct.
 
