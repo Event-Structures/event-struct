@@ -898,16 +898,41 @@ Proof.
 Qed.*)
 
 (* Strict (irreflexive) causality *)
-(*Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
+Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
+
 Lemma sca_def : forall e1 e2, sca e1 e2 = (e2 != e1) && (ca e1 e2).
 Proof. done. Qed.
+
+Lemma refl_ca : reflexive ca.
+Proof. done. Qed.
+
+Lemma dispC : unit.
+Proof. done. Qed.
+
 Definition orderMixin :=
-  LePOrderMixin sca_def ca_refl ca_anti (@ca_trans).
-Definition ev_display : unit.
-Proof. exact: tt. Qed.
-(* TODO: make this canonocal projection work *)
-Canonical predorderType := POrderType ev_display E orderMixin.
-Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 0).*)
+  @LePOrderMixin E ca sca sca_def refl_ca ca_anti (@ca_trans).
+Canonical predorderType := Eval hnf in @POrderType dispC E orderMixin.
+Definition tmp : E -> (porderType dispC).
+Proof.
+  move=> x. case: E.
+
+Notation "x <c= y" := (@Order.le dispC E x y) (at level 0).
+Notation "<=%C" := (@Order.le dispC E) (at level 0).
+
+Lemma asdjvjn : transitive (<=%C).
+Proof. apply le_trans. Qed. 
+
+Lemma fin_cause_def : @fin_cause E (<=%O).
+Proof.
+Admitted.
+  
+
+Definition pomsetMixin :=
+  @Pomset.Pomset.Mixin E _ fin_cause_def.
+Canonical pomsetType := Eval hnf in @Pomset.Pomset.pack E disp _ _ _ pomsetMixin.
+
+Lemma clos e : @is_finite E (<= e).
+Proof. exact: prefix_fin. Qed.
 
 (* ************************************************************************* *)
 (*     Immediate Conflict                                                    *)
@@ -1084,10 +1109,10 @@ Proof. exact: val_inj. Qed.
 Lemma rf_ncf_dom_es (es : prime_porf_eventstruct) : rf_ncf_dom es.
 Proof. by case: es. Qed.
 
-Variable (b : Pomset.Pomset.class_of E) (es : prime_porf_eventstruct).
+Variable (es : prime_porf_eventstruct).
 
 Lemma hered_porfes :
-  @hereditary (@Pomset.Pomset.Pack tt E b) <=%O (cf es).
+  hereditary <=%O (cf es).
 Proof.
 Admitted.
 
@@ -1096,11 +1121,11 @@ Admitted.
     (cf_sym es) (cf_hereditaryR es).*)
 
 Definition prime_porfMixin := 
-  @Prime.PrimeEventStruct.Mixin E b (cf es) (cf_irrelf es (rf_ncf_dom_es es))
+  @Prime.PrimeEventStruct.Mixin E _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
     (cf_sym es) hered_porfes.
 
 Canonical prime_porfPrime :=
-  Eval hnf in @Prime.PrimeEventStruct.pack E disp E b _ prime_porfMixin.
+  Eval hnf in @Prime.PrimeEventStruct.pack E disp E _ _ prime_porfMixin.
 
 End PrimePORFEventStruct.
 
