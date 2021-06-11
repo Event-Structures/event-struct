@@ -450,7 +450,6 @@ Hypothesis eqv_trans : Transitive e.
 Hypothesis eqv_symm  : Symmetric e.
 Hypothesis eqv_refl  : 1 ≦ e.
 
-Hypothesis irr_re : Irreflexive (r^+ ⋅ e).
 Hypothesis e_r     : e ⊓ r^+ ≦ bot.
 
 Definition initial s0 := forall s, r^* s0 s.
@@ -467,8 +466,8 @@ Proof.
   - case: (confl _ _ _ (init st) (init s))=> s' [s'' [/M-> ??]].
     by exists s''=> //; exact/eqv_symm.
   rewrite {1}str_itr=> [[]] // /[swap][[s']].
-  rewrite str_itr=> [[-> /eqv_symm *|*]]; exfalso; first exact/(e_r st s').
-  apply/(irr_re st); exists s'=> //; apply/(itr_trans r); by exists s.
+  rewrite str_itr=> [[-> |?]] /eqv_symm*; exfalso; first exact/(e_r st s').
+  apply/(e_r st s'); split=> //; apply/(itr_trans r); by exists s.
 Qed.
 
 End Terminate.
