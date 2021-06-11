@@ -906,32 +906,48 @@ Proof. done. Qed.
 Lemma refl_ca : reflexive ca.
 Proof. done. Qed.
 
-Lemma dispC : unit.
+Definition C T : Type := T.
+
+Lemma dispC : unit -> unit.
 Proof. done. Qed.
 
-Definition orderMixin :=
-  @LePOrderMixin E ca sca sca_def refl_ca ca_anti (@ca_trans).
-Canonical predorderType := Eval hnf in @POrderType dispC E orderMixin.
-Definition tmp : E -> (porderType dispC).
-Proof.
-  move=> x. case: E.
+Canonical dual_eqType := EqType E [eqMixin of (C E)].
+Canonical dual_choiceType := [choiceType of (C E)].
+(* Canonical dual_countType := [countType of (dual E)]. *)
+(* Canonical dual_finType (T : finType) := [finType of T^d]. *)
 
-Notation "x <c= y" := (@Order.le dispC E x y) (at level 0).
-Notation "<=%C" := (@Order.le dispC E) (at level 0).
+Definition dual_orderMixin :=
+  @LePOrderMixin _ ca sca sca_def refl_ca ca_anti (@ca_trans).
+
+Canonical predorderType := Eval hnf in @POrderType (dispC disp) (C E) dual_orderMixin.
+
+(* Print Canonical Projections. *)
+
+Notation "x <=^c y" := (@Order.le (dispC _) _ x y) (at level 0).
+(* Notation "<=%C" := (@Order.le dispC E) (at level 0). *)
+
+Variable (x y : C E).
+
+Check (x <=^c y : bool).
+
+Notation "<=%C" := ((@Order.le (dispC _) _) : rel (C E)) (at level 0).
 
 Lemma asdjvjn : transitive (<=%C).
 Proof. apply le_trans. Qed. 
 
-Lemma fin_cause_def : @fin_cause E (<=%O).
-Proof.
-Admitted.
-  
+Lemma fin_cause_def : @fin_cause (predorderType) (<=%C : rel (C E)).
+Proof. 
+  rewrite /fin_cause=> e. 
+  exists (undup (wsuffix fca_gt e)).
+  - apply: undup_uniq.
+  move=> e'. rewrite mem_undup. done.
+Qed.
 
 Definition pomsetMixin :=
-  @Pomset.Pomset.Mixin E _ fin_cause_def.
-Canonical pomsetType := Eval hnf in @Pomset.Pomset.pack E disp _ _ _ pomsetMixin.
+  @Pomset.Pomset.Mixin _ _ fin_cause_def.
+Canonical pomsetType := Eval hnf in @Pomset.Pomset.pack (C E) (dispC disp) _ _ _ pomsetMixin.
 
-Lemma clos e : @is_finite E (<= e).
+Lemma clos e : is_finite (<= (e : C E)).
 Proof. exact: prefix_fin. Qed.
 
 (* ************************************************************************* *)
