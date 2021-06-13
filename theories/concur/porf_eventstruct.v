@@ -936,10 +936,10 @@ Notation "x >^c y :> T" := ((x : T) >^c (y : T)) (at level 0, y at next level).
 Canonical causal_eqType := EqType E [eqMixin of (E^c)].
 Canonical causal_choiceType := [choiceType of (E^c)].
 
-Definition dual_orderMixin :=
+Definition causal_orderMixin :=
   @LePOrderMixin _ ca sca sca_def refl_ca ca_anti (@ca_trans).
 
-Canonical porderType := @POrderType (dispC disp) E^c dual_orderMixin.
+Canonical porderType := @POrderType (dispC disp) E^c causal_orderMixin.
 
 Lemma fin_cause_ca : @fin_cause (porderType) (<=%C).
 Proof. 
@@ -953,7 +953,8 @@ Definition pomsetMixin :=
   @Pomset.Pomset.Mixin E^c _ fin_cause_ca.
 
 Canonical pomsetType := 
-  Eval hnf in @Pomset.Pomset.pack E^c (dispC disp) porderType _ _ pomsetMixin.
+  Eval hnf in @Pomset.Pomset.pack E^c (dispC disp) porderType 
+    (Order.POrder.class porderType) _ pomsetMixin.
 
 (* ************************************************************************* *)
 (*     Immediate Conflict                                                    *)
