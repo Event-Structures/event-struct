@@ -1143,7 +1143,8 @@ Definition prime_porfMixin :=
     (cf_sym es) hered_porfes.
 
 Canonical prime_porfPrime :=
-  Eval hnf in @Prime.PrimeEventStruct.pack E^c (dispC disp) _ _ _ prime_porfMixin.
+  Eval hnf in
+    @Prime.PrimeEventStruct.pack E^c (dispC disp) (porderType es) _ _ prime_porfMixin.
 
 End PrimePORFEventStruct.
 
