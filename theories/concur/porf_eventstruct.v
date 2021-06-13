@@ -301,6 +301,11 @@ Definition edescr_map {E1 E2 : Type} : (E1 -> E2) -> edescr E1 -> edescr E2 :=
     let: mk_edescr l e_po e_rf := ed in
     mk_edescr l (f e_po) (f e_rf).
 
+Lemma edescr_mapE {E1 E2} (f : E1 -> E2) ed : 
+  edescr_map f ed = mk_edescr (lab_prj ed) (f (fpo_prj ed)) (f (frf_prj ed)).
+Proof. by case: ed. Qed.
+
+
 (* TODO: prove functor and monad laws? *)
 
 Lemma edescr_map_id {E : Type} : 
@@ -366,7 +371,6 @@ Context {disp : unit} (E : identType disp) (L : labType).
 Local Notation edescr := (edescr E L).
 
 Structure porf_eventstruct := Pack {
-  dom    : seq E;
   fed    : { fsfun for fun e =>
                {| lab_prj := \eps;
                   fpo_prj := e;
@@ -374,6 +378,7 @@ Structure porf_eventstruct := Pack {
                |} : edescr
            };
 
+  dom    := nfresh (#|` finsupp fed|.-1);
   lab e  := lab_prj (fed e);
   fpo e  := fpo_prj (fed e);
   frf e  := frf_prj (fed e);
@@ -413,20 +418,17 @@ Section PORFEventStructEq.
 Context {disp} {E : identType disp} {L : labType}.
 
 Definition eq_es (es es' : porf_eventstruct E L) : bool :=
-  [&& dom es == dom es' & fed es == fed es'].
+  fed es == fed es'.
 
 Lemma eqesP : Equality.axiom eq_es.
 Proof.
   move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
-  case: x=> dom1 fed1 lab1 fpo1 frf1 df1 ds1 di1. 
-  rewrite {}/lab1 {}/fpo1 {}/frf1=> li1 pc1 f1 g1 rc1 rc1' rc1''.
-  case: y=> dom2 fed2 lab2 fpo2 frf2 df2 ds2 di2.
-  rewrite {}/lab2 {}/fpo2 {}/frf2=> li2 pc2 f2 g2 rc2 rc2' rc2''.
-  case/andP=> /= /eqP E1 /eqP E2. 
+  case: x=> /= fed1 df1 ds1 di1 li1 pc1 f1 g1 rc1 rc1' rc1''.
+  case: y=> /= fed2 df2 ds2 di2 li2 pc2 f2 g2 rc2 rc2' rc2''.
+  move=> /eqP /= E1. 
   move: df1 ds1 di1 li1 pc1 f1 g1 rc1 rc1' rc1''. 
   move: df2 ds2 di2 li2 pc2 f2 g2 rc2 rc2' rc2''. 
-  move: E1 E2; do 2 (case: _ /). 
-  move=> *; congr Pack; exact/eq_irrelevance.
+  case: _ / E1; move=> *; congr Pack; exact/eq_irrelevance.
 Qed.
 
 End PORFEventStructEq. 
@@ -443,18 +445,17 @@ Local Notation edescr := (edescr E L).
 
 Lemma inh_exec_eventstructure : porf_eventstruct E L.
 Proof.
-  pose dom0 := ([:: \i0] : seq E).
-  pose fed0 := [fsfun [fsfun] with ident0 |-> mk_edescr \init \i0 \i0] :
+  pose fed0 := [fsfun [fsfun] with \i0 |-> mk_edescr \init \i0 \i0] :
     {fsfun for fun e => mk_edescr \eps e e : edescr}.
-  have S: finsupp fed0 =i [:: \i0] => [?|].
+  have S: finsupp fed0 = [fset \i0].
   - rewrite /fed0 finsupp_with /= /eq_op /= /eq_op /= /eq_op /=.
-    by rewrite (negbTE init_eps) finsupp0 ?inE orbF.
+    by rewrite (negbTE init_eps) /= finsupp0 fsetU0.
   have F: fed0 \i0 = mk_edescr \init \i0 \i0 by rewrite ?fsfun_with.
   have [: a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] @evstr : 
-  porf_eventstruct E L := Pack dom0 fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10;
-  rewrite /dom0 ?inE ?eq_refl //.
-  - by apply/eqP/fsetP=> ?; rewrite S seq_fsetE.
-  all: apply/forallP=> [[/= x]]; rewrite S ?inE=> /eqP-> /[! F]/= //.
+  porf_eventstruct E L := Pack fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10.
+  - by apply/eqP/fsetP=> ?; rewrite ?inE seq_fsetE S cardfs1 /= ?inE.
+  all: rewrite ?S ?cardfs1 /nfresh /= /fresh_seq /= ?inE ?eq_refl //.
+  all: apply/forallP=> [[/= x]]; rewrite ?inE=> /eqP-> /[! F]/= //.
   all: by rewrite ?eq_refl ?synch.
 Defined.
 
@@ -611,7 +612,8 @@ Lemma fpo_dom e :
   e \in dom -> fpo e \in dom.
 Proof.
   rewrite -fed_supp_mem.
-  case: es=> /=; rewrite /porf_eventstruct.fpo /==>> ???? /forallP H ????? L'.
+  case: es=> /=; 
+  rewrite /porf_eventstruct.fpo /porf_eventstruct.dom /==>> ???? /forallP H ????? L'.
   exact/(H [` L']).
 Qed.
 
@@ -665,7 +667,8 @@ Lemma frf_dom e :
   e \in dom -> frf e \in dom.
 Proof.
   rewrite -fed_supp_mem.
-  case: es=> /=; rewrite /porf_eventstruct.frf /==>> ????? /forallP H ???? L'.
+  case: es=> /=; 
+  rewrite /porf_eventstruct.frf /porf_eventstruct.dom /==>> ????? /forallP H ???? L'.
   exact/(H [` L']).
 Qed.
 
@@ -1070,6 +1073,17 @@ Implicit Type es : (@porf_eventstruct disp E L).
 Inductive prime_porf_eventstruct := 
   PrimeES es of (rf_ncf_dom es && dup_free es).
 
+Lemma prime_inh : 
+  rf_ncf_dom (inh : (@porf_eventstruct disp E L)) && 
+  dup_free (inh : (@porf_eventstruct disp E L)).
+Proof.
+  have I : forall (x : E), x \in dom inh -> x = \i0=> [>|].
+  - rewrite -fed_supp_mem /= finsupp_with /= {1}/eq_op /= {1}/eq_op /=.
+    by rewrite {1}/eq_op /= (negbTE init_eps) /= finsupp0 ?inE orbF =>/eqP->.
+  apply/andP; split; last by apply/dup_freeP=> ?? /I->/I->.
+  - apply/allP=> /= x ?; by rewrite ?inE /frf (I L x) // ?fsfun_with /= eqxx.
+Qed.
+
 Arguments PrimeES {_}.
 
 Coercion porf_eventstruct_of (pes : prime_porf_eventstruct) :=
@@ -1080,6 +1094,15 @@ Canonical prime_subType := [subType for porf_eventstruct_of].
 Lemma prime_inj : injective (porf_eventstruct_of).
 Proof. exact: val_inj. Qed.
 
+Definition prime_eqMixin := Eval hnf in [eqMixin of prime_porf_eventstruct by <:].
+Canonical prime_eqType := Eval hnf in EqType prime_porf_eventstruct prime_eqMixin.
+
 End PrimePORFEventStruct.
 
 Notation "e '|-' a # b" := (cf e a b) (at level 10).
+
+Canonical pes_inhMixin {disp E V} := 
+  @Inhabitant.Mixin (@prime_porf_eventstruct disp E V) _ 
+    (PrimeES _ (prime_inh E V)).
+Canonical pes_inhType {disp E V} := 
+  Eval hnf in Inhabitant (@prime_porf_eventstruct disp E V) pes_inhMixin.
