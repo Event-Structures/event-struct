@@ -439,7 +439,7 @@ Qed.
 
 End SubTypeRewriting.
 
-Section Terminate.
+Section Terminal.
 
 Context {S : Type} (r e : hrel S S).
 
@@ -456,13 +456,21 @@ Definition initial s0 := forall s, r^* s0 s.
 
 Context s0 (init : initial s0).
 
-Definition maximal sm := forall s, r^* sm s -> sm = s.
+Definition maximal r (sm : S) := forall s, r sm s -> sm = s.
 
+(* We use "categorical" meaning of "terminal" element *)
 Definition terminal st := forall s, (r^* ⋅ e) s st.
 
-Lemma terminal_max : maximal ≡ terminal.
+Lemma maximal_str : maximal r ≡ maximal r^*.
 Proof.
-  move=> st; split=> [/[swap] s M|/[swap] s /(_ s) /[swap]].
+  move=> s; split=> [/[swap] ? /[swap]|/[swap] s' /(_ s') I /(str_ext r)/I //].
+  suff: r^* ≦ (fun s s' => maximal r s -> s = s') by apply.
+  apply/str_ind_l1=> ?? // [? ++ M ] => /M<-; exact.
+Qed.
+
+Lemma terminal_max : maximal r ≡ terminal.
+Proof.
+  rewrite maximal_str=> st; split=> [/[swap] s M|/[swap] s /(_ s) /[swap]].
   - case: (confl _ _ _ (init st) (init s))=> s' [s'' [/M-> ??]].
     by exists s''=> //; exact/eqv_symm.
   rewrite {1}str_itr=> [[]] // /[swap][[s']].
@@ -470,4 +478,4 @@ Proof.
   apply/(e_r st s'); split=> //; apply/(itr_trans r); by exists s.
 Qed.
 
-End Terminate.
+End Terminal.
