@@ -1128,7 +1128,7 @@ Lemma prime_inj : injective (porf_eventstruct_of).
 Proof. exact: val_inj. Qed.
 
 Lemma rf_ncf_dom_es (es : prime_porf_eventstruct) : rf_ncf_dom es.
-Proof. by case: es. Qed.
+Proof. by case: es=> /= ? /andP[]. Qed.
 
 Variable (es : prime_porf_eventstruct).
 
