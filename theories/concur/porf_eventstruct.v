@@ -933,15 +933,15 @@ Notation "x >=^c y :> T" := ((x : T) >=^c (y : T)) (at level 0, y at next level)
 Notation "x <^c y :> T" := ((x : T) <^c (y : T)) (at level 0, y at next level).
 Notation "x >^c y :> T" := ((x : T) >^c (y : T)) (at level 0, y at next level).
 
-Canonical dual_eqType := EqType E [eqMixin of (E^c)].
-Canonical dual_choiceType := [choiceType of (E^c)].
+Canonical causal_eqType := EqType E [eqMixin of (E^c)].
+Canonical causal_choiceType := [choiceType of (E^c)].
 
 Definition dual_orderMixin :=
   @LePOrderMixin _ ca sca sca_def refl_ca ca_anti (@ca_trans).
 
-Canonical predorderType := @POrderType (dispC disp) E^c dual_orderMixin.
+Canonical porderType := @POrderType (dispC disp) E^c dual_orderMixin.
 
-Lemma fin_cause_def : @fin_cause (predorderType) (<=%C).
+Lemma fin_cause_ca : @fin_cause (porderType) (<=%C).
 Proof. 
   rewrite /fin_cause=> e. 
   exists (undup (wsuffix fca_gt e)).
@@ -950,10 +950,10 @@ Proof.
 Qed.
 
 Definition pomsetMixin :=
-  @Pomset.Pomset.Mixin E^c _ fin_cause_def.
+  @Pomset.Pomset.Mixin E^c _ fin_cause_ca.
 
 Canonical pomsetType := 
-  Eval hnf in @Pomset.Pomset.pack E^c (dispC disp) predorderType _ _ pomsetMixin.
+  Eval hnf in @Pomset.Pomset.pack E^c (dispC disp) porderType _ _ pomsetMixin.
 
 (* ************************************************************************* *)
 (*     Immediate Conflict                                                    *)
