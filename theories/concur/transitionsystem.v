@@ -822,6 +822,125 @@ Proof.
   by case=>/[dup] /C{C}C /D{D}D /= /andP[? /andP[/C{C}C /D{D}D/[dup]/C->/D->]].
 Qed.
 
+Lemma tr_ninh es : es != inh -> exists es', es' ~> es.
+Proof.
+  case: es=> fed dom; case: {1}dom (@erefl _ dom)=> [/= I ??/[dup]|fr l D].
+  - by rewrite -{1}I.
+  move=> lab fpo frf supp /[dup]; rewrite -{1}D /==> P s d i df dp vf vp sf sp.
+  rewrite /eq_op /= /eq_es /==> /[dup] F.
+  have Efr : fr = fresh (head \i0 l).
+  - case: (l) D F=> /= [F|>]; last by move/nfresh2.
+    move/nfresh1: F supp=> F; rewrite /dom F=> /eqP Es /eqP N.
+    exfalso; apply/N/fsfunP=> ?; rewrite fsfun_withE.
+    case: ifP=> [/eqP-> //|{N}N].
+    by rewrite ?fsfun_dflt // (finsupp0, Es) ?seq_fsetE ?inE // N.
+  have f0 : \i0 != fr by rewrite lt_eqF // Efr; move: (i0_fresh_seq l).
+  have npo : {in finsupp fed, forall e, fpo_prj (fed e) != fr}.
+  - move=> x /[dup] L; move: P.
+    case: (boolP (x == \i0))=> [/eqP->|?]; first by rewrite i /=.
+    rewrite (eqP supp) seq_fsetE -D path_sortedE ?inE.
+    - case/andP=> a _ O; have: x <= fr by move/orP: O=> [/eqP->|/(allP a)/ltW].
+      move=> Lf; rewrite lt_eqF //; apply/(lt_le_trans _ Lf).
+      move/forallP: vf=> /(_ [`L])/implyP /=; exact.
+    exact/rev_trans/lt_trans.
+  have nrf : {in finsupp fed, forall e, frf_prj (fed e) != fr}.
+  - move=> x /[dup] L; move: P.
+    case: (boolP (x == \i0))=> [/eqP->|?]; first by rewrite i /=.
+    rewrite (eqP supp) seq_fsetE -D path_sortedE ?inE.
+    - case/andP=> a _ O; have: x <= fr by move/orP: O=> [/eqP->|/(allP a)/ltW].
+      move=> Lf; rewrite lt_eqF //; apply/(lt_le_trans _ Lf).
+      move/forallP: vp=> /(_ [`L])/implyP /=; exact.
+    exact/rev_trans/lt_trans.
+  have n_fr : forall e, e \in l -> e != fr=> [?|].
+  - move: P; rewrite (path_sortedE (rev_trans lt_trans))=> /andP[/allP I+/I*].
+    by rewrite lt_eqF.
+  have Ed: nfresh #|` finsupp [fsfun fed without fr]|.-1 = l.
+    rewrite finsupp_without // cardfsDS ?cardfs1 -?behead_nfresh ?subn1.
+    - by rewrite -/dom -D.
+    - by apply/eqP=> N; move: N D; rewrite /dom=>-> /= [/esym/eqP/(negP f0)].
+    by apply/fsubsetP=> ?; rewrite ?inE (eqP supp) seq_fsetE -D ?inE=>->.
+  have [: a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] @es : porf_eventstruct :=
+    Pack ([fsfun fed without fr]) a1 a2 a3 a4 a5 a6 a7 a8 a9 a10;
+    rewrite ?Ed.
+  - rewrite finsupp_without ?(eqP supp) // -D.
+    apply/eqP/fsetP=> x; rewrite ?inE ?seq_fsetE ?inE.
+    case: (x =P fr)=> //=->; apply/esym/negbTE/negP; move: s=> /=.
+    rewrite -D /= (path_sortedE (rev_trans lt_trans))=> /andP[/allP L ? /L].
+    by rewrite ltxx.
+  - by move: s; rewrite -D /==> /path_sorted.
+  - by move: d f0=> /=; rewrite -D ?inE=> /orP[]// /eqP<- /[! eqxx].
+  - by rewrite fsfun_withE (negbTE f0).
+  - apply/forallP=> [[e /=]]; rewrite (eqP a1) seq_fsetE fsfun_withE=> /[dup].
+    rewrite Ed; move/n_fr/negbTE=>-> L.
+    have I : e \in (finsupp fed) by rewrite (eqP supp) seq_fsetE -D ?inE L. 
+    by move/forallP/(_ [`I]): df; rewrite/=-D ?inE=>/orP[]// /(negP (npo _ I)).
+  - apply/forallP=> [[e /=]]; rewrite (eqP a1) seq_fsetE fsfun_withE=> /[dup].
+    rewrite Ed; move/n_fr/negbTE=>-> L.
+    have I : e \in (finsupp fed) by rewrite (eqP supp) seq_fsetE -D ?inE L. 
+    by move/forallP/(_ [`I]): dp; rewrite/=-D ?inE=>/orP[]// /(negP (nrf _ I)).
+  - apply/forallP=> [[e /=]]; rewrite fsfun_withE finsupp_without // ?inE.
+    case/andP=> /negbTE-> L; exact/(forallP vf [`L]).
+  - apply/forallP=> [[e /=]]; rewrite fsfun_withE finsupp_without // ?inE.
+    case/andP=> /negbTE-> L; exact/(forallP vp [`L]).
+  - apply/forallP=> [[e /=]]; rewrite ?fsfun_withE finsupp_without // ?inE.
+    case/andP=> /negbTE-> /[dup] L /npo/negbTE->; exact/(forallP sf [`L]).
+    - apply/forallP=> [[e /=]]; rewrite ?fsfun_withE finsupp_without // ?inE.
+    case/andP=> /negbTE-> /[dup] L /nrf/negbTE->; exact/(forallP sp [`L]).
+  exists es.
+  have L : fr \in finsupp fed by rewrite (eqP supp) seq_fsetE -D ?inE eqxx.
+  have [: b1 b2 b3 b4] @al : add_label es := 
+    Add (lab fr) (fpo fr) (frf fr) b1 b2 b3 b4.
+  - rewrite -fed_supp_mem /= finsupp_without // ?inE.
+    move: (forallP vf [`L]) (forallP df [`L])=> /=.
+    rewrite ?inE [fr == _](eq_sym) f0 /= (eqP supp) seq_fsetE ?inE.
+    by move/lt_eqF->.
+  - rewrite -fed_supp_mem /= finsupp_without // ?inE.
+    move: (forallP vp [`L]) (forallP dp [`L])=> /=.
+    rewrite ?inE [fr == _](eq_sym) f0 /= (eqP supp) seq_fsetE ?inE.
+    by move/lt_eqF->.
+  - rewrite /porf_eventstruct.lab /= fsfun_withE lt_eqF.
+    - exact/(forallP sf [`L]).
+    apply/(implyP (forallP vf [`L])); by rewrite eq_sym.
+  - rewrite /porf_eventstruct.lab /= fsfun_withE lt_eqF.
+    - exact/(forallP sp [`L]).
+    apply/(implyP (forallP vp [`L])); by rewrite eq_sym.
+  exists al; apply/eqP; rewrite /eq_op /= /eq_es /=.
+  apply/eqP/fsfunP=> ?; rewrite add_fedE /= /fresh_seq /porf_eventstruct.dom.
+  move=> /=; rewrite Ed -Efr fsfun_withE; case: ifP=> [|->] // /eqP->.
+  by rewrite /lab /fpo /frf; case: (fed fr).
+Qed.
+
+Lemma dom_tr es1 es2 : es1 ~> es2 -> size (dom es2) = (size (dom es1)).+1.
+Proof. by case=> ?->; rewrite dom_add_event. Qed.
+
+Lemma dom_eqv es1 es2 : es1 ~~ es2 -> size (dom es1) = size (dom es2).
+Proof. 
+  case=> f /[dup][[_ /bij_inj ?]] /iso_dom Es.
+  rewrite -(size_map f); apply/perm_size/uniq_perm=> //; 
+  by rewrite ?map_inj_uniq ?(sorted_uniq (rev_trans (lt_trans))) // dom_sorted.
+Qed.
+
+Lemma dom_itr_tr : 
+  tr^+ ≦ (fun es1 es2 => (size (dom es1) < size (dom es2))%N).
+Proof. apply/itr_ind_l1=> [?|?? /= []]? /= /dom_tr->; ssrnatlia. Qed.
+
+Lemma dom_itr_ptr : 
+  ptr^+ ≦ (fun pes1 pes2 => (size (dom pes1) < size (dom pes2))%N).
+Proof. apply/itr_ind_l1=> [?|?? /= []]? /= /dom_tr->; ssrnatlia. Qed.
+
+Lemma init_inh (pes : prime_porf_eventstruct) : ptr^* inh pes.
+Proof.
+  rewrite tr_ptr /relpreim; case: pes=> /= pes _.
+  have [n le_size] := ubnP (size (dom pes)).
+  elim: n pes le_size=> // n IHn pes.
+  case: (pes =P inh)=>[-> *|/eqP /tr_ninh[]]; first exact/(str_refl tr).
+  move=> es es_tr s; apply/(str_snoc tr); exists es=> //.
+  apply/IHn; rewrite -(dom_tr es_tr); ssrnatlia.
+Qed.
+
+Lemma irr_ptr: ptr^+ ⊓ eqv ≦ bot.
+Proof. move=> ?? [/dom_itr_ptr ? /dom_eqv]; ssrnatlia. Qed.
+
 End Confluence.
 
 End AddEvent.
