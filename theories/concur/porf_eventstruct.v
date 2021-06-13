@@ -953,8 +953,7 @@ Definition pomsetMixin :=
   @Pomset.Pomset.Mixin E^c _ fin_cause_ca.
 
 Canonical pomsetType := 
-  Eval hnf in @Pomset.Pomset.pack E^c (dispC disp) porderType 
-    (Order.POrder.class porderType) _ pomsetMixin.
+  Eval hnf in PomsetType (dispC disp) E^c pomsetMixin.
 
 (* ************************************************************************* *)
 (*     Immediate Conflict                                                    *)

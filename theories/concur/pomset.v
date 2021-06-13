@@ -93,6 +93,8 @@ Coercion porderType : type >-> Order.POrder.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
+Notation pomsetType := type.
+Notation PomsetType disp T m := (@pack T disp _ _ id m).
 End Exports.
 
 End Pomset.
