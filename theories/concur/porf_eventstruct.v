@@ -1073,6 +1073,17 @@ Implicit Type es : (@porf_eventstruct disp E L).
 Inductive prime_porf_eventstruct := 
   PrimeES es of (rf_ncf_dom es && dup_free es).
 
+Lemma prime_inh : 
+  rf_ncf_dom (inh : (@porf_eventstruct disp E L)) && 
+  dup_free (inh : (@porf_eventstruct disp E L)).
+Proof.
+  have I : forall (x : E), x \in dom inh -> x = \i0=> [>|].
+  - rewrite -fed_supp_mem /= finsupp_with /= {1}/eq_op /= {1}/eq_op /=.
+    by rewrite {1}/eq_op /= (negbTE init_eps) /= finsupp0 ?inE orbF =>/eqP->.
+  apply/andP; split; last by apply/dup_freeP=> ?? /I->/I->.
+  - apply/allP=> /= x ?; by rewrite ?inE /frf (I L x) // ?fsfun_with /= eqxx.
+Qed.
+
 Arguments PrimeES {_}.
 
 Coercion porf_eventstruct_of (pes : prime_porf_eventstruct) :=
@@ -1083,6 +1094,15 @@ Canonical prime_subType := [subType for porf_eventstruct_of].
 Lemma prime_inj : injective (porf_eventstruct_of).
 Proof. exact: val_inj. Qed.
 
+Definition prime_eqMixin := Eval hnf in [eqMixin of prime_porf_eventstruct by <:].
+Canonical prime_eqType := Eval hnf in EqType prime_porf_eventstruct prime_eqMixin.
+
 End PrimePORFEventStruct.
 
 Notation "e '|-' a # b" := (cf e a b) (at level 10).
+
+Canonical pes_inhMixin {disp E V} := 
+  @Inhabitant.Mixin (@prime_porf_eventstruct disp E V) _ 
+    (PrimeES _ (prime_inh E V)).
+Canonical pes_inhType {disp E V} := 
+  Eval hnf in Inhabitant (@prime_porf_eventstruct disp E V) pes_inhMixin.
