@@ -301,6 +301,11 @@ Definition edescr_map {E1 E2 : Type} : (E1 -> E2) -> edescr E1 -> edescr E2 :=
     let: mk_edescr l e_po e_rf := ed in
     mk_edescr l (f e_po) (f e_rf).
 
+Lemma edescr_mapE {E1 E2} (f : E1 -> E2) ed : 
+  edescr_map f ed = mk_edescr (lab_prj ed) (f (fpo_prj ed)) (f (frf_prj ed)).
+Proof. by case: ed. Qed.
+
+
 (* TODO: prove functor and monad laws? *)
 
 Lemma edescr_map_id {E : Type} : 
