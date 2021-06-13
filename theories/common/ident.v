@@ -179,15 +179,15 @@ Proof. by rewrite nfreshE trajectS rev_cons -cats1 last_cat. Qed.
 
 Lemma behead_nfresh n :
   n != 0 ->
-  behead (nfresh n : seq E) = nfresh n.-1.
+  behead (nfresh n) = nfresh n.-1.
 Proof. by case: n. Qed.
 
-Lemma nfresh2 n (e1 e2 : E) s : 
+Lemma nfresh2 n e1 e2 s : 
   [:: e1, e2 & s] = nfresh n -> e1 = fresh e2.
 Proof. by case: n=> //= [[/= |/= ?]][->->].  Qed.
 
-Lemma nfresh1 n (e1 : E) : 
-  [:: e1] = nfresh n -> (nfresh n : seq E) = [:: \i0].
+Lemma nfresh1 n e1 : 
+  [:: e1] = nfresh n -> nfresh n = [:: \i0].
 Proof. by case: n=> //= [[]]. Qed.
 
 End NfreshSpec.
