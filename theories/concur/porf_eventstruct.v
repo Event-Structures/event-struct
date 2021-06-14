@@ -1142,21 +1142,9 @@ Definition prime_porfMixin :=
   @Prime.PrimeEventStruct.Mixin E^c _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
     (cf_sym es) hered_porfes.
 
-Definition phant_def : phant_id (Order.POrder.class (pomsetType es))
-    (Pomset.Pomset.class (pomsetType es)) :=
-  fun=> Phantom (Pomset.eventStruct E^c)
-    {|
-      Pomset.Pomset.base :=
-        {|
-          Order.POrder.base := IdentType.class E;
-          Order.POrder.mixin := causal_orderMixin es
-        |};
-      Pomset.Pomset.mixin := pomsetMixin es
-    |}.
-
 Canonical prime_porfPrime :=
   @Prime.PrimeEventStruct.pack E^c (dispC disp) (pomsetType es) _
-    phant_def prime_porfMixin.
+    (fun=> Phantom (Pomset.eventStruct E^c) _) prime_porfMixin.
 
 End PrimePORFEventStruct.
 
