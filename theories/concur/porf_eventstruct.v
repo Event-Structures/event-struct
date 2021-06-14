@@ -4,6 +4,7 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
 From monae Require Import hierarchy monad_model.
 From eventstruct Require Import utils relalg rel wftype ident inhtype.
+From eventstruct Require Import prime_eventstruct pomset.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
@@ -897,16 +898,62 @@ Proof.
 Qed.*)
 
 (* Strict (irreflexive) causality *)
-(*Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
+Definition sca e1 e2 := (e2 != e1) && (ca e1 e2).
+
 Lemma sca_def : forall e1 e2, sca e1 e2 = (e2 != e1) && (ca e1 e2).
 Proof. done. Qed.
-Definition orderMixin :=
-  LePOrderMixin sca_def ca_refl ca_anti (@ca_trans).
-Definition ev_display : unit.
-Proof. exact: tt. Qed.
-(* TODO: make this canonocal projection work *)
-Canonical predorderType := POrderType ev_display E orderMixin.
-Notation "x <c= y" := (@Order.le ev_display _ x y) (at level 0).*)
+
+Lemma refl_ca : reflexive ca.
+Proof. done. Qed.
+
+Definition causal T : Type := T.
+
+Lemma dispC : unit -> unit.
+Proof. done. Qed.
+
+Notation "E ^c" := (causal E) (at level 2, format "E ^c").
+
+Notation causal_le := ((@Order.le (dispC _) _) : rel E^c).
+Notation causal_ge := ((@Order.ge (dispC _) _) : rel E^c).
+Notation causal_lt := ((@Order.lt (dispC _) _) : rel E^c).
+Notation causal_gt := ((@Order.gt (dispC _) _) : rel E^c).
+
+Notation "<=%C" := causal_le (at level 0).
+Notation ">=%C" := causal_ge (at level 0).
+Notation "<%C" := causal_lt (at level 0).
+Notation ">%C" := causal_gt (at level 0).
+
+Notation "x <=^c y" := (<=%C x y) (at level 0).
+Notation "x >=^c y" := (>=%C x y) (at level 0).
+Notation "x <^c y" := (<%C x y) (at level 0).
+Notation "x >^c y" := (>%C x y) (at level 0).
+
+Notation "x <=^c y :> T" := ((x : T) <=^c (y : T)) (at level 0, y at next level).
+Notation "x >=^c y :> T" := ((x : T) >=^c (y : T)) (at level 0, y at next level).
+Notation "x <^c y :> T" := ((x : T) <^c (y : T)) (at level 0, y at next level).
+Notation "x >^c y :> T" := ((x : T) >^c (y : T)) (at level 0, y at next level).
+
+Canonical causal_eqType := EqType E [eqMixin of (E^c)].
+Canonical causal_choiceType := [choiceType of (E^c)].
+
+Definition causal_orderMixin :=
+  @LePOrderMixin _ ca sca sca_def refl_ca ca_anti (@ca_trans).
+
+Canonical porderType := @POrderType (dispC disp) E^c causal_orderMixin.
+
+Lemma fin_cause_ca : @fin_cause (porderType) (<=%C).
+Proof. 
+  rewrite /fin_cause=> e. 
+  exists (undup (wsuffix fca_gt e)).
+  - apply: undup_uniq.
+  move=> e'. rewrite mem_undup. done.
+Qed.
+
+Definition pomsetMixin :=
+  @Pomset.Pomset.Mixin E^c _ fin_cause_ca.
+
+Canonical pomsetType := 
+  Eval hnf in PomsetType (dispC disp) E^c pomsetMixin.
 
 (* ************************************************************************* *)
 (*     Immediate Conflict                                                    *)
@@ -1079,6 +1126,26 @@ Canonical prime_subType := [subType for porf_eventstruct_of].
 
 Lemma prime_inj : injective (porf_eventstruct_of).
 Proof. exact: val_inj. Qed.
+
+Lemma rf_ncf_dom_es (es : prime_porf_eventstruct) : rf_ncf_dom es.
+Proof. by case: es=> /= ? /andP[]. Qed.
+
+Variable (es : prime_porf_eventstruct).
+
+Notation "E ^c" := (causal E) (at level 2, format "E ^c").
+
+Lemma hered_porfes :
+  @hereditary (pomsetType es) <=%O (cf es).
+Proof. exact: cf_hereditaryR. Qed.
+
+Definition prime_porfMixin := 
+  @Prime.PrimeEventStruct.Mixin E^c _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
+    (cf_sym es) hered_porfes.
+
+(* TODO: remove Phantom *)
+Canonical prime_porfPrime :=
+  @Prime.PrimeEventStruct.pack E^c (dispC disp) (pomsetType es) _
+    (fun=> Phantom (Pomset.eventStruct E^c) _) prime_porfMixin.
 
 End PrimePORFEventStruct.
 
