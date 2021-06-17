@@ -77,7 +77,7 @@ Definition clone c of phant_id class c := @Pack disp T c.
 Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
 
 Definition pack :=
-  fun bT b & phant_id (@Order.POrder.class disp bT) b =>
+  fun bT b & phant_id (@Pomset.Pomset.class disp bT) b =>
   fun m => Pack disp (@Class T b m).
 
 Definition eqType := @Equality.Pack cT class.
@@ -106,6 +106,7 @@ Import PrimeEventStruct.Exports.
 
 Notation eventType := PrimeEventStruct.type.
 Notation eventStruct := PrimeEventStruct.class_of.
+Notation EventType disp T m := (@PrimeEventStruct.pack T disp _ _ id m).
 
 Module Import PrimeEventStructDef.
 Section PrimeEventStructDef.
