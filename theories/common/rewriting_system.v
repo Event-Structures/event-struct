@@ -452,21 +452,11 @@ Hypothesis eqv_refl  : 1 ≦ e.
 
 Hypothesis e_r     : e ⊓ r^+ ≦ bot.
 
+(* We use categorical meaning of initial/terminal element *)
 Definition initial s0 := forall s, r^* s0 s.
-
-Context s0 (init : initial s0).
-
-Definition maximal r (sm : S) := forall s, r sm s -> sm = s.
-
-(* We use "categorical" meaning of "terminal" element *)
 Definition terminal st := forall s, (r^* ⋅ e) s st.
 
-Lemma maximal_str : maximal r ≡ maximal r^*.
-Proof.
-  move=> s; split=> [/[swap] ? /[swap]|/[swap] s' /(_ s') I /(str_ext r)/I //].
-  suff: r^* ≦ (fun s s' => maximal r s -> s = s') by apply.
-  apply/str_ind_l1=> ?? // [? ++ M ] => /M<-; exact.
-Qed.
+Context s0 (init : initial s0).
 
 Lemma terminal_max : maximal r ≡ terminal.
 Proof.
