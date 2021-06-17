@@ -166,7 +166,7 @@ Export Prime.EventStruct.Exports.
 Export Prime.Syntax.
 Export Prime.Theory.
 
-Module PrimeCons.
+Module PrimeG.
 
 Module EventStruct.
 Section ClassDef.
@@ -235,44 +235,44 @@ Section Def.
 
 Variable (disp : unit) (E : eventType disp).
 
-Definition Conf : pred {fset E} :=
+Definition gcf : pred {fset E} :=
   EventStruct.Conf (EventStruct.class E).
 
-Definition conf_free (X : {fset E}) := ~~ (Conf X).
+Definition gcf_free (x : {fset E}) := ~~ (gcf x).
 
 End Def.
 
-Prenex Implicits Conf.
+Prenex Implicits gcf.
 
 Module Import Theory.
 Section Theory.
 
 Context {disp : unit} {E : eventType disp}.
 
-Lemma con_irrefl : forall (e : E), ~~ (Conf [fset e]).
+Lemma gcf_self : forall (e : E), ~~ (gcf [fset e]).
 Proof. by case: E => ? [? []]. Qed.
 
-Lemma con_ext : forall (X Y : {fset E}), X `<=` Y -> Conf X -> Conf Y.
+Lemma gcf_ext : forall (X Y : {fset E}), X `<=` Y -> gcf X -> gcf Y.
 Proof. by case: E => ? [? []]. Qed.
 
-Lemma con_hered :
-  forall X (e e' : E), e <= e' -> Conf (X `|` [fset e]) -> Conf (X `|` [fset e']).
+Lemma gcf_hered :
+  forall X (e e' : E), e <= e' -> gcf (X `|` [fset e]) -> gcf (X `|` [fset e']).
 Proof. by case: E => ? [? []]. Qed.
 
 End Theory.
 End Theory.
 
-Module ConsOfPrime.
-Section ConsOfPrime.
+Module GenOfPrime.
+Section GenOfPrime.
 
 Context {disp : unit} {E : Prime.eventType disp}.
 
-Definition conf_of_cf : pred {fset E} :=
+Definition gcf_of_cf : pred {fset E} :=
   fun X => [exists e1 : X, exists e2 : X, (val e1) \# (val e2)].
 
-Lemma not_self_conf (e : E) : ~~ (conf_of_cf [fset e]).
+Lemma cf_self (e : E) : ~~ (gcf_of_cf [fset e]).
 Proof.
-  rewrite /conf_of_cf /=. apply /existsP => [] [] /= e1 /existsP [] /= e2.
+  rewrite /gcf_of_cf /=. apply /existsP => [] [] /= e1 /existsP [] /= e2.
   move: e1 e2 => [] e1 p1 /= [] e2 p2 /=.
   have: e1 = e.
   - exact: fset1P.
@@ -282,10 +282,10 @@ Proof.
   by move=> ->; rewrite cf_irrefl.
 Qed.
 
-Lemma conf_ext (X Y : {fset E}) : X `<=` Y -> conf_of_cf X -> conf_of_cf Y.
+Lemma cf_ext (X Y : {fset E}) : X `<=` Y -> gcf_of_cf X -> gcf_of_cf Y.
 Proof.
   move=> XsubY.
-  rewrite /conf_of_cf => /existsP [] /= [] e1 p1 /existsP [] /= [] e2 p2 /= cf12.
+  rewrite /gcf_of_cf => /existsP [] /= [] e1 p1 /existsP [] /= [] e2 p2 /= cf12.
   apply /existsP => /=.
   have: e1 \in Y.
   { by move: XsubY p1 => /fsubsetP /[apply]. }
@@ -297,10 +297,10 @@ Proof.
   move=> /=. exact: cf12.
 Qed.
 
-Lemma conf_hered (X : {fset E}) (e e' : E) :
-  e <= e' -> conf_of_cf (X `|` [fset e]) -> conf_of_cf (X `|` [fset e']).
+Lemma cf_hered (X : {fset E}) (e e' : E) :
+  e <= e' -> gcf_of_cf (X `|` [fset e]) -> gcf_of_cf (X `|` [fset e']).
 Proof.
-  move=> ca12. rewrite /conf_of_cf => /existsP [] /= [] /= e1.
+  move=> ca12. rewrite /gcf_of_cf => /existsP [] /= [] /= e1.
   rewrite in_fsetU => /orP [H|H] /existsP [] /= [] /= e2.
   all: rewrite in_fsetU => /orP [H'|H'] cf12.
   { apply /existsP. exists (FSetSub (fsetU1l e' H)).
@@ -322,16 +322,16 @@ Proof.
   move=> -> ->. by rewrite cf_irrefl.
 Qed.
 
-Definition conf_primeMixin :=
-  @EventStruct.Mixin E _ conf_of_cf not_self_conf conf_ext conf_hered.
+Definition gcf_primeMixin :=
+  @EventStruct.Mixin E _ gcf_of_cf cf_self cf_ext cf_hered.
 
-Canonical conf_primePrime := EventType disp E conf_primeMixin.
+Canonical conf_primePrime := EventType disp E gcf_primeMixin.
 
-End ConsOfPrime.
-End ConsOfPrime.
+End GenOfPrime.
+End GenOfPrime.
 
-End PrimeCons.
+End PrimeG.
 
-Export PrimeCons.EventStruct.Exports.
-Export PrimeCons.Theory.
-Export PrimeCons.ConsOfPrime.
+Export PrimeG.EventStruct.Exports.
+Export PrimeG.Theory.
+Export PrimeG.GenOfPrime.
