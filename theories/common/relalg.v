@@ -363,7 +363,7 @@ End PwEqvReflect.
 
 Hint Resolve r_refl rt_refl : core.
 
-Section RelAux.
+Section RelClos.
 
 Context {T : Type}.
 Implicit Types (R : hrel T T) (r : rel T).
@@ -419,5 +419,52 @@ Qed.
 Lemma clos_refl_trans_hrel_str R : 
   clos_refl_trans _ R ≡ R^*. 
 Proof. by rewrite str_itr clos_refl_transE clos_refl_hrel_qmk clos_trans_hrel_itr. Qed.
+
+End RelClos.
+
+
+(* ************************************************************************** *)
+(*     Auxiliary definitions and lemmas about binary relations               *)
+(* ************************************************************************** *)
+
+Section RelAux.
+
+Context {T : Type}.
+Implicit Types (R : hrel T T) (r : rel T).
+
+Definition minimal R x := forall y, R y x -> x = y.
+
+Definition maximal R x := forall y, R x y -> x = y.
+
+Lemma minimal_maximal R : minimal R ≡ maximal R°.
+Proof. by rewrite /cnv /= /hrel_cnv /minimal /maximal. Qed.
+
+(* TODO: relax to `leq` ? *)
+Instance minimal_weq : 
+  Proper (weq ==> weq) minimal.
+Proof. 
+  rewrite /minimal; move=> R1 R2 H x.
+  by split; move=> + y /H; move=> /[apply].
+Qed.
+
+Instance maximal_weq : 
+  Proper (weq ==> weq) maximal.
+Proof. 
+  move=> R1 R2. rewrite -!minimal_maximal.
+  by move=> /cnv_weq; apply: minimal_weq.
+Qed.
+
+Lemma minimal_str R : minimal R ≡ minimal R^*.
+Proof.
+  move=> s; split=> [/[swap] ? /[swap]|/[swap] s' /(_ s') I /(str_ext R)/I //].
+  suff: R^* ≦ (fun s s' => minimal R s' -> s' = s). 
+  - by move=> /[apply] /[apply].
+  apply/str_ind_l1=> ?? // [? ++ /[dup]].  
+  move=> H /[apply]; move: H=> /[swap] ->.
+  by move=> /[swap] /[apply].
+Qed.
+
+Lemma maximal_str R : maximal R ≡ maximal R^*.
+Proof. by rewrite -!minimal_maximal minimal_str -kleene.cnvstr. Qed.
 
 End RelAux.

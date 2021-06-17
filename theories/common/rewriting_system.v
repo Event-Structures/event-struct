@@ -438,3 +438,34 @@ Proof.
 Qed.
 
 End SubTypeRewriting.
+
+Section Terminal.
+
+Context {S : Type} (r e : hrel S S).
+
+Hypothesis confl : eqv_rconfluent r e.
+Hypothesis edcomm : diamond_commute e r.
+
+Hypothesis eqv_trans : Transitive e.
+Hypothesis eqv_symm  : Symmetric e.
+Hypothesis eqv_refl  : 1 ≦ e.
+
+Hypothesis e_r     : e ⊓ r^+ ≦ bot.
+
+(* We use categorical meaning of initial/terminal element *)
+Definition initial s0 := forall s, r^* s0 s.
+Definition terminal st := forall s, (r^* ⋅ e) s st.
+
+Context s0 (init : initial s0).
+
+Lemma terminal_max : maximal r ≡ terminal.
+Proof.
+  rewrite maximal_str=> st; split=> [/[swap] s M|/[swap] s /(_ s) /[swap]].
+  - case: (confl _ _ _ (init st) (init s))=> s' [s'' [/M-> ??]].
+    by exists s''=> //; exact/eqv_symm.
+  rewrite {1}str_itr=> [[]] // /[swap][[s']].
+  rewrite str_itr=> [[-> |?]] /eqv_symm*; exfalso; first exact/(e_r st s').
+  apply/(e_r st s'); split=> //; apply/(itr_trans r); by exists s.
+Qed.
+
+End Terminal.
