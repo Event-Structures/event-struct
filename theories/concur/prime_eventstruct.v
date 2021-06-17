@@ -38,7 +38,7 @@ Declare Scope prime_eventstruct_scope.
 Delimit Scope prime_eventstruct_scope with prime_es.
 Local Open Scope prime_eventstruct_scope.
 
-Reserved Notation "x # y" (at level 75, no associativity).
+Reserved Notation "x \# y" (at level 75, no associativity).
 
 Definition hereditary {T : Type} (ca cf : rel T) := 
   forall x y z : T, cf x y -> ca y z -> cf x z.
@@ -126,7 +126,7 @@ End Def.
 Prenex Implicits cf.
 
 Module Import Syntax.
-Notation "x # y" := (cf x y) : prime_eventstruct_scope.
+Notation "x \# y" := (cf x y) : prime_eventstruct_scope.
 End Syntax.
 
 Module Export Theory.
@@ -268,7 +268,7 @@ Section ConsOfPrime.
 Context {disp : unit} {E : Prime.eventType disp}.
 
 Definition conf_of_cf : pred {fset E} :=
-  fun X => [exists e1 : X, exists e2 : X, (val e1) # (val e2)].
+  fun X => [exists e1 : X, exists e2 : X, (val e1) \# (val e2)].
 
 Lemma not_self_conf (e : E) : ~~ (conf_of_cf [fset e]).
 Proof.
