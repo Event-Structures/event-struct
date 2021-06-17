@@ -460,8 +460,7 @@ Proof.
   suff: R^* ≦ (fun s s' => minimal R s' -> s' = s). 
   - by move=> /[apply] /[apply].
   apply/str_ind_l1=> ?? // [? ++ /[dup]].  
-  move=> + /[apply] /[swap].
-  move=> ->.
+  move=> H /[apply]; move: H=> /[swap] ->.
   by move=> /[swap] /[apply].
 Qed.
 
