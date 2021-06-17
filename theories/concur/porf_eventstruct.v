@@ -1142,7 +1142,7 @@ Definition prime_porfMixin :=
   @Prime.PrimeEventStruct.Mixin E^c _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
     (cf_sym es) hered_porfes.
 
-Canonical prime_porfPrime := EventType (dispC disp) E^c prime_porfMixin.
+Canonical prime_porfPrime := Prime.EventType (dispC disp) E^c prime_porfMixin.
 
 End PrimePORFEventStruct.
 

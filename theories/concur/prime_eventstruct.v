@@ -98,15 +98,15 @@ Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
 Canonical pomsetEventType.
-Notation eventType := type.
-Notation EventType disp T m := (@pack T disp _ _ id m).
 End Exports.
 
 End PrimeEventStruct.
 
 Import PrimeEventStruct.Exports.
 
+Notation eventType := PrimeEventStruct.type.
 Notation eventStruct := PrimeEventStruct.class_of.
+Notation EventType disp T m := (@PrimeEventStruct.pack T disp _ _ id m).
 
 Module Import PrimeEventStructDef.
 Section PrimeEventStructDef.
