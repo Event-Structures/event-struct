@@ -1139,7 +1139,7 @@ Lemma hered_porfes :
 Proof. exact: cf_hereditaryR. Qed.
 
 Definition prime_porfMixin := 
-  @Prime.PrimeEventStruct.Mixin E^c _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
+  @Prime.EventStruct.Mixin E^c _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
     (cf_sym es) hered_porfes.
 
 Canonical prime_porfPrime := Prime.EventType (dispC disp) E^c prime_porfMixin.

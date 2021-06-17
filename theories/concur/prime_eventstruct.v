@@ -34,19 +34,18 @@ Local Open Scope fset_scope.
 Local Notation symmetric  := Coq.ssr.ssrbool.symmetric.
 Local Notation transitive := Coq.ssr.ssrbool.transitive.
 
+Declare Scope prime_eventstruct_scope.
+Delimit Scope prime_eventstruct_scope with prime_es.
+Local Open Scope prime_eventstruct_scope.
+
+Reserved Notation "x # y" (at level 75, no associativity).
+
 Definition hereditary {T : Type} (ca cf : rel T) := 
   forall x y z : T, cf x y -> ca y z -> cf x z.
 
 Module Prime.
 
-Declare Scope prime_eventstruct_scope.
-Delimit Scope prime_eventstruct_scope with prime_es.
-
-Local Open Scope prime_eventstruct_scope.
-
-Reserved Notation "x # y" (at level 75, no associativity).
-
-Module PrimeEventStruct.
+Module EventStruct.
 Section ClassDef. 
 
 Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
@@ -87,8 +86,8 @@ Definition porderType := @Order.POrder.Pack disp cT class.
 Definition pomsetEventType := @Pomset.Pomset.Pack disp cT class.
 End ClassDef.
 
-Module Exports.
-Coercion base : class_of >-> Pomset.Pomset.class_of.
+Module Export Exports.
+Coercion base : EventStruct.class_of >-> Pomset.Pomset.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
@@ -101,37 +100,37 @@ Canonical porderType.
 Canonical pomsetEventType.
 End Exports.
 
-End PrimeEventStruct.
+End EventStruct.
 
-Import PrimeEventStruct.Exports.
+Export EventStruct.Exports.
 
-Notation eventType := PrimeEventStruct.type.
-Notation eventStruct := PrimeEventStruct.class_of.
-Notation EventType disp T m := (@PrimeEventStruct.pack T disp _ _ id m).
+Notation eventType := EventStruct.type.
+Notation eventStruct := EventStruct.class_of.
+Notation EventType disp T m := (@EventStruct.pack T disp _ _ id m).
 
-Module Import PrimeEventStructDef.
-Section PrimeEventStructDef.
+Section Def.
 
 Variable (disp : unit) (E : eventType disp).
 
-Definition cf : rel E := PrimeEventStruct.cf (PrimeEventStruct.class E).
+Definition cf : rel E := EventStruct.cf (EventStruct.class E).
 
 Definition cf_free (X : pred E) : Prop := 
   cf ⊓ (X × X) ≦ bot.
 
-End PrimeEventStructDef.
-End PrimeEventStructDef.
+(* configuration *)
+Definition cfg (x : pred E) := 
+  ca_closed x /\ cf_free x.
+
+End Def.
 
 Prenex Implicits cf.
 
-Module Export PrimeEventStructSyntax.
-
+Module Import Syntax.
 Notation "x # y" := (cf x y) : prime_eventstruct_scope.
+End Syntax.
 
-End PrimeEventStructSyntax.
-
-Module Import PrimeEventStructTheory.
-Section PrimeEventStructTheory.
+Module Export Theory.
+Section Theory.
 
 Context {disp : unit} {E : eventType disp}.
 
@@ -152,34 +151,24 @@ Proof.
   by rewrite cf_irrefl.
 Qed.
 
-End PrimeEventStructTheory.
-End PrimeEventStructTheory.
-
-Section Config.
-
-Context {disp : unit} {E : eventType disp}.
-
-(* configuration *)
-Definition cfg (x : pred E) := 
-  ca_closed x /\ cf_free x.
-
-End Config.
-
-Module Import ConfigTheory.
-Section ConfigTheory.
-
-Context {disp : unit} {E : eventType disp}.
-
 Lemma prefix_cfg (e : E) : cfg (<= e).
 Proof.
   split; first by apply: prefix_ca_closed.
   exact: prefix_cf_free.
 Qed.
 
-End ConfigTheory.
-End ConfigTheory.
+End Theory.
+End Theory.
 
-Module PrimeEventStructCon.
+End Prime.
+
+Export Prime.EventStruct.Exports.
+Export Prime.Syntax.
+Export Prime.Theory.
+
+Module PrimeCons.
+
+Module EventStruct.
 Section ClassDef.
 
 Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
@@ -220,7 +209,7 @@ Definition porderType := @Order.POrder.Pack disp cT class.
 Definition pomsetEventType := @Pomset.Pomset.Pack disp cT class.
 End ClassDef.
 
-Module Exports.
+Module Export Exports.
 Coercion base : class_of >-> Pomset.Pomset.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
@@ -234,33 +223,31 @@ Canonical porderType.
 Canonical pomsetEventType.
 End Exports.
 
-End PrimeEventStructCon.
+End EventStruct.
 
-Import PrimeEventStructCon.Exports.
+Export EventStruct.Exports.
 
-Notation conEventType := PrimeEventStructCon.type.
-Notation conEventStruct := PrimeEventStructCon.class_of.
-Notation ConEventType disp T m := (@PrimeEventStructCon.pack T disp _ _ id m).
+Notation eventType := EventStruct.type.
+Notation eventStruct := EventStruct.class_of.
+Notation EventType disp T m := (@EventStruct.pack T disp _ _ id m).
 
-Module Import PrimeEventStructConDef.
-Section PrimeEventStructConDef.
+Section Def.
 
-Variable (disp : unit) (E : conEventType disp).
+Variable (disp : unit) (E : eventType disp).
 
 Definition Conf : pred {fset E} :=
-  PrimeEventStructCon.Conf (PrimeEventStructCon.class E).
+  EventStruct.Conf (EventStruct.class E).
 
 Definition conf_free (X : {fset E}) := ~~ (Conf X).
 
-End PrimeEventStructConDef.
-End PrimeEventStructConDef.
+End Def.
 
 Prenex Implicits Conf.
 
-Module Import PrimeEventStructConTheory.
-Section PrimeEventStructConTheory.
+Module Import Theory.
+Section Theory.
 
-Context {disp : unit} {E : conEventType disp}.
+Context {disp : unit} {E : eventType disp}.
 
 Lemma con_irrefl : forall (e : E), ~~ (Conf [fset e]).
 Proof. by case: E => ? [? []]. Qed.
@@ -272,13 +259,13 @@ Lemma con_hered :
   forall X (e e' : E), e <= e' -> Conf (X `|` [fset e]) -> Conf (X `|` [fset e']).
 Proof. by case: E => ? [? []]. Qed.
 
-End PrimeEventStructConTheory.
-End PrimeEventStructConTheory.
+End Theory.
+End Theory.
 
-Module ConOfPrime.
-Section ConOfPrime.
+Module ConsOfPrime.
+Section ConsOfPrime.
 
-Context {disp : unit} {E : eventType disp}.
+Context {disp : unit} {E : Prime.eventType disp}.
 
 Definition conf_of_cf : pred {fset E} :=
   fun X => [exists e1 : X, exists e2 : X, (val e1) # (val e2)].
@@ -292,7 +279,7 @@ Proof.
   move=> ->.
   have: e2 = e.
   - exact: fset1P.
-  move=> ->. by rewrite cf_irrefl.
+  by move=> ->; rewrite cf_irrefl.
 Qed.
 
 Lemma conf_ext (X Y : {fset E}) : X `<=` Y -> conf_of_cf X -> conf_of_cf Y.
@@ -336,20 +323,15 @@ Proof.
 Qed.
 
 Definition conf_primeMixin :=
-  @PrimeEventStructCon.Mixin E _ conf_of_cf not_self_conf conf_ext conf_hered.
+  @EventStruct.Mixin E _ conf_of_cf not_self_conf conf_ext conf_hered.
 
-Canonical conf_primePrime := ConEventType disp E conf_primeMixin.
+Canonical conf_primePrime := EventType disp E conf_primeMixin.
 
-End ConOfPrime.
-End ConOfPrime.
+End ConsOfPrime.
+End ConsOfPrime.
 
-End Prime.
+End PrimeCons.
 
-Export Prime.PrimeEventStruct.Exports.
-Export Prime.PrimeEventStructDef.
-Export Prime.PrimeEventStructTheory.
-Export Prime.ConfigTheory.
-Export Prime.PrimeEventStructCon.Exports.
-Export Prime.PrimeEventStructConDef.
-Export Prime.PrimeEventStructConTheory.
-Export Prime.ConOfPrime.
+Export PrimeCons.EventStruct.Exports.
+Export PrimeCons.Theory.
+Export PrimeCons.ConsOfPrime.
