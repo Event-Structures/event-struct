@@ -460,7 +460,9 @@ Proof.
   suff: R^* ≦ (fun s s' => minimal R s' -> s' = s). 
   - by move=> /[apply] /[apply].
   apply/str_ind_l1=> ?? // [? ++ /[dup]].  
-  by move=> + /[apply] /[swap] <- /[swap] /[apply].
+  move=> + /[apply] /[swap].
+  move=> ->.
+  by move=> /[swap] /[apply].
 Qed.
 
 Lemma maximal_str R : maximal R ≡ maximal R^*.
