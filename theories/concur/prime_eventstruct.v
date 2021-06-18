@@ -289,8 +289,8 @@ Proof. by case: E => ? [? []]. Qed.
 End Theory.
 End Theory.
 
-Module GenOfPrime.
-Section GenOfPrime.
+Module OfPrime.
+Section OfPrime.
 
 Context {disp : unit} {E : Prime.eventType disp}.
 
@@ -328,16 +328,34 @@ Proof.
   by rewrite !in_fsetU; split; try (apply /orP); try by left.
 Qed.
 
-Definition gcf_primeMixin :=
+Definition prime_gcfMixin := 
   @EventStruct.Mixin E _ gcf gcf_self gcf_ext gcf_hered.
 
-Canonical conf_primePrime := EventType disp E gcf_primeMixin.
+Definition prime_primeG := EventType disp E prime_gcfMixin.
 
-End GenOfPrime.
-End GenOfPrime.
+End OfPrime.
+
+Module Export Exports.
+Coercion prime_primeG : Prime.eventType >-> eventType.
+Canonical prime_primeG.
+End Exports.
+
+End OfPrime.
 
 End PrimeG.
 
 Export PrimeG.EventStruct.Exports.
+Export PrimeG.OfPrime.Exports.
 Export PrimeG.Theory.
-Export PrimeG.GenOfPrime.
+
+Section Test.
+
+Context {disp : unit} {E : Prime.eventType disp}.
+Variable (e1 e2 : E) (s : {fset E}).
+
+Check (e1 <= e2 : bool).
+Check (e1 \# e2 : bool).
+Check (PrimeG.gcf s : bool).
+
+End Test.
+
