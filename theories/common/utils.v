@@ -1,6 +1,6 @@
 From Coq Require Import Relations.
-From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
-From mathcomp Require Import seq path fingraph fintype.
+From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype choice.
+From mathcomp Require Import seq path fingraph fintype finmap.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -193,3 +193,31 @@ Definition orelpre (f : T -> option rT) (r : rel rT) : simpl_rel T :=
   [rel x y | match f x, f y with Some x, Some y => r x y | _, _ => false end].
 
 End OptionUtils.
+
+
+Section FSetUtils.
+
+Context {T : choiceType}.
+Implicit Types (s : {fset T}) (p : pred T) (r : rel T).
+
+Lemma fset_existsP s p :
+  reflect (exists x, x \in s /\ p x) [exists x : s, p (val x)].
+Proof.
+  apply /equivP; first (by apply /existsP); split.
+  - by move=> [] /= [] /= x Hx Px; exists x. 
+  by move=> [] x [] Hx Px; exists (FSetSub Hx). 
+Qed.  
+
+(* TODO: use `rst s r` (restriction of relation) ? *)
+Lemma fset_exists2P s r :
+  reflect (exists x y, [/\ x \in s, y \in s & r x y]) 
+          [exists x : s, exists y : s, r (val x) (val y)].
+Proof.
+  apply /equivP; last split. 
+  - apply /(@fset_existsP _ (fun x => [exists y, r x (val y)])).
+  - by move=> [] x [] Hx /fset_existsP [] y [] Hy Rxy; exists x, y.
+  move=> [] x [] y [] Hx [] Hy Rxy; exists x; split=> //. 
+  by apply /fset_existsP; exists y.
+Qed.  
+
+End FSetUtils.
