@@ -281,12 +281,12 @@ Section GenOfPrime.
 
 Context {disp : unit} {E : Prime.eventType disp}.
 
-Definition gcf_of_cf : pred {fset E} :=
+Definition gcf : pred {fset E} :=
   fun X => [exists e1 : X, exists e2 : X, (val e1) \# (val e2)].
 
-Lemma cf_self (e : E) : ~~ (gcf_of_cf [fset e]).
+Lemma gcf_self (e : E) : ~~ (gcf [fset e]).
 Proof.
-  rewrite /gcf_of_cf /=. apply /existsP => [] [] /= e1 /existsP [] /= e2.
+  rewrite /gcf /=. apply /existsP => [] [] /= e1 /existsP [] /= e2.
   move: e1 e2 => [] e1 p1 /= [] e2 p2 /=.
   have: e1 = e.
   - exact: fset1P.
@@ -296,10 +296,10 @@ Proof.
   by move=> ->; rewrite cf_irrefl.
 Qed.
 
-Lemma cf_ext (X Y : {fset E}) : X `<=` Y -> gcf_of_cf X -> gcf_of_cf Y.
+Lemma gcf_ext (X Y : {fset E}) : X `<=` Y -> gcf X -> gcf Y.
 Proof.
   move=> XsubY.
-  rewrite /gcf_of_cf => /existsP [] /= [] e1 p1 /existsP [] /= [] e2 p2 /= cf12.
+  rewrite /gcf => /existsP [] /= [] e1 p1 /existsP [] /= [] e2 p2 /= cf12.
   apply /existsP => /=.
   have: e1 \in Y.
   { by move: XsubY p1 => /fsubsetP /[apply]. }
@@ -311,11 +311,11 @@ Proof.
   move=> /=. exact: cf12.
 Qed.
 
-Lemma cf_hered (X : {fset E}) (e e' : E) :
-  e <= e' -> gcf_of_cf (X `|` [fset e]) -> gcf_of_cf (X `|` [fset e']).
+Lemma gcf_hered (X : {fset E}) (e e' : E) :
+  e <= e' -> gcf (X `|` [fset e]) -> gcf (X `|` [fset e']).
 Proof.
-  move=> ca12. rewrite /gcf_of_cf => /existsP [] /= [] /= e1.
-  rewrite in_fsetU => /orP [H|H] /existsP [] /= [] /= e2.
+  move=> ca12; rewrite /gcf => /existsP [] /= [] /= e1.
+  rewrite in_fsetU=> /orP [H|H] /existsP [] /= [] /= e2.
   all: rewrite in_fsetU => /orP [H'|H'] cf12.
   { apply /existsP. exists (FSetSub (fsetU1l e' H)).
     apply /existsP. exists (FSetSub (fsetU1l e' H')).
@@ -337,7 +337,7 @@ Proof.
 Qed.
 
 Definition gcf_primeMixin :=
-  @EventStruct.Mixin E _ gcf_of_cf cf_self cf_ext cf_hered.
+  @EventStruct.Mixin E _ gcf gcf_self gcf_ext gcf_hered.
 
 Canonical conf_primePrime := EventType disp E gcf_primeMixin.
 
