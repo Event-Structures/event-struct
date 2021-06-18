@@ -147,6 +147,7 @@ Module Export Theory.
 Section Theory.
 
 Context {disp : unit} {E : eventType disp}.
+Implicit Types (x y z : E).
 
 Lemma cf_irrefl : irreflexive (cf : rel E).
 Proof. by case: E => ? [? []]. Qed.
@@ -156,6 +157,18 @@ Proof. by case: E => ? [? []]. Qed.
 
 Lemma cf_hered : hereditary (<=%O) (cf : rel E).
 Proof. by case: E => ? [? []]. Qed.
+
+Lemma cf_heredL x y z : 
+  cf x y -> ca x z -> cf z y.
+Proof. by rewrite cf_sym=> /cf_hered /[apply]; rewrite cf_sym. Qed.
+
+Lemma cf_heredR x y z : 
+  cf x y -> ca y z -> cf x z.
+Proof. by apply cf_hered. Qed.
+
+Lemma cf_heredLR x y z1 z2 : 
+  cf x y -> ca x z1 -> ca y z2 -> cf z1 z2.
+Proof. by do 2 (rewrite cf_sym; move=> /cf_hered /[apply]). Qed.
 
 Lemma prefix_cf_free (e : E) : cf_free (<= e).
 Proof. 
@@ -286,54 +299,33 @@ Definition gcf : pred {fset E} :=
 
 Lemma gcf_self (e : E) : ~~ (gcf [fset e]).
 Proof.
-  rewrite /gcf /=. apply /existsP => [] [] /= e1 /existsP [] /= e2.
-  move: e1 e2 => [] e1 p1 /= [] e2 p2 /=.
-  have: e1 = e.
-  - exact: fset1P.
-  move=> ->.
-  have: e2 = e.
-  - exact: fset1P.
-  by move=> ->; rewrite cf_irrefl.
+  rewrite /gcf /=; apply /fset_exists2P=> [] [] x [] y [].
+  by move=> /fset1P -> /fset1P ->; rewrite cf_irrefl.
 Qed.
 
 Lemma gcf_ext (X Y : {fset E}) : X `<=` Y -> gcf X -> gcf Y.
 Proof.
-  move=> XsubY.
-  rewrite /gcf => /existsP [] /= [] e1 p1 /existsP [] /= [] e2 p2 /= cf12.
-  apply /existsP => /=.
-  have: e1 \in Y.
-  { by move: XsubY p1 => /fsubsetP /[apply]. }
-  move=> py1. exists (FSetSub py1).
-  apply /existsP => /=.
-  have: e2 \in Y.
-  { by move: XsubY p2 => /fsubsetP /[apply]. }
-  move=> py2. exists (FSetSub py2).
-  move=> /=. exact: cf12.
+  rewrite /gcf=> H /= /fset_exists2P [] x [] y [].  
+  move=> /(fsubsetP H) ? /(fsubsetP H) ??.
+  by apply /fset_exists2P; exists x, y.
 Qed.
 
 Lemma gcf_hered (X : {fset E}) (e e' : E) :
   e <= e' -> gcf (X `|` [fset e]) -> gcf (X `|` [fset e']).
 Proof.
-  move=> ca12; rewrite /gcf => /existsP [] /= [] /= e1.
-  rewrite in_fsetU=> /orP [H|H] /existsP [] /= [] /= e2.
-  all: rewrite in_fsetU => /orP [H'|H'] cf12.
-  { apply /existsP. exists (FSetSub (fsetU1l e' H)).
-    apply /existsP. exists (FSetSub (fsetU1l e' H')).
-    exact: cf12. }
-  { apply /existsP. exists (FSetSub (fsetU1l e' H)).
-    apply /existsP. exists (FSetSub (fsetU1r X e')).
-    apply: cf_hered; first exact: cf12.
-    have: e2 = e by apply: fset1P.
-    by move=> ->. }
-  { apply /existsP. exists (FSetSub (fsetU1r X e')).
-    apply /existsP. exists (FSetSub (fsetU1l e' H')).
-    rewrite cf_sym. apply: cf_hered; last exact: ca12.
-    have: e1 = e by apply: fset1P.
-    move=> <-. by rewrite cf_sym. }
-  move: cf12.
-  have: e1 = e by apply: fset1P.
-  have: e2 = e by apply: fset1P.
-  move=> -> ->. by rewrite cf_irrefl.
+  rewrite /gcf=> Hca /fset_exists2P [] e1 [] e2 []. 
+  rewrite !in_fsetU=> /orP [] + /orP []; last first. 
+  - by move=> /fset1P -> /fset1P ->; rewrite cf_irrefl.
+  - move=> /fset1P -> ? H; apply /fset_exists2P; exists e', e2.
+    rewrite !in_fsetU; split; try (apply /orP); try by left.
+    + by right; apply /fset1P.
+    by apply: (cf_heredL H).
+  - move=> ? /fset1P -> H; apply /fset_exists2P; exists e1, e'.
+    rewrite !in_fsetU; split; try (apply /orP); try by left.
+    + by right; apply /fset1P.
+    by apply: (cf_heredR H). 
+  move=> ???; apply /fset_exists2P; exists e1, e2. 
+  by rewrite !in_fsetU; split; try (apply /orP); try by left.
 Qed.
 
 Definition gcf_primeMixin :=
