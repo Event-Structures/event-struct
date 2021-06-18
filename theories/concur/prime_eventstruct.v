@@ -200,11 +200,11 @@ Section ClassDef.
 
 Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
                 (T := Pomset.Pomset.Pack tt b) := Mixin {
-  Conf : pred {fset T};
+  gcf : pred {fset T};
 
-  _ : forall (e : T), ~~ (Conf [fset e]);
-  _ : forall (X Y : {fset T}), X `<=` Y -> Conf X -> Conf Y;
-  _ : forall X e e', e <= e' -> Conf (X `|` [fset e]) -> Conf (X `|` [fset e'])
+  _ : forall (e : T), ~~ (gcf [fset e]);
+  _ : forall (X Y : {fset T}), X `<=` Y -> gcf X -> gcf Y;
+  _ : forall X e e', e <= e' -> gcf (X `|` [fset e]) -> gcf (X `|` [fset e'])
 }.
 
 Set Primitive Projections.
@@ -263,7 +263,7 @@ Section Def.
 Variable (disp : unit) (E : eventType disp).
 
 Definition gcf : pred {fset E} :=
-  EventStruct.Conf (EventStruct.class E).
+  EventStruct.gcf (EventStruct.class E).
 
 Definition gcf_free (x : {fset E}) := ~~ (gcf x).
 
@@ -348,14 +348,14 @@ Export PrimeG.EventStruct.Exports.
 Export PrimeG.OfPrime.Exports.
 Export PrimeG.Theory.
 
-Section Test.
+(* Section Test. *)
 
-Context {disp : unit} {E : Prime.eventType disp}.
-Variable (e1 e2 : E) (s : {fset E}).
+(* Context {disp : unit} {E : Prime.eventType disp}. *)
+(* Variable (e1 e2 : E) (s : {fset E}). *)
 
-Check (e1 <= e2 : bool).
-Check (e1 \# e2 : bool).
-Check (PrimeG.gcf s : bool).
+(* Check (e1 <= e2 : bool). *)
+(* Check (e1 \# e2 : bool). *)
+(* Check (PrimeG.gcf s : bool). *)
 
-End Test.
+(* End Test. *)
 
