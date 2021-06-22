@@ -196,7 +196,7 @@ Definition orelpre f r : simpl_rel T :=
 Definition mk_total f (tot : forall x, f x) : T -> rT :=
   fun x => oextract (tot x).
     
-Lemma mk_totalE f x d tot : 
+Lemma mk_totalE d f x tot : 
   @mk_total f tot x = odflt d (f x).
 Proof.
   rewrite /mk_total /odflt /oapp.
