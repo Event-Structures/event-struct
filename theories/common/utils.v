@@ -185,12 +185,24 @@ End Swap.
 Section OptionUtils. 
 
 Context {T rT : Type}.
+Implicit Types (f : T -> option rT) (p : pred rT) (r : rel rT).
 
-Definition opreim (f : T -> option rT) (p : pred rT) : simpl_pred T := 
+Definition opreim f p : simpl_pred T := 
   [pred x | match f x with Some x => p x | _ => false end]. 
 
-Definition orelpre (f : T -> option rT) (r : rel rT) : simpl_rel T := 
+Definition orelpre f r : simpl_rel T := 
   [rel x y | match f x, f y with Some x, Some y => r x y | _, _ => false end].
+
+Definition mk_total f (tot : forall x, f x) : T -> rT :=
+  fun x => oextract (tot x).
+    
+Lemma mk_totalE f x d tot : 
+  @mk_total f tot x = odflt d (f x).
+Proof.
+  rewrite /mk_total /odflt /oapp.
+  move: (tot x)=> {tot}.
+  case: (f x)=> [{}x|] //.
+Qed.
 
 End OptionUtils.
 
