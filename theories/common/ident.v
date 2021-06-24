@@ -55,6 +55,18 @@ Reserved Notation ">=<^i y :> T" (at level 35, y at next level).
 Reserved Notation "x ><^i y" (at level 70, no associativity).
 Reserved Notation "><^i x" (at level 35).
 Reserved Notation "><^i y :> T" (at level 35, y at next level).
+Reserved Notation "x <=^i y <=^i z" (at level 70, y, z at next level).
+Reserved Notation "x <^i y <=^i z" (at level 70, y, z at next level).
+Reserved Notation "x <=^i y <^i z" (at level 70, y, z at next level).
+Reserved Notation "x <^i y <^i z" (at level 70, y, z at next level).
+Reserved Notation "x <=^i y ?= 'iff' c" (at level 70, y, c at next level,
+  format "x '[hv'  <=^i  y '/'  ?=  'iff'  c ']'").
+Reserved Notation "x <=^i y ?= 'iff' c :> T" (at level 70, y, c at next level,
+  format "x '[hv'  <=^i  y '/'  ?=  'iff'  c  :> T ']'").
+Reserved Notation "x <^i y ?<= 'if' c" (at level 70, y, c at next level,
+  format "x '[hv'  <^i  y '/'  ?<=  'if'  c ']'").
+Reserved Notation "x <^i y ?<= 'if' c :> T" (at level 70, y, c at next level,
+  format "x '[hv'  <^i  y '/'  ?<=  'if'  c  :> T ']'").
 
 Section Utils. 
 Context {T : countType}.
@@ -70,6 +82,7 @@ Section ClassDef.
 Record mixin_of T0 (b : Countable.class_of T0)
   (T := Countable.Pack b) := Mixin {
   _ : forall n, @unpickle T n;
+  _ : injective (@unpickle T)
 
   (* fresh : T -> T; *)
   (* ident0 : T; *)
@@ -99,9 +112,6 @@ Definition pack :=
   fun bT b & phant_id (@Countable.class bT) b =>
   fun m => Pack (@Class T b m).
 
-(* Inheritance *)
-(* Definition wfType := @WellFounded.Pack disp cT class. *)
-(* Definition porderType := @Order.POrder.Pack disp cT class. *)
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition countType := @Countable.Pack cT class.
@@ -114,15 +124,9 @@ Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion countType : type >-> Countable.type.
-(* Coercion porderType : type >-> Order.POrder.type. *)
-(* Coercion wfType : type >-> WellFounded.type. *)
-
 Canonical eqType.
 Canonical choiceType.
 Canonical countType.
-(* Canonical wfType. *)
-(* Canonical porderType. *)
-
 Notation identType := type.
 Notation IdentType disp T m := (@pack T disp _ _ id m).
 Notation "[ 'identType' 'of' T 'for' cT ]" := (@clone T cT _ id)
@@ -168,7 +172,7 @@ End Def.
 
 Prenex Implicits fresh fresh_seq ident_le ident_lt.
 
-Module Order. 
+Module Export Order. 
 Section Order. 
 
 Context (T : identType).
@@ -213,22 +217,15 @@ Proof. by move=> z x y; rewrite /ident_le; apply leq_trans. Qed.
 Lemma le_total : total (@ident_le T). 
 Proof. by move=> x y; rewrite /ident_le; apply leq_total. Qed.
 
-Lemma encodeK : cancel decode (encode : T -> nat).
-Proof. 
-  move=> x; rewrite /decode.
-  move: (unpickle_tot x). 
-  case H: (unpickle x)=> [{}y|] //.
-  rewrite /finmap.oextract=> ?; move: H.
-  have ->: (Some y = unpickle (pickle y)).
-  - apply /esym /pickleK. 
-  admit. 
-Admitted.  
-
-Lemma encode0 : encode (ident0 : T) = 0.
-Proof. by rewrite /ident0 encodeK. Qed.
-
 Lemma le0x x : ident_le ident0 x.
-Proof. by rewrite /ident_le encode0; apply leq0n. Qed.
+Proof. 
+  rewrite /ident_le.
+  have ->: encode ident0 = 0; last exact /leq0n.
+  move=> T'; apply /inj_can_sym.
+  - by apply /mk_totalK /pickleK.
+  apply /mk_total_inj.
+  by case: T'=> ? [? []]. 
+Qed.
 
 Definition mixin :=
   LeOrderMixin lt_def meet_def join_def le_anti le_trans le_total.
@@ -236,32 +233,96 @@ Definition mixin :=
 End Order.
 
 Module Export Exports.
-(* Context {T : identType}. *)
-
-Canonical porderType {T : identType} := POrderType idisp T (@Order.mixin T).
-(* Canonical latticeType := LatticeType T (@Order.mixin T). *)
-(* Canonical bLatticeType := BLatticeType T (BottomMixin (@Order.le0x T)). *)
-(* Canonical distrLatticeType := DistrLatticeType T (@Order.mixin T). *)
-(* Canonical bDistrLatticeType := [bDistrLatticeType of T]. *)
-(* Canonical orderType := OrderType T (@Order.mixin T). *)
-
+Implicit Types (T : identType). 
+Canonical porderType T := POrderType idisp T (@Order.mixin T).
+Canonical latticeType T := LatticeType T (@Order.mixin T).
+Canonical bLatticeType T := BLatticeType T (BottomMixin (@Order.le0x T)).
+Canonical distrLatticeType T := DistrLatticeType T (@Order.mixin T).
+Canonical bDistrLatticeType T := [bDistrLatticeType of T].
 End Exports.
-
-Context {T : identType} (a b : T).
 
 End Order.
 
-Module Syntax. 
-Notation "'\i0'" := (ident0).
+Module Export Syntax. 
+
+Notation "'\i0'" := (ident0) : ident_scope.
+
+Notation ident_le := (@Order.le (Order.idisp) _).
+Notation ident_lt := (@Order.lt (Order.idisp) _).
+Notation ident_comparable := (@Order.comparable (Order.idisp) _).
+Notation ident_ge := (@Order.ge (Order.idisp) _).
+Notation ident_gt := (@Order.gt (Order.idisp) _).
+Notation ident_leif := (@Order.leif (Order.idisp) _).
+Notation ident_lteif := (@Order.lteif (Order.idisp) _).
+Notation ident_max := (@Order.max (Order.idisp) _).
+Notation ident_min := (@Order.min (Order.idisp) _).
+Notation ident_meet := (@Order.meet (Order.idisp) _).
+Notation ident_join := (@Order.join (Order.idisp) _).
+Notation ident_bottom := (@Order.bottom (Order.idisp) _).
+Notation ident_top := (@Order.top (Order.idisp) _).
+
+Notation "<=^i%O" := ident_le : fun_scope.
+Notation ">=^i%O" := ident_ge : fun_scope.
+Notation "<^i%O" := ident_lt : fun_scope.
+Notation ">^i%O" := ident_gt : fun_scope.
+Notation "<?=^i%O" := ident_leif : fun_scope.
+Notation "<?<=^i%O" := ident_lteif : fun_scope.
+Notation ">=<^i%O" := ident_comparable : fun_scope.
+Notation "><^i%O" := (fun x y => ~~ ident_comparable x y) : fun_scope.
+
+Notation "<=^i y" := (>=^i%O y) : order_scope.
+Notation "<=^i y :> T" := (<=^i (y : T)) (only parsing) : order_scope.
+Notation ">=^i y" := (<=^i%O y) : order_scope.
+Notation ">=^i y :> T" := (>=^i (y : T)) (only parsing) : order_scope.
+
+Notation "<^i y" := (>^i%O y) : order_scope.
+Notation "<^i y :> T" := (<^i (y : T)) (only parsing) : order_scope.
+Notation ">^i y" := (<^i%O y) : order_scope.
+Notation ">^i y :> T" := (>^i (y : T)) (only parsing) : order_scope.
+
+Notation "x <=^i y" := (<=^i%O x y) : order_scope.
+Notation "x <=^i y :> T" := ((x : T) <=^i (y : T)) (only parsing) : order_scope.
+Notation "x >=^i y" := (y <=^i x) (only parsing) : order_scope.
+Notation "x >=^i y :> T" := ((x : T) >=^i (y : T)) (only parsing) : order_scope.
+
+Notation "x <^i y" := (<^i%O x y) : order_scope.
+Notation "x <^i y :> T" := ((x : T) <^i (y : T)) (only parsing) : order_scope.
+Notation "x >^i y" := (y <^i x) (only parsing) : order_scope.
+Notation "x >^i y :> T" := ((x : T) >^i (y : T)) (only parsing) : order_scope.
+
+Notation "x <=^i y <=^i z" := ((x <=^i y) && (y <=^i z)) : order_scope.
+Notation "x <^i y <=^i z" := ((x <^i y) && (y <=^i z)) : order_scope.
+Notation "x <=^i y <^i z" := ((x <=^i y) && (y <^i z)) : order_scope.
+Notation "x <^i y <^i z" := ((x <^i y) && (y <^i z)) : order_scope.
+
+Notation "x <=^i y ?= 'iff' C" := (<?=^i%O x y C) : order_scope.
+Notation "x <=^i y ?= 'iff' C :> T" := ((x : T) <=^i (y : T) ?= iff C)
+  (only parsing) : order_scope.
+
+Notation "x <^i y ?<= 'if' C" := (<?<=^i%O x y C) : order_scope.
+Notation "x <^i y ?<= 'if' C :> T" := ((x : T) <^i (y : T) ?<= if C)
+  (only parsing) : order_scope.
+
+Notation ">=<^i x" := (>=<^i%O x) : order_scope.
+Notation ">=<^i y :> T" := (>=<^i (y : T)) (only parsing) : order_scope.
+Notation "x >=<^i y" := (>=<^i%O x y) : order_scope.
+
+Notation "><^i y" := [pred x | ~~ ident_comparable x y] : order_scope.
+Notation "><^i y :> T" := (><^i (y : T)) (only parsing) : order_scope.
+Notation "x ><^i y" := (~~ (><^i%O x y)) : order_scope.
+
 End Syntax.
 
-End IdentType.
+End Ident.
 
-Export IdentType.Exports.
-Export IdentType.Def.
-Export IdentType.Syntax.
+Export Ident.Exports.
+Export Ident.Order.Exports.
+Export Ident.Def.
+Export Ident.Syntax.
 
-Notation "'\i0'" := (@ident0 _ _).
+Context {T : identType}.
+Variable (x y : T).
+Check (x <=^i y : bool).
 
 Section IdentTheory.
 Context {disp} {T : identType disp}.

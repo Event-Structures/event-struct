@@ -195,13 +195,34 @@ Definition orelpre f r : simpl_rel T :=
 
 Definition mk_total f (tot : forall x, f x) : T -> rT :=
   fun x => oextract (tot x).
-    
+  
 Lemma mk_totalE d f x tot : 
   @mk_total f tot x = odflt d (f x).
 Proof.
   rewrite /mk_total /odflt /oapp.
   move: (tot x)=> {tot}.
   case: (f x)=> [{}x|] //.
+Qed.
+
+Lemma mk_totalK g f tot : 
+  pcancel g f -> cancel g (@mk_total f tot). 
+Proof. 
+  move=> K x; rewrite /mk_total.
+  move: (tot (g x))=> {tot}.
+  case H: (f (g x))=> [{}y|] //= _.
+  apply /esym; move: H; rewrite K. 
+  exact /Some_inj.
+Qed.  
+
+Lemma mk_total_inj f tot : 
+  injective f -> injective (@mk_total f tot).
+Proof. 
+  move=> I x y; rewrite /mk_total.
+  move: (tot x) (tot y)=> {tot}.
+  case H1: (f x)=> [{}x'|] //= _.
+  case H2: (f y)=> [{}y'|] //= _.
+  move=> H3; move: H3 H2 H1=> <- <-.
+  exact /I.
 Qed.
 
 End OptionUtils.
