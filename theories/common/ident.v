@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import choice eqtype order.
-From eventstruct Require Import utils wftype.
+From eventstruct Require Import utils ssrnatlia wftype.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
@@ -75,6 +75,27 @@ Lemma pickle_inj : injective (@pickle T).
 Proof. by apply /pcan_inj /pickleK. Qed.
 
 End Utils.
+
+Lemma foldl_maxn_leq n m s : 
+  n <= m -> foldl maxn n s <= foldl maxn m s.
+Proof. 
+  move: n m; elim s=> [|k {}s IH n m]=> //=.
+  rewrite {2 4}/maxn; case: ifP; case: ifP=> //; last 1 first.
+  - by move=> ?? /IH. 
+  - by move=> /negP /(contra_not_leq id) /IH.
+  move=> + /negP /(contra_not_leq id).
+  move=> + /leq_trans /[apply]. 
+  by ssrnatlia.
+Qed.
+
+Lemma foldl_maxn_leq_init n s : 
+  n <= foldl maxn n s.
+Proof. 
+  move: n; elim s=> [|m {}s IH n]=> //=.
+  rewrite {2}/maxn; case: ifP=> //.
+  move=> H; apply /leq_trans; last by exact/IH.
+  rewrite -leEnat; apply /ltW /H.
+Qed.
 
 Module Ident.
 Section ClassDef.
@@ -313,24 +334,47 @@ Notation "x ><^i y" := (~~ (><^i%O x y)) : order_scope.
 
 End Syntax.
 
-End Ident.
-
-Export Ident.Exports.
-Export Ident.Order.Exports.
-Export Ident.Def.
-Export Ident.Syntax.
+Section Theory.
 
 Context {T : identType}.
-Variable (x y : T).
-Check (x <=^i y : bool).
+Implicit Types (x : T) (s : seq T).
 
-Section IdentTheory.
-Context {disp} {T : identType disp}.
-Local Notation ident0 := (@ident0 disp T).
-Local Notation fresh := (@fresh disp T).
+Lemma unpickle_inj : 
+  injective (@unpickle T).
+Proof. by case: T=> ? [/= ? []]. Qed.
 
-Lemma fresh_lt x : x < fresh x.
-Proof. by case: T x=> ? [/= ? []]. Qed.
+Lemma decode_inj : 
+  injective (decode : nat -> T).
+Proof. by apply /mk_total_inj /unpickle_inj. Qed.
+
+Lemma encodeK : 
+  cancel encode (decode : nat -> T). 
+Proof. by apply /mk_totalK /pickleK. Qed.
+
+Lemma decodeK : 
+  cancel decode (encode : T -> nat). 
+Proof. by apply/inj_can_sym; [exact/encodeK | exact/decode_inj]. Qed.
+
+Lemma encode0 : 
+  encode (\i0 : T) = 0.
+Proof. by rewrite /ident0; exact /decodeK. Qed.
+
+(* TODO: remove --- duplicate of le0x of Order.BLatticeTheory.le0x *)
+(* Lemma le0x x :  *)
+(*   \i0 <= x. *)
+(* Proof. exact /le0x. Qed. *)
+
+Lemma fresh_lt x : 
+  x <^i fresh x.
+Proof. 
+  rewrite /fresh /ident_lt /= /Def.ident_lt decodeK. 
+  (* ssrnatlia --- should work here, but it doesn't :( *)
+  exact /ltnSn.
+Qed.
+
+Lemma fresh_inj : 
+  injective (@fresh T).
+Proof. by rewrite /fresh=> x y /decode_inj [] /pickle_inj. Qed.
 
 Lemma fresh_iter n m x: iter n fresh x = iter m fresh x -> n = m.
 Proof.
@@ -342,49 +386,46 @@ Proof.
   by rewrite -iterS ?iterSr => /IHn->.
 Qed.
 
-Lemma i0_le (x : T) : \i0 <= x.
-Proof. by case: T x=> ? [/= ? []]. Qed.
+Lemma fresh_seq0 s : 
+  \i0 <^i fresh_seq s.
+Proof. by rewrite /fresh_seq /ident0 /ident_lt /= /Def.ident_lt !decodeK. Qed.
 
-Lemma i0_mem (s : seq T): 
-  \i0 \notin s = all (> \i0) s.
-Proof.
-  elim: s=> //= a ? <-; rewrite ?inE.
-  case: (\i0 \in _)=> //=; rewrite (orbF, orbT) (andbF, andbT) //.
-  have C: (\i0 >=< a) by rewrite /(_ >=< _) (i0_le _).
-  move: (i0_le a); by case: (comparable_ltgtP C).
+(* Lemma fresh_seq_mem is a replacement of the following two lemmas *)
+
+(* Lemma fresh_seq_lt x : x \in s -> x < fresh_seq s. *)
+(* Proof. *)
+(*   move: path_fresh_seq; rewrite path_sortedE. *)
+(*   - by case/andP=> /allP + _ => /[apply]. *)
+(*   exact/rev_trans/lt_trans. *)
+(* Qed. *)
+
+(* Lemma fresh_seq_le x : x \in (fresh_seq s :: s) -> x <= fresh_seq s. *)
+(* Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed. *)
+
+Lemma fresh_seq_mem x s : 
+  x \in s -> x <^i fresh_seq s.
+Proof. 
+  rewrite /fresh_seq /ident0 /ident_lt /= /Def.ident_lt !decodeK.
+  elim s=> [|y {}s IH]=> //=.
+  rewrite max0n in_cons=> /orP [/eqP<-|].
+  - rewrite ltEnat /=; apply /leq_ltn_trans; last exact/ltnSn.
+    apply /foldl_maxn_leq_init.
+  move=> /IH H; apply /leq_trans; first exact/H.
+  apply /ssrnat.leP /le_n_S /ssrnat.leP.
+  apply /foldl_maxn_leq /Order.BLatticeTheory.le0x. 
 Qed.
 
-Definition fresh_seq s := fresh (head \i0 s).
+Lemma fresh_seq_nmem s : fresh_seq s \notin s.
+Proof. by apply/memPn => x /fresh_seq_mem; rewrite lt_neqAle=> /andP[]. Qed.
 
-Lemma i0_fresh_seq s: \i0 < fresh_seq s.
-Proof.
-  case: s=> [|??]; first exact/fresh_lt.
-  exact/(le_lt_trans _ (fresh_lt _))/i0_le.
-Qed.
+(* Section Add_Sorted. *)
 
-Section Add_Sorted.
+(* Context {s : seq T} (s_sorted : sorted (>%O) s). *)
 
-Context {s : seq T} (s_sorted : sorted (>%O) s).
+(* Lemma path_fresh_seq : path (>%O) (fresh_seq s) s. *)
+(* Proof. by case: s s_sorted=> //= ??; rewrite fresh_lt. Qed. *)
 
-Lemma path_fresh_seq : path (>%O) (fresh_seq s) s.
-Proof. by case: s s_sorted=> //= ??; rewrite fresh_lt. Qed.
-
-Lemma fresh_seq_lt x : x \in s -> x < fresh_seq s.
-Proof.
-  move: path_fresh_seq; rewrite path_sortedE.
-  - by case/andP=> /allP + _ => /[apply].
-  exact/rev_trans/lt_trans.
-Qed.
-
-Lemma fresh_seq_le x : x \in (fresh_seq s :: s) -> x <= fresh_seq s.
-Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed.
-
-Lemma fresh_seq_notin : fresh_seq s \notin s.
-Proof. by apply/memPn => x /fresh_seq_lt; rewrite lt_neqAle=> /andP[]. Qed.
-
-
-End Add_Sorted.
-
+(* End Add_Sorted. *)
 
 Definition nfresh n := iter n (fun s => fresh_seq s :: s) [:: \i0].
 
@@ -416,6 +457,17 @@ Lemma nfresh_le x n : x \in nfresh n.+1 -> x <= fresh_seq (nfresh n).
 Proof. by move=> /= /fresh_seq_le; apply; apply: nfresh_sorted. Qed.
 
 End IdentTheory.
+
+End Ident.
+
+Export Ident.Exports.
+Export Ident.Order.Exports.
+Export Ident.Def.
+Export Ident.Syntax.
+
+Context {T : identType}.
+Variable (x y : T).
+Check (x <=^i y : bool).
 
 Import Order.NatOrder.
 
