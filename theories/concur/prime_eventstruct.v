@@ -362,3 +362,162 @@ Export PrimeG.Theory.
 
 (* End Test. *)
 
+Module PrimeC.
+
+Module EventStruct.
+Section ClassDef.
+
+Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
+                (T := Pomset.Pomset.Pack tt b) := Mixin {
+  Con : pred {fset T};
+
+  _ : forall (e : T), Con [fset e];
+  _ : forall (X Y : {fset T}), X `<=` Y -> Con Y -> Con X;
+  _ : forall X e e', e <= e' -> Con (X `|` [fset e']) -> Con (X `|` [fset e])
+}.
+
+Set Primitive Projections.
+Record class_of (T : Type) := Class {
+  base  : Pomset.Pomset.class_of T;
+  mixin : mixin_of base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Pomset.Pomset.class_of.
+
+Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (T : Type) (disp : unit) (cT : type disp).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
+Definition clone c of phant_id class c := @Pack disp T c.
+Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
+
+Definition pack :=
+  fun bT b & phant_id (@Pomset.Pomset.class disp bT) b =>
+  fun m => Pack disp (@Class T b m).
+
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition porderType := @Order.POrder.Pack disp cT class.
+Definition pomsetEventType := @Pomset.Pomset.Pack disp cT class.
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Pomset.Pomset.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion porderType : type >-> Order.POrder.type.
+Coercion pomsetEventType : type >-> Pomset.eventType.
+Canonical eqType.
+Canonical choiceType.
+Canonical porderType.
+Canonical pomsetEventType.
+End Exports.
+
+End EventStruct.
+
+Export EventStruct.Exports.
+
+Notation eventType := EventStruct.type.
+Notation eventStruct := EventStruct.class_of.
+Notation EventType disp T m := (@EventStruct.pack T disp _ _ id m).
+
+Section Def.
+
+Variable (disp : unit) (E : eventType disp).
+
+Definition Con : pred {fset E} :=
+  EventStruct.Con (EventStruct.class E).
+
+End Def.
+
+Prenex Implicits Con.
+
+Module Import Theory.
+Section Theory.
+
+Context {disp : unit} {E : eventType disp}.
+
+Lemma con_self : forall (e : E), Con [fset e].
+Proof. by case: E => ? [? []]. Qed.
+
+Lemma con_contr : forall (X Y : {fset E}), X `<=` Y -> Con Y -> Con X.
+Proof. by case: E => ? [? []]. Qed.
+
+Lemma con_prop :
+  forall X (e e' : E), e <= e' -> Con (X `|` [fset e']) -> Con (X `|` [fset e]).
+Proof. by case: E => ? [? []]. Qed.
+
+End Theory.
+End Theory.
+
+Module OfPrimeG.
+Section OfPrimeG.
+
+Context {disp : unit} {E : PrimeG.eventType disp}.
+
+Definition Con : pred {fset E} :=
+  fun X => ~~ (PrimeG.gcf X).
+
+Lemma con_self (e : E) : Con [fset e].
+Proof. rewrite /Con /=. exact: gcf_self. Qed.
+
+Lemma con_contr (X Y : {fset E}) : X `<=` Y -> Con Y -> Con X.
+Proof. rewrite /Con=> ?. apply /contraNN. exact: gcf_ext. Qed.
+
+Lemma con_prop (X : {fset E}) (e e' : E) :
+  e <= e' -> Con (X `|` [fset e']) -> Con (X `|` [fset e]).
+Proof. rewrite /Con=> ?. apply /contraNN. exact: gcf_hered. Qed.
+
+Definition gcf_conMixin := 
+  @EventStruct.Mixin E _ Con con_self con_contr con_prop.
+
+Definition primeG_primeC := EventType disp E gcf_conMixin.
+
+End OfPrimeG.
+
+Module Export Exports.
+Coercion primeG_primeC : PrimeG.eventType >-> eventType.
+Canonical primeG_primeC.
+End Exports.
+
+End OfPrimeG.
+
+Module ToPrimeG.
+Section ToPrimeG.
+
+Context {disp : unit} {E : PrimeC.eventType disp}.
+
+Definition gcf : pred {fset E} :=
+  fun X => ~~ (Con X).
+
+Lemma gcf_self (e : E) : ~~ (gcf [fset e]).
+Proof. by rewrite /gcf con_self. Qed.
+
+Lemma gcf_ext (X Y : {fset E}) : X `<=` Y -> gcf X -> gcf Y.
+Proof. rewrite /gcf=> H. apply: contraNN. exact: con_contr. Qed.
+
+Lemma gcf_hered (X : {fset E}) (e e' : E) :
+  e <= e' -> gcf (X `|` [fset e]) -> gcf (X `|` [fset e']).
+Proof. rewrite /gcf=> H. apply: contraNN. exact: con_prop. Qed.
+
+Definition con_gcfMixin := 
+  @PrimeG.EventStruct.Mixin E _ gcf gcf_self gcf_ext gcf_hered.
+
+Definition primeC_primeG := PrimeG.EventType disp E con_gcfMixin.
+
+End ToPrimeG.
+
+Module Export Exports.
+Coercion primeC_primeG : PrimeC.eventType >-> PrimeG.eventType.
+Canonical primeC_primeG.
+End Exports.
+
+End ToPrimeG.
+
+End PrimeC.
