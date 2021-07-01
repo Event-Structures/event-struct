@@ -54,82 +54,168 @@ Local Open Scope prime_eventstruct_scope.
 
 Reserved Notation "x \# y" (at level 75, no associativity).
 
+Definition fin_cause {T : eqType} (ca : rel T) :=
+  forall e, is_finite (ca^~ e).
+
 Definition hereditary {T : Type} (ca cf : rel T) := 
   forall x y z : T, cf x y -> ca y z -> cf x z.
 
-Module Prime.
+Module Elem. 
 
-Module EventStruct.
+Module Export EventStruct.
 Section ClassDef. 
 
-Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
-                (T := Pomset.Pomset.Pack tt b) := Mixin {
-  cf : rel T; 
-
-  _  : irreflexive cf;
-  _  : symmetric cf;
-  _  : hereditary (<=%O) cf; 
+Record mixin_of (E0 : Type) (L : Type) (eb : Pomset.Pomset.class_of E0 L)
+                (E := Pomset.Pomset.Pack eb) := Mixin {
+  _ : fin_cause (ca : rel E)
 }.
 
 Set Primitive Projections.
-Record class_of (T : Type) := Class {
-  base  : Pomset.Pomset.class_of T;
+Record class_of (E : Type) (L : Type) := Class {
+  base  : Pomset.Pomset.class_of E L;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Pomset.Pomset.class_of.
 
-Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (disp : unit) (cT : type disp).
+Variables (E : Type) (L : Type) (cT : type L).
 
-Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
-Definition clone c of phant_id class c := @Pack disp T c.
-Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack E c.
+(* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
 
 Definition pack :=
-  fun bT b & phant_id (@Pomset.Pomset.class disp bT) b =>
-  fun m => Pack disp (@Class T b m).
+  fun bE b & phant_id (@Pomset.Pomset.class L bE) b =>
+  fun m => Pack (@Class E L b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
-Definition porderType := @Order.POrder.Pack disp cT class.
-Definition pomsetEventType := @Pomset.Pomset.Pack disp cT class.
+Definition porderType := @Order.POrder.Pack tt cT class.
+Definition pomsetType := @Pomset.Pomset.Pack L cT class.
 End ClassDef.
 
 Module Export Exports.
-Coercion base : EventStruct.class_of >-> Pomset.Pomset.class_of.
+Coercion base : class_of >-> Pomset.Pomset.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
-Coercion pomsetEventType : type >-> Pomset.eventType.
+Coercion pomsetType : type >-> Pomset.eventType.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Canonical pomsetEventType.
+Canonical pomsetType.
 End Exports.
 
 End EventStruct.
 
-Export EventStruct.Exports.
+Notation eventType := EventStruct.type.
+Notation eventStruct := EventStruct.class_of.
+Notation EventType E L m := (@EventStruct.pack E L _ _ id m).
+
+Module Export Theory.
+Section Theory.
+
+Context {L : Type} {E : eventType L}.
+Implicit Types (e : E).
+
+Lemma prefix_fin (e : E) : is_finite (<= e).
+Proof. by move: e; case: E => ? [? []]. Qed.
+
+(* TODO: move to pomset? *)
+Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
+Proof. move=> e1 e2 /=; exact: le_trans. Qed.
+
+End Theory.
+End Theory.
+
+End Elem.
+
+Export Elem.EventStruct.Exports.
+Export Elem.Theory.
+
+
+Module Prime.
+
+Module Export EventStruct.
+Section ClassDef. 
+
+Record mixin_of (E0 : Type) (L : Type) (b : Elem.EventStruct.class_of E0 L)
+                (E := Elem.EventStruct.Pack b) := Mixin {
+  cf : rel E; 
+
+  _  : irreflexive cf;
+  _  : symmetric cf;
+  _  : hereditary ca cf; 
+}.
+
+Set Primitive Projections.
+Record class_of (E : Type) (L : Type) := Class {
+  base  : Elem.EventStruct.class_of E L;
+  mixin : mixin_of base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Elem.EventStruct.class_of.
+
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (E : Type) (L : Type) (cT : type L).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack E L c.
+(* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
+
+Definition pack :=
+  fun bE b & phant_id (@Elem.EventStruct.class L bE) b =>
+  fun m => Pack (@Class E L b m).
+
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition porderType := @Order.POrder.Pack tt cT class.
+Definition pomsetType := @Pomset.Pomset.Pack L cT class.
+Definition elemEventType := @Elem.EventStruct.Pack L cT class.
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Elem.EventStruct.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion porderType : type >-> Order.POrder.type.
+Coercion pomsetType : type >-> Pomset.eventType.
+Coercion elemEventType : type >-> Elem.eventType.
+Canonical eqType.
+Canonical choiceType.
+Canonical porderType.
+Canonical pomsetType.
+Canonical elemEventType.
+End Exports.
+
+End EventStruct.
 
 Notation eventType := EventStruct.type.
 Notation eventStruct := EventStruct.class_of.
-Notation EventType disp T m := (@EventStruct.pack T disp _ _ id m).
+Notation EventType E L m := (@EventStruct.pack E L _ _ id m).
 
 Section Def.
 
-Variable (disp : unit) (E : eventType disp).
+Variable (L : Type) (E : eventType L).
 
 Definition cf : rel E := EventStruct.cf (EventStruct.class E).
 
 Definition cf_free (X : pred E) : Prop := 
-  cf ⊓ (X × X) ≦ bot.
+  (* cf ⊓ (X × X) ≦ bot. *)
+  forall x y, cf x y -> X x -> X y -> False.
 
 (* configuration *)
 Definition cfg (x : pred E) := 
@@ -137,17 +223,17 @@ Definition cfg (x : pred E) :=
 
 End Def.
 
-Prenex Implicits cf.
+Prenex Implicits cf cfg.
 
-Module Import Syntax.
+Module Export Syntax.
 Notation "x \# y" := (cf x y) : prime_eventstruct_scope.
 End Syntax.
 
 Module Export Theory.
 Section Theory.
 
-Context {disp : unit} {E : eventType disp}.
-Implicit Types (x y z : E).
+Context {L : Type} {E : eventType L}.
+Implicit Types (e x y z : E).
 
 Lemma cf_irrefl : irreflexive (cf : rel E).
 Proof. by case: E => ? [? []]. Qed.
@@ -170,19 +256,15 @@ Lemma cf_heredLR x y z1 z2 :
   cf x y -> ca x z1 -> ca y z2 -> cf z1 z2.
 Proof. by do 2 (rewrite cf_sym; move=> /cf_hered /[apply]). Qed.
 
-Lemma prefix_cf_free (e : E) : cf_free (<= e).
+Lemma prefix_cf_free e : cf_free (<= e).
 Proof. 
   move=> e1 e2 /=; rewrite /le_bool.
-  case/andP=> /cf_hered cf /andP[+ {}/cf].
-  rewrite cf_sym; move/cf_hered/[apply].
+  move=> /(@cf_heredLR e1 e2 e e) /[apply] /[apply]. 
   by rewrite cf_irrefl.
 Qed.
 
-Lemma prefix_cfg (e : E) : cfg (<= e).
-Proof.
-  split; first by apply: prefix_ca_closed.
-  exact: prefix_cf_free.
-Qed.
+Lemma prefix_cfg e : cfg (<= e).
+Proof. split; [exact/prefix_ca_closed | exact/prefix_cf_free]. Qed.
 
 End Theory.
 End Theory.
@@ -193,61 +275,65 @@ Export Prime.EventStruct.Exports.
 Export Prime.Syntax.
 Export Prime.Theory.
 
+
 Module PrimeG.
 
 Module EventStruct.
 Section ClassDef.
 
-Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
-                (T := Pomset.Pomset.Pack tt b) := Mixin {
-  gcf : pred {fset T};
+Record mixin_of (E0 : Type) (L : Type) (b : Elem.EventStruct.class_of E0 L)
+                (E := Pomset.Pomset.Pack b) := Mixin {
+  gcf : pred {fset E};
 
-  _ : forall (e : T), ~~ (gcf [fset e]);
-  _ : forall (X Y : {fset T}), X `<=` Y -> gcf X -> gcf Y;
+  _ : forall (e : E), ~~ (gcf [fset e]);
+  _ : forall (X Y : {fset E}), X `<=` Y -> gcf X -> gcf Y;
   _ : forall X e e', e <= e' -> gcf (X `|` [fset e]) -> gcf (X `|` [fset e'])
 }.
 
 Set Primitive Projections.
-Record class_of (T : Type) := Class {
-  base  : Pomset.Pomset.class_of T;
+Record class_of (E : Type) (L : Type) := Class {
+  base  : Elem.EventStruct.class_of E L;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Pomset.Pomset.class_of.
+Local Coercion base : class_of >-> Elem.EventStruct.class_of.
 
-Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (disp : unit) (cT : type disp).
+Variables (E : Type) (L : Type) (cT : type L).
 
-Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
-Definition clone c of phant_id class c := @Pack disp T c.
-Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack E L c.
+(* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
 
 Definition pack :=
-  fun bT b & phant_id (@Pomset.Pomset.class disp bT) b =>
-  fun m => Pack disp (@Class T b m).
+  fun bE b & phant_id (@Elem.EventStruct.class L bE) b =>
+  fun m => Pack (@Class E L b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
-Definition porderType := @Order.POrder.Pack disp cT class.
-Definition pomsetEventType := @Pomset.Pomset.Pack disp cT class.
+Definition porderType := @Order.POrder.Pack tt cT class.
+Definition pomsetType := @Pomset.Pomset.Pack L cT class.
+Definition elemEventType := @Elem.EventStruct.Pack L cT class.
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Pomset.Pomset.class_of.
+Coercion base : class_of >-> Elem.EventStruct.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
-Coercion pomsetEventType : type >-> Pomset.eventType.
+Coercion pomsetType : type >-> Pomset.eventType.
+Coercion elemEventType : type >-> Elem.eventType.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Canonical pomsetEventType.
+Canonical pomsetType.
+Canonical elemEventType.
 End Exports.
 
 End EventStruct.
@@ -256,11 +342,11 @@ Export EventStruct.Exports.
 
 Notation eventType := EventStruct.type.
 Notation eventStruct := EventStruct.class_of.
-Notation EventType disp T m := (@EventStruct.pack T disp _ _ id m).
+Notation EventType E L m := (@EventStruct.pack E L _ _ id m).
 
 Section Def.
 
-Variable (disp : unit) (E : eventType disp).
+Variable (L : Type) (E : eventType L).
 
 Definition gcf : pred {fset E} :=
   EventStruct.gcf (EventStruct.class E).
@@ -274,7 +360,7 @@ Prenex Implicits gcf.
 Module Import Theory.
 Section Theory.
 
-Context {disp : unit} {E : eventType disp}.
+Context {L : Type} {E : eventType L}.
 
 Lemma gcf_self : forall (e : E), ~~ (gcf [fset e]).
 Proof. by case: E => ? [? []]. Qed.
@@ -292,7 +378,7 @@ End Theory.
 Module OfPrime.
 Section OfPrime.
 
-Context {disp : unit} {E : Prime.eventType disp}.
+Context {L : Type} {E : Prime.eventType L}.
 
 Definition gcf : pred {fset E} :=
   fun X => [exists e1 : X, exists e2 : X, (val e1) \# (val e2)].
@@ -329,9 +415,9 @@ Proof.
 Qed.
 
 Definition prime_gcfMixin := 
-  @EventStruct.Mixin E _ gcf gcf_self gcf_ext gcf_hered.
+  @EventStruct.Mixin E L _ gcf gcf_self gcf_ext gcf_hered.
 
-Definition prime_primeG := EventType disp E prime_gcfMixin.
+Definition prime_primeG := EventType E L prime_gcfMixin.
 
 End OfPrime.
 
@@ -350,7 +436,7 @@ Export PrimeG.Theory.
 
 (* Section Test. *)
 
-(* Context {disp : unit} {E : Prime.eventType disp}. *)
+(* Context {L : Type} {E : Prime.eventType L}. *)
 (* Variable (e1 e2 : E) (s : {fset E}). *)
 
 (* Check (e1 <= e2 : bool). *)

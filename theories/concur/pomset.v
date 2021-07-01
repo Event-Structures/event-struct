@@ -112,6 +112,11 @@ Definition ca : rel E := le.
 (* strict causality alias *)
 Definition sca : rel E := lt.
 
+
+Definition ca_closed (X : pred E) : Prop :=
+  (* ca · [X] ≦ [X] · ca; *)
+  forall x y, x <= y -> X y -> X x.  
+
 End Def.
 End Def.
 
