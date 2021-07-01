@@ -1,4 +1,4 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import choice eqtype order.
 From eventstruct Require Import utils ssrnatlia wftype.
 
@@ -31,6 +31,7 @@ Local Open Scope ident_scope.
 
 (* Notation for initial identifier *)
 Reserved Notation "\i0" (at level 0).
+Reserved Notation "\i1" (at level 0).
 
 (* Notations for canonical order on identifiers *)
 Reserved Notation "x <=^i y" (at level 70, y at next level).
@@ -97,6 +98,22 @@ Proof.
   rewrite -leEnat; apply /ltW /H.
 Qed.
 
+Lemma foldl_maxn_sorted s :
+  sorted (<=%O) s -> foldl maxn 0 s = last 0 s.
+Proof.
+  elim/last_ind: s=> [|{}s m IH]=> //=.
+  rewrite foldl_rcons last_rcons {1}/maxn.
+  case: ifP=> //=.
+  move=> /negP /(contra_not_leq id) + S.
+  rewrite IH; last first.
+  - apply /(subseq_sorted le_trans (subseq_rcons s m) S).
+  rewrite -leEnat le_eqVlt=> /orP[/eqP<-|] //=.
+  move: S; rewrite -(@path_min_sorted _ _ 0); last first.
+  - apply/allP=> x ?; exact/leq0n.
+  rewrite rcons_path=> /andP[] ?. 
+  by move=> H; rewrite (le_gtF H). 
+Qed.
+
 Module Ident.
 Section ClassDef.
 
@@ -104,11 +121,6 @@ Record mixin_of T0 (b : Countable.class_of T0)
   (T := Countable.Pack b) := Mixin {
   _ : forall n, @unpickle T n;
   _ : injective (@unpickle T)
-
-  (* fresh : T -> T; *)
-  (* ident0 : T; *)
-  (* _ : forall x, ident0 <= x; *)
-  (* _ : forall x, x < fresh x; *)
 }.
 
 Set Primitive Projections.
@@ -168,10 +180,16 @@ Section Def.
 Context {T : identType}.
 
 Definition ident0 : T := 
-  decode 0.
+  decode 0%nat.
+
+Definition ident1 : T := 
+  decode 1%nat.
 
 Definition fresh : T -> T := 
   fun x => decode (1 + encode x).
+
+Definition nfresh : T -> nat -> seq T := 
+  fun i n => traject fresh i n. 
 
 Definition fresh_seq : seq T -> T := 
   fun s => decode (1 + foldl maxn 0 (map encode s)).
@@ -267,6 +285,7 @@ End Order.
 Module Export Syntax. 
 
 Notation "'\i0'" := (ident0) : ident_scope.
+Notation "'\i1'" := (ident1) : ident_scope.
 
 Notation ident_le := (@Order.le (Order.idisp) _).
 Notation ident_lt := (@Order.lt (Order.idisp) _).
@@ -334,6 +353,7 @@ Notation "x ><^i y" := (~~ (><^i%O x y)) : order_scope.
 
 End Syntax.
 
+Module Export Theory.
 Section Theory.
 
 Context {T : identType}.
@@ -376,7 +396,9 @@ Lemma fresh_inj :
   injective (@fresh T).
 Proof. by rewrite /fresh=> x y /decode_inj [] /pickle_inj. Qed.
 
-Lemma fresh_iter n m x: iter n fresh x = iter m fresh x -> n = m.
+(* TODO: do we need it? *)
+Lemma fresh_iter n m x : 
+  iter n fresh x = iter m fresh x -> n = m.
 Proof.
   have F: forall x n, x < iter n.+1 fresh x.
   - move=> {x}{n}x; elim=> /= [|? /lt_trans]; last apply; exact/fresh_lt.
@@ -386,21 +408,41 @@ Proof.
   by rewrite -iterS ?iterSr => /IHn->.
 Qed.
 
+Lemma size_nfresh x n : 
+  size (nfresh x n) = n.
+Proof. by rewrite /nfresh size_traject. Qed.
+
+Lemma nth_nfresh x n i : 
+  i < n -> nth x (nfresh x n) i = iter i fresh x.
+Proof. by rewrite /nfresh=> ?; apply /nth_traject. Qed.
+
+Lemma nfresh_head x y n : 
+  head x (nfresh y n) = if n == 0 then x else y.
+Proof. by case: n=> //=. Qed.
+
+Lemma nfresh_sorted x n : 
+  sorted (<%O) (nfresh x n).
+Proof. 
+  rewrite /nfresh; case: n=> //= n.
+  apply /sub_path; last exact/fpath_traject.
+  move=> ?? /= /eqP <-; exact/fresh_lt.
+Qed.  
+
+Lemma nfreshS x n : 
+  nfresh x n.+1 = x :: nfresh (fresh x) n.
+Proof. by rewrite /nfresh; exact/trajectS. Qed.
+
+Lemma nfreshSr x n : 
+  nfresh x n.+1 = rcons (nfresh x n) (iter n fresh x).
+Proof. by rewrite /nfresh; exact/trajectSr. Qed.
+
+Lemma fresh_seq_nil : 
+  fresh_seq [::] = (\i1 : T).
+Proof. by rewrite /fresh_seq /ident1 //=. Qed.
+
 Lemma fresh_seq0 s : 
   \i0 <^i fresh_seq s.
 Proof. by rewrite /fresh_seq /ident0 /ident_lt /= /Def.ident_lt !decodeK. Qed.
-
-(* Lemma fresh_seq_mem is a replacement of the following two lemmas *)
-
-(* Lemma fresh_seq_lt x : x \in s -> x < fresh_seq s. *)
-(* Proof. *)
-(*   move: path_fresh_seq; rewrite path_sortedE. *)
-(*   - by case/andP=> /allP + _ => /[apply]. *)
-(*   exact/rev_trans/lt_trans. *)
-(* Qed. *)
-
-(* Lemma fresh_seq_le x : x \in (fresh_seq s :: s) -> x <= fresh_seq s. *)
-(* Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed. *)
 
 Lemma fresh_seq_mem x s : 
   x \in s -> x <^i fresh_seq s.
@@ -418,45 +460,19 @@ Qed.
 Lemma fresh_seq_nmem s : fresh_seq s \notin s.
 Proof. by apply/memPn => x /fresh_seq_mem; rewrite lt_neqAle=> /andP[]. Qed.
 
-(* Section Add_Sorted. *)
-
-(* Context {s : seq T} (s_sorted : sorted (>%O) s). *)
-
-(* Lemma path_fresh_seq : path (>%O) (fresh_seq s) s. *)
-(* Proof. by case: s s_sorted=> //= ??; rewrite fresh_lt. Qed. *)
-
-(* End Add_Sorted. *)
-
-Definition nfresh n := iter n (fun s => fresh_seq s :: s) [:: \i0].
-
-Lemma nfreshS n : nfresh n.+1 = fresh_seq (nfresh n) :: (nfresh n).
-Proof. by []. Qed.
-
-Lemma fresh_seq_iter n : fresh_seq (nfresh n) = iter n.+1 fresh \i0.
-Proof. by elim: n=> //= ? ->. Qed.
-
-Section NfreshSpec.
-
-Lemma nfresh_sorted n : sorted (>%O) (nfresh n).
-Proof. by elim: n=> //= n IHn; rewrite path_fresh_seq. Qed.
-
-Lemma nfreshE n : nfresh n = rev (traject fresh \i0 n.+1).
-Proof.
-  by elim: n=> // n IHn; rewrite nfreshS fresh_seq_iter trajectSr rev_rcons IHn.
+Lemma fresh_seq_nfresh x n : 
+  0 < n -> fresh_seq (nfresh x n) = iter n fresh x.
+Proof. 
+  rewrite /fresh_seq foldl_maxn_sorted; last first.
+  - rewrite sorted_map; apply /sub_sorted /nfresh_sorted.
+    rewrite /ident_lt /= /Def.ident_lt=> {}x y /=; exact /ltW.
+  rewrite -encode0 last_map; case: n=> [|{}n].
+  - by rewrite encode0=> /=. 
+  by rewrite nfreshSr last_rcons iterS /fresh.
 Qed.
 
-Lemma nfresh_size n : size (nfresh n) = n.+1.
-Proof. by rewrite nfreshE size_rev size_traject. Qed.
-
-Lemma nfresh_last n : last \i0 (nfresh n) = \i0.
-Proof. by rewrite nfreshE trajectS rev_cons -cats1 last_cat. Qed.
-
-End NfreshSpec.
-
-Lemma nfresh_le x n : x \in nfresh n.+1 -> x <= fresh_seq (nfresh n).
-Proof. by move=> /= /fresh_seq_le; apply; apply: nfresh_sorted. Qed.
-
-End IdentTheory.
+End Theory.
+End Theory.
 
 End Ident.
 
@@ -464,10 +480,11 @@ Export Ident.Exports.
 Export Ident.Order.Exports.
 Export Ident.Def.
 Export Ident.Syntax.
+Export Ident.Theory.
 
-Context {T : identType}.
-Variable (x y : T).
-Check (x <=^i y : bool).
+(* Context {T : identType}. *)
+(* Variable (x y : T). *)
+(* Check (x <=^i y : bool). *)
 
 Import Order.NatOrder.
 
