@@ -37,53 +37,50 @@ Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
 
-Definition fin_cause {T : eqType} (ca : rel T) :=
-  forall e, is_finite (ca^~ e).
-
-Module Pomset.
-
 Declare Scope pomset_scope.
 Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
 Module Pomset.
+
+Module Export Pomset.
 Section ClassDef. 
 
-Record mixin_of (T0 : Type) (b : Order.POrder.class_of T0)
-                (T := Order.POrder.Pack tt b) := Mixin {
-  _ : fin_cause (<=%O : rel T)
+Record mixin_of (E0 : Type) (eb : Order.POrder.class_of E0)
+                (E := Order.POrder.Pack tt eb)
+                (L : Type) := Mixin {
+  lab : E -> L
 }.
 
 Set Primitive Projections.
-Record class_of (T : Type) := Class {
-  base  : Order.POrder.class_of T;
-  mixin : mixin_of base;
+Record class_of (E : Type) (L : Type) := Class {
+  base  : Order.POrder.class_of E;
+  mixin : mixin_of base L;
 }.
 Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Order.POrder.class_of.
 
-Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (disp : unit) (cT : type disp).
+Variables (E : Type) (L : Type) (cT : type L).
 
-Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
-Definition clone c of phant_id class c := @Pack disp T c.
-Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack E c.
 
 Definition pack :=
-  fun bE b & phant_id (@Order.POrder.class disp bE) b =>
-  fun m => Pack disp (@Class T b m).
+  fun bE b & phant_id (@Order.POrder.class tt bE) b =>
+  fun m => Pack (@Class E L b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
-Definition porderType := @Order.POrder.Pack disp cT class.
+Definition porderType := @Order.POrder.Pack tt cT class.
 End ClassDef.
 
-Module Exports.
+Module Export Exports.
 Coercion base : class_of >-> Order.POrder.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
@@ -93,8 +90,7 @@ Coercion porderType : type >-> Order.POrder.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Notation pomsetType := type.
-Notation PomsetType disp T m := (@pack T disp _ _ id m).
+Notation PomsetType E L m := (@pack E L _ _ id m).
 End Exports.
 
 End Pomset.
@@ -102,12 +98,13 @@ End Pomset.
 Notation eventType := Pomset.type.
 Notation eventStruct := Pomset.class_of.
 
-Import Pomset.Exports.
+Module Export Def.
+Section Def.
 
-Module Import PomsetDef.
-Section PomsetDef.
+Context {L : Type} {E : eventType L}.
 
-Variable (disp : unit) (E : eventType disp).
+(* labeling function *)
+Definition lab : E -> L := Pomset.lab (Pomset.class E).
 
 (* causality alias *)
 Definition ca : rel E := le.
@@ -115,31 +112,82 @@ Definition ca : rel E := le.
 (* strict causality alias *)
 Definition sca : rel E := lt.
 
-Definition ca_closed (X : pred E) : Prop :=
-  (* ca · [X] ≦ [X] · ca; *)
-  forall x y, x <= y -> X y -> X x.  
+End Def.
+End Def.
 
-End PomsetDef.
-End PomsetDef.
+Prenex Implicits lab ca sca.
 
-Prenex Implicits ca.
+Module Export Hom.
+Section Hom. 
 
-Module Export PomsetTheory.
-Section PomsetTheory.
+(* TODO: homomorphism between pomsets labelled by different labels? *)
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
 
-Context {disp : unit} {E : eventType disp}.
+Record mixin_of f := Mixin {
+  _ : forall e, lab (f e) = lab e;
+  _ : forall e1 e2, e1 <= e2 -> f e1 <= f e2;
+}.
 
-Lemma prefix_fin (e : E) : is_finite (<= e).
-Proof. by move: e; case: E => ? [? []]. Qed.
+Set Primitive Projections.
+Record class_of f := Class {
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
 
-Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
-Proof. move=> e1 e2 /=; exact: le_trans. Qed.
+Structure type := Pack { homf ; _ : class_of homf }.
 
-End PomsetTheory.
-End PomsetTheory.
+Local Coercion homf : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (homf cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+End Hom.
+
+Module Export Exports.
+Coercion mixin : class_of >-> mixin_of.
+Coercion homf : type >-> Funclass.
+Notation hom := type.
+End Exports.
+
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : hom E1 E2).
+
+Lemma lab_preserv (e : E1) :
+  lab (f e) = lab e.
+Proof. by move: e; case: f => ? [[]]. Qed.
+
+Lemma monotone (e1 e2 : E1) :
+  e1 <= e2 -> f e1 <= f e2.
+Proof. by move: e1 e2; case: f => ? [[]]. Qed.
+
+End Theory.
+
+Section Cat.
+Context {L : Type}.
+
+Definition id {E : eventType L} : hom E E.
+Proof. by exists id; do 2 constructor=> //. Defined.
+
+Definition tr {E1 E2 E3 : eventType L} : hom E1 E2 -> hom E2 E3 -> hom E1 E3.
+Proof. 
+  move=> f1 f2; exists (f2 \o f1); do 2 constructor=> /=.
+  - by move=> e; rewrite !lab_preserv.
+  by move=> e1 e2 /(monotone f1) /(monotone f2).
+Defined.
+
+End Cat.
+
+End Hom.
 
 End Pomset.
 
 Export Pomset.Pomset.Exports.
-Export Pomset.PomsetDef.
-Export Pomset.PomsetTheory.
+Export Pomset.Def.
+Export Pomset.Hom.Exports.
