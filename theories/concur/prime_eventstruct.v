@@ -267,6 +267,9 @@ Definition gcf : pred {fset E} :=
 
 Definition gcf_free (x : {fset E}) := ~~ (gcf x).
 
+Definition cfg (p : pred E) := 
+  forall (S : {fset E}), (forall x, x \in S -> p x) -> gcf_free S.
+
 End Def.
 
 Prenex Implicits gcf.
