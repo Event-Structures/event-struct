@@ -443,13 +443,13 @@ Section Theory.
 
 Context {disp : unit} {E : eventType disp}.
 
-Lemma con_self : forall (e : E), cons [fset e].
+Lemma cons_self : forall (e : E), cons [fset e].
 Proof. by case: E => ? [? []]. Qed.
 
-Lemma con_contr : forall (X Y : {fset E}), X `<=` Y -> cons Y -> cons X.
+Lemma cons_contr : forall (X Y : {fset E}), X `<=` Y -> cons Y -> cons X.
 Proof. by case: E => ? [? []]. Qed.
 
-Lemma con_prop :
+Lemma cons_prop :
   forall X (e e' : E), e <= e' -> cons (X `|` [fset e']) -> cons (X `|` [fset e]).
 Proof. by case: E => ? [? []]. Qed.
 
@@ -461,21 +461,21 @@ Section OfPrimeG.
 
 Context {disp : unit} {E : PrimeG.eventType disp}.
 
-Definition Con : pred {fset E} :=
+Definition cons : pred {fset E} :=
   fun X => ~~ (PrimeG.gcf X).
 
-Lemma con_self (e : E) : Con [fset e].
-Proof. rewrite /Con /=. exact: gcf_self. Qed.
+Lemma cons_self (e : E) : cons [fset e].
+Proof. rewrite /cons /=. exact: gcf_self. Qed.
 
-Lemma con_contr (X Y : {fset E}) : X `<=` Y -> Con Y -> Con X.
-Proof. rewrite /Con=> ?. apply /contraNN. exact: gcf_ext. Qed.
+Lemma cons_contr (X Y : {fset E}) : X `<=` Y -> cons Y -> cons X.
+Proof. rewrite /cons=> ?. apply /contraNN. exact: gcf_ext. Qed.
 
-Lemma con_prop (X : {fset E}) (e e' : E) :
-  e <= e' -> Con (X `|` [fset e']) -> Con (X `|` [fset e]).
-Proof. rewrite /Con=> ?. apply /contraNN. exact: gcf_hered. Qed.
+Lemma cons_prop (X : {fset E}) (e e' : E) :
+  e <= e' -> cons (X `|` [fset e']) -> cons (X `|` [fset e]).
+Proof. rewrite /cons=> ?. apply /contraNN. exact: gcf_hered. Qed.
 
 Definition gcf_conMixin := 
-  @EventStruct.Mixin E _ Con con_self con_contr con_prop.
+  @EventStruct.Mixin E _ cons cons_self cons_contr cons_prop.
 
 Definition primeG_primeC := EventType disp E gcf_conMixin.
 
@@ -497,14 +497,14 @@ Definition gcf : pred {fset E} :=
   fun X => ~~ (cons X).
 
 Lemma gcf_self (e : E) : ~~ (gcf [fset e]).
-Proof. by rewrite /gcf con_self. Qed.
+Proof. by rewrite /gcf cons_self. Qed.
 
 Lemma gcf_ext (X Y : {fset E}) : X `<=` Y -> gcf X -> gcf Y.
-Proof. rewrite /gcf=> H. apply: contraNN. exact: con_contr. Qed.
+Proof. rewrite /gcf=> H. apply: contraNN. exact: cons_contr. Qed.
 
 Lemma gcf_hered (X : {fset E}) (e e' : E) :
   e <= e' -> gcf (X `|` [fset e]) -> gcf (X `|` [fset e']).
-Proof. rewrite /gcf=> H. apply: contraNN. exact: con_prop. Qed.
+Proof. rewrite /gcf=> H. apply: contraNN. exact: cons_prop. Qed.
 
 Definition con_gcfMixin := 
   @PrimeG.EventStruct.Mixin E _ gcf gcf_self gcf_ext gcf_hered.
