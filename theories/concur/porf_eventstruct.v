@@ -51,6 +51,7 @@ Import WfClosure.
 Local Open Scope order_scope.
 Local Open Scope fset_scope.
 Local Open Scope fmap_scope.
+Local Open Scope ident_scope.
 
 Declare Scope exec_eventstruct_scope.
 Delimit Scope exec_eventstruct_scope with exec_es.
@@ -362,7 +363,7 @@ End EDescrEq.
 
 Section PORFEventStructureDef.
 
-Context {disp : unit} (E : identType disp) (L : labType).
+Context (E : identType) (L : labType).
 
 Local Notation edescr := (edescr E L).
 
@@ -411,7 +412,7 @@ End PORFEventStructureDef.
 
 Section PORFEventStructEq. 
 
-Context {disp} {E : identType disp} {L : labType}.
+Context {E : identType} {L : labType}.
 
 Definition eq_es (es es' : porf_eventstruct E L) : bool :=
   [&& dom es == dom es' & fed es == fed es'].
@@ -432,13 +433,13 @@ Qed.
 
 End PORFEventStructEq. 
 
-Canonical es_eqMixin disp E L := EqMixin (@eqesP disp E L).
-Canonical es_eqType disp E L := 
-  Eval hnf in EqType (@porf_eventstruct disp E L) (es_eqMixin E L).
+Canonical es_eqMixin E L := EqMixin (@eqesP E L).
+Canonical es_eqType E L := 
+  Eval hnf in EqType (@porf_eventstruct E L) (es_eqMixin E L).
 
 Section PORFEventStructInh. 
 
-Context {disp} {E : identType disp} {L : labType}.
+Context {E : identType} {L : labType}.
 
 Local Notation edescr := (edescr E L).
 
@@ -461,11 +462,11 @@ Defined.
 
 End PORFEventStructInh. 
 
-Canonical es_inhMixin {disp E V} := 
-  @Inhabitant.Mixin (@porf_eventstruct disp E V) _ 
+Canonical es_inhMixin {E V} := 
+  @Inhabitant.Mixin (@porf_eventstruct E V) _ 
     inh_exec_eventstructure.
-Canonical es_inhType disp E V := 
-  Eval hnf in Inhabitant (@porf_eventstruct disp E V) es_inhMixin.
+Canonical es_inhType E V := 
+  Eval hnf in Inhabitant (@porf_eventstruct E V) es_inhMixin.
 
 (* ************************************************************************* *)
 (*     Label related functions, predicates and relations on events           *)
@@ -473,7 +474,7 @@ Canonical es_inhType disp E V :=
 
 Section PORFEventStructLab. 
 
-Context {disp} {E : identType disp} {L : labType}.
+Context {E : identType} {L : labType}.
 Context (x : Loc) (v : L).
 Context (es : porf_eventstruct E L).
 
@@ -535,7 +536,7 @@ Notation "[ 'events' e <- S | C1 & C2 ]" :=
 
 Section PORFEventStructureTheory.
 
-Context {disp} {E : identType disp} {L : labType}.
+Context {E : identType} {L : labType}.
 Context (es : porf_eventstruct E L).
 
 Local Notation fed := (fed es).
@@ -592,7 +593,7 @@ Lemma lab_ndom e : e \notin dom -> lab e = \eps.
 Proof. by move=> ?; rewrite labE fed_ndom. Qed.
 
 Lemma lab_fresh : lab fresh_id = \eps.
-Proof. by rewrite lab_ndom //; apply /fresh_seq_notin/dom_sorted. Qed.
+Proof. by rewrite lab_ndom //; apply /fresh_seq_nmem. Qed.
 
 Lemma lab_prj_edescr_map f e : 
   @lab_prj E L (edescr_map f (fed e)) = lab e.
@@ -635,8 +636,8 @@ Qed.
 Lemma fpo_fresh e : 
   fpo e = fresh_id -> e = fresh_id.
 Proof.
-  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/fpo_ndom->//].
-  by move/le_lt_trans: (fpo_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
+  case: (boolP (e \in dom))=> [/fresh_seq_mem|/fpo_ndom->//].
+  by move/le_lt_trans: (fpo_le e)=> /[apply]/[swap]-> /[! (@ltxx)].
 Qed.
 
 Lemma fpo_sync e : lab (fpo e) (po)>> lab e. 
@@ -689,8 +690,8 @@ Qed.
 Lemma frf_fresh e : 
   frf e = fresh_id -> e = fresh_id.
 Proof.
-  case: (boolP (e \in dom))=> [/(fresh_seq_lt dom_sorted)|/frf_ndom->//].
-  by move/le_lt_trans: (frf_le e)=> /[apply]/[swap]-> /[! (@ltxx disp)].
+  case: (boolP (e \in dom))=> [/fresh_seq_mem|/frf_ndom->//].
+  by move/le_lt_trans: (frf_le e)=> /[apply]/[swap]-> /[! @ltxx].
 Qed.
 
 Lemma frf_sync e : lab (frf e) (rf)>> lab e. 
@@ -775,7 +776,7 @@ Proof.
   move/[dup]/ica_ndom/[swap]/fca_ge.
   rewrite /ica ?inE.
   case I: (e \in dom); last by move=> ?/(_ erefl)/eqP->.
-  by move: (fresh_seq_lt dom_sorted I)=> /= /lt_geF ->. 
+  by move: (fresh_seq_mem I)=> /= /lt_geF ->. 
 Qed.
 
 (* ************************************************************************* *)
@@ -906,42 +907,12 @@ Proof. done. Qed.
 Lemma refl_ca : reflexive ca.
 Proof. done. Qed.
 
-Definition causal T : Type := T.
-
-Lemma dispC : unit -> unit.
-Proof. done. Qed.
-
-Notation "E ^c" := (causal E) (at level 2, format "E ^c").
-
-Notation causal_le := ((@Order.le (dispC _) _) : rel E^c).
-Notation causal_ge := ((@Order.ge (dispC _) _) : rel E^c).
-Notation causal_lt := ((@Order.lt (dispC _) _) : rel E^c).
-Notation causal_gt := ((@Order.gt (dispC _) _) : rel E^c).
-
-Notation "<=%C" := causal_le (at level 0).
-Notation ">=%C" := causal_ge (at level 0).
-Notation "<%C" := causal_lt (at level 0).
-Notation ">%C" := causal_gt (at level 0).
-
-Notation "x <=^c y" := (<=%C x y) (at level 0).
-Notation "x >=^c y" := (>=%C x y) (at level 0).
-Notation "x <^c y" := (<%C x y) (at level 0).
-Notation "x >^c y" := (>%C x y) (at level 0).
-
-Notation "x <=^c y :> T" := ((x : T) <=^c (y : T)) (at level 0, y at next level).
-Notation "x >=^c y :> T" := ((x : T) >=^c (y : T)) (at level 0, y at next level).
-Notation "x <^c y :> T" := ((x : T) <^c (y : T)) (at level 0, y at next level).
-Notation "x >^c y :> T" := ((x : T) >^c (y : T)) (at level 0, y at next level).
-
-Canonical causal_eqType := EqType E [eqMixin of (E^c)].
-Canonical causal_choiceType := [choiceType of (E^c)].
-
 Definition causal_orderMixin :=
   @LePOrderMixin _ ca sca sca_def refl_ca ca_anti (@ca_trans).
 
-Canonical porderType := @POrderType (dispC disp) E^c causal_orderMixin.
+Canonical porderType := @POrderType tt E causal_orderMixin.
 
-Lemma fin_cause_ca : @fin_cause (porderType) (<=%C).
+Lemma fin_cause_ca : @fin_cause porderType (<=%O).
 Proof. 
   rewrite /fin_cause=> e. 
   exists (undup (wsuffix fca_gt e)).
@@ -950,10 +921,10 @@ Proof.
 Qed.
 
 Definition lposetMixin :=
-  @LPoset.LPoset.Mixin E^c (Order.POrder.class porderType) L lab.
+  @lPoset.lPoset.Mixin E L lab. 
 
 Canonical lposetType := 
-  @LPoset.LPoset.Pack L E^c (LPoset.LPoset.Class lposetMixin).
+  @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lposetMixin).
 
 Definition elem_porfMixin := 
   @Elem.EventStruct.Mixin E^c L _ fin_cause_ca.
@@ -1085,7 +1056,8 @@ Qed.
 
 Lemma cf_irrelf : irreflexive cf.
 Proof.
-  move=> m; apply/negbTE/negP; elim/(@wfb_ind disp E): m=> m IHm.
+  move=> m; apply/negbTE/negP. 
+  elim/(@wfb_ind Ident.Order.idisp E): m=> m IHm.
   suff: ~ cf m (fpo m).
   - move=> /negP /(contraNF id) C. 
     rewrite cfE. rewrite orbb icfxx //=. 
@@ -1117,8 +1089,8 @@ End PORFEventStructureTheory.
 
 Section PrimePORFEventStruct.
 
-Context {disp : unit} (E : identType disp) (L : labType).
-Implicit Type es : (@porf_eventstruct disp E L).
+Context (E : identType) (L : labType).
+Implicit Type es : (@porf_eventstruct E L).
 
 Inductive prime_porf_eventstruct := 
   PrimeES es of (rf_ncf_dom es && dup_free es).
@@ -1149,7 +1121,7 @@ Definition prime_porfMixin :=
     (cf es) (cf_irrelf es (rf_ncf_dom_es es)) (cf_sym es) hered_porfes.
 
 Canonical prime_porfPrime := 
-  @Prime.EventStruct.Pack L E^c (Prime.EventStruct.Class prime_porfMixin).
+  @Prime.EventStruct.Pack L E (Prime.EventStruct.Class prime_porfMixin).
 
 End PrimePORFEventStruct.
 
