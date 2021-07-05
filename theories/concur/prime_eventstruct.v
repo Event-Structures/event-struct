@@ -268,7 +268,7 @@ Definition gcf : pred {fset E} :=
 Definition gcf_free (x : {fset E}) := ~~ (gcf x).
 
 Definition cfg (p : pred E) := 
-  forall (S : {fset E}), (forall x, x \in S -> p x) -> gcf_free S.
+  forall (s : {fset E}), (forall x, x \in s -> p x) -> gcf_free s.
 
 End Def.
 
@@ -369,11 +369,11 @@ Section ClassDef.
 
 Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
                 (T := Pomset.Pomset.Pack tt b) := Mixin {
-  Con : pred {fset T};
+  cons : pred {fset T};
 
-  _ : forall (e : T), Con [fset e];
-  _ : forall (X Y : {fset T}), X `<=` Y -> Con Y -> Con X;
-  _ : forall X e e', e <= e' -> Con (X `|` [fset e']) -> Con (X `|` [fset e])
+  _ : forall (e : T), cons [fset e];
+  _ : forall (X Y : {fset T}), X `<=` Y -> cons Y -> cons X;
+  _ : forall X e e', e <= e' -> cons (X `|` [fset e']) -> cons (X `|` [fset e])
 }.
 
 Set Primitive Projections.
@@ -431,26 +431,26 @@ Section Def.
 
 Variable (disp : unit) (E : eventType disp).
 
-Definition Con : pred {fset E} :=
-  EventStruct.Con (EventStruct.class E).
+Definition cons : pred {fset E} :=
+  EventStruct.cons (EventStruct.class E).
 
 End Def.
 
-Prenex Implicits Con.
+Prenex Implicits cons.
 
 Module Import Theory.
 Section Theory.
 
 Context {disp : unit} {E : eventType disp}.
 
-Lemma con_self : forall (e : E), Con [fset e].
+Lemma con_self : forall (e : E), cons [fset e].
 Proof. by case: E => ? [? []]. Qed.
 
-Lemma con_contr : forall (X Y : {fset E}), X `<=` Y -> Con Y -> Con X.
+Lemma con_contr : forall (X Y : {fset E}), X `<=` Y -> cons Y -> cons X.
 Proof. by case: E => ? [? []]. Qed.
 
 Lemma con_prop :
-  forall X (e e' : E), e <= e' -> Con (X `|` [fset e']) -> Con (X `|` [fset e]).
+  forall X (e e' : E), e <= e' -> cons (X `|` [fset e']) -> cons (X `|` [fset e]).
 Proof. by case: E => ? [? []]. Qed.
 
 End Theory.
@@ -494,7 +494,7 @@ Section ToPrimeG.
 Context {disp : unit} {E : PrimeC.eventType disp}.
 
 Definition gcf : pred {fset E} :=
-  fun X => ~~ (Con X).
+  fun X => ~~ (cons X).
 
 Lemma gcf_self (e : E) : ~~ (gcf [fset e]).
 Proof. by rewrite /gcf con_self. Qed.
