@@ -474,10 +474,10 @@ Lemma cons_prop (X : {fset E}) (e e' : E) :
   e <= e' -> cons (X `|` [fset e']) -> cons (X `|` [fset e]).
 Proof. rewrite /cons=> ?. apply /contraNN. exact: gcf_hered. Qed.
 
-Definition gcf_conMixin := 
+Definition gcf_consMixin := 
   @EventStruct.Mixin E _ cons cons_self cons_contr cons_prop.
 
-Definition primeG_primeC := EventType disp E gcf_conMixin.
+Definition primeG_primeC := EventType disp E gcf_consMixin.
 
 End OfPrimeG.
 
@@ -506,10 +506,10 @@ Lemma gcf_hered (X : {fset E}) (e e' : E) :
   e <= e' -> gcf (X `|` [fset e]) -> gcf (X `|` [fset e']).
 Proof. rewrite /gcf=> H. apply: contraNN. exact: cons_prop. Qed.
 
-Definition con_gcfMixin := 
+Definition cons_gcfMixin := 
   @PrimeG.EventStruct.Mixin E _ gcf gcf_self gcf_ext gcf_hered.
 
-Definition primeC_primeG := PrimeG.EventType disp E con_gcfMixin.
+Definition primeC_primeG := PrimeG.EventType disp E cons_gcfMixin.
 
 End ToPrimeG.
 
