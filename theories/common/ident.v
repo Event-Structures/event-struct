@@ -7,11 +7,11 @@ From eventstruct Require Import utils ssrnatlia wftype.
 (*  identType d == interface for inhabited well-founded orders equipped with  *)
 (*                 increasing function to generate "fresh" identifiers.       *)
 (*     fresh id == a fresh identifier coming after id (id < fresh id).        *)
-(*       \i0 == an initial identifier.                                     *)
+(*       \i0 == an initial identifier.                                        *)
 (*     nfresh n == a decreasing sequence of size n+1 of fresh identifiers     *)
-(*                 with \i0 as the last element.                           *)
+(*                 with \i0 as the last element.                              *)
 (*  fresh_seq s == an identifier fresher than the head of the s sequence      *)
-(*                 (\i0 if s is empty). Helps with reducing time           *)
+(*                 (\i0 if s is empty). Helps with reducing time              *)
 (*                 complexity of incremental generation of sequences of fresh *)
 (*                 identifiers).                                              *)
 (* This file also contains canonical instance of identType for nat.           *)
@@ -161,7 +161,7 @@ Canonical eqType.
 Canonical choiceType.
 Canonical countType.
 Notation identType := type.
-Notation IdentType disp T m := (@pack T disp _ _ id m).
+Notation IdentType T m := (@pack T _ _ id m).
 Notation "[ 'identType' 'of' T 'for' cT ]" := (@clone T cT _ id)
   (at level 0, format "[ 'identType'  'of'  T  'for'  cT ]") : form_scope.
 Notation "[ 'identType' 'of' T ]" := [identType of T for _]
@@ -486,15 +486,17 @@ Export Ident.Theory.
 (* Variable (x y : T). *)
 (* Check (x <=^i y : bool). *)
 
-Import Order.NatOrder.
+(* Import Order.NatOrder. *)
 
-Section IdentDataTypes.
+Lemma nat_unpickle_tot (n : nat) : (unpickle n : option nat).
+Proof. done. Qed.
+
+Lemma nat_unpickle_inj : injective (unpickle : nat -> option nat).
+Proof. exact/Some_inj. Qed.
 
 Definition nat_identMixin :=
-  @IdentType.Mixin nat (WellFounded.class nat_wfType) succn 0 leq0n ltnSn.
-
-End IdentDataTypes.
+  @Ident.Mixin nat (Countable.class nat_countType) 
+               nat_unpickle_tot nat_unpickle_inj.
 
 Canonical nat_identType :=
-  Eval hnf in IdentType nat_display nat nat_identMixin.
-
+  Eval hnf in IdentType nat nat_identMixin.
