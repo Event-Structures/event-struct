@@ -211,6 +211,41 @@ End Def.
 
 Prenex Implicits fresh fresh_seq ident_le ident_lt.
 
+(* basic properties requires by canonical instances *)
+Module Export Props.
+Section Props.
+
+Context {T : identType}.
+Implicit Types (x : T) (s : seq T).
+
+Lemma unpickle_inj : 
+  injective (@unpickle T).
+Proof. by case: T=> ? [/= ? []]. Qed.
+
+Lemma decode_inj : 
+  injective (decode : nat -> T).
+Proof. by apply /mk_total_inj /unpickle_inj. Qed.
+
+Lemma encodeK : 
+  cancel encode (decode : nat -> T). 
+Proof. by apply /mk_totalK /pickleK. Qed.
+
+Lemma decodeK : 
+  cancel decode (encode : T -> nat). 
+Proof. by apply/inj_can_sym; [exact/encodeK | exact/decode_inj]. Qed.
+
+Lemma encode0 : 
+  encode (ident0 : T) = 0%nat.
+Proof. by rewrite /ident0; exact /decodeK. Qed.
+
+Lemma encode1 : 
+  encode (ident1 : T) = 1%nat.
+Proof. by rewrite /ident1; exact /decodeK. Qed.
+
+End Props.
+End Props.
+
+
 Module Export Order. 
 Section Order. 
 
@@ -257,14 +292,17 @@ Lemma le_total : total (@ident_le T).
 Proof. by move=> x y; rewrite /ident_le; apply leq_total. Qed.
 
 Lemma le0x x : ident_le ident0 x.
-Proof. 
-  rewrite /ident_le.
-  have ->: encode ident0 = 0; last exact /leq0n.
-  move=> T'; apply /inj_can_sym.
-  - by apply /mk_totalK /pickleK.
-  apply /mk_total_inj.
-  by case: T'=> ? [? []]. 
-Qed.
+Proof. rewrite /ident_le encode0; exact /leq0n. Qed.
+
+Lemma wfb : well_founded_bool (@ident_lt T).
+Proof.
+  move=> x; rewrite /ident_lt.
+  rewrite -(encodeK x).
+  elim/(@wfb_ind _ nat_wfType): (encode x).
+  constructor=> y.
+  rewrite decodeK -{2}(encodeK y).
+  by apply /X.
+Qed.  
 
 Definition mixin :=
   LeOrderMixin lt_def meet_def join_def le_anti le_trans le_total.
@@ -272,12 +310,27 @@ Definition mixin :=
 End Order.
 
 Module Export Exports.
+
 Implicit Types (T : identType). 
+
 Canonical porderType T := POrderType idisp T (@Order.mixin T).
 Canonical latticeType T := LatticeType T (@Order.mixin T).
 Canonical bLatticeType T := BLatticeType T (BottomMixin (@Order.le0x T)).
 Canonical distrLatticeType T := DistrLatticeType T (@Order.mixin T).
 Canonical bDistrLatticeType T := [bDistrLatticeType of T].
+
+Canonical wfType T := 
+  let wf_mixin := @WellFounded.Mixin T 
+     (Order.POrder.class (porderType T)) (@Order.wfb T) 
+  in WfType idisp T wf_mixin.
+
+Coercion porderType : type >-> Order.POrder.type.
+Coercion latticeType : type >-> Order.Lattice.type.
+Coercion bLatticeType : type >-> Order.BLattice.type.
+Coercion distrLatticeType : type >-> Order.DistrLattice.type.
+Coercion bDistrLatticeType : type >-> Order.BDistrLattice.type.
+Coercion wfType : type >-> WellFounded.type.
+
 End Exports.
 
 End Order.
@@ -358,31 +411,6 @@ Section Theory.
 
 Context {T : identType}.
 Implicit Types (x : T) (s : seq T).
-
-Lemma unpickle_inj : 
-  injective (@unpickle T).
-Proof. by case: T=> ? [/= ? []]. Qed.
-
-Lemma decode_inj : 
-  injective (decode : nat -> T).
-Proof. by apply /mk_total_inj /unpickle_inj. Qed.
-
-Lemma encodeK : 
-  cancel encode (decode : nat -> T). 
-Proof. by apply /mk_totalK /pickleK. Qed.
-
-Lemma decodeK : 
-  cancel decode (encode : T -> nat). 
-Proof. by apply/inj_can_sym; [exact/encodeK | exact/decode_inj]. Qed.
-
-Lemma encode0 : 
-  encode (\i0 : T) = 0.
-Proof. by rewrite /ident0; exact /decodeK. Qed.
-
-(* TODO: remove --- duplicate of le0x of Order.BLatticeTheory.le0x *)
-(* Lemma le0x x :  *)
-(*   \i0 <= x. *)
-(* Proof. exact /le0x. Qed. *)
 
 Lemma fresh_lt x : 
   x <^i fresh x.
@@ -466,7 +494,8 @@ Proof.
   rewrite /fresh_seq foldl_maxn_sorted; last first.
   - rewrite sorted_map; apply /sub_sorted /nfresh_sorted.
     rewrite /ident_lt /= /Def.ident_lt=> {}x y /=; exact /ltW.
-  rewrite -encode0 last_map; case: n=> [|{}n].
+  have {2}->: 0 = @encode T \i0 by apply/esym/encode0.
+  rewrite last_map; case: n=> [|{}n].
   - by rewrite encode0=> /=. 
   by rewrite nfreshSr last_rcons iterS /fresh.
 Qed.
@@ -479,6 +508,7 @@ End Ident.
 Export Ident.Exports.
 Export Ident.Order.Exports.
 Export Ident.Def.
+Export Ident.Props.
 Export Ident.Syntax.
 Export Ident.Theory.
 
