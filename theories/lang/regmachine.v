@@ -59,7 +59,7 @@ Import Label.Syntax.
 
 Local Notation M := ModelMonad.ListMonad.t.
 
-Context {disp} {E : identType disp} {Val : inhType}.
+Context {E : identType} {Val : inhType}.
 
 (*Notation n := (@n val).*)
 (*Notation porf_event_struct := (porf_eventstruct E Val).
@@ -193,8 +193,8 @@ Definition label_labMixin :=
 
 Canonical label_labType := Eval hnf in LabType tr_label label_labMixin.
 
-Notation porf_eventstruct := (@porf_eventstruct disp E label_labType).
-Notation prime_porf_eventstruct := (@prime_porf_eventstruct disp E label_labType).
+Notation porf_eventstruct := (@porf_eventstruct E label_labType).
+Notation prime_porf_eventstruct := (@prime_porf_eventstruct E label_labType).
 
 End RegMachine.
 
