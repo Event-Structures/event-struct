@@ -516,8 +516,6 @@ Export Ident.Theory.
 (* Variable (x y : T). *)
 (* Check (x <=^i y : bool). *)
 
-(* Import Order.NatOrder. *)
-
 Lemma nat_unpickle_tot (n : nat) : (unpickle n : option nat).
 Proof. done. Qed.
 

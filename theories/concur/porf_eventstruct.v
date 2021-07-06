@@ -381,7 +381,6 @@ Structure porf_eventstruct := Pack {
   frf e  := frf_prj (fed e);
 
   _      : finsupp fed == (seq_fset tt dom);
-  _      : sorted (>%O) dom;
   _      : \i0 \in dom;
 
   _      : fed \i0 = {| lab_prj := \init; 
@@ -421,12 +420,12 @@ Lemma eqesP : Equality.axiom eq_es.
 Proof.
   move=> x y; apply: (iffP idP)=> [|->]; last by rewrite /eq_es ?eq_refl.
   case: x=> dom1 fed1 lab1 fpo1 frf1 df1 ds1 di1. 
-  rewrite {}/lab1 {}/fpo1 {}/frf1=> li1 pc1 f1 g1 rc1 rc1' rc1''.
+  rewrite {}/lab1 {}/fpo1 {}/frf1=> li1 pc1 f1 g1 rc1 rc1'.
   case: y=> dom2 fed2 lab2 fpo2 frf2 df2 ds2 di2.
-  rewrite {}/lab2 {}/fpo2 {}/frf2=> li2 pc2 f2 g2 rc2 rc2' rc2''.
+  rewrite {}/lab2 {}/fpo2 {}/frf2=> li2 pc2 f2 g2 rc2 rc2'.
   case/andP=> /= /eqP E1 /eqP E2. 
-  move: df1 ds1 di1 li1 pc1 f1 g1 rc1 rc1' rc1''. 
-  move: df2 ds2 di2 li2 pc2 f2 g2 rc2 rc2' rc2''. 
+  move: df1 ds1 di1 li1 pc1 f1 g1 rc1 rc1'. 
+  move: df2 ds2 di2 li2 pc2 f2 g2 rc2 rc2'. 
   move: E1 E2; do 2 (case: _ /). 
   move=> *; congr Pack; exact/eq_irrelevance.
 Qed.
@@ -452,8 +451,8 @@ Proof.
   - rewrite /fed0 finsupp_with /= /eq_op /= /eq_op /= /eq_op /=.
     by rewrite (negbTE init_eps) finsupp0 ?inE orbF.
   have F: fed0 \i0 = mk_edescr \init \i0 \i0 by rewrite ?fsfun_with.
-  have [: a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] @evstr : 
-  porf_eventstruct E L := Pack dom0 fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10;
+  have [: a1 a2 a3 a4 a5 a6 a7 a8 a9] @evstr : 
+  porf_eventstruct E L := Pack dom0 fed0 a1 a2 a3 a4 a5 a6 a7 a8 a9;
   rewrite /dom0 ?inE ?eq_refl //.
   - by apply/eqP/fsetP=> ?; rewrite S seq_fsetE.
   all: apply/forallP=> [[/= x]]; rewrite S ?inE=> /eqP-> /[! F]/= //.
@@ -576,8 +575,8 @@ Proof. by rewrite -fed_supp_mem=> ?; rewrite fsfun_dflt. Qed.
 Lemma dom0 : \i0 \in dom. 
 Proof. by case: es. Qed.
 
-Lemma dom_sorted : sorted (>%O) dom. 
-Proof. by case: es. Qed.
+(* Lemma dom_sorted : sorted (>%O) dom.  *)
+(* Proof. by case: es. Qed. *)
 
 (* ************************************************************************* *)
 (*     Label mapping                                                         *)
@@ -613,7 +612,7 @@ Lemma fpo_dom e :
   e \in dom -> fpo e \in dom.
 Proof.
   rewrite -fed_supp_mem.
-  case: es=> /=; rewrite /porf_eventstruct.fpo /==>> ???? /forallP H ????? L'.
+  case: es=> /=; rewrite /porf_eventstruct.fpo /==>> ??? /forallP H ????? L'.
   exact/(H [` L']).
 Qed.
 
@@ -623,7 +622,7 @@ Proof. by move=> ndom; rewrite /fpo fsfun_dflt // fed_supp ndom. Qed.
 Lemma fpo_n0 e : e \in dom -> e != \i0 -> fpo e < e.
 Proof.
   rewrite /fpo -fed_supp.
-  case: es=> /= > ?????? /forallP H ??? eI.
+  case: es=> /= > ????? /forallP H ??? eI.
   by move/(_ [` eI])/implyP: H=> /= /[apply].
 Qed.
 
@@ -643,7 +642,7 @@ Qed.
 Lemma fpo_sync e : lab (fpo e) (po)>> lab e. 
 Proof.
   rewrite /lab /fed /fpo; case (boolP (e \in finsupp fed)).
-  - case: es=> ????????????? H ? /= eI. 
+  - case: es=> ???????????? H ? /= eI. 
     rewrite -[e]/(fsval [` eI]).
     move: H=> /forallP H; exact: H.
   by move=> ndom; rewrite !fsfun_dflt //= synch.
@@ -667,7 +666,7 @@ Lemma frf_dom e :
   e \in dom -> frf e \in dom.
 Proof.
   rewrite -fed_supp_mem.
-  case: es=> /=; rewrite /porf_eventstruct.frf /==>> ????? /forallP H ???? L'.
+  case: es=> /=; rewrite /porf_eventstruct.frf /==>> ???? /forallP H ???? L'.
   exact/(H [` L']).
 Qed.
 
@@ -677,7 +676,7 @@ Proof. by move=> ndom; rewrite /frf fsfun_dflt // fed_supp ndom. Qed.
 Lemma frf_n0 e : e \in dom -> e != \i0 -> frf e < e.
 Proof.
   rewrite /frf -fed_supp.
-  case: es=> /= > ??????? /forallP H ?? eI.
+  case: es=> /= > ?????? /forallP H ?? eI.
   by move/(_ [` eI])/implyP: H=> /= /[apply].
 Qed.
 
@@ -697,7 +696,7 @@ Qed.
 Lemma frf_sync e : lab (frf e) (rf)>> lab e. 
 Proof.
   rewrite /lab /fed /frf; case (boolP (e \in finsupp fed)).
-  - case: es=> ?????????????? H /= eI. 
+  - case: es=> ????????????? H /= eI. 
     rewrite -[e]/(fsval [` eI]).
     move: H=> /forallP H; exact: H.
   by move=> ndom; rewrite !fsfun_dflt //= synch.
