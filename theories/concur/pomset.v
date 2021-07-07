@@ -105,7 +105,6 @@ Definition ca : rel E := le.
 (* strict causality alias *)
 Definition sca : rel E := lt.
 
-
 Definition ca_closed (X : pred E) : Prop :=
   (* ca · [X] ≦ [X] · ca; *)
   forall x y, x <= y -> X y -> X x.  
@@ -154,8 +153,13 @@ Coercion homf : type >-> Funclass.
 Notation hom := type.
 End Exports.
 
+Module Export Syntax. 
+Notation "E1 ~> E2" := (hom E1 E2) (at level 50) : pomset_scope.
+End Syntax. 
+
+Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : hom E1 E2).
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ~> E2).
 
 Lemma lab_preserv (e : E1) :
   lab (f e) = lab e.
@@ -166,14 +170,15 @@ Lemma monotone (e1 e2 : E1) :
 Proof. by move: e1 e2; case: f => ? [[]]. Qed.
 
 End Theory.
+End Theory.
 
 Section Cat.
 Context {L : Type}.
 
-Definition id {E : eventType L} : hom E E.
+Definition id {E : eventType L} : E ~> E.
 Proof. by exists id; do 2 constructor=> //. Defined.
 
-Definition tr {E1 E2 E3 : eventType L} : hom E1 E2 -> hom E2 E3 -> hom E1 E3.
+Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
 Proof. 
   move=> f1 f2; exists (f2 \o f1); do 2 constructor=> /=.
   - by move=> e; rewrite !lab_preserv.
@@ -187,5 +192,7 @@ End Hom.
 End LPoset.
 
 Export LPoset.LPoset.Exports.
-Export LPoset.Def.
 Export LPoset.Hom.Exports.
+Export LPoset.Def.
+Export LPoset.Hom.Theory.
+
