@@ -1,10 +1,13 @@
 From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype choice.
-From mathcomp Require Import seq path fingraph fintype finmap.
+From mathcomp Require Import order seq path fintype finmap.
+From eventstruct Require Import ssrnatlia.
 
 Set Implicit Arguments.
-Unset Printing Implicit Defensive.
 Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
+Import Order.Theory.
 
 (* ************************************************************************** *)
 (*     Some automation with hints and tactics                                 *)
@@ -196,7 +199,7 @@ Definition orelpre f r : simpl_rel T :=
 Definition mk_total f (tot : forall x, f x) : T -> rT :=
   fun x => oextract (tot x).
   
-Lemma mk_totalE d f x tot : 
+Lemma mk_totalE d f x tot :
   @mk_total f tot x = odflt d (f x).
 Proof.
   rewrite /mk_total /odflt /oapp.
@@ -204,19 +207,19 @@ Proof.
   case: (f x)=> [{}x|] //.
 Qed.
 
-Lemma mk_totalK g f tot : 
-  pcancel g f -> cancel g (@mk_total f tot). 
-Proof. 
+Lemma mk_totalK g f tot :
+  pcancel g f -> cancel g (@mk_total f tot).
+Proof.
   move=> K x; rewrite /mk_total.
   move: (tot (g x))=> {tot}.
   case H: (f (g x))=> [{}y|] //= _.
-  apply /esym; move: H; rewrite K. 
+  apply /esym; move: H; rewrite K.
   exact /Some_inj.
-Qed.  
+Qed.
 
-Lemma mk_total_inj f tot : 
+Lemma mk_total_inj f tot :
   injective f -> injective (@mk_total f tot).
-Proof. 
+Proof.
   move=> I x y; rewrite /mk_total.
   move: (tot x) (tot y)=> {tot}.
   case H1: (f x)=> [{}x'|] //= _.
@@ -227,6 +230,56 @@ Qed.
 
 End OptionUtils.
 
+
+Section CountableUtils. 
+Context {T : countType}.
+
+Lemma pickle_inj : injective (@choice.pickle T).
+Proof. apply /pcan_inj /choice.pickleK. Qed.
+
+End CountableUtils.
+
+
+Section FoldUtils. 
+
+Lemma foldl_maxn_leq n m s : 
+  n <= m -> foldl maxn n s <= foldl maxn m s.
+Proof. 
+  move: n m; elim s=> [|k {}s IH n m] => //=.
+  rewrite {2 4}/maxn; case: ifP; case: ifP=> //; last 1 first.
+  - by move=> ?? /IH. 
+  - by move=> /negP /(contra_not_leq id) /IH.
+  move=> + /negP /(contra_not_leq id).
+  move=> + /leq_trans /[apply]. 
+  by ssrnatlia.
+Qed.
+
+Lemma foldl_maxn_leq_init n s : 
+  n <= foldl maxn n s.
+Proof. 
+  move: n; elim s=> [|m {}s IH n] => //=.
+  rewrite {2}/maxn; case: ifP=> //.
+  move=> H; apply /leq_trans; last by exact/IH.
+  by apply ltnW.
+Qed.
+
+Lemma foldl_maxn_sorted s :
+  sorted (<=%O) s -> foldl maxn 0 s = last 0 s.
+Proof.
+  elim/last_ind: s=> [|{}s m IH] => //=.
+  rewrite foldl_rcons last_rcons {1}/maxn.
+  case: ifP=> //=.
+  move=> /negP /(contra_not_leq id) + S.
+  rewrite IH; last first.
+  - apply /(subseq_sorted le_trans (subseq_rcons s m) S).
+  rewrite -leEnat le_eqVlt=> /orP[/eqP<-|] //=.
+  move: S; rewrite -(@path_min_sorted _ _ 0); last first.
+  - apply/allP=> x ?; exact/leq0n.
+  rewrite rcons_path=> /andP[] ?. 
+  by move=> H; rewrite (le_gtF H). 
+Qed.
+
+End FoldUtils. 
 
 Section FSetUtils.
 
@@ -249,7 +302,7 @@ Proof.
   apply /equivP; last split. 
   - apply /(@fset_existsP _ (fun x => [exists y, r x (val y)])).
   - by move=> [] x [] Hx /fset_existsP [] y [] Hy Rxy; exists x, y.
-  move=> [] x [] y [] Hx [] Hy Rxy; exists x; split=> //. 
+  move=> [] x [] y [] Hx Hy Rxy; exists x; split=> //. 
   by apply /fset_existsP; exists y.
 Qed.  
 

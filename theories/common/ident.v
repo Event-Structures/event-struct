@@ -81,51 +81,6 @@ Reserved Notation "x <^i y ?<= 'if' c" (at level 70, y, c at next level,
 Reserved Notation "x <^i y ?<= 'if' c :> T" (at level 70, y, c at next level,
   format "x '[hv'  <^i  y '/'  ?<=  'if'  c  :> T ']'").
 
-Section Utils. 
-Context {T : countType}.
-
-Lemma pickle_inj : injective (@pickle T).
-Proof. by apply /pcan_inj /pickleK. Qed.
-
-End Utils.
-
-Lemma foldl_maxn_leq n m s : 
-  n <= m -> foldl maxn n s <= foldl maxn m s.
-Proof. 
-  move: n m; elim s=> [|k {}s IH n m]=> //=.
-  rewrite {2 4}/maxn; case: ifP; case: ifP=> //; last 1 first.
-  - by move=> ?? /IH. 
-  - by move=> /negP /(contra_not_leq id) /IH.
-  move=> + /negP /(contra_not_leq id).
-  move=> + /leq_trans /[apply]. 
-  by ssrnatlia.
-Qed.
-
-Lemma foldl_maxn_leq_init n s : 
-  n <= foldl maxn n s.
-Proof. 
-  move: n; elim s=> [|m {}s IH n]=> //=.
-  rewrite {2}/maxn; case: ifP=> //.
-  move=> H; apply /leq_trans; last by exact/IH.
-  rewrite -leEnat; apply /ltW /H.
-Qed.
-
-Lemma foldl_maxn_sorted s :
-  sorted (<=%O) s -> foldl maxn 0 s = last 0 s.
-Proof.
-  elim/last_ind: s=> [|{}s m IH]=> //=.
-  rewrite foldl_rcons last_rcons {1}/maxn.
-  case: ifP=> //=.
-  move=> /negP /(contra_not_leq id) + S.
-  rewrite IH; last first.
-  - apply /(subseq_sorted le_trans (subseq_rcons s m) S).
-  rewrite -leEnat le_eqVlt=> /orP[/eqP<-|] //=.
-  move: S; rewrite -(@path_min_sorted _ _ 0); last first.
-  - apply/allP=> x ?; exact/leq0n.
-  rewrite rcons_path=> /andP[] ?. 
-  by move=> H; rewrite (le_gtF H). 
-Qed.
-
 Module Ident.
 Section ClassDef.
 
@@ -494,7 +449,7 @@ Proof.
     apply /foldl_maxn_leq_init.
   move=> /IH H; apply /leq_trans; first exact/H.
   apply /ssrnat.leP /le_n_S /ssrnat.leP.
-  apply /foldl_maxn_leq /Order.BLatticeTheory.le0x. 
+  by apply /foldl_maxn_leq /leq0n. 
 Qed.
 
 Lemma fresh_seq_nmem s : fresh_seq s \notin s.
@@ -506,7 +461,7 @@ Proof.
   rewrite /fresh_seq foldl_maxn_sorted; last first.
   - rewrite sorted_map; apply /sub_sorted /nfresh_sorted.
     rewrite /ident_lt /= /Def.ident_lt=> {}x y /=; exact /ltW.
-  have {2}->: 0 = @encode T \i0 by apply/esym/encode0.
+  have {2}->: 0%nat = @encode T \i0 by apply/esym/encode0.
   rewrite last_map; case: n=> [|{}n].
   - by rewrite encode0=> /=. 
   by rewrite nfreshSr last_rcons iterS /fresh.
