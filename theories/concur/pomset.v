@@ -15,9 +15,25 @@ From eventstruct Require Import utils.
 (*                               lposet structure itself (as opposed to       *)
 (*                               `eventType`) and for uniformity with the     *)
 (*                               theory of event structures.                  *)
-(*       LPoset.eventType L   == a type of events with labels of type L,      *)
+(*         LPoset.eventType L == a type of events with labels of type L,      *)
 (*                               i.e. a type equipped with canonical labelled *)
 (*                               poset structure instance.                    *)
+(*                        lab == labelling function                           *)
+(*                         ca == causality order                              *)
+(*                        sca == strict causality order                       *)
+(*                     x <= y == x preceds y in causality order. All          *)
+(*                               conventional order notations are as well.    *)
+(*                                                                            *)
+(*           LPoset.hom E1 E2 == a homomorphism between lposet types E1 and   *)
+(*                               E1 and E2, that is a label preserving        *) 
+(*                               monotone function.                           *)
+(*          LPoset.Hom.id     == identity homomorphism.                       *)
+(*          LPoset.Hom.tr f g == composition of homomorphisms (g \o f).       *)
+(*                                                                            *)
+(* Additionally, this file provides notations for homomorphisms which can     *)
+(* be used by importing corresponding module: `Import LPoset.Hom.Syntax`.     *)
+(*                   E1 ~> E2 == homomorphism                                 *)
+(*                                                                            *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -180,9 +196,9 @@ Proof. by exists id; do 2 constructor=> //. Defined.
 
 Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
 Proof. 
-  move=> f1 f2; exists (f2 \o f1); do 2 constructor=> /=.
+  move=> f g; exists (g \o f); do 2 constructor=> /=.
   - by move=> e; rewrite !lab_preserv.
-  by move=> e1 e2 /(monotone f1) /(monotone f2).
+  by move=> e1 e2 /(monotone f) /(monotone g).
 Defined.
 
 End Cat.
