@@ -178,7 +178,7 @@ End Def.
 
 Prenex Implicits fresh fresh_seq ident_le ident_lt.
 
-(* basic properties requires by canonical instances *)
+(* basic properties required by canonical instances *)
 Module Export Props.
 Section Props.
 
@@ -390,18 +390,6 @@ Qed.
 Lemma fresh_inj : 
   injective (@fresh T).
 Proof. by rewrite /fresh=> x y /decode_inj [] /pickle_inj. Qed.
-
-(* TODO: do we need it? *)
-Lemma fresh_iter n m x : 
-  iter n fresh x = iter m fresh x -> n = m.
-Proof.
-  have F: forall x n, x < iter n.+1 fresh x.
-  - move=> {x}{n}x; elim=> /= [|? /lt_trans]; last apply; exact/fresh_lt.
-  elim: n m x=> /= [[] // n x|n IHn [/= x|l x]].
-  - move: (F x n)=>/[swap]{1}->; by rewrite ltxx.
-  - rewrite -iterS; move: (F x n)=>/[swap]{1}->; by rewrite ltxx.
-  by rewrite -iterS ?iterSr => /IHn->.
-Qed.
 
 Lemma size_nfresh x n : 
   size (nfresh x n) = n.
