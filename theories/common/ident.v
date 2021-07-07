@@ -219,7 +219,7 @@ Section Order.
 Context (T : identType).
 Implicit Types (x y z : T).
 
-Lemma idisp : unit. 
+Lemma disp : unit. 
 Proof. exact: tt. Qed.
 
 Lemma lt_def x y : (ident_lt x y) = (y != x) && (ident_le x y).
@@ -280,7 +280,7 @@ Module Export Exports.
 
 Implicit Types (T : identType). 
 
-Canonical porderType T := POrderType idisp T (@Order.mixin T).
+Canonical porderType T := POrderType disp T (@Order.mixin T).
 Canonical latticeType T := LatticeType T (@Order.mixin T).
 Canonical bLatticeType T := BLatticeType T (BottomMixin (@Order.le0x T)).
 Canonical distrLatticeType T := DistrLatticeType T (@Order.mixin T).
@@ -289,7 +289,7 @@ Canonical bDistrLatticeType T := [bDistrLatticeType of T].
 Canonical wfType T := 
   let wf_mixin := @WellFounded.Mixin T 
      (Order.POrder.class (porderType T)) (@Order.wfb T) 
-  in WfType idisp T wf_mixin.
+  in WfType disp T wf_mixin.
 
 Coercion porderType : type >-> Order.POrder.type.
 Coercion latticeType : type >-> Order.Lattice.type.
@@ -307,19 +307,19 @@ Module Export Syntax.
 Notation "'\i0'" := (ident0) : ident_scope.
 Notation "'\i1'" := (ident1) : ident_scope.
 
-Notation ident_le := (@Order.le (Order.idisp) _).
-Notation ident_lt := (@Order.lt (Order.idisp) _).
-Notation ident_comparable := (@Order.comparable (Order.idisp) _).
-Notation ident_ge := (@Order.ge (Order.idisp) _).
-Notation ident_gt := (@Order.gt (Order.idisp) _).
-Notation ident_leif := (@Order.leif (Order.idisp) _).
-Notation ident_lteif := (@Order.lteif (Order.idisp) _).
-Notation ident_max := (@Order.max (Order.idisp) _).
-Notation ident_min := (@Order.min (Order.idisp) _).
-Notation ident_meet := (@Order.meet (Order.idisp) _).
-Notation ident_join := (@Order.join (Order.idisp) _).
-Notation ident_bottom := (@Order.bottom (Order.idisp) _).
-Notation ident_top := (@Order.top (Order.idisp) _).
+Notation ident_le := (@Order.le (Order.disp) _).
+Notation ident_lt := (@Order.lt (Order.disp) _).
+Notation ident_comparable := (@Order.comparable (Order.disp) _).
+Notation ident_ge := (@Order.ge (Order.disp) _).
+Notation ident_gt := (@Order.gt (Order.disp) _).
+Notation ident_leif := (@Order.leif (Order.disp) _).
+Notation ident_lteif := (@Order.lteif (Order.disp) _).
+Notation ident_max := (@Order.max (Order.disp) _).
+Notation ident_min := (@Order.min (Order.disp) _).
+Notation ident_meet := (@Order.meet (Order.disp) _).
+Notation ident_join := (@Order.join (Order.disp) _).
+Notation ident_bottom := (@Order.bottom (Order.disp) _).
+Notation ident_top := (@Order.top (Order.disp) _).
 
 Notation "<=^i%O" := ident_le : fun_scope.
 Notation ">=^i%O" := ident_ge : fun_scope.

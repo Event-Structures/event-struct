@@ -1056,7 +1056,7 @@ Qed.
 Lemma cf_irrelf : irreflexive cf.
 Proof.
   move=> m; apply/negbTE/negP. 
-  elim/(@wfb_ind Ident.Order.idisp E): m=> m IHm.
+  elim/(@wfb_ind Ident.Order.disp E): m=> m IHm.
   suff: ~ cf m (fpo m).
   - move=> /negP /(contraNF id) C. 
     rewrite cfE. rewrite orbb icfxx //=. 
