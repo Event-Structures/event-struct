@@ -5,26 +5,19 @@ From eventstruct Require Import utils.
 
 (******************************************************************************)
 (* This file provides a theory of pomsets.                                    *)
-(* Originally, the term pomset is an abbreviation for partially ordered       *)
-(* multiset. Since then the term has been widely used in the theory of        *)
-(* concurrency semantics. Here we use it following this tradition.            *)
-(* That is, our pomsets are not actually multisets, but rather usual sets.    *)
+(* The hierarchy of pomsets is based mathcomp's porderType.                   *)
 (*                                                                            *)
-(* We inheret most of the theory from mathcomp porderType.                    *)
-(* We add an axiom of finite cause, that is each event has only finite prefix *)
-(* of events on which it causally depends.                                    *)
-(*                                                                            *)
-(*       Pomset.eventStruct E == the type of pomset (event structures).       *)
-(*                               Pomset consists of partial causality order   *)
-(*                               (<=) which satisfies the axiom of finite     *)
-(*                               cause.                                       *)
+(*     LPoset.eventStruct E L == the type of partially ordered sets over      *) 
+(*                               elements of type E labeled by type L.        *)
+(*                               LPoset of partial causality order (<=) and   *) 
+(*                               labelling function lab.                      *)
 (*                               We use the name `eventStruct` to denote the  *)
-(*                               pomset structure itself (as opposed to       *)
+(*                               lposet structure itself (as opposed to       *)
 (*                               `eventType`) and for uniformity with the     *)
-(*                               theory of (prime and stable) event           *)
-(*                               structures.                                  *)
-(*       Pomset.eventType d   == a type of events, i.e. a type equipped with  *)
-(*                               pomset structure instance.                   *)
+(*                               theory of event structures.                  *)
+(*       LPoset.eventType L   == a type of events with labels of type L,      *)
+(*                               i.e. a type equipped with canonical labelled *)
+(*                               poset structure instance.                    *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -42,9 +35,9 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module Pomset.
+Module LPoset.
 
-Module Export Pomset.
+Module Export LPoset.
 Section ClassDef. 
 
 Record mixin_of (E0 : Type) (eb : Order.POrder.class_of E0)
@@ -90,13 +83,13 @@ Coercion porderType : type >-> Order.POrder.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Notation PomsetType E L m := (@pack E L _ _ id m).
+Notation LPosetType E L m := (@pack E L _ _ id m).
 End Exports.
 
-End Pomset.
+End LPoset.
 
-Notation eventType := Pomset.type.
-Notation eventStruct := Pomset.class_of.
+Notation eventType := LPoset.type.
+Notation eventStruct := LPoset.class_of.
 
 Module Export Def.
 Section Def.
@@ -104,7 +97,7 @@ Section Def.
 Context {L : Type} {E : eventType L}.
 
 (* labeling function *)
-Definition lab : E -> L := Pomset.lab (Pomset.class E).
+Definition lab : E -> L := LPoset.lab (LPoset.class E).
 
 (* causality alias *)
 Definition ca : rel E := le.
@@ -191,8 +184,8 @@ End Cat.
 
 End Hom.
 
-End Pomset.
+End LPoset.
 
-Export Pomset.Pomset.Exports.
-Export Pomset.Def.
-Export Pomset.Hom.Exports.
+Export LPoset.LPoset.Exports.
+Export LPoset.Def.
+Export LPoset.Hom.Exports.
