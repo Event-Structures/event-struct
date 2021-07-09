@@ -285,8 +285,88 @@ End Cat.
 
 End Bij.
 
+Module Export Emb.
+Section Emb. 
+
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  _ : forall e1 e2, f e1 <= f e2 -> e1 <= e2;
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Hom.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Hom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := Hom.Pack class.
+
+End Emb.
+
+Module Export Exports.
+Coercion base : class_of >-> Hom.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+End Exports.
+
+Module Export Syntax. 
+Notation emb := type.
+Notation "E1 => E2" := (emb E1 E2) (at level 50) : pomset_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : E1 => E2).
+
+Lemma ord_refl e1 e2 :
+  (e1 <= e2) = (f e1 <= f e2).
+Proof.
+  apply/idP/idP; first exact/(monotone f).
+  by case: f=> ? [[? []]] => /= /[apply]. 
+Qed.
+
+End Theory.
+End Theory.
+
+Section Cat.
+Context {L : Type}.
+
+Definition id {E : eventType L} : E => E.
+  by exists id; do 1 constructor=> //; exists id. 
+Defined.
+
+Definition tr {E1 E2 E3 : eventType L} : (E1 => E2) -> (E2 => E3) -> (E1 => E3).
+  move=> f g; exists (Hom.tr f g); constructor. 
+  - by case: (Hom.tr f g). 
+  by constructor=> e1 e2 /=; do 2 rewrite -(ord_refl).
+Defined.
+
+End Cat.
+
+End Emb.
+
 Notation hom := Hom.type.
 Notation bij := Bij.type.
+Notation emb := Emb.type.
 
 End LPoset.
 
