@@ -149,13 +149,13 @@ Record class_of f := Class {
 }.
 Unset Primitive Projections.
 
-Structure type := Pack { homf ; _ : class_of homf }.
+Structure type := Pack { apply ; _ : class_of apply }.
 
-Local Coercion homf : type >-> Funclass.
+Local Coercion apply : type >-> Funclass.
 
 Variables (cT : type).
 
-Definition class := let: Pack _ c as cT' := cT return class_of (homf cT') in c.
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
 Definition clone f c of phant_id class c := @Pack f c.
 
 (* Definition pack := *)
@@ -166,11 +166,11 @@ End Hom.
 
 Module Export Exports.
 Coercion mixin : class_of >-> mixin_of.
-Coercion homf : type >-> Funclass.
-Notation hom := type.
+Coercion apply : type >-> Funclass.
 End Exports.
 
 Module Export Syntax. 
+Notation hom := type.
 Notation "E1 ~> E2" := (hom E1 E2) (at level 50) : pomset_scope.
 End Syntax. 
 
@@ -178,13 +178,13 @@ Module Export Theory.
 Section Theory. 
 Context {L : Type} {E1 E2 : eventType L} (f : E1 ~> E2).
 
-Lemma lab_preserv e :
-  lab (f e) = lab e.
+Lemma lab_preserv :
+  { mono f : e / lab e }.
 Proof. by case: f => ? [[]]. Qed.
 
-Lemma monotone (e1 e2 : E1) :
-  e1 <= e2 -> f e1 <= f e2.
-Proof. by move: e1 e2; case: f => ? [[]]. Qed.
+Lemma monotone :
+  { homo f : e1 e2 / e1 <= e2 }.
+Proof. by case: f => ? [[]]. Qed.
 
 End Theory.
 End Theory.
