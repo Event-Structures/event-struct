@@ -132,7 +132,9 @@ End Def.
 Prenex Implicits lab ca sca.
 
 Module Export Hom.
-Section Hom. 
+
+Module Hom.
+Section ClassDef. 
 
 (* TODO: homomorphism between pomsets labelled by different labels? *)
 Context {L : Type} (E1 E2 : eventType L).
@@ -162,15 +164,19 @@ Definition clone f c of phant_id class c := @Pack f c.
 (*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
 (*   fun m => Pack (@Class E L b m). *)
 
-End Hom.
+End ClassDef.
 
 Module Export Exports.
 Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 End Exports.
 
+End Hom.
+
+Export Hom.Exports.
+
 Module Export Syntax. 
-Notation hom := type.
+Notation hom := Hom.type.
 Notation "E1 ~> E2" := (hom E1 E2) (at level 50) : pomset_scope.
 End Syntax. 
 
@@ -197,7 +203,7 @@ Definition id {E : eventType L} : E ~> E.
 Defined.
 
 Lemma idE {E : eventType L} : 
-  apply (id : E ~> E) = ssrfun.id.
+  Hom.apply (id : E ~> E) = ssrfun.id.
 Proof. done. Qed.
 
 Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
@@ -207,7 +213,7 @@ Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
 Defined.
 
 Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~> E2) (g : E2 ~> E3) : 
-   apply (tr f g) = g \o f.
+   Hom.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
 End Cat.
@@ -217,7 +223,9 @@ Global Opaque id tr.
 End Hom.
 
 Module Export Bij.
-Section Bij. 
+
+Module Bij.
+Section ClassDef. 
 
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
@@ -252,7 +260,7 @@ Definition clone f c of phant_id class c := @Pack f c.
 
 Definition homType := Hom.Pack class.
 
-End Bij.
+End ClassDef.
 
 Module Export Exports.
 Coercion base : class_of >-> Hom.class_of.
@@ -262,15 +270,19 @@ Coercion homType : type >-> Hom.type.
 Canonical homType.
 End Exports.
 
-Section Def.
-Context {L : Type} {E1 E2 : eventType L} (f : type E1 E2).
+End Bij.
 
-Definition inv : E2 -> E1 := g (class f).
+Export Bij.Exports.
+
+Section Def.
+Context {L : Type} {E1 E2 : eventType L} (f : Bij.type E1 E2).
+
+Definition inv : E2 -> E1 := Bij.g (Bij.class f).
 
 End Def.
 
 Module Export Syntax. 
-Notation bij := type.
+Notation bij := Bij.type.
 Notation "E1 ≈> E2" := (bij E1 E2) (at level 50) : pomset_scope.
 End Syntax. 
 
@@ -301,7 +313,7 @@ Definition id {E : eventType L} : E ≈> E.
 Defined.
 
 Lemma idE {E : eventType L} : 
-  apply (id : E ≈> E) = ssrfun.id.
+  Bij.apply (id : E ≈> E) = ssrfun.id.
 Proof. done. Qed.
 
 Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3).
@@ -312,7 +324,7 @@ Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈
 Defined.
 
 Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≈> E2) (g : E2 ≈> E3) : 
-   apply (tr f g) = g \o f.
+   Bij.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
 End Cat.
@@ -322,7 +334,9 @@ Global Opaque id tr.
 End Bij.
 
 Module Export Emb.
-Section Emb. 
+
+Module Emb.
+Section ClassDef. 
 
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
@@ -355,7 +369,7 @@ Definition clone f c of phant_id class c := @Pack f c.
 
 Definition homType := Hom.Pack class.
 
-End Emb.
+End ClassDef.
 
 Module Export Exports.
 Coercion base : class_of >-> Hom.class_of.
@@ -365,8 +379,12 @@ Coercion homType : type >-> Hom.type.
 Canonical homType.
 End Exports.
 
+End Emb.
+
+Export Emb.Exports.
+
 Module Export Syntax. 
-Notation emb := type.
+Notation emb := Emb.type.
 Notation "E1 => E2" := (emb E1 E2) (at level 50) : pomset_scope.
 End Syntax. 
 
@@ -392,7 +410,7 @@ Definition id {E : eventType L} : E => E.
 Defined.
 
 Lemma idE {E : eventType L} : 
-  apply (id : E => E) = ssrfun.id.
+  Emb.apply (id : E => E) = ssrfun.id.
 Proof. done. Qed.
 
 Definition tr {E1 E2 E3 : eventType L} : (E1 => E2) -> (E2 => E3) -> (E1 => E3).
@@ -402,7 +420,7 @@ Definition tr {E1 E2 E3 : eventType L} : (E1 => E2) -> (E2 => E3) -> (E1 => E3).
 Defined.
 
 Lemma trE {E1 E2 E3 : eventType L} (f : E1 => E2) (g : E2 => E3) : 
-   apply (tr f g) = g \o f.
+   Emb.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
 End Cat.
@@ -412,7 +430,9 @@ Global Opaque id tr.
 End Emb.
 
 Module Export Iso.
-Section Iso. 
+
+Module Iso.
+Section ClassDef. 
 
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
@@ -443,7 +463,7 @@ Definition homType := Hom.Pack class.
 Definition bijType := Bij.Pack class.
 Definition embType := Emb.Pack (Emb.Class class (mixin class)).
 
-End Iso.
+End ClassDef.
 
 Module Export Exports.
 Coercion base : class_of >-> Bij.class_of.
@@ -457,8 +477,12 @@ Canonical bijType.
 Canonical embType.
 End Exports.
 
+End Iso.
+
+Export Iso.Exports.
+
 Module Export Syntax. 
-Notation iso := type.
+Notation iso := Iso.type.
 Notation "E1 ~= E2" := (iso E1 E2) (at level 50) : pomset_scope.
 End Syntax. 
 
@@ -470,7 +494,7 @@ Definition id {E : eventType L} : E ~= E.
 Defined.
 
 Lemma idE {E : eventType L} : 
-  apply (id : E ~= E) = ssrfun.id.
+  Iso.apply (id : E ~= E) = ssrfun.id.
 Proof. done. Qed.
 
 Definition sy {E1 E2 : eventType L} : (E1 ~= E2) -> (E2 ~= E1).
@@ -483,7 +507,7 @@ Definition sy {E1 E2 : eventType L} : (E1 ~= E2) -> (E2 ~= E1).
 Defined.
 
 Lemma syE {E1 E2 : eventType L} (f : E1 ~= E2) : 
-  apply (sy f) = Bij.inv f.
+  Iso.apply (sy f) = Bij.inv f.
 Proof. by move: f=> [] f [[]] [[]] ?? [] g ?? [] ?; rewrite /inv=> //=. Qed.
 
 Definition tr {E1 E2 E3 : eventType L} : (E1 ~= E2) -> (E2 ~= E3) -> (E1 ~= E3).
@@ -495,7 +519,7 @@ Definition tr {E1 E2 E3 : eventType L} : (E1 ~= E2) -> (E2 ~= E3) -> (E1 ~= E3).
 Defined.
 
 Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~= E2) (g : E2 ~= E3) : 
-   apply (tr f g) = g \o f.
+   Iso.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
 End Cat.
@@ -512,7 +536,7 @@ Notation iso := Iso.type.
 End LPoset.
 
 Export LPoset.LPoset.Exports.
-Export LPoset.Hom.Exports.
 Export LPoset.Def.
-Export LPoset.Hom.Theory.
 
+Export LPoset.Hom.Hom.Exports.
+Export LPoset.Hom.Theory.
