@@ -69,16 +69,16 @@ Module lPoset.
 Module Export lPoset.
 Section ClassDef. 
 
-Record mixin_of (E0 : Type) (eb : Order.POrder.class_of E0)
-                (E := Order.POrder.Pack tt eb)
-                (L : Type) := Mixin {
+Record mixin_of (E0 : Type) (L : Type)
+                (eb : Order.POrder.class_of E0)
+                (E := Order.POrder.Pack tt eb) := Mixin {
   lab : E -> L
 }.
 
 Set Primitive Projections.
 Record class_of (E : Type) (L : Type) := Class {
   base  : Order.POrder.class_of E;
-  mixin : mixin_of base L;
+  mixin : mixin_of L base;
 }.
 Unset Primitive Projections.
 
@@ -756,3 +756,94 @@ Export Pomset.Lattice.Exports.
 Export Pomset.Def.
 Export Pomset.Syntax.
 Export Pomset.Theory.
+
+
+Module LLoset.
+
+Module Export LLoset.
+Section ClassDef. 
+
+Set Primitive Projections.
+Record class_of (E : Type) (L : Type) := Class { 
+  base  : Order.Total.class_of E;
+  mixin : LPoset.LPoset.mixin_of L base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Order.Total.class_of.
+
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (E : Type) (L : Type) (cT : type L).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack E c.
+
+Definition pack :=
+  fun bE b & phant_id (@LPoset.LPoset.class L bE) b =>
+  fun m => Pack (@Class E L b m).
+
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition porderType := @Order.POrder.Pack tt cT class.
+Definition latticeType := @Lattice.Pack tt cT class.
+Definition distrLatticeType := @DistrLattice.Pack tt cT class.
+Definition orderType := @Order.Total.Pack tt cT class.
+Definition lposetType := 
+  @LPoset.LPoset.Pack L cT (LPoset.LPoset.Class (mixin class)).
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Order.Total.class_of.
+Coercion mixin : class_of >-> LPoset.LPoset.mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion porderType : type >-> Order.POrder.type.
+Coercion latticeType : type >-> Lattice.type.
+Coercion distrLatticeType : type >-> DistrLattice.type.
+Coercion orderType : type >-> Order.Total.type.
+Coercion lposetType : type >-> LPoset.LPoset.type.
+Canonical eqType.
+Canonical choiceType.
+Canonical porderType.
+Canonical latticeType.
+Canonical distrLatticeType.
+Canonical orderType.
+Canonical lposetType.
+Notation LLosetType E L m := (@pack E L _ _ id m).
+End Exports.
+
+End LLoset.
+
+Notation eventType := LLoset.type.
+Notation eventStruct := LLoset.class_of.
+
+End LLoset.
+
+Export LLoset.LLoset.Exports.
+
+
+Module Export Lin.
+
+Section Def. 
+Context {L : Type} (E : LPoset.eventType L).
+
+Record lin (E' : LLoset.eventType L) : Prop := 
+  is_lin { _ : LPoset.hom E E' }.
+
+End Def.
+
+Import LPoset.Hom.Syntax.
+
+Section Theory. 
+Context {L : Type} {E1 E2 : LPoset.eventType L}.
+
+Lemma hom_lin : (E1 ~> E2) -> lin E2 ≦ lin E1.
+Proof. move=> f E2' [] g; constructor; exact /(LPoset.Hom.tr f g). Qed.
+
+End Theory.  
+
+End Lin.
