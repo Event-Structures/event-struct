@@ -206,6 +206,88 @@ End Cat.
 
 End Hom.
 
+Module Export Bij.
+Section Bij. 
+
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  g : E2 -> E1;
+  _ : cancel f g;
+  _ : cancel g f;
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Hom.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Hom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := Hom.Pack class.
+
+End Bij.
+
+Module Export Exports.
+Coercion base : class_of >-> Hom.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+End Exports.
+
+Module Export Syntax. 
+Notation bij := type.
+Notation "E1 ≈> E2" := (bij E1 E2) (at level 50) : pomset_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
+
+Lemma event_bij :
+  bijective f.
+Proof. by case: f => ? [[? []]] g ? ?; exists g. Qed.
+
+End Theory.
+End Theory.
+
+Section Cat.
+Context {L : Type}.
+
+Definition id {E : eventType L} : E ≈> E.
+  by exists id; do 1 constructor=> //; exists id. 
+Defined.
+
+Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3).
+  move=> f g; exists (Hom.tr f g); constructor. 
+  - by case: (Hom.tr f g). 
+  case: f=> [? [? []]]; case: g=> [? [? []]].
+  by move=> g ?? h ??; exists (h \o g)=> /=; apply /can_comp.
+Defined.
+
+End Cat.
+
+End Bij.
+
+Notation hom := Hom.type.
+Notation bij := Bij.type.
+
 End LPoset.
 
 Export LPoset.LPoset.Exports.
