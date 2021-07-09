@@ -249,6 +249,7 @@ Coercion base : class_of >-> Hom.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 Coercion homType : type >-> Hom.type.
+Canonical homType.
 End Exports.
 
 Module Export Syntax. 
@@ -326,6 +327,7 @@ Coercion base : class_of >-> Hom.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 Coercion homType : type >-> Hom.type.
+Canonical homType.
 End Exports.
 
 Module Export Syntax. 
@@ -364,9 +366,88 @@ End Cat.
 
 End Emb.
 
+Module Export Iso.
+Section Iso. 
+
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Bij.class_of f; 
+  mixin : Emb.mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Bij.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := Hom.Pack class.
+Definition bijType := Bij.Pack class.
+Definition embType := Emb.Pack (Emb.Class class (mixin class)).
+
+End Iso.
+
+Module Export Exports.
+Coercion base : class_of >-> Bij.class_of.
+Coercion mixin : class_of >-> Emb.mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+Coercion bijType : type >-> Bij.type.
+Coercion embType : type >-> Emb.type.
+Canonical homType.
+Canonical bijType.
+Canonical embType.
+End Exports.
+
+Module Export Syntax. 
+Notation iso := type.
+Notation "E1 ~= E2" := (iso E1 E2) (at level 50) : pomset_scope.
+End Syntax. 
+
+Section Cat.
+Context {L : Type}.
+
+Definition id {E : eventType L} : E ~= E.
+  by exists Bij.id; constructor=> //; case: Bij.id. 
+Defined.
+
+Definition sy {E1 E2 : eventType L} : (E1 ~= E2) -> (E2 ~= E1).
+  move=> [] f [[]] [] [] HL HM [] g HK HK' [] HR.
+  exists g; repeat constructor.
+  - by move=> e; rewrite -{2}[e]HK' !HL.
+  - by move=> e1 e2; rewrite -{1}[e1]HK' -{1}[e2]HK'; exact/HR.
+  - by exists f.
+  move=> e1 e2; rewrite -{2}[e1]HK' -{2}[e2]HK'; exact/HM.
+Defined.
+
+Definition tr {E1 E2 E3 : eventType L} : (E1 ~= E2) -> (E2 ~= E3) -> (E1 ~= E3).
+  move=> f g; exists (Bij.tr f g); constructor; last move=> /=.
+  - by case: (Bij.tr f g).
+  have ->: (g \o f = Emb.tr f g) by done.
+  by case: (Emb.tr f g)=> ? []. 
+Defined.
+
+End Cat.
+
+End Iso.
+
 Notation hom := Hom.type.
 Notation bij := Bij.type.
 Notation emb := Emb.type.
+Notation iso := Iso.type.
 
 End LPoset.
 
