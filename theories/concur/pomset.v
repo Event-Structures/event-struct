@@ -196,13 +196,23 @@ Definition id {E : eventType L} : E ~> E.
   by exists id; do 2 constructor=> //. 
 Defined.
 
+Lemma idE {E : eventType L} : 
+  apply (id : E ~> E) = ssrfun.id.
+Proof. done. Qed.
+
 Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
   move=> f g; exists (g \o f); do 2 constructor=> /=.
   - by move=> e; rewrite !lab_preserv.
   by move=> e1 e2 /(monotone f) /(monotone g).
 Defined.
 
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~> E2) (g : E2 ~> E3) : 
+   apply (tr f g) = g \o f.
+Proof. done. Qed.
+
 End Cat.
+
+Global Opaque id tr.
 
 End Hom.
 
@@ -252,6 +262,13 @@ Coercion homType : type >-> Hom.type.
 Canonical homType.
 End Exports.
 
+Section Def.
+Context {L : Type} {E1 E2 : eventType L} (f : type E1 E2).
+
+Definition inv : E2 -> E1 := g (class f).
+
+End Def.
+
 Module Export Syntax. 
 Notation bij := type.
 Notation "E1 ≈> E2" := (bij E1 E2) (at level 50) : pomset_scope.
@@ -260,6 +277,14 @@ End Syntax.
 Module Export Theory.
 Section Theory. 
 Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
+
+Lemma inv_can : 
+  cancel f (inv f).
+Proof. by case: f => ? [[? []]] ???. Qed.
+
+Lemma can_inv : 
+  cancel (inv f) f.
+Proof. by case: f => ? [[? []]] ???. Qed.
 
 Lemma event_bij :
   bijective f.
@@ -275,6 +300,10 @@ Definition id {E : eventType L} : E ≈> E.
   by exists id; do 1 constructor=> //; exists id. 
 Defined.
 
+Lemma idE {E : eventType L} : 
+  apply (id : E ≈> E) = ssrfun.id.
+Proof. done. Qed.
+
 Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3).
   move=> f g; exists (Hom.tr f g); constructor. 
   - by case: (Hom.tr f g). 
@@ -282,7 +311,13 @@ Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈
   by move=> g ?? h ??; exists (h \o g)=> /=; apply /can_comp.
 Defined.
 
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≈> E2) (g : E2 ≈> E3) : 
+   apply (tr f g) = g \o f.
+Proof. done. Qed.
+
 End Cat.
+
+Global Opaque id tr.
 
 End Bij.
 
@@ -356,13 +391,23 @@ Definition id {E : eventType L} : E => E.
   by exists id; do 1 constructor=> //; exists id. 
 Defined.
 
+Lemma idE {E : eventType L} : 
+  apply (id : E => E) = ssrfun.id.
+Proof. done. Qed.
+
 Definition tr {E1 E2 E3 : eventType L} : (E1 => E2) -> (E2 => E3) -> (E1 => E3).
   move=> f g; exists (Hom.tr f g); constructor. 
   - by case: (Hom.tr f g). 
   by constructor=> e1 e2 /=; do 2 rewrite -(ord_refl).
 Defined.
 
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 => E2) (g : E2 => E3) : 
+   apply (tr f g) = g \o f.
+Proof. done. Qed.
+
 End Cat.
+
+Global Opaque id tr.
 
 End Emb.
 
@@ -424,6 +469,10 @@ Definition id {E : eventType L} : E ~= E.
   by exists Bij.id; constructor=> //; case: Bij.id. 
 Defined.
 
+Lemma idE {E : eventType L} : 
+  apply (id : E ~= E) = ssrfun.id.
+Proof. done. Qed.
+
 Definition sy {E1 E2 : eventType L} : (E1 ~= E2) -> (E2 ~= E1).
   move=> [] f [[]] [] [] HL HM [] g HK HK' [] HR.
   exists g; repeat constructor.
@@ -433,14 +482,25 @@ Definition sy {E1 E2 : eventType L} : (E1 ~= E2) -> (E2 ~= E1).
   move=> e1 e2; rewrite -{2}[e1]HK' -{2}[e2]HK'; exact/HM.
 Defined.
 
+Lemma syE {E1 E2 : eventType L} (f : E1 ~= E2) : 
+  apply (sy f) = Bij.inv f.
+Proof. by move: f=> [] f [[]] [[]] ?? [] g ?? [] ?; rewrite /inv=> //=. Qed.
+
 Definition tr {E1 E2 E3 : eventType L} : (E1 ~= E2) -> (E2 ~= E3) -> (E1 ~= E3).
-  move=> f g; exists (Bij.tr f g); constructor; last move=> /=.
+  move=> f g; exists (Bij.tr f g); constructor.
   - by case: (Bij.tr f g).
+  rewrite Hom.trE.
   have ->: (g \o f = Emb.tr f g) by done.
   by case: (Emb.tr f g)=> ? []. 
 Defined.
 
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~= E2) (g : E2 ~= E3) : 
+   apply (tr f g) = g \o f.
+Proof. done. Qed.
+
 End Cat.
+
+Global Opaque id sy tr.
 
 End Iso.
 
