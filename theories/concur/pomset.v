@@ -758,15 +758,15 @@ Export Pomset.Syntax.
 Export Pomset.Theory.
 
 
-Module LLoset.
+Module lLoset.
 
-Module Export LLoset.
+Module Export lLoset.
 Section ClassDef. 
 
 Set Primitive Projections.
 Record class_of (E : Type) (L : Type) := Class { 
   base  : Order.Total.class_of E;
-  mixin : LPoset.LPoset.mixin_of L base;
+  mixin : lPoset.lPoset.mixin_of L base;
 }.
 Unset Primitive Projections.
 
@@ -782,7 +782,7 @@ Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c
 Definition clone c of phant_id class c := @Pack E c.
 
 Definition pack :=
-  fun bE b & phant_id (@LPoset.LPoset.class L bE) b =>
+  fun bE b & phant_id (@lPoset.lPoset.class L bE) b =>
   fun m => Pack (@Class E L b m).
 
 Definition eqType := @Equality.Pack cT class.
@@ -792,12 +792,12 @@ Definition latticeType := @Lattice.Pack tt cT class.
 Definition distrLatticeType := @DistrLattice.Pack tt cT class.
 Definition orderType := @Order.Total.Pack tt cT class.
 Definition lposetType := 
-  @LPoset.LPoset.Pack L cT (LPoset.LPoset.Class (mixin class)).
+  @lPoset.lPoset.Pack L cT (lPoset.lPoset.Class (mixin class)).
 End ClassDef.
 
 Module Export Exports.
 Coercion base : class_of >-> Order.Total.class_of.
-Coercion mixin : class_of >-> LPoset.LPoset.mixin_of.
+Coercion mixin : class_of >-> lPoset.lPoset.mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
@@ -805,7 +805,7 @@ Coercion porderType : type >-> Order.POrder.type.
 Coercion latticeType : type >-> Lattice.type.
 Coercion distrLatticeType : type >-> DistrLattice.type.
 Coercion orderType : type >-> Order.Total.type.
-Coercion lposetType : type >-> LPoset.LPoset.type.
+Coercion lposetType : type >-> lPoset.lPoset.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
@@ -813,36 +813,36 @@ Canonical latticeType.
 Canonical distrLatticeType.
 Canonical orderType.
 Canonical lposetType.
-Notation LLosetType E L m := (@pack E L _ _ id m).
+Notation lLosetType E L m := (@pack E L _ _ id m).
 End Exports.
 
-End LLoset.
+End lLoset.
 
-Notation eventType := LLoset.type.
-Notation eventStruct := LLoset.class_of.
+Notation eventType := lLoset.type.
+Notation eventStruct := lLoset.class_of.
 
-End LLoset.
+End lLoset.
 
-Export LLoset.LLoset.Exports.
+Export lLoset.lLoset.Exports.
 
 
 Module Export Lin.
 
 Section Def. 
-Context {L : Type} (E : LPoset.eventType L).
+Context {L : Type} (E : lPoset.eventType L).
 
-Record lin (E' : LLoset.eventType L) : Prop := 
-  is_lin { _ : LPoset.hom E E' }.
+Record lin (E' : lLoset.eventType L) : Prop := 
+  is_lin { _ : lPoset.hom E E' }.
 
 End Def.
 
-Import LPoset.Hom.Syntax.
+Import lPoset.Hom.Syntax.
 
 Section Theory. 
-Context {L : Type} {E1 E2 : LPoset.eventType L}.
+Context {L : Type} {E1 E2 : lPoset.eventType L}.
 
 Lemma hom_lin : (E1 ~> E2) -> lin E2 ≦ lin E1.
-Proof. move=> f E2' [] g; constructor; exact /(LPoset.Hom.tr f g). Qed.
+Proof. move=> f E2' [] g; constructor; exact /(lPoset.Hom.tr f g). Qed.
 
 End Theory.  
 
