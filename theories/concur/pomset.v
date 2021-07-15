@@ -567,8 +567,81 @@ Notation iso := Iso.type.
 
 End LPoset.
 
-Export LPoset.LPoset.Exports.
-Export LPoset.Def.
+Export lPoset.lPoset.Exports.
+Export lPoset.Def.
 
-Export LPoset.Hom.Hom.Exports.
-Export LPoset.Hom.Theory.
+Export lPoset.Hom.Hom.Exports.
+Export lPoset.Bij.Bij.Exports.
+Export lPoset.Emb.Emb.Exports.
+Export lPoset.Iso.Iso.Exports.
+Export lPoset.Hom.Theory.
+Export lPoset.Bij.Theory.
+Export lPoset.Emb.Theory.
+
+Notation lposet := (lPoset.eventStruct).
+
+
+Module Pomset. 
+
+Implicit Types (L : Type).
+
+Import lPoset.Hom.Syntax.
+Import lPoset.Iso.Syntax.
+
+Record lang L := mk_lang { 
+  apply : lPoset.eventType L -> Prop;
+  _     : forall E1 E2 (f : E1 ~= E2), apply E1 -> apply E2;
+            
+}.
+
+Module Export Exports.
+Coercion apply : lang >-> Funclass.
+End Exports.
+
+Module Export Def.
+Section Def.
+
+Context {L : Type}.
+Implicit Types (P Q : lang L).
+
+Definition subsumes P Q : Prop := 
+  forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
+
+End Def.
+End Def.
+
+Module Export Syntax.
+Notation "P ⊑ Q" := (subsumes P Q) (at level 69) : pomset_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory.
+
+Context {L : Type}.
+Implicit Types (P Q R : lang L).
+
+Lemma subsumes_refl P : 
+  P ⊑ P.
+Proof. 
+  move=> p HP; exists p; split=> //. 
+  constructor; exact/lPoset.Hom.id.
+Qed.
+
+Lemma subsumes_trans P Q R : 
+  P ⊑ Q -> Q ⊑ R -> P ⊑ R.
+Proof. 
+  move=> H1 H2 p HP. 
+  move: (H1 p HP)=> [q [HQ [f]]].
+  move: (H2 q HQ)=> [r [HR [g]]].
+  exists r; split=> //; constructor; exact/(lPoset.Hom.tr g f).
+Qed.
+
+End Theory.
+End Theory.
+
+End Pomset.
+
+Export Pomset.Exports.
+Export Pomset.Def.
+Export Pomset.Syntax.
+Export Pomset.Theory.
