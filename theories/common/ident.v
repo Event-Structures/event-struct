@@ -81,143 +81,23 @@ Reserved Notation "x <^i y ?<= 'if' c" (at level 70, y, c at next level,
 Reserved Notation "x <^i y ?<= 'if' c :> T" (at level 70, y, c at next level,
   format "x '[hv'  <^i  y '/'  ?<=  'if'  c  :> T ']'").
 
-Module Ident.
-Section ClassDef.
-
-Record mixin_of T0 (b : Countable.class_of T0)
-  (T := Countable.Pack b) := Mixin {
-  _ : forall n, @unpickle T n;
-  _ : injective (@unpickle T)
-}.
-
-Set Primitive Projections.
-Record class_of (T : Type) := Class {
-  base  : Countable.class_of T;
-  mixin : mixin_of base;
-}.
-Unset Primitive Projections.
-
-Local Coercion base : class_of >-> Countable.class_of.
-
-Structure type := Pack { sort; _ : class_of sort }.
-
-Local Coercion sort : type >-> Sortclass.
-
-Variables (T : Type) (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack T c.
-
-Definition pack :=
-  fun bT b & phant_id (@Countable.class bT) b =>
-  fun m => Pack (@Class T b m).
-
-Definition eqType := @Equality.Pack cT class.
-Definition choiceType := @Choice.Pack cT class.
-Definition countType := @Countable.Pack cT class.
-
-End ClassDef.
-
-Module Export Exports.
-Coercion base : class_of >-> Countable.class_of.
-Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
-Coercion choiceType : type >-> Choice.type.
-Coercion countType : type >-> Countable.type.
-Canonical eqType.
-Canonical choiceType.
-Canonical countType.
-Notation identType := type.
-Notation IdentType T m := (@pack T _ _ id m).
-Notation "[ 'identType' 'of' T 'for' cT ]" := (@clone T cT _ id)
-  (at level 0, format "[ 'identType'  'of'  T  'for'  cT ]") : form_scope.
-Notation "[ 'identType' 'of' T ]" := [identType of T for _]
-  (at level 0, format "[ 'identType'  'of'  T ]") : form_scope.
-End Exports.
-
-Module Export Def.
-
-Definition unpickle_tot {T : identType} n : @unpickle T n. 
-Proof. by case: T=> ? [? []]. Defined.
-
-Notation encode (* : T -> nat *) := (pickle).
-Notation decode (* : nat -> T *) := (mk_total unpickle_tot).
-
-Section Def.
-Context {T : identType}.
-
-Definition ident0 : T := 
-  decode 0%nat.
-
-Definition ident1 : T := 
-  decode 1%nat.
-
-Definition fresh : T -> T := 
-  fun x => decode (1 + encode x).
-
-Definition nfresh : T -> nat -> seq T := 
-  fun i n => traject fresh i n. 
-
-Definition fresh_seq : seq T -> T := 
-  fun s => decode (1 + foldl maxn 0 (map encode s)).
-
-Definition ident_le : rel T := 
-  fun x y => encode x <= encode y.
-
-Definition ident_lt : rel T := 
-  fun x y => encode x < encode y.
-
-Definition ident_min : T -> T -> T := 
-  fun x y => decode (minn (encode x) (encode y)).
-
-Definition ident_max : T -> T -> T := 
-  fun x y => decode (maxn (encode x) (encode y)).
-
-End Def.
-End Def. 
-
-Prenex Implicits fresh fresh_seq ident_le ident_lt.
-
-(* basic properties required by canonical instances *)
-Module Export Props.
-Section Props.
-
-Context {T : identType}.
-Implicit Types (x : T) (s : seq T).
-
-Lemma unpickle_inj : 
-  injective (@unpickle T).
-Proof. by case: T=> ? [/= ? []]. Qed.
-
-Lemma decode_inj : 
-  injective (decode : nat -> T).
-Proof. by apply /mk_total_inj /unpickle_inj. Qed.
-
-Lemma encodeK : 
-  cancel encode (decode : nat -> T). 
-Proof. by apply /mk_totalK /pickleK. Qed.
-
-Lemma decodeK : 
-  cancel decode (encode : T -> nat). 
-Proof. by apply/inj_can_sym; [exact/encodeK | exact/decode_inj]. Qed.
-
-Lemma encode0 : 
-  encode (ident0 : T) = 0%nat.
-Proof. by rewrite /ident0; exact /decodeK. Qed.
-
-Lemma encode1 : 
-  encode (ident1 : T) = 1%nat.
-Proof. by rewrite /ident1; exact /decodeK. Qed.
-
-End Props.
-End Props.
-
-
-Module Export Order. 
+Module CountableOrder. 
 Section Order. 
 
-Context (T : identType).
+Context {T : countType}.
 Implicit Types (x y z : T).
+
+Definition ident_le : rel T := 
+  fun x y => pickle x <= pickle y.
+
+Definition ident_lt : rel T := 
+  fun x y => pickle x < pickle y.
+
+Definition ident_min : T -> T -> T := 
+  fun x y => odflt x (unpickle (minn (pickle x) (pickle y))).
+
+Definition ident_max : T -> T -> T := 
+  fun x y => odflt x (unpickle (maxn (pickle x) (pickle y))).
 
 Lemma disp : unit. 
 Proof. exact: tt. Qed.
@@ -235,40 +115,41 @@ Qed.
 Lemma meet_def x y : ident_min x y = (if ident_lt x y then x else y).
 Proof. 
   rewrite /ident_min /ident_lt /minn /Order.lt=> /=.
-  rewrite (mk_totalE ident0).
   by case: ifP=> ?; rewrite pickleK /=. 
 Qed.
 
 Lemma join_def x y : ident_max x y = (if ident_lt x y then y else x).
 Proof. 
   rewrite /ident_max /ident_lt /maxn /Order.lt=> /=.
-  rewrite (mk_totalE ident0).
   by case: ifP=> ?; rewrite pickleK /=. 
 Qed.
 
-Lemma le_anti : antisymmetric (@ident_le T). 
+Lemma le_anti : antisymmetric ident_le. 
 Proof. 
   move=> x y /andP []; rewrite /ident_le=> ??.
   by apply /pickle_inj /anti_leq /andP. 
 Qed.
 
-Lemma le_trans : transitive (@ident_le T). 
+Lemma le_trans : transitive ident_le. 
 Proof. by move=> z x y; rewrite /ident_le; apply leq_trans. Qed.
 
-Lemma le_total : total (@ident_le T). 
+Lemma le_total : total ident_le. 
 Proof. by move=> x y; rewrite /ident_le; apply leq_total. Qed.
 
-Lemma le0x x : ident_le ident0 x.
-Proof. rewrite /ident_le encode0; exact /leq0n. Qed.
+(* Lemma le0x x : ident_le ident0 x. *)
+(* Proof. rewrite /ident_le encode0; exact /leq0n. Qed. *)
 
-Lemma wfb : well_founded_bool (@ident_lt T).
+Lemma wfb : well_founded_bool ident_lt.
 Proof.
   move=> x; rewrite /ident_lt.
-  rewrite -(encodeK x).
-  elim/(@wfb_ind _ nat_wfType): (encode x).
-  constructor=> y.
-  rewrite decodeK -{2}(encodeK y).
-  by apply /X.
+  rewrite -(odflt_pcancel x x pickleK).
+  remember (pickle x) as n; move: x Heqn. 
+  elim/(@wfb_ind _ nat_wfType): n.
+  move=> n IH x Heq; rewrite Heq.
+  constructor=> y. 
+  rewrite pickleK=> /= H.
+  rewrite -(odflt_pcancel y y pickleK).
+  by apply /IH; rewrite ?Heq. 
 Qed.  
 
 Definition mixin :=
@@ -276,50 +157,49 @@ Definition mixin :=
 
 End Order.
 
+Prenex Implicits ident_le ident_lt.
+
 Module Export Exports.
 
-Implicit Types (T : identType). 
+Implicit Types (T : countType). 
 
-Canonical porderType T := POrderType disp T (@Order.mixin T).
-Canonical latticeType T := LatticeType T (@Order.mixin T).
-Canonical bLatticeType T := BLatticeType T (BottomMixin (@Order.le0x T)).
-Canonical distrLatticeType T := DistrLatticeType T (@Order.mixin T).
-Canonical bDistrLatticeType T := [bDistrLatticeType of T].
+Canonical porderType T := POrderType disp T (@mixin T).
+Canonical latticeType T := LatticeType _ (@mixin T).
+Canonical distrLatticeType T := DistrLatticeType _ (@mixin T).
+
+(* Canonical bLatticeType T := BLatticeType T (BottomMixin (@Order.le0x T)). *)
+(* Canonical bDistrLatticeType T := [bDistrLatticeType of T]. *)
 
 Canonical wfType T := 
   let wf_mixin := @WellFounded.Mixin T 
-     (Order.POrder.class (porderType T)) (@Order.wfb T) 
-  in WfType disp T wf_mixin.
+     (Order.POrder.class (porderType T)) (@wfb T) 
+  in WellFounded.Pack disp (WellFounded.Class wf_mixin).
 
-Coercion porderType : type >-> Order.POrder.type.
-Coercion latticeType : type >-> Order.Lattice.type.
-Coercion bLatticeType : type >-> Order.BLattice.type.
-Coercion distrLatticeType : type >-> Order.DistrLattice.type.
-Coercion bDistrLatticeType : type >-> Order.BDistrLattice.type.
-Coercion wfType : type >-> WellFounded.type.
+Coercion porderType : Countable.type >-> Order.POrder.type.
+Coercion latticeType : Countable.type >-> Order.Lattice.type.
+Coercion distrLatticeType : Countable.type >-> Order.DistrLattice.type.
+Coercion wfType : Countable.type >-> WellFounded.type.
+
+(* Coercion bLatticeType : type >-> Order.BLattice.type. *)
+(* Coercion bDistrLatticeType : type >-> Order.BDistrLattice.type. *)
 
 End Exports.
 
-End Order.
-
 Module Export Syntax. 
 
-Notation "'\i0'" := (ident0) : ident_scope.
-Notation "'\i1'" := (ident1) : ident_scope.
-
-Notation ident_le := (@Order.le (Order.disp) _).
-Notation ident_lt := (@Order.lt (Order.disp) _).
-Notation ident_comparable := (@Order.comparable (Order.disp) _).
-Notation ident_ge := (@Order.ge (Order.disp) _).
-Notation ident_gt := (@Order.gt (Order.disp) _).
-Notation ident_leif := (@Order.leif (Order.disp) _).
-Notation ident_lteif := (@Order.lteif (Order.disp) _).
-Notation ident_max := (@Order.max (Order.disp) _).
-Notation ident_min := (@Order.min (Order.disp) _).
-Notation ident_meet := (@Order.meet (Order.disp) _).
-Notation ident_join := (@Order.join (Order.disp) _).
-Notation ident_bottom := (@Order.bottom (Order.disp) _).
-Notation ident_top := (@Order.top (Order.disp) _).
+Notation ident_le := (@Order.le disp _).
+Notation ident_lt := (@Order.lt disp _).
+Notation ident_comparable := (@Order.comparable disp _).
+Notation ident_ge := (@Order.ge disp _).
+Notation ident_gt := (@Order.gt disp _).
+Notation ident_leif := (@Order.leif disp _).
+Notation ident_lteif := (@Order.lteif disp _).
+Notation ident_max := (@Order.max disp _).
+Notation ident_min := (@Order.min disp _).
+Notation ident_meet := (@Order.meet disp _).
+Notation ident_join := (@Order.join disp _).
+Notation ident_bottom := (@Order.bottom disp _).
+Notation ident_top := (@Order.top disp _).
 
 Notation "<=^i%O" := ident_le : fun_scope.
 Notation ">=^i%O" := ident_ge : fun_scope.
@@ -373,6 +253,176 @@ Notation "x ><^i y" := (~~ (><^i%O x y)) : order_scope.
 
 End Syntax.
 
+End CountableOrder.
+
+Export CountableOrder.Exports.
+Export CountableOrder.Syntax.
+
+
+Module Ident.
+Section ClassDef.
+
+Record mixin_of T0 (b : Countable.class_of T0)
+  (T := Countable.Pack b) := Mixin {
+  _ : forall n, @unpickle T n;
+  _ : injective (@unpickle T)
+}.
+
+Set Primitive Projections.
+Record class_of (T : Type) := Class {
+  base  : Countable.class_of T;
+  mixin : mixin_of base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Countable.class_of.
+
+Structure type := Pack { sort; _ : class_of sort }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (T : Type) (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
+Definition clone c of phant_id class c := @Pack T c.
+
+Definition pack :=
+  fun bT b & phant_id (@Countable.class bT) b =>
+  fun m => Pack (@Class T b m).
+
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition countType := @Countable.Pack cT class.
+
+Local Notation disp := (CountableOrder.disp).
+
+Definition porderType := 
+  @Order.POrder.Pack disp cT (Order.POrder.class countType).
+Definition latticeType := 
+  @Order.Lattice.Pack disp cT (Order.Lattice.class countType).
+Definition distrLatticeType := 
+  @Order.DistrLattice.Pack disp cT (Order.DistrLattice.class countType).
+Definition wfType := 
+  @WellFounded.Pack disp cT (WellFounded.class countType).
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Countable.class_of.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion countType : type >-> Countable.type.
+Coercion porderType : type >-> Order.POrder.type.
+Coercion latticeType : type >-> Order.Lattice.type.
+Coercion distrLatticeType : type >-> Order.DistrLattice.type.
+Coercion wfType : type >-> WellFounded.type.
+Canonical eqType.
+Canonical choiceType.
+Canonical countType.
+Canonical porderType.
+Canonical latticeType.
+Canonical distrLatticeType.
+Canonical wfType.
+Notation identType := type.
+Notation IdentType T m := (@pack T _ _ id m).
+Notation "[ 'identType' 'of' T 'for' cT ]" := (@clone T cT _ id)
+  (at level 0, format "[ 'identType'  'of'  T  'for'  cT ]") : form_scope.
+Notation "[ 'identType' 'of' T ]" := [identType of T for _]
+  (at level 0, format "[ 'identType'  'of'  T ]") : form_scope.
+End Exports.
+
+Module Export Def.
+
+Definition unpickle_tot {T : identType} n : @unpickle T n. 
+Proof. by case: T=> ? [? []]. Defined.
+
+Notation encode (* : T -> nat *) := (pickle).
+Notation decode (* : nat -> T *) := (mk_total unpickle_tot).
+
+Section Def.
+Context {T : identType}.
+
+Definition ident0 : T := 
+  decode 0%nat.
+
+Definition ident1 : T := 
+  decode 1%nat.
+
+Definition fresh : T -> T := 
+  fun x => decode (1 + encode x).
+
+Definition nfresh : T -> nat -> seq T := 
+  fun i n => traject fresh i n. 
+
+Definition fresh_seq : seq T -> T := 
+  fun s => decode (1 + foldl maxn 0 (map encode s)).
+
+End Def.
+End Def. 
+
+Prenex Implicits fresh fresh_seq.
+
+(* basic properties required by canonical instances *)
+Module Export Props.
+Section Props.
+
+Context {T : identType}.
+Implicit Types (x : T) (s : seq T).
+
+Lemma unpickle_inj : 
+  injective (@unpickle T).
+Proof. by case: T=> ? [/= ? []]. Qed.
+
+Lemma decode_inj : 
+  injective (decode : nat -> T).
+Proof. by apply /mk_total_inj /unpickle_inj. Qed.
+
+Lemma encodeK : 
+  cancel encode (decode : nat -> T). 
+Proof. by apply /mk_totalK /pickleK. Qed.
+
+Lemma decodeK : 
+  cancel decode (encode : T -> nat). 
+Proof. by apply/inj_can_sym; [exact/encodeK | exact/decode_inj]. Qed.
+
+Lemma encode0 : 
+  encode (ident0 : T) = 0%nat.
+Proof. by rewrite /ident0; exact /decodeK. Qed.
+
+Lemma encode1 : 
+  encode (ident1 : T) = 1%nat.
+Proof. by rewrite /ident1; exact /decodeK. Qed.
+
+End Props.
+End Props.
+
+Module Order. 
+Section Order. 
+
+Context {T : identType}.
+Implicit Types (x : T).
+
+Lemma le0x x : ident0 <=^i x.
+Proof. rewrite /ident_le /= /CountableOrder.ident_le encode0; exact/leq0n. Qed.
+
+End Order.
+
+Module Export Exports.
+Implicit Types (T : identType). 
+Canonical bLatticeType T := BLatticeType T (BottomMixin (@Order.le0x T)).
+Canonical bDistrLatticeType T := [bDistrLatticeType of T].
+Coercion bLatticeType : type >-> Order.BLattice.type.
+Coercion bDistrLatticeType : type >-> Order.BDistrLattice.type.
+End Exports.
+
+End Order.
+
+Module Export Syntax. 
+Notation "'\i0'" := (ident0) : ident_scope.
+Notation "'\i1'" := (ident1) : ident_scope.
+End Syntax.
+
 Module Export Theory.
 Section Theory.
 
@@ -382,7 +432,7 @@ Implicit Types (x : T) (s : seq T).
 Lemma fresh_lt x : 
   x <^i fresh x.
 Proof. 
-  rewrite /fresh /ident_lt /= /Def.ident_lt decodeK. 
+  rewrite /fresh /ident_lt /= /CountableOrder.ident_lt decodeK. 
   (* ssrnatlia --- should work here, but it doesn't :( *)
   exact /ltnSn.
 Qed.
@@ -425,12 +475,15 @@ Proof. by rewrite /fresh_seq /ident1 //=. Qed.
 
 Lemma fresh_seq0 s : 
   \i0 <^i fresh_seq s.
-Proof. by rewrite /fresh_seq /ident0 /ident_lt /= /Def.ident_lt !decodeK. Qed.
+Proof. 
+  rewrite /fresh_seq /ident0 /ident_lt /=.
+  by rewrite /CountableOrder.ident_lt !decodeK. 
+Qed.
 
 Lemma fresh_seq_mem x s : 
   x \in s -> x <^i fresh_seq s.
 Proof. 
-  rewrite /fresh_seq /ident0 /ident_lt /= /Def.ident_lt !decodeK.
+  rewrite /fresh_seq /ident0 /ident_lt /= /CountableOrder.ident_lt !decodeK.
   elim s=> [|y {}s IH]=> //=.
   rewrite max0n in_cons=> /orP [/eqP<-|].
   - rewrite ltEnat /=; apply /leq_ltn_trans; last exact/ltnSn.
@@ -448,7 +501,7 @@ Lemma fresh_seq_nfresh x n :
 Proof. 
   rewrite /fresh_seq foldl_maxn_sorted; last first.
   - rewrite sorted_map; apply /sub_sorted /nfresh_sorted.
-    rewrite /ident_lt /= /Def.ident_lt=> {}x y /=; exact /ltW.
+    rewrite /ident_lt /= /CountableOrder.ident_lt=> {}x y /=; exact /ltW.
   have {2}->: 0%nat = @encode T \i0 by apply/esym/encode0.
   rewrite last_map; case: n=> [|{}n].
   - by rewrite encode0=> /=. 

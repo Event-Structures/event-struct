@@ -198,6 +198,10 @@ Definition orelpre f r : simpl_rel T :=
 
 Definition mk_total f (tot : forall x, f x) : T -> rT :=
   fun x => oextract (tot x).
+
+Lemma odflt_pcancel f g x d : 
+  pcancel g f -> odflt d (f (g x)) = x.
+Proof. by move=> -> /=. Qed.
   
 Lemma mk_totalE d f x tot :
   @mk_total f tot x = odflt d (f x).
