@@ -128,23 +128,25 @@ End Order.
 
 Prenex Implicits le lt.
 
-Module Export Exports.
+Definition type (T : Type) := T.
 
+Module Export Exports.
 Implicit Types (T : countType). 
 
-Canonical porderType T := POrderType disp T (@mixin T).
-Canonical latticeType T := LatticeType _ (@mixin T).
-Canonical distrLatticeType T := DistrLatticeType _ (@mixin T).
+Notation "T ^n" := (type T) (at level 2, format "T ^n").
 
+Canonical porderType T := POrderType disp T^n (@mixin T).
+Canonical latticeType T := LatticeType T^n (@mixin T).
+Canonical distrLatticeType T := DistrLatticeType T^n (@mixin T).
 Canonical wfType T := 
   let wf_mixin := @WellFounded.Mixin T 
      (Order.POrder.class (porderType T)) (@wfb T) 
   in WellFounded.Pack disp (WellFounded.Class wf_mixin).
 
-Coercion porderType : Countable.type >-> Order.POrder.type.
-Coercion latticeType : Countable.type >-> Order.Lattice.type.
-Coercion distrLatticeType : Countable.type >-> Order.DistrLattice.type.
-Coercion wfType : Countable.type >-> WellFounded.type.
+Coercion porderType : countType >-> Order.POrder.type.
+Coercion latticeType : countType >-> Order.Lattice.type.
+Coercion distrLatticeType : countType >-> Order.DistrLattice.type.
+Coercion wfType : countType >-> WellFounded.type.
 
 End Exports.
 
