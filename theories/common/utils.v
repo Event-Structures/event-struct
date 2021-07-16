@@ -235,15 +235,6 @@ Qed.
 End OptionUtils.
 
 
-Section CountableUtils. 
-Context {T : countType}.
-
-Lemma pickle_inj : injective (@choice.pickle T).
-Proof. apply /pcan_inj /choice.pickleK. Qed.
-
-End CountableUtils.
-
-
 Section FoldUtils. 
 
 Lemma foldl_maxn_leq n m s : 
