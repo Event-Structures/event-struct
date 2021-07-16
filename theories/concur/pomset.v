@@ -593,7 +593,7 @@ Definition iso_inv {L} (P : lPoset.eventType L -> Prop) :=
 
 Record lang L := Lang { 
   apply : lPoset.eventType L -> Prop;
-  _     : forall E1 E2 (f : E1 ~= E2), apply E1 -> apply E2;
+  _     : iso_inv apply;
             
 }.
 
@@ -821,6 +821,35 @@ End lLoset.
 Notation eventType := lLoset.type.
 Notation eventStruct := lLoset.class_of.
 
+Module Export Lang. 
+
+Import lPoset.Hom.Syntax.
+Import lPoset.Iso.Syntax.
+
+Section Lang. 
+Context {L : Type}.
+
+Definition prop (E : lPoset.eventType L) : Prop := 
+  total (<=%O : rel E).
+
+Lemma iso_inv : Pomset.iso_inv prop. 
+Proof. 
+  rewrite /prop=> E1 E2 f T e1 e2. 
+  set (g := lPoset.Iso.sy f).
+  move: (T (g e1) (g e2)).
+  case H: (g e1 <= g e2); move: H. 
+  - by rewrite -(ord_refl)=> ->.
+  by move=> ? /=; rewrite -(ord_refl)=> ->.    
+Qed.
+
+Definition lang : Pomset.lang L := 
+  Pomset.mk_lang iso_inv.
+
+End Lang. 
+End Lang.
+
+Notation lang := (Lang.lang).
+
 End lLoset.
 
 Export lLoset.lLoset.Exports.
@@ -828,21 +857,41 @@ Export lLoset.lLoset.Exports.
 
 Module Export Lin.
 
-Section Def. 
+Import lPoset.Hom.Syntax.
+Import lPoset.Bij.Syntax.
+Import lPoset.Iso.Syntax.
+
+Module Lang. 
+Section Lang. 
 Context {L : Type} (E : lPoset.eventType L).
 
-Record lin (E' : lLoset.eventType L) : Prop := 
-  is_lin { _ : lPoset.hom E E' }.
+Definition prop (E' : lPoset.eventType L) : Prop := 
+  lLoset.lang E' /\ inhabited (E ≈> E').
 
-End Def.
+Lemma iso_inv : Pomset.iso_inv prop. 
+Proof. 
+  move=> E1 E2 f [] HT [] g; split.
+  - by apply /(lLoset.Lang.iso_inv f).  
+  constructor; exact /(lPoset.Bij.tr g f).
+Qed.
 
-Import lPoset.Hom.Syntax.
+Definition lang : Pomset.lang L := 
+  Pomset.mk_lang iso_inv. 
+
+End Lang. 
+End Lang.
+
+Notation lin := (Lang.lang).
 
 Section Theory. 
 Context {L : Type} {E1 E2 : lPoset.eventType L}.
 
-Lemma hom_lin : (E1 ~> E2) -> lin E2 ≦ lin E1.
-Proof. move=> f E2' [] g; constructor; exact /(lPoset.Hom.tr f g). Qed.
+(* TODO: make Pomset.lang instance of lattice *)
+Lemma bij_lin : (E1 ≈> E2) -> (lin E2 : lPoset.eventType L -> Prop) ≦ lin E1.
+Proof. 
+  move=> f E2' [] P [] g; repeat constructor=> //. 
+  exact /(lPoset.Bij.tr f g). 
+Qed.
 
 End Theory.  
 
