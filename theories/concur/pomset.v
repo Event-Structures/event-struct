@@ -893,6 +893,38 @@ Proof.
   exact /(lPoset.Bij.tr f g). 
 Qed.
 
+Lemma hom_lin : (E1 ~> E2) -> lin E2 ⊑ lin E1.
+Proof. 
+  (* For the proof of this lemma, we need to construct 
+   * a (decidable) linear extension of an arbitary partial order. 
+   * It is not possible to do this **constructively** in general. 
+   * It should be possible, however, under additional assumptions 
+   * on partial order. There are several directions we can take.
+   *
+   *  (1) Trivially, it is possible to construct linear extension 
+   *      for partial order over finite type.  
+   *
+   *  (2) It is possible for a finitely supported partial order over countable type.
+   *
+   *  (3) For a countable type if the partial order is embedded in
+   *      the total order induced by embedding into natural numbers.
+   *      That is `r x y -> x <=^n y`. 
+   *      Under this assumption there is a very simple way to extend 
+   *      the partial order to linear order: 
+   *      just link the elements unrelated by `r` according to their `<=^n` ordering. 
+   * 
+   *  (4) It can also be done for a partial order over countable type 
+   *      with finite width (width is the size of the largest antichain). 
+   *  
+   *  The (1) approach should work nicely for finite pomsets. 
+   *  For finitely supported pomsets we can actually combine (2) and (3). 
+   *  Since we are going to use finitly supported pomsets for operational semantics
+   *  we can enforce the axiom required by (3). 
+   *  As for (4) it is not obvious how it can be exploited in practice.
+   *)
+  admit. 
+Admitted.
+
 End Theory.  
 
 End Lin.
