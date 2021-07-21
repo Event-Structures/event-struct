@@ -1,7 +1,7 @@
+From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice order finmap. 
-From RelationAlgebra Require Import lattice monoid rel boolean.
-From eventstruct Require Import utils.
+From eventstruct Require Import utils rel.
 
 (******************************************************************************)
 (* This file provides a theory of pomsets.                                    *)
@@ -345,6 +345,7 @@ Global Opaque id tr.
 
 End Bij.
 
+
 Module Export Emb.
 
 Module Emb.
@@ -564,6 +565,122 @@ Notation hom := Hom.type.
 Notation bij := Bij.type.
 Notation emb := Emb.type.
 Notation iso := Iso.type.
+
+Module HomExtOrder.
+Section HomExtOrder.
+Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
+Implicit Types (x y : E1).
+
+Definition lt : rel E1 := 
+  (<%O : rel E1) ⊔ relpre f (<%O : rel E2).
+
+Definition le : rel E1 := 
+  fun x y => (x == y) || (lt x y).
+
+Lemma ltxx x : 
+  lt x x = false.
+Proof. by rewrite /lt /= !POrderTheory.ltxx. Qed.
+
+Lemma lt_def x y : 
+  lt x y = (y != x) && (le x y).
+Proof. 
+  rewrite /le /lt eq_sym andb_orr andNb /=.
+  apply/idP/idP; last by move=> /andP[].
+  move=> H; apply /andP; split=> //.
+  apply /eqP=> Heq; move: Heq H=> <-. 
+  by rewrite !POrderTheory.ltxx.
+Qed.
+
+Lemma le_refl :
+  reflexive le.
+Proof. by move=> x /=; rewrite /le eq_refl. Qed.
+
+Lemma le_antisym :
+  antisymmetric le.
+Proof. 
+  rewrite /le=> x y /=.
+  move=> /andP [] /orP + /orP.
+  move=> []; first by move=> /eqP<-; rewrite ltxx.
+  move=> /[swap]; move=> []; first by move=> /eqP<-; rewrite ltxx.
+  rewrite /lt /= => /orP + /orP []; move=> [].
+  - by move: (lt_asym x y)=> /andP H ??; exfalso; apply/H.
+  - move=> /[swap] /ltW /(monotone f).
+    move: (le_lt_asym (f x) (f y)).
+    by move=> /andP H ??; exfalso; apply/H.
+  - move=> /ltW /(monotone f).
+    move: (le_lt_asym (f y) (f x)).
+    by move=> /andP H ??; exfalso; apply/H.
+  by move: (lt_asym (f y) (f x))=> /andP H ??; exfalso; apply/H.
+Qed.
+
+Lemma le_trans : 
+  transitive le.
+Proof. 
+  rewrite /le /lt /= => z x y.
+  move=> /orP[]; first by move=> /eqP->.
+  move=> + /orP[].
+  - by move=> /[swap] /eqP-> ->.
+  move=> /orP + /orP []; move=> [].
+  - by move=> /lt_trans /[apply] ->.
+  - move=> /[swap] /ltW /(monotone f). 
+    rewrite le_eqVlt=> /orP[]; first by move=> /eqP-> ->.
+    by move=> /[swap] /lt_trans /[apply] ->.
+  - move=> /ltW /(monotone f). 
+    rewrite le_eqVlt=> /orP[]; first by move=> /eqP-> ->.
+    by move=> /lt_trans /[apply] ->.
+  by move=> /lt_trans /[apply] ->. 
+Qed.
+
+Lemma le_id_mono x y :
+  x <= y -> le x y.
+Proof.  by rewrite /le /lt le_eqVlt orbA /= => ->. Qed.
+
+Lemma le_mono x y :
+  le x y -> f x <= f y.
+Proof.  
+  rewrite /le /lt /= => /orP[]; last move=> /orP[]. 
+  - move=> /eqP<-; exact/lexx.
+  - by move=> /ltW /(monotone f).
+  exact/ltW.
+Qed.
+
+Lemma lt_rmono x y :
+  f x < f y -> lt x y.
+Proof. by rewrite /lt /= => ->. Qed.
+
+End HomExtOrder.
+End HomExtOrder.
+
+Section HomExt. 
+Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
+
+Definition Ext : lPoset.eventType L.
+  exists E1; constructor. 
+  - exists (class E1). 
+    exists (HomExtOrder.le f) (HomExtOrder.lt f).
+    + exact/HomExtOrder.lt_def.
+    + exact/HomExtOrder.le_refl.
+    + exact/HomExtOrder.le_antisym.
+    + exact/HomExtOrder.le_trans. 
+  - constructor; exact/(@lab L E1). 
+  exact/(mixin_count (class E1)).
+Defined.
+
+Definition ext_bij : E1 ≈> Ext.
+  exists (id : E1 -> Ext).
+  repeat constructor. 
+  - exact/HomExtOrder.le_id_mono.
+  by exists (id : Ext -> E1).
+Defined.
+
+Definition ext_hom : Ext ~> E2.
+  exists (f : Ext -> E2).
+  repeat constructor.
+  - exact/(lab_preserv f).
+  move=> e1 e2; exact/HomExtOrder.le_mono.
+Defined.  
+
+End HomExt.
 
 End lPoset.
 
