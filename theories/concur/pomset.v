@@ -607,11 +607,15 @@ Implicit Types (P Q : lang L).
 Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
 
+Definition supported P Q : Prop := 
+  forall p, P p -> exists q, Q q /\ inhabited (p ~> q).
+
 End Def.
 End Def.
 
 Module Export Syntax.
 Notation "P ⊑ Q" := (stronger P Q) (at level 69) : pomset_scope.
+Notation "P ↪ Q" := (supported P Q) (at level 69) : pomset_scope.
 End Syntax.
 
 Module Export Theory.
@@ -634,6 +638,22 @@ Proof.
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
   exists r; split=> //; constructor; exact/(lPoset.Hom.tr g f).
+Qed.
+
+Lemma supported_refl P : 
+  P ↪ P. 
+Proof. 
+  move=> p HP; exists p; split=> //.
+  constructor; exact/lPoset.Hom.id.
+Qed.
+
+Lemma supported_trans P Q R : 
+  (P ↪ Q) -> (Q ↪ R) -> (P ↪ R). 
+Proof. 
+  move=> H1 H2 p HP. 
+  move: (H1 p HP)=> [q [HQ [f]]].
+  move: (H2 q HQ)=> [r [HR [g]]].
+  exists r; split=> //; constructor; exact/(lPoset.Hom.tr f g).
 Qed.
 
 End Theory.
