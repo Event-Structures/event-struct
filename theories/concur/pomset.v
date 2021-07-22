@@ -604,14 +604,14 @@ Section Def.
 Context {L : Type}.
 Implicit Types (P Q : lang L).
 
-Definition subsumes P Q : Prop := 
+Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
 
 End Def.
 End Def.
 
 Module Export Syntax.
-Notation "P ⊑ Q" := (subsumes P Q) (at level 69) : pomset_scope.
+Notation "P ⊑ Q" := (stronger P Q) (at level 69) : pomset_scope.
 End Syntax.
 
 Module Export Theory.
