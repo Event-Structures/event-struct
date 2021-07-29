@@ -601,8 +601,8 @@ Module Export Exports.
 Coercion apply : lang >-> Funclass.
 End Exports.
 
-Module Export Def.
-Section Def.
+Module Lattice.
+Section Lattice.
 
 Context {L : Type}.
 Implicit Types (P Q : lang L).
@@ -646,6 +646,37 @@ Proof.
 Qed.  
 Canonical neg P := Lang (@negP P).
 
+End Lattice.
+
+Module Export Exports.
+
+Canonical Structure pomset_lang_lattice_ops L : lattice.ops := 
+  lattice.mk_ops (lang L) leq weq cup cap neg bot top.
+
+Global Instance pomset_lang_lattice_morph L : 
+  lattice.morphism BDL (@apply L).
+Proof. by constructor. Qed.
+
+Global Instance pomset_lang_lattice_laws L : 
+  lattice.laws (BDL+STR+CNV+DIV) (@pomset_lang_lattice_ops L).
+Proof.
+  have H: (lattice.laws BDL (@pomset_lang_lattice_ops L)). 
+  - by apply/(laws_of_injective_morphism (@apply L)).
+  by constructor; apply H. 
+Qed.
+
+End Exports.
+
+End Lattice.
+
+Export Lattice.Exports.
+
+Module Export Def.
+Section Def.
+
+Context {L : Type}.
+Implicit Types (P Q : lang L).
+
 Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
 
@@ -659,26 +690,6 @@ Module Export Syntax.
 Notation "P ⊑ Q" := (stronger P Q) (at level 69) : pomset_scope.
 Notation "P ↪ Q" := (supported P Q) (at level 69) : pomset_scope.
 End Syntax.
-
-Module Export Lattice.
-Section Lattice.
-
-Context {L : Type}.
-
-Canonical Structure ops : lattice.ops := 
-  lattice.mk_ops (lang L) leq weq cup cap neg bot top.
-
-Global Instance morph : lattice.morphism BDL (@apply L).
-Proof. by constructor. Qed.
-
-Global Instance laws : lattice.laws (BDL+STR+CNV+DIV) ops.
-Proof.
-  have H: (lattice.laws BDL ops); last by constructor; apply H. 
-  by apply/(laws_of_injective_morphism (@apply L)).
-Qed.
-
-End Lattice. 
-End Lattice.
 
 Module Export Theory.
 Section Theory.
@@ -741,7 +752,7 @@ End Theory.
 End Pomset.
 
 Export Pomset.Exports.
+Export Pomset.Lattice.Exports.
 Export Pomset.Def.
 Export Pomset.Syntax.
-Export Pomset.Lattice.
 Export Pomset.Theory.
