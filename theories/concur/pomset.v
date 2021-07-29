@@ -588,7 +588,10 @@ Implicit Types (L : Type).
 Import lPoset.Hom.Syntax.
 Import lPoset.Iso.Syntax.
 
-Record lang L := mk_lang { 
+Definition iso_inv {L} (P : lPoset.eventType L -> Prop) := 
+  forall {E1 E2} (f : E1 ~= E2), P E1 -> P E2.
+
+Record lang L := Lang { 
   apply : lPoset.eventType L -> Prop;
   _     : forall E1 E2 (f : E1 ~= E2), apply E1 -> apply E2;
             
@@ -604,6 +607,45 @@ Section Def.
 Context {L : Type}.
 Implicit Types (P Q : lang L).
 
+Definition leq P Q := lattice.leq (P : lPoset.eventType L -> Prop) Q.
+
+Definition weq P Q := lattice.weq (P : lPoset.eventType L -> Prop) Q.
+
+Lemma botP : iso_inv (lattice.bot : lPoset.eventType L -> Prop).
+Proof. done. Qed.
+Canonical bot := Lang (@botP).
+
+Lemma topP : iso_inv (lattice.top : lPoset.eventType L -> Prop).
+Proof. done. Qed.
+Canonical top := Lang (@topP).
+
+Lemma cupP P Q : iso_inv ((P : lPoset.eventType L -> Prop) ⊔ Q).
+Proof. 
+  move: P Q=> [] P + [] Q + p q /=.
+  rewrite /iso_inv=> HP HQ f []. 
+  - by move: (HP _ _ f)=> /[apply] ?; left. 
+  by move: (HQ _ _ f)=> /[apply] ?; right. 
+Qed.
+Canonical cup P Q := Lang (@cupP P Q).
+
+Lemma capP P Q : iso_inv ((P : lPoset.eventType L -> Prop) ⊓ Q).
+Proof. 
+  move: P Q=> [] P + [] Q + p q /=.
+  rewrite /iso_inv=> HP HQ f []. 
+  move: (HP _ _ f)=> /[apply] /[swap].
+  by move: (HQ _ _ f)=> /[apply] /[swap].
+Qed.
+Canonical cap P Q := Lang (@capP P Q).
+
+Lemma negP P : iso_inv (neg (P : lPoset.eventType L -> Prop)).
+Proof. 
+  move: P=> [] P + p q /=.
+  rewrite /iso_inv=> HP f.
+  apply/contra_not.
+  by move: (HP _ _ (lPoset.Iso.sy f)).
+Qed.  
+Canonical neg P := Lang (@negP P).
+
 Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
 
@@ -617,6 +659,26 @@ Module Export Syntax.
 Notation "P ⊑ Q" := (stronger P Q) (at level 69) : pomset_scope.
 Notation "P ↪ Q" := (supported P Q) (at level 69) : pomset_scope.
 End Syntax.
+
+Module Export Lattice.
+Section Lattice.
+
+Context {L : Type}.
+
+Canonical Structure ops : lattice.ops := 
+  lattice.mk_ops (lang L) leq weq cup cap neg bot top.
+
+Global Instance morph : lattice.morphism BDL (@apply L).
+Proof. by constructor. Qed.
+
+Global Instance laws : lattice.laws (BDL+STR+CNV+DIV) ops.
+Proof.
+  have H: (lattice.laws BDL ops); last by constructor; apply H. 
+  by apply/(laws_of_injective_morphism (@apply L)).
+Qed.
+
+End Lattice. 
+End Lattice.
 
 Module Export Theory.
 Section Theory.
@@ -681,4 +743,5 @@ End Pomset.
 Export Pomset.Exports.
 Export Pomset.Def.
 Export Pomset.Syntax.
+Export Pomset.Lattice.
 Export Pomset.Theory.
