@@ -200,9 +200,20 @@ Lemma lab_preserv :
   { mono f : e / lab e }.
 Proof. by case: f => ? [[]]. Qed.
 
-Lemma monotone :
+Lemma ca_monotone :
   { homo f : e1 e2 / e1 <= e2 }.
 Proof. by case: f => ? [[]]. Qed.
+
+Lemma sca_img e1 e2 : (f e1 < f e2) -> (e1 < e2) || (e1 >< e2).
+Proof.
+  case H: (e1 < e2)=> //= Hf.
+  apply/negP=> /orP [].
+  - rewrite le_eqVlt H orbF.
+    by move: Hf=> /[swap] /eqP<-; rewrite ltxx.
+  move=> /ca_monotone; move: H Hf=> _.
+  move: (lt_le_asym (f e1) (f e2))=> /andP H ??. 
+  by apply/H.
+Qed.
 
 End Theory.
 End Theory.
@@ -221,7 +232,7 @@ Proof. done. Qed.
 Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
   move=> f g; exists (g \o f); do 2 constructor=> /=.
   - by move=> e; rewrite !lab_preserv.
-  by move=> e1 e2 /(monotone f) /(monotone g).
+  by move=> e1 e2 /(ca_monotone f) /(ca_monotone g).
 Defined.
 
 Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~> E2) (g : E2 ~> E3) : 
@@ -313,6 +324,27 @@ Proof. by case: f => ? [[? []]] ???. Qed.
 Lemma event_bij :
   bijective f.
 Proof. by case: f => ? [[? []]] g ? ?; exists g. Qed.
+
+Lemma inv_lab : 
+  { mono (inv f) : e / lab e }.
+Proof. by move=> e /=; rewrite -{2}[e]can_inv (lab_preserv f). Qed.
+
+Lemma sca_monotone :
+  { homo f : e1 e2 / e1 < e2 }.
+Proof. apply/inj_homo_lt; [apply/bij_inj/event_bij | exact/ca_monotone]. Qed.
+
+Lemma ca_img e1 e2 : 
+  (f e1 <= f e2) -> (e1 <= e2) || (e1 >< e2).
+Proof.
+  rewrite le_eqVlt=> /orP[].
+  - by move=> /eqP /(bij_inj event_bij)<-; rewrite lexx.
+  move=> /sca_img /orP[]; last by move=> ->.
+  by move=> /ltW ->.
+Qed.
+
+Lemma ca_img_inv e1 e2 : 
+  (e1 <= e2) -> (inv f e1 <= inv f e2) || (inv f e1 >< inv f e2).
+Proof. by rewrite -{1}[e1]can_inv -{1}[e2]can_inv=> /ca_img. Qed.
 
 End Theory.
 End Theory.
@@ -408,7 +440,7 @@ Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
 Lemma ord_refl e1 e2 :
   (e1 <= e2) = (f e1 <= f e2).
 Proof.
-  apply/idP/idP; first exact/(monotone f).
+  apply/idP/idP; first exact/(ca_monotone f).
   by case: f=> ? [[? []]] => /= /[apply]. 
 Qed.
 
@@ -604,10 +636,10 @@ Proof.
   move=> /[swap]; move=> []; first by move=> /eqP<-; rewrite ltxx.
   rewrite /lt /= => /orP + /orP []; move=> [].
   - by move: (lt_asym x y)=> /andP H ??; exfalso; apply/H.
-  - move=> /[swap] /ltW /(monotone f).
+  - move=> /[swap] /ltW /(ca_monotone f).
     move: (le_lt_asym (f x) (f y)).
     by move=> /andP H ??; exfalso; apply/H.
-  - move=> /ltW /(monotone f).
+  - move=> /ltW /(ca_monotone f).
     move: (le_lt_asym (f y) (f x)).
     by move=> /andP H ??; exfalso; apply/H.
   by move: (lt_asym (f y) (f x))=> /andP H ??; exfalso; apply/H.
@@ -622,10 +654,10 @@ Proof.
   - by move=> /[swap] /eqP-> ->.
   move=> /orP + /orP []; move=> [].
   - by move=> /lt_trans /[apply] ->.
-  - move=> /[swap] /ltW /(monotone f). 
+  - move=> /[swap] /ltW /(ca_monotone f). 
     rewrite le_eqVlt=> /orP[]; first by move=> /eqP-> ->.
     by move=> /[swap] /lt_trans /[apply] ->.
-  - move=> /ltW /(monotone f). 
+  - move=> /ltW /(ca_monotone f). 
     rewrite le_eqVlt=> /orP[]; first by move=> /eqP-> ->.
     by move=> /lt_trans /[apply] ->.
   by move=> /lt_trans /[apply] ->. 
@@ -640,7 +672,7 @@ Lemma le_mono x y :
 Proof.  
   rewrite /le /lt /= => /orP[]; last move=> /orP[]. 
   - move=> /eqP<-; exact/lexx.
-  - by move=> /ltW /(monotone f).
+  - by move=> /ltW /(ca_monotone f).
   exact/ltW.
 Qed.
 
@@ -680,6 +712,45 @@ Definition ext_hom : Ext ~> E2.
   move=> e1 e2; exact/HomExtOrder.le_mono.
 Defined.  
 
+Lemma ext_lt_rmono (e1 e2 : Ext) :
+  f e1 < f e2 -> e1 < e2.
+Proof. rewrite {2}/Order.lt /=; exact/HomExtOrder.lt_rmono. Qed.
+
+Lemma ext_incomp (e1 e2 : Ext) :
+  e1 >< e2 -> (f e1 == f e2) || (f e1 >< f e2).
+Proof. 
+  case H: (f e1 <= f e2); move: H.
+  - rewrite le_eqVlt=> /orP[/eqP->|]; rewrite ?eq_refl=> //.
+    by rewrite {1}/comparable=> /ext_lt_rmono /ltW ->.
+  case H: (f e2 <= f e1); move: H.
+  - rewrite le_eqVlt=> /orP[/eqP->|]; rewrite ?eq_refl=> //.
+    by rewrite /comparable=> /ext_lt_rmono /ltW ->; rewrite orbT. 
+  by rewrite {2}/comparable=> -> ->.
+Qed.
+
+(* Lemma hom_incomp_linset (E1 E2 : lPoset.eventType L) (f : E1 ~> E2) e1 e2 : *)
+(*   lang E2 -> (e1 >< e2) -> f e1 = f e2. *)
+
+
+(* Lemma hack x y : (f x <= f y) -> (x <= y) || (x >< y). *)
+(* Proof.  *)
+(*   rewrite le_eqVlt=> /orP[]; last first. *)
+(*   - by move=> /ext_lt_rmono/ltW ->.  *)
+(*   move=> /eqP; case H: (x <= y)=> //=. *)
+(*   move=> ?; apply/negP=> /orP []. *)
+(*   - by rewrite H. *)
+
+(*   move=> /(monotone ext_hom)=> /=. *)
+
+(*   rewrite le_eqVlt=> /orP []. *)
+(*   - by move: H=> /[swap] /eqP ->; rewrite lexx. *)
+
+(*   - by move=> <-; rewrite lexx.  *)
+(*   move=> ??; apply/orP. *)
+(*   apply/negP=> /orP []. *)
+(*   apply/idP/idP; last first. *)
+(*   - move=> /orP. *)
+
 End HomExt.
 
 End lPoset.
@@ -703,6 +774,8 @@ Module Pomset.
 Implicit Types (L : Type).
 
 Import lPoset.Hom.Syntax.
+Import lPoset.Bij.Syntax.
+Import lPoset.Emb.Syntax.
 Import lPoset.Iso.Syntax.
 
 Definition iso_inv {L} (P : lPoset.eventType L -> Prop) := 
@@ -794,11 +867,14 @@ Section Def.
 Context {L : Type}.
 Implicit Types (P Q : lang L).
 
+Definition extensible P : Prop := 
+  forall p1 p2 (f : p1 ~> p2), P p1 -> P p2 -> P (lPoset.Ext f).
+
 Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
 
 Definition supported P Q : Prop := 
-  forall p, P p -> exists q, Q q /\ inhabited (p ~> q).
+  forall p, P p -> exists q, Q q /\ inhabited (p ≈> q).
 
 End Def.
 End Def.
@@ -817,21 +893,21 @@ Implicit Types (P Q R : lang L).
 Lemma lang_iso_inv P : iso_inv P.
 Proof. by case: P. Qed.
 
-Lemma subsumes_subset P Q :
+Lemma stronger_subset P Q :
   P ≦ Q -> P ⊑ Q. 
 Proof. 
   move=> Hs p Hp; exists p; split; first exact /Hs. 
   constructor; exact/lPoset.Hom.id. 
 Qed.
   
-Lemma subsumes_refl P : 
+Lemma stronger_refl P : 
   P ⊑ P.
 Proof. 
   move=> p HP; exists p; split=> //. 
   constructor; exact/lPoset.Hom.id.
 Qed.
 
-Lemma subsumes_trans P Q R : 
+Lemma stronger_trans P Q R : 
   P ⊑ Q -> Q ⊑ R -> P ⊑ R.
 Proof. 
   move=> H1 H2 p HP. 
@@ -851,7 +927,7 @@ Lemma supported_refl P :
   P ↪ P. 
 Proof. 
   move=> p HP; exists p; split=> //.
-  constructor; exact/lPoset.Hom.id.
+  constructor; exact/lPoset.Bij.id.
 Qed.
 
 Lemma supported_trans P Q R : 
@@ -860,7 +936,7 @@ Proof.
   move=> H1 H2 p HP. 
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
-  exists r; split=> //; constructor; exact/(lPoset.Hom.tr f g).
+  exists r; split=> //; constructor; exact/(lPoset.Bij.tr f g).
 Qed.
 
 End Theory.
@@ -938,10 +1014,12 @@ End lLoset.
 Notation eventType := lLoset.type.
 Notation eventStruct := lLoset.class_of.
 
-Module Export Lang. 
-
 Import lPoset.Hom.Syntax.
+Import lPoset.Bij.Syntax.
+Import lPoset.Emb.Syntax.
 Import lPoset.Iso.Syntax.
+
+Module Export Lang. 
 
 Section Lang. 
 Context {L : Type}.
@@ -967,12 +1045,48 @@ End Lang.
 
 Notation lang := (Lang.lang).
 
+Module Export Theory.
+Section Theory.
+
+Context {L : Type}.
+
+(* TODO: introduce a way to create linearly ordered set 
+ *   from a proof that partially ordered set is totally ordered,  
+ *   i.e. make a conversion from `p : lPoset.eventType L` and 
+ *   a proof of `lLoset.lang p` to `lLoset.eventType L` 
+ *)
+(* Lemma hom_incomp_linset (E1 E2 : lPoset.eventType L) (f : E1 ~> E2) e1 e2 : *)
+(*   lang E2 -> (e1 >< e2) -> f e1 = f e2. *)
+(* Proof.  *)
+(*   move=> Ht /orP Hi. *)
+(*   move: (Ht (f e1) (f e2)); rewrite le_eqVlt. *)
+(*   move=> /orP[]; first move=> /orP[]. *)
+(*   - by move=> /eqP. *)
+(*   -  *)
+(*   case H: (e1 <= e2); move: H. *)
+  (* -  *)
+
+End Theory.
+End Theory.
+
 End lLoset.
 
 Export lLoset.lLoset.Exports.
 
+Module Export Schedule.
+Section Schedule.
 
-Module Export Lin.
+Context {L : Type}.
+Implicit Types (P : Pomset.lang L).
+
+Definition schedulable P : Prop := 
+  P ↪ P ⊓ @lLoset.lang L.
+
+End Schedule.
+End Schedule.
+
+
+Module Export Schedule.
 
 Import lPoset.Hom.Syntax.
 Import lPoset.Bij.Syntax.
@@ -980,16 +1094,17 @@ Import lPoset.Iso.Syntax.
 
 Module Lang. 
 Section Lang. 
-Context {L : Type} (E : lPoset.eventType L).
+Context {L : Type} (P : Pomset.lang L) (E : lPoset.eventType L).
 
 Definition prop (E' : lPoset.eventType L) : Prop := 
-  lLoset.lang E' /\ inhabited (E ≈> E').
+  P E' /\ lLoset.lang E' /\ inhabited (E ≈> E').
 
 Lemma iso_inv : Pomset.iso_inv prop. 
 Proof. 
-  move=> E1 E2 f [] HT [] g; split.
+  move=> E1 E2 f [] HP [] HT [] g; repeat split.
+  - by apply/(lang_iso_inv f).
   - by apply /(lLoset.Lang.iso_inv f).  
-  constructor; exact /(lPoset.Bij.tr g f).
+   by apply /(lPoset.Bij.tr g f).
 Qed.
 
 Definition lang : Pomset.lang L := 
@@ -998,19 +1113,28 @@ Definition lang : Pomset.lang L :=
 End Lang. 
 End Lang.
 
-Notation lin := (Lang.lang).
+Notation schedule := (Lang.lang).
+
+Section Def.
+Context {L : Type}.
+Implicit Types (P : Pomset.lang L).
+
+Definition schedulable P : Prop := 
+  P ↪ P ⊓ @lLoset.lang L.
+
+End Def.
 
 Section Theory. 
-Context {L : Type} {E1 E2 : lPoset.eventType L}.
+Context {L : Type} {P : Pomset.lang L} {E1 E2 : lPoset.eventType L}.
 
-(* TODO: make Pomset.lang instance of lattice *)
-Lemma bij_lin : (E1 ≈> E2) -> (lin E2 : lPoset.eventType L -> Prop) ≦ lin E1.
+Lemma schedule_bij : (E1 ≈> E2) -> schedule P E2 ≦ schedule P E1.
 Proof. 
-  move=> f E2' [] P [] g; repeat constructor=> //. 
+  move=> f E2' [] HP [] Hl [] g; repeat constructor=> //. 
   exact /(lPoset.Bij.tr f g). 
 Qed.
 
-Lemma hom_lin : (E1 ~> E2) -> lin E2 ⊑ lin E1.
+Lemma schedule_hom : extensible P -> schedulable P -> 
+  P E1 -> P E2 -> (E1 ~> E2) -> schedule P E2 ⊑ schedule P E1.
 Proof. 
   (* For the proof of this lemma, we need to construct 
    * a (decidable) linear extension of an arbitary partial order. 
@@ -1039,9 +1163,26 @@ Proof.
    *  we can enforce the axiom required by (3). 
    *  As for (4) it is not obvious how it can be exploited in practice.
    *)
-  admit. 
-Admitted.
+  move=> He Hd H1 H2 f E2' [] H3 [] Hl [] g.
+  pose h := lPoset.Hom.tr f g.
+  pose E1' := lPoset.Ext h. 
+  move: (He _ _ h) H1 H3=> /[apply] /[apply]. 
+  move: (Hd E1')=> /[apply] [[]] E1'' [] [] HP HL [] k.
+  exists E1''; repeat split=> //.
+  - apply/(lPoset.Bij.tr _ k)/lPoset.ext_bij.
+  pose h' := (lPoset.ext_hom h).
+  pose k' := (lPoset.Bij.inv k).
+  exists (h' \o k').
+  repeat constructor.
+  - by move=> x /=; rewrite (lab_preserv h) -(inv_lab k).
+  move=> e1 e2=> /= /(ca_img_inv k) /orP[].
+  - by move=> /(ca_monotone h').
+  move=> /lPoset.ext_incomp /orP [/eqP->|] //. 
+  rewrite /comparable.
+  move: Hl=> /=; rewrite /lLoset.Lang.prop=> Ht.
+  by move: (Ht (h (k' e1)) (h (k' e2)))=> ->. 
+Qed.
 
 End Theory.  
 
-End Lin.
+End Schedule.
