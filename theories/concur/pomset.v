@@ -1127,6 +1127,14 @@ End Def.
 Section Theory. 
 Context {L : Type} {P : Pomset.lang L} {E1 E2 : lPoset.eventType L}.
 
+Lemma schedule_inh : 
+  schedulable P -> P E1 -> inhabited { E2 | schedule P E1 E2 }. 
+Proof. 
+  move=> Hd Hp; move: (Hd E1 Hp). 
+  move=> [] E2' [] [] Hp' Hl [] f. 
+  constructor; exists E2'=> //=. 
+Qed.  
+
 Lemma schedule_bij : (E1 ≈> E2) -> schedule P E2 ≦ schedule P E1.
 Proof. 
   move=> f E2' [] HP [] Hl [] g; repeat constructor=> //. 
