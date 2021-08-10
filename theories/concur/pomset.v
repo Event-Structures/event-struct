@@ -698,7 +698,7 @@ Definition Ext : lPoset.eventType L.
   exact/(mixin_count (class E1)).
 Defined.
 
-Definition ext_bij : E1 ≈> Ext.
+Definition ext_bij : E1 ≃> Ext.
   exists (id : E1 -> Ext).
   repeat constructor. 
   - exact/HomExtOrder.le_id_mono.
@@ -850,7 +850,7 @@ Definition stronger P Q : Prop :=
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
 
 Definition supported P Q : Prop := 
-  forall p, P p -> exists q, Q q /\ inhabited (p ≈> q).
+  forall p, P p -> exists q, Q q /\ inhabited (p ≃> q).
 
 (* TODO: generalize stronger/supported to arbitary relation on posets 
  *   and introduce notation in the style of `homo` from `ssreflect`:
@@ -1019,7 +1019,7 @@ Proof.
 Qed.
 
 Definition lang : Pomset.lang L := 
-  Pomset.mk_lang iso_inv.
+  Pomset.Lang iso_inv.
 
 End Lang. 
 End Lang.
@@ -1044,18 +1044,6 @@ End lLoset.
 
 Export lLoset.lLoset.Exports.
 
-Module Export Schedule.
-Section Schedule.
-
-Context {L : Type}.
-Implicit Types (P : Pomset.lang L).
-
-Definition schedulable P : Prop := 
-  P ↪ P ⊓ @lLoset.lang L.
-
-End Schedule.
-End Schedule.
-
 
 Module Export Schedule.
 
@@ -1068,7 +1056,7 @@ Section Schedule.
 Context {L : Type} (P : Pomset.lang L) (E : lPoset.eventType L).
 
 Definition prop (E' : lPoset.eventType L) : Prop := 
-  P E' /\ lLoset.lang E' /\ inhabited (E ≈> E').
+  P E' /\ lLoset.lang E' /\ inhabited (E ≃> E').
 
 Lemma iso_inv : Pomset.iso_inv prop. 
 Proof. 
@@ -1079,7 +1067,7 @@ Proof.
 Qed.
 
 Definition lang : Pomset.lang L := 
-  Pomset.mk_lang iso_inv. 
+  Pomset.Lang iso_inv. 
 
 End Schedule. 
 End Schedule.
