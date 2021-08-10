@@ -728,29 +728,6 @@ Proof.
   by rewrite {2}/comparable=> -> ->.
 Qed.
 
-(* Lemma hom_incomp_linset (E1 E2 : lPoset.eventType L) (f : E1 ~> E2) e1 e2 : *)
-(*   lang E2 -> (e1 >< e2) -> f e1 = f e2. *)
-
-
-(* Lemma hack x y : (f x <= f y) -> (x <= y) || (x >< y). *)
-(* Proof.  *)
-(*   rewrite le_eqVlt=> /orP[]; last first. *)
-(*   - by move=> /ext_lt_rmono/ltW ->.  *)
-(*   move=> /eqP; case H: (x <= y)=> //=. *)
-(*   move=> ?; apply/negP=> /orP []. *)
-(*   - by rewrite H. *)
-
-(*   move=> /(monotone ext_hom)=> /=. *)
-
-(*   rewrite le_eqVlt=> /orP []. *)
-(*   - by move: H=> /[swap] /eqP ->; rewrite lexx. *)
-
-(*   - by move=> <-; rewrite lexx.  *)
-(*   move=> ??; apply/orP. *)
-(*   apply/negP=> /orP []. *)
-(*   apply/idP/idP; last first. *)
-(*   - move=> /orP. *)
-
 End HomExt.
 
 End lPoset.
@@ -784,7 +761,6 @@ Definition iso_inv {L} (P : lPoset.eventType L -> Prop) :=
 Record lang L := Lang { 
   apply : lPoset.eventType L -> Prop;
   _     : iso_inv apply;
-            
 }.
 
 Module Export Exports.
@@ -1055,16 +1031,6 @@ Context {L : Type}.
  *   i.e. make a conversion from `p : lPoset.eventType L` and 
  *   a proof of `lLoset.lang p` to `lLoset.eventType L` 
  *)
-(* Lemma hom_incomp_linset (E1 E2 : lPoset.eventType L) (f : E1 ~> E2) e1 e2 : *)
-(*   lang E2 -> (e1 >< e2) -> f e1 = f e2. *)
-(* Proof.  *)
-(*   move=> Ht /orP Hi. *)
-(*   move: (Ht (f e1) (f e2)); rewrite le_eqVlt. *)
-(*   move=> /orP[]; first move=> /orP[]. *)
-(*   - by move=> /eqP. *)
-(*   -  *)
-(*   case H: (e1 <= e2); move: H. *)
-  (* -  *)
 
 End Theory.
 End Theory.
