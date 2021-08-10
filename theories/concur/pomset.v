@@ -843,14 +843,19 @@ Section Def.
 Context {L : Type}.
 Implicit Types (P Q : lang L).
 
-Definition extensible P : Prop := 
-  forall p1 p2 (f : p1 ~> p2), P p1 -> P p2 -> P (lPoset.Ext f).
+Definition extensible P Q : Prop := 
+  forall p q (f : p ~> q), P p -> Q q -> (P ⊓ Q) (lPoset.Ext f).
 
 Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
 
 Definition supported P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (p ≈> q).
+
+(* TODO: generalize stronger/supported to arbitary relation on posets 
+ *   and introduce notation in the style of `homo` from `ssreflect`:
+ *   e.g. {lang P ⊑ Q : p q / p ~> q }
+ *)
 
 End Def.
 End Def.
@@ -1058,8 +1063,8 @@ Import lPoset.Hom.Syntax.
 Import lPoset.Bij.Syntax.
 Import lPoset.Iso.Syntax.
 
-Module Lang. 
-Section Lang. 
+Module Schedule. 
+Section Schedule. 
 Context {L : Type} (P : Pomset.lang L) (E : lPoset.eventType L).
 
 Definition prop (E' : lPoset.eventType L) : Prop := 
@@ -1076,10 +1081,34 @@ Qed.
 Definition lang : Pomset.lang L := 
   Pomset.mk_lang iso_inv. 
 
-End Lang. 
-End Lang.
+End Schedule. 
+End Schedule.
 
-Notation schedule := (Lang.lang).
+Notation schedule := (Schedule.lang).
+
+Module Scheduling. 
+Section Scheduling. 
+Context {L : Type} (P : Pomset.lang L).
+
+Definition prop : lPoset.eventType L -> Prop := 
+  fun q => exists p, P p /\ schedule P p q.
+
+Lemma iso_inv : Pomset.iso_inv prop. 
+Proof. 
+  move=> E1 E2 f [] E1' [] HP' [] HP [] Hl [] g.
+  exists E1'; repeat split=> //=.
+  - by apply /(lang_iso_inv f).
+  - by apply /(lLoset.Lang.iso_inv f).
+  by apply /(lPoset.Bij.tr g f).
+Qed.
+
+Definition lang : Pomset.lang L := 
+  Pomset.Lang iso_inv. 
+
+End Scheduling. 
+End Scheduling. 
+
+Notation scheduling := (Scheduling.lang).
 
 Section Def.
 Context {L : Type}.
@@ -1091,24 +1120,30 @@ Definition schedulable P : Prop :=
 End Def.
 
 Section Theory. 
-Context {L : Type} {P : Pomset.lang L} {E1 E2 : lPoset.eventType L}.
+Context {L : Type}. 
+Implicit Types (P Q : Pomset.lang L). 
+Implicit Types (p q : lPoset.eventType L).
 
-Lemma schedule_inh : 
-  schedulable P -> P E1 -> inhabited { E2 | schedule P E1 E2 }. 
+Lemma schedule_inh P p : 
+  schedulable P -> P p -> inhabited { q | schedule P p q }. 
 Proof. 
-  move=> Hd Hp; move: (Hd E1 Hp). 
-  move=> [] E2' [] [] Hp' Hl [] f. 
-  constructor; exists E2'=> //=. 
+  move=> Hd Hp; move: (Hd p Hp). 
+  move=> [] p' [] [] Hp' Hl [] f. 
+  constructor; exists p'=> //=. 
 Qed.  
 
-Lemma schedule_bij : (E1 ≈> E2) -> schedule P E2 ≦ schedule P E1.
+Lemma schedule_subset P Q p : 
+  (P ≦ Q) -> schedule P p ≦ schedule Q p.
+Proof. by move=> H q [? [??]]; split; [exact/H | split=> //]. Qed.
+
+Lemma schedule_bij P p q : (p ≃> q) -> schedule P q ≦ schedule P p.
 Proof. 
-  move=> f E2' [] HP [] Hl [] g; repeat constructor=> //. 
+  move=> f p' [] Hp' [Hl [g]]; repeat constructor=> //. 
   exact /(lPoset.Bij.tr f g). 
 Qed.
 
-Lemma schedule_hom : extensible P -> schedulable P -> 
-  P E1 -> P E2 -> (E1 ~> E2) -> schedule P E2 ⊑ schedule P E1.
+Lemma schedule_hom P Q p q : extensible P Q -> schedulable P -> 
+  P p -> Q q -> (p ~> q) -> schedule Q q ⊑ schedule P p.
 Proof. 
   (* For the proof of this lemma, we need to construct 
    * a (decidable) linear extension of an arbitary partial order. 
@@ -1137,12 +1172,12 @@ Proof.
    *  we can enforce the axiom required by (3). 
    *  As for (4) it is not obvious how it can be exploited in practice.
    *)
-  move=> He Hd H1 H2 f E2' [] H3 [] Hl [] g.
+  move=> He Hd H1 H2 f q' [] H3 [] Hl [] g.
   pose h := lPoset.Hom.tr f g.
-  pose E1' := lPoset.Ext h. 
-  move: (He _ _ h) H1 H3=> /[apply] /[apply]. 
-  move: (Hd E1')=> /[apply] [[]] E1'' [] [] HP HL [] k.
-  exists E1''; repeat split=> //.
+  pose p' := lPoset.Ext h. 
+  move: (He _ _ h) H1 H3=> /[apply] /[apply] [[]] + _. 
+  move: (Hd p')=> /[apply] [[]] p'' [] [] HP HL [] k.
+  exists p''; repeat split=> //.
   - apply/(lPoset.Bij.tr _ k)/lPoset.ext_bij.
   pose h' := (lPoset.ext_hom h).
   pose k' := (lPoset.Bij.inv k).
@@ -1156,6 +1191,25 @@ Proof.
   move: Hl=> /=; rewrite /lLoset.Lang.prop=> Ht.
   by move: (Ht (h (k' e1)) (h (k' e2)))=> ->. 
 Qed.
+
+Lemma scheduling_subset P Q : 
+  P ≦ Q -> scheduling P ≦ scheduling Q.
+Proof. 
+  move=> H p' [p [Hp Hs]].
+  exists p; split=> //; first exact/H.
+  by apply/(schedule_subset H).
+Qed.
+
+Lemma scheduling_stronger P Q : extensible Q P -> schedulable Q -> 
+  P ⊑ Q -> scheduling P ⊑ scheduling Q.
+Proof. 
+  move=> He Hd Hw p' [p [Hp Hs]]. 
+  move: (Hw p Hp)=> [q [Hq [f]]].
+  move: (@schedule_hom Q P q p He Hd Hq Hp f)=> H.
+  move: (H p' Hs)=> [q' [Hs' [g]]].
+  exists q'; split=> //=.
+  exists q; split=> //=.
+Qed.  
 
 End Theory.  
 
