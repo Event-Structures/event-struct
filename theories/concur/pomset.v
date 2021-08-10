@@ -534,9 +534,29 @@ Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~= E2) (g : E2 ~= E3) :
    Iso.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
+Definition of_homs {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~> E1) : 
+  cancel f g -> cancel g f -> (E1 ~= E2).
+(* --- *)
+  move=> HK HK'; exists f.
+  repeat constructor; try by move: HK HK'; case: f=> ? [[]]. 
+  - by exists g.
+  move=> e1 e2; rewrite -{2}[e1]HK -{2}[e2]HK.
+  by move: HK HK'; case: g=> ? [[? H]] ?? /= => /H. 
+Defined.
+
+Lemma of_homsE {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~= E1) 
+               (K : cancel f g) (K' : cancel g f) : 
+   Iso.apply (of_homs K K') = f.
+Proof. done. Qed.
+
+Lemma of_homs_invE {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~= E1) 
+                   (K : cancel f g) (K' : cancel g f) : 
+   Bij.inv (of_homs K K') = g.
+Proof. done. Qed.
+
 End Cat.
 
-Global Opaque id sy tr.
+Global Opaque id sy tr of_homs.
 
 End Iso.
 
