@@ -37,8 +37,8 @@ From eventstruct Require Import utils.
 (* be used by importing corresponding module: Import LPoset.Mod.Syntax        *)
 (* for Mod in {Hom, Bij, Emb, Iso}.                                           *)
 (*                   E1 ~> E2 == homomorphism.                                *)
-(*                   E1 ≈> E2 == bijective homomorphism.                      *)
-(*                   E1 => E2 == embedding.                                   *)
+(*                   E1 ≃> E2 == bijective homomorphism.                      *)
+(*                   E1 ≈> E2 == embedding.                                   *)
 (*                   E1 ~= E2 == isomorphism.                                 *)
 (*                                                                            *)
 (* Each module Mod in {Hom, Bij, Emb, Iso} also defines combinators which     *)
@@ -295,12 +295,12 @@ End Def.
 
 Module Export Syntax. 
 Notation bij := Bij.type.
-Notation "E1 ≈> E2" := (bij E1 E2) (at level 50) : pomset_scope.
+Notation "E1 ≃> E2" := (bij E1 E2) (at level 50) : pomset_scope.
 End Syntax. 
 
 Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ≃> E2).
 
 Lemma inv_can : 
   cancel f (inv f).
@@ -320,22 +320,22 @@ End Theory.
 Section Cat.
 Context {L : Type}.
 
-Definition id {E : eventType L} : E ≈> E.
+Definition id {E : eventType L} : E ≃> E.
   by exists id; do 1 constructor=> //; exists id. 
 Defined.
 
 Lemma idE {E : eventType L} : 
-  Bij.apply (id : E ≈> E) = ssrfun.id.
+  Bij.apply (id : E ≃> E) = ssrfun.id.
 Proof. done. Qed.
 
-Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3).
+Definition tr {E1 E2 E3 : eventType L} : (E1 ≃> E2) -> (E2 ≃> E3) -> (E1 ≃> E3).
   move=> f g; exists (Hom.tr f g); constructor. 
   - by case: (Hom.tr f g). 
   case: f=> [? [? []]]; case: g=> [? [? []]].
   by move=> g ?? h ??; exists (h \o g)=> /=; apply /can_comp.
 Defined.
 
-Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≈> E2) (g : E2 ≈> E3) : 
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≃> E2) (g : E2 ≃> E3) : 
    Bij.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
@@ -397,12 +397,12 @@ Export Emb.Exports.
 
 Module Export Syntax. 
 Notation emb := Emb.type.
-Notation "E1 => E2" := (emb E1 E2) (at level 50) : pomset_scope.
+Notation "E1 ≈> E2" := (emb E1 E2) (at level 50) : pomset_scope.
 End Syntax. 
 
 Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : E1 => E2).
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
 
 Lemma ord_refl e1 e2 :
   (e1 <= e2) = (f e1 <= f e2).
@@ -417,21 +417,21 @@ End Theory.
 Section Cat.
 Context {L : Type}.
 
-Definition id {E : eventType L} : E => E.
+Definition id {E : eventType L} : E ≈> E.
   by exists id; do 1 constructor=> //; exists id. 
 Defined.
 
 Lemma idE {E : eventType L} : 
-  Emb.apply (id : E => E) = ssrfun.id.
+  Emb.apply (id : E ≈> E) = ssrfun.id.
 Proof. done. Qed.
 
-Definition tr {E1 E2 E3 : eventType L} : (E1 => E2) -> (E2 => E3) -> (E1 => E3).
+Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3).
   move=> f g; exists (Hom.tr f g); constructor. 
   - by case: (Hom.tr f g). 
   by constructor=> e1 e2 /=; do 2 rewrite -(ord_refl).
 Defined.
 
-Lemma trE {E1 E2 E3 : eventType L} (f : E1 => E2) (g : E2 => E3) : 
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≈> E2) (g : E2 ≈> E3) : 
    Emb.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
