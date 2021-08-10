@@ -624,6 +624,16 @@ Section Theory.
 Context {L : Type}.
 Implicit Types (P Q R : lang L).
 
+Lemma lang_iso_inv P : iso_inv P.
+Proof. by case: P. Qed.
+
+Lemma subsumes_subset P Q :
+  P ≦ Q -> P ⊑ Q. 
+Proof. 
+  move=> Hs p Hp; exists p; split; first exact /Hs. 
+  constructor; exact/lPoset.Hom.id. 
+Qed.
+  
 Lemma subsumes_refl P : 
   P ⊑ P.
 Proof. 
@@ -638,6 +648,13 @@ Proof.
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
   exists r; split=> //; constructor; exact/(lPoset.Hom.tr g f).
+Qed.
+
+Lemma supported_subset P Q :
+  P ≦ Q -> P ↪ Q. 
+Proof. 
+  move=> Hs p Hp; exists p; split; first exact /Hs. 
+  constructor; exact/lPoset.Bij.id. 
 Qed.
 
 Lemma supported_refl P : 
