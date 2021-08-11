@@ -949,11 +949,17 @@ Proof.
   move=> e'. rewrite mem_undup. done.
 Qed.
 
-Definition pomsetMixin :=
-  @Pomset.Pomset.Mixin E^c _ fin_cause_ca.
+Definition lposetMixin :=
+  @LPoset.LPoset.Mixin E^c (Order.POrder.class porderType) L lab.
 
-Canonical pomsetType := 
-  Eval hnf in PomsetType (dispC disp) E^c pomsetMixin.
+Canonical lposetType := 
+  @LPoset.LPoset.Pack L E^c (LPoset.LPoset.Class lposetMixin).
+
+Definition elem_porfMixin := 
+  @Elem.EventStruct.Mixin E^c L _ fin_cause_ca.
+
+Canonical elem_porfPrime := 
+  @Elem.EventStruct.Pack L E^c (Elem.EventStruct.Class elem_porfMixin).
 
 (* ************************************************************************* *)
 (*     Immediate Conflict                                                    *)
@@ -1135,14 +1141,15 @@ Variable (es : prime_porf_eventstruct).
 Notation "E ^c" := (causal E) (at level 2, format "E ^c").
 
 Lemma hered_porfes :
-  @hereditary (pomsetType es) <=%O (cf es).
+  @hereditary (lposetType es) <=%O (cf es).
 Proof. exact: cf_hereditaryR. Qed.
 
 Definition prime_porfMixin := 
-  @Prime.EventStruct.Mixin E^c _ (cf es) (cf_irrelf es (rf_ncf_dom_es es))
-    (cf_sym es) hered_porfes.
+  @Prime.EventStruct.Mixin E^c L _ 
+    (cf es) (cf_irrelf es (rf_ncf_dom_es es)) (cf_sym es) hered_porfes.
 
-Canonical prime_porfPrime := Prime.EventType (dispC disp) E^c prime_porfMixin.
+Canonical prime_porfPrime := 
+  @Prime.EventStruct.Pack L E^c (Prime.EventStruct.Class prime_porfMixin).
 
 End PrimePORFEventStruct.
 

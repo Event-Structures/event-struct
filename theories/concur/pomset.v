@@ -5,26 +5,36 @@ From eventstruct Require Import utils.
 
 (******************************************************************************)
 (* This file provides a theory of pomsets.                                    *)
-(* Originally, the term pomset is an abbreviation for partially ordered       *)
-(* multiset. Since then the term has been widely used in the theory of        *)
-(* concurrency semantics. Here we use it following this tradition.            *)
-(* That is, our pomsets are not actually multisets, but rather usual sets.    *)
+(* The hierarchy of pomsets is based mathcomp's porderType.                   *)
 (*                                                                            *)
-(* We inheret most of the theory from mathcomp porderType.                    *)
-(* We add an axiom of finite cause, that is each event has only finite prefix *)
-(* of events on which it causally depends.                                    *)
-(*                                                                            *)
-(*       Pomset.eventStruct E == the type of pomset (event structures).       *)
-(*                               Pomset consists of partial causality order   *)
-(*                               (<=) which satisfies the axiom of finite     *)
-(*                               cause.                                       *)
+(*     LPoset.eventStruct E L == the type of partially ordered sets over      *) 
+(*                               elements of type E labeled by type L.        *)
+(*                               LPoset of partial causality order (<=) and   *) 
+(*                               labelling function lab.                      *)
 (*                               We use the name `eventStruct` to denote the  *)
-(*                               pomset structure itself (as opposed to       *)
+(*                               lposet structure itself (as opposed to       *)
 (*                               `eventType`) and for uniformity with the     *)
-(*                               theory of (prime and stable) event           *)
-(*                               structures.                                  *)
-(*       Pomset.eventType d   == a type of events, i.e. a type equipped with  *)
-(*                               pomset structure instance.                   *)
+(*                               theory of event structures.                  *)
+(*         LPoset.eventType L == a type of events with labels of type L,      *)
+(*                               i.e. a type equipped with canonical labelled *)
+(*                               poset structure instance.                    *)
+(*                        lab == labelling function.                          *)
+(*                         ca == causality order.                             *)
+(*                        sca == strict causality order.                      *)
+(*                     x <= y == x preceds y in causality order.              *)
+(*                               All conventional order notations are         *)
+(*                               defined as well.                             *)
+(*                                                                            *)
+(*           LPoset.hom E1 E2 == a homomorphism between lposet types E1 and   *)
+(*                               E1 and E2, that is a label preserving        *) 
+(*                               monotone function.                           *)
+(*          LPoset.Hom.id     == identity homomorphism.                       *)
+(*          LPoset.Hom.tr f g == composition of homomorphisms (g \o f).       *)
+(*                                                                            *)
+(* Additionally, this file provides notations for homomorphisms which can     *)
+(* be used by importing corresponding module: `Import LPoset.Hom.Syntax`.     *)
+(*                   E1 ~> E2 == homomorphism.                                *)
+(*                                                                            *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -37,53 +47,50 @@ Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
 
-Definition fin_cause {T : eqType} (ca : rel T) :=
-  forall e, is_finite (ca^~ e).
-
-Module Pomset.
-
 Declare Scope pomset_scope.
 Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module Pomset.
+Module LPoset.
+
+Module Export LPoset.
 Section ClassDef. 
 
-Record mixin_of (T0 : Type) (b : Order.POrder.class_of T0)
-                (T := Order.POrder.Pack tt b) := Mixin {
-  _ : fin_cause (<=%O : rel T)
+Record mixin_of (E0 : Type) (eb : Order.POrder.class_of E0)
+                (E := Order.POrder.Pack tt eb)
+                (L : Type) := Mixin {
+  lab : E -> L
 }.
 
 Set Primitive Projections.
-Record class_of (T : Type) := Class {
-  base  : Order.POrder.class_of T;
-  mixin : mixin_of base;
+Record class_of (E : Type) (L : Type) := Class {
+  base  : Order.POrder.class_of E;
+  mixin : mixin_of base L;
 }.
 Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Order.POrder.class_of.
 
-Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (disp : unit) (cT : type disp).
+Variables (E : Type) (L : Type) (cT : type L).
 
-Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
-Definition clone c of phant_id class c := @Pack disp T c.
-Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack E c.
 
 Definition pack :=
-  fun bE b & phant_id (@Order.POrder.class disp bE) b =>
-  fun m => Pack disp (@Class T b m).
+  fun bE b & phant_id (@Order.POrder.class tt bE) b =>
+  fun m => Pack (@Class E L b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
-Definition porderType := @Order.POrder.Pack disp cT class.
+Definition porderType := @Order.POrder.Pack tt cT class.
 End ClassDef.
 
-Module Exports.
+Module Export Exports.
 Coercion base : class_of >-> Order.POrder.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
@@ -93,21 +100,21 @@ Coercion porderType : type >-> Order.POrder.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Notation pomsetType := type.
-Notation PomsetType disp T m := (@pack T disp _ _ id m).
+Notation LPosetType E L m := (@pack E L _ _ id m).
 End Exports.
 
-End Pomset.
+End LPoset.
 
-Notation eventType := Pomset.type.
-Notation eventStruct := Pomset.class_of.
+Notation eventType := LPoset.type.
+Notation eventStruct := LPoset.class_of.
 
-Import Pomset.Exports.
+Module Export Def.
+Section Def.
 
-Module Import PomsetDef.
-Section PomsetDef.
+Context {L : Type} {E : eventType L}.
 
-Variable (disp : unit) (E : eventType disp).
+(* labeling function *)
+Definition lab : E -> L := LPoset.lab (LPoset.class E).
 
 (* causality alias *)
 Definition ca : rel E := le.
@@ -119,27 +126,90 @@ Definition ca_closed (X : pred E) : Prop :=
   (* ca · [X] ≦ [X] · ca; *)
   forall x y, x <= y -> X y -> X x.  
 
-End PomsetDef.
-End PomsetDef.
+End Def.
+End Def.
 
-Prenex Implicits ca.
+Prenex Implicits lab ca sca.
 
-Module Export PomsetTheory.
-Section PomsetTheory.
+Module Export Hom.
+Section Hom. 
 
-Context {disp : unit} {E : eventType disp}.
+(* TODO: homomorphism between pomsets labelled by different labels? *)
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
 
-Lemma prefix_fin (e : E) : is_finite (<= e).
-Proof. by move: e; case: E => ? [? []]. Qed.
+Record mixin_of f := Mixin {
+  _ : forall e, lab (f e) = lab e;
+  _ : forall e1 e2, e1 <= e2 -> f e1 <= f e2;
+}.
 
-Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
-Proof. move=> e1 e2 /=; exact: le_trans. Qed.
+Set Primitive Projections.
+Record class_of f := Class {
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
 
-End PomsetTheory.
-End PomsetTheory.
+Structure type := Pack { apply ; _ : class_of apply }.
 
-End Pomset.
+Local Coercion apply : type >-> Funclass.
 
-Export Pomset.Pomset.Exports.
-Export Pomset.PomsetDef.
-Export Pomset.PomsetTheory.
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+End Hom.
+
+Module Export Exports.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+End Exports.
+
+Module Export Syntax. 
+Notation hom := type.
+Notation "E1 ~> E2" := (hom E1 E2) (at level 50) : pomset_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ~> E2).
+
+Lemma lab_preserv :
+  { mono f : e / lab e }.
+Proof. by case: f => ? [[]]. Qed.
+
+Lemma monotone :
+  { homo f : e1 e2 / e1 <= e2 }.
+Proof. by case: f => ? [[]]. Qed.
+
+End Theory.
+End Theory.
+
+Section Cat.
+Context {L : Type}.
+
+Definition id {E : eventType L} : E ~> E.
+  by exists id; do 2 constructor=> //. 
+Defined.
+
+Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
+  move=> f g; exists (g \o f); do 2 constructor=> /=.
+  - by move=> e; rewrite !lab_preserv.
+  by move=> e1 e2 /(monotone f) /(monotone g).
+Defined.
+
+End Cat.
+
+End Hom.
+
+End LPoset.
+
+Export LPoset.LPoset.Exports.
+Export LPoset.Hom.Exports.
+Export LPoset.Def.
+Export LPoset.Hom.Theory.
+
