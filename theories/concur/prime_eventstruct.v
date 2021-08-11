@@ -453,57 +453,61 @@ Module PrimeC.
 Module EventStruct.
 Section ClassDef.
 
-Record mixin_of (T0 : Type) (b : Pomset.Pomset.class_of T0)
-                (T := Pomset.Pomset.Pack tt b) := Mixin {
-  cons : pred {fset T};
+Record mixin_of (E0 : Type) (L : Type) (b : Elem.EventStruct.class_of E0 L)
+                (E := Elem.EventStruct.Pack b) := Mixin {
+  cons : pred {fset E};
 
-  _ : forall (e : T), cons [fset e];
-  _ : forall (X Y : {fset T}), X `<=` Y -> cons Y -> cons X;
+  _ : forall (e : E), cons [fset e];
+  _ : forall (X Y : {fset E}), X `<=` Y -> cons Y -> cons X;
   _ : forall X e e', e <= e' -> cons (X `|` [fset e']) -> cons (X `|` [fset e])
 }.
 
 Set Primitive Projections.
-Record class_of (T : Type) := Class {
-  base  : Pomset.Pomset.class_of T;
+Record class_of (E L : Type) := Class {
+  base  : Elem.EventStruct.class_of E L;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Pomset.Pomset.class_of.
+Local Coercion base : class_of >-> Elem.EventStruct.class_of.
 
-Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (disp : unit) (cT : type disp).
+Variables (E : Type) (L : Type) (cT : type L).
 
-Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') in c.
-Definition clone c of phant_id class c := @Pack disp T c.
-Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack E L c.
+(* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
 
 Definition pack :=
-  fun bT b & phant_id (@Pomset.Pomset.class disp bT) b =>
-  fun m => Pack disp (@Class T b m).
+  fun bE b & phant_id (@Elem.EventStruct.class L bE) b =>
+  fun m => Pack (@Class E L b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
-Definition porderType := @Order.POrder.Pack disp cT class.
-Definition pomsetEventType := @Pomset.Pomset.Pack disp cT class.
+Definition porderType := @Order.POrder.Pack tt cT class.
+Definition lposetType := @LPoset.LPoset.Pack L cT class.
+Definition elemEventType := @Elem.EventStruct.Pack L cT class.
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Pomset.Pomset.class_of.
+Coercion base : class_of >-> Elem.EventStruct.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
-Coercion pomsetEventType : type >-> Pomset.eventType.
+Coercion lposetType : type >-> LPoset.eventType.
+Coercion elemEventType : type >-> Elem.eventType.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Canonical pomsetEventType.
+Canonical lposetType.
+Canonical elemEventType.
 End Exports.
+
 
 End EventStruct.
 
@@ -511,11 +515,11 @@ Export EventStruct.Exports.
 
 Notation eventType := EventStruct.type.
 Notation eventStruct := EventStruct.class_of.
-Notation EventType disp T m := (@EventStruct.pack T disp _ _ id m).
+Notation EventType E L m := (@EventStruct.pack E L _ _ id m).
 
 Section Def.
 
-Variable (disp : unit) (E : eventType disp).
+Variable (L : Type) (E : eventType L).
 
 Definition cons : pred {fset E} :=
   EventStruct.cons (EventStruct.class E).
@@ -527,7 +531,7 @@ Prenex Implicits cons.
 Module Import Theory.
 Section Theory.
 
-Context {disp : unit} {E : eventType disp}.
+Context {L : Type} {E : eventType L}.
 
 Lemma cons_self : forall (e : E), cons [fset e].
 Proof. by case: E => ? [? []]. Qed.
@@ -545,7 +549,7 @@ End Theory.
 Module OfPrimeG.
 Section OfPrimeG.
 
-Context {disp : unit} {E : PrimeG.eventType disp}.
+Context {L : Type} {E : PrimeG.eventType L}.
 
 Definition cons : pred {fset E} :=
   fun X => ~~ (PrimeG.gcf X).
@@ -561,9 +565,9 @@ Lemma cons_prop (X : {fset E}) (e e' : E) :
 Proof. rewrite /cons=> ?. apply /contraNN. exact: gcf_hered. Qed.
 
 Definition gcf_consMixin := 
-  @EventStruct.Mixin E _ cons cons_self cons_contr cons_prop.
+  @EventStruct.Mixin E L _ cons cons_self cons_contr cons_prop.
 
-Definition primeG_primeC := EventType disp E gcf_consMixin.
+Definition primeG_primeC := EventType E L gcf_consMixin. 
 
 End OfPrimeG.
 
@@ -577,7 +581,7 @@ End OfPrimeG.
 Module ToPrimeG.
 Section ToPrimeG.
 
-Context {disp : unit} {E : PrimeC.eventType disp}.
+Context {L : Type} {E : PrimeC.eventType L}.
 
 Definition gcf : pred {fset E} :=
   fun X => ~~ (cons X).
@@ -593,9 +597,9 @@ Lemma gcf_hered (X : {fset E}) (e e' : E) :
 Proof. rewrite /gcf=> H. apply: contraNN. exact: cons_prop. Qed.
 
 Definition cons_gcfMixin := 
-  @PrimeG.EventStruct.Mixin E _ gcf gcf_self gcf_ext gcf_hered.
+  @PrimeG.EventStruct.Mixin E L _ gcf gcf_self gcf_ext gcf_hered.
 
-Definition primeC_primeG := PrimeG.EventType disp E cons_gcfMixin.
+Definition primeC_primeG := PrimeG.EventType E L cons_gcfMixin.
 
 End ToPrimeG.
 

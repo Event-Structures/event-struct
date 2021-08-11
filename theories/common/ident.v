@@ -1,198 +1,485 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq path.
-From mathcomp Require Import order choice.
-From eventstruct Require Import utils wftype.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
+From mathcomp Require Import choice eqtype order.
+From eventstruct Require Import utils ssrnatlia wftype.
 
 (******************************************************************************)
-(* This file contains the definitions of:                                     *)
-(*  identType d == interface for inhabited well-founded orders equipped with  *)
-(*                 increasing function to generate "fresh" identifiers.       *)
-(*     fresh id == a fresh identifier coming after id (id < fresh id).        *)
-(*       \i0 == an initial identifier.                                     *)
-(*     nfresh n == a decreasing sequence of size n+1 of fresh identifiers     *)
-(*                 with \i0 as the last element.                           *)
-(*  fresh_seq s == an identifier fresher than the head of the s sequence      *)
-(*                 (\i0 if s is empty). Helps with reducing time           *)
-(*                 complexity of incremental generation of sequences of fresh *)
-(*                 identifiers).                                              *)
+(* This file contains a theory of types that can be used as identifiers.      *)
+(* Essentially, a type of identifiers is an infinite countable type.          *)
+(*                                                                            *)
+(*  identType  == interface for types which behave as identifiers.            *)
+(*    \i0, \i1 == some distinguished identifiers.                             *)
+(*     fresh i == allocates a fresh identifier which is guaranteed to         *)
+(*                differ from i.                                              *) 
+(*  nfresh i n == allocates n fresh identifier which are guaranteed to        *)
+(*                differ from i.                                              *)
+(* fresh_seq s == allocates a fresh identifier which is guaranteed to         *)
+(*                differ from all identifiers from the list s                 *)
+(*                                                                            *)
+(* Elements of identType also can be converted to natural numbers and back    *)
+(* from natural numbers. This conversion also induces a total well-founded    *)
+(* order on identifiers.                                                      *)
+(*    encode i == converts the identifier i into a natural number.            *)
+(*    decode n == converts the natural number n into an identifier.           *)
+(*    x <=^i y == a total well-founded order on identifiers induced           *)
+(*                by the conversion to natural numbers.                       *)
+(*                That is x <=^i y iff encode x <= encode y.                  *)
+(*                All conventional order notations are defined with           *)
+(*                the suffix _^i as well.                                     *)
+(*                                                                            *)
 (* This file also contains canonical instance of identType for nat.           *)
 (******************************************************************************)
-
-Import Order.LTheory.
-Open Scope order_scope.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Module IdentType.
+Import Order.Theory.
+Open Scope order_scope.
 
+Declare Scope ident_scope.
+Delimit Scope ident_scope with ident.
+
+Local Open Scope ident_scope.
+
+(* Notation for initial identifier *)
+Reserved Notation "\i0" (at level 0).
+Reserved Notation "\i1" (at level 0).
+
+(* Notations for canonical order on identifiers *)
+Reserved Notation "x <=^i y" (at level 70, y at next level).
+Reserved Notation "x >=^i y" (at level 70, y at next level).
+Reserved Notation "x <^i y" (at level 70, y at next level).
+Reserved Notation "x >^i y" (at level 70, y at next level).
+Reserved Notation "x <=^i y :> T" (at level 70, y at next level).
+Reserved Notation "x >=^i y :> T" (at level 70, y at next level).
+Reserved Notation "x <^i y :> T" (at level 70, y at next level).
+Reserved Notation "x >^i y :> T" (at level 70, y at next level).
+Reserved Notation "<=^i y" (at level 35).
+Reserved Notation ">=^i y" (at level 35).
+Reserved Notation "<^i y" (at level 35).
+Reserved Notation ">^i y" (at level 35).
+Reserved Notation "<=^i y :> T" (at level 35, y at next level).
+Reserved Notation ">=^i y :> T" (at level 35, y at next level).
+Reserved Notation "<^i y :> T" (at level 35, y at next level).
+Reserved Notation ">^i y :> T" (at level 35, y at next level).
+Reserved Notation "x >=<^i y" (at level 70, no associativity).
+Reserved Notation ">=<^i y" (at level 35).
+Reserved Notation ">=<^i y :> T" (at level 35, y at next level).
+Reserved Notation "x ><^i y" (at level 70, no associativity).
+Reserved Notation "><^i x" (at level 35).
+Reserved Notation "><^i y :> T" (at level 35, y at next level).
+Reserved Notation "x <=^i y <=^i z" (at level 70, y, z at next level).
+Reserved Notation "x <^i y <=^i z" (at level 70, y, z at next level).
+Reserved Notation "x <=^i y <^i z" (at level 70, y, z at next level).
+Reserved Notation "x <^i y <^i z" (at level 70, y, z at next level).
+Reserved Notation "x <=^i y ?= 'iff' c" (at level 70, y, c at next level,
+  format "x '[hv'  <=^i  y '/'  ?=  'iff'  c ']'").
+Reserved Notation "x <=^i y ?= 'iff' c :> T" (at level 70, y, c at next level,
+  format "x '[hv'  <=^i  y '/'  ?=  'iff'  c  :> T ']'").
+Reserved Notation "x <^i y ?<= 'if' c" (at level 70, y, c at next level,
+  format "x '[hv'  <^i  y '/'  ?<=  'if'  c ']'").
+Reserved Notation "x <^i y ?<= 'if' c :> T" (at level 70, y, c at next level,
+  format "x '[hv'  <^i  y '/'  ?<=  'if'  c  :> T ']'").
+
+Module Ident.
 Section ClassDef.
 
-Record mixin_of T0 (b : WellFounded.class_of T0)
-  (T := WellFounded.Pack tt b) := Mixin {
-  fresh : T -> T;
-  ident0 : T;
-  _ : forall x, ident0 <= x;
-  _ : forall x, x < fresh x;
+Record mixin_of T0 (b : Countable.class_of T0)
+  (T := Countable.Pack b) := Mixin {
+  _ : forall n, @unpickle T n;
+  _ : injective (@unpickle T)
 }.
 
 Set Primitive Projections.
 Record class_of (T : Type) := Class {
-  base  : WellFounded.class_of T;
+  base  : Countable.class_of T;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> WellFounded.class_of.
+Local Coercion base : class_of >-> Countable.class_of.
 
-Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+Structure type := Pack { sort; _ : class_of sort }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (disp : unit) (cT : (type disp)).
+Variables (T : Type) (cT : type).
 
 Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack disp T c.
+Definition clone c of phant_id class c := @Pack T c.
 
 Definition pack :=
-  fun bT b & phant_id (@WellFounded.class disp bT) b =>
-  fun m => Pack disp (@Class T b m).
+  fun bT b & phant_id (@Countable.class bT) b =>
+  fun m => Pack (@Class T b m).
 
-(* Inheritance *)
-Definition wfType := @WellFounded.Pack disp cT class.
-Definition porderType := @Order.POrder.Pack disp cT class.
-Definition choiceType := @Choice.Pack cT class.
 Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition countType := @Countable.Pack cT class.
+
 End ClassDef.
 
-Module Exports.
-Coercion base : class_of >-> WellFounded.class_of.
+Module Export Exports.
+Coercion base : class_of >-> Countable.class_of.
 Coercion sort : type >-> Sortclass.
-Coercion wfType : type >-> WellFounded.type.
-Coercion porderType : type >-> Order.POrder.type.
-Coercion choiceType : type >-> Choice.type.
 Coercion eqType : type >-> Equality.type.
-Canonical wfType.
-Canonical porderType.
-Canonical choiceType.
+Coercion choiceType : type >-> Choice.type.
+Coercion countType : type >-> Countable.type.
 Canonical eqType.
+Canonical choiceType.
+Canonical countType.
 Notation identType := type.
-Definition fresh {disp} {T : identType disp} : T -> T := fresh (mixin (class T)).
-Definition ident0 {disp} {T : identType disp} : T := ident0 (mixin (class T)).
-Notation IdentType disp T m := (@pack T disp _ _ id m).
+Notation IdentType T m := (@pack T _ _ id m).
 Notation "[ 'identType' 'of' T 'for' cT ]" := (@clone T cT _ id)
   (at level 0, format "[ 'identType'  'of'  T  'for'  cT ]") : form_scope.
 Notation "[ 'identType' 'of' T ]" := [identType of T for _]
   (at level 0, format "[ 'identType'  'of'  T ]") : form_scope.
 End Exports.
 
-End IdentType.
-Export IdentType.Exports.
+Module Export Def.
 
-Notation "'\i0'" := (@ident0 _ _).
+Definition unpickle_tot {T : identType} n : @unpickle T n. 
+Proof. by case: T=> ? [? []]. Defined.
 
-Section IdentTheory.
-Context {disp} {T : identType disp}.
-Local Notation ident0 := (@ident0 disp T).
-Local Notation fresh := (@fresh disp T).
+Notation encode (* : T -> nat *) := (pickle).
+Notation decode (* : nat -> T *) := (mk_total unpickle_tot).
 
-Lemma fresh_lt x : x < fresh x.
-Proof. by case: T x=> ? [/= ? []]. Qed.
+Section Def.
+Context {T : identType}.
 
-Lemma fresh_iter n m x: iter n fresh x = iter m fresh x -> n = m.
-Proof.
-  have F: forall x n, x < iter n.+1 fresh x.
-  - move=> {x}{n}x; elim=> /= [|? /lt_trans]; last apply; exact/fresh_lt.
-  elim: n m x=> /= [[] // n x|n IHn [/= x|l x]].
-  - move: (F x n)=>/[swap]{1}->; by rewrite ltxx.
-  - rewrite -iterS; move: (F x n)=>/[swap]{1}->; by rewrite ltxx.
-  by rewrite -iterS ?iterSr => /IHn->.
+Definition ident0 : T := 
+  decode 0%nat.
+
+Definition ident1 : T := 
+  decode 1%nat.
+
+Definition fresh : T -> T := 
+  fun x => decode (1 + encode x).
+
+Definition nfresh : T -> nat -> seq T := 
+  fun i n => traject fresh i n. 
+
+Definition fresh_seq : seq T -> T := 
+  fun s => decode (1 + foldl maxn 0 (map encode s)).
+
+Definition ident_le : rel T := 
+  fun x y => encode x <= encode y.
+
+Definition ident_lt : rel T := 
+  fun x y => encode x < encode y.
+
+Definition ident_min : T -> T -> T := 
+  fun x y => decode (minn (encode x) (encode y)).
+
+Definition ident_max : T -> T -> T := 
+  fun x y => decode (maxn (encode x) (encode y)).
+
+End Def.
+End Def. 
+
+Prenex Implicits fresh fresh_seq ident_le ident_lt.
+
+(* basic properties required by canonical instances *)
+Module Export Props.
+Section Props.
+
+Context {T : identType}.
+Implicit Types (x : T) (s : seq T).
+
+Lemma unpickle_inj : 
+  injective (@unpickle T).
+Proof. by case: T=> ? [/= ? []]. Qed.
+
+Lemma decode_inj : 
+  injective (decode : nat -> T).
+Proof. by apply /mk_total_inj /unpickle_inj. Qed.
+
+Lemma encodeK : 
+  cancel encode (decode : nat -> T). 
+Proof. by apply /mk_totalK /pickleK. Qed.
+
+Lemma decodeK : 
+  cancel decode (encode : T -> nat). 
+Proof. by apply/inj_can_sym; [exact/encodeK | exact/decode_inj]. Qed.
+
+Lemma encode0 : 
+  encode (ident0 : T) = 0%nat.
+Proof. by rewrite /ident0; exact /decodeK. Qed.
+
+Lemma encode1 : 
+  encode (ident1 : T) = 1%nat.
+Proof. by rewrite /ident1; exact /decodeK. Qed.
+
+End Props.
+End Props.
+
+
+Module Export Order. 
+Section Order. 
+
+Context (T : identType).
+Implicit Types (x y z : T).
+
+Lemma disp : unit. 
+Proof. exact: tt. Qed.
+
+Lemma lt_def x y : (ident_lt x y) = (y != x) && (ident_le x y).
+Proof. 
+  rewrite /ident_lt /ident_le. 
+  have ->: (y != x) = (pickle y != pickle x); last exact /lt_def. 
+  case H: (y == x); first by (move: H=> /eqP->; rewrite eq_refl).
+  move=> /=; apply esym.
+  move: H=> /eqP /eqP /=. 
+  by apply /contra_neq /pickle_inj.
 Qed.
 
-Lemma i0_le (x : T) : \i0 <= x.
-Proof. by case: T x=> ? [/= ? []]. Qed.
-
-Lemma i0_mem (s : seq T): 
-  \i0 \notin s = all (> \i0) s.
-Proof.
-  elim: s=> //= a ? <-; rewrite ?inE.
-  case: (\i0 \in _)=> //=; rewrite (orbF, orbT) (andbF, andbT) //.
-  have C: (\i0 >=< a) by rewrite /(_ >=< _) (i0_le _).
-  move: (i0_le a); by case: (comparable_ltgtP C).
+Lemma meet_def x y : ident_min x y = (if ident_lt x y then x else y).
+Proof. 
+  rewrite /ident_min /ident_lt /minn /Order.lt=> /=.
+  rewrite (mk_totalE ident0).
+  by case: ifP=> ?; rewrite pickleK /=. 
 Qed.
 
-Definition fresh_seq s := fresh (head \i0 s).
-
-Lemma i0_fresh_seq s: \i0 < fresh_seq s.
-Proof.
-  case: s=> [|??]; first exact/fresh_lt.
-  exact/(le_lt_trans _ (fresh_lt _))/i0_le.
+Lemma join_def x y : ident_max x y = (if ident_lt x y then y else x).
+Proof. 
+  rewrite /ident_max /ident_lt /maxn /Order.lt=> /=.
+  rewrite (mk_totalE ident0).
+  by case: ifP=> ?; rewrite pickleK /=. 
 Qed.
 
-Section Add_Sorted.
-
-Context {s : seq T} (s_sorted : sorted (>%O) s).
-
-Lemma path_fresh_seq : path (>%O) (fresh_seq s) s.
-Proof. by case: s s_sorted=> //= ??; rewrite fresh_lt. Qed.
-
-Lemma fresh_seq_lt x : x \in s -> x < fresh_seq s.
-Proof.
-  move: path_fresh_seq; rewrite path_sortedE.
-  - by case/andP=> /allP + _ => /[apply].
-  exact/rev_trans/lt_trans.
+Lemma le_anti : antisymmetric (@ident_le T). 
+Proof. 
+  move=> x y /andP []; rewrite /ident_le=> ??.
+  by apply /pickle_inj /anti_leq /andP. 
 Qed.
 
-Lemma fresh_seq_le x : x \in (fresh_seq s :: s) -> x <= fresh_seq s.
-Proof. by rewrite inE=> /predU1P[->|/fresh_seq_lt/ltW]. Qed.
+Lemma le_trans : transitive (@ident_le T). 
+Proof. by move=> z x y; rewrite /ident_le; apply leq_trans. Qed.
 
-Lemma fresh_seq_notin : fresh_seq s \notin s.
-Proof. by apply/memPn => x /fresh_seq_lt; rewrite lt_neqAle=> /andP[]. Qed.
+Lemma le_total : total (@ident_le T). 
+Proof. by move=> x y; rewrite /ident_le; apply leq_total. Qed.
 
+Lemma le0x x : ident_le ident0 x.
+Proof. rewrite /ident_le encode0; exact /leq0n. Qed.
 
-End Add_Sorted.
-
-
-Definition nfresh n := iter n (fun s => fresh_seq s :: s) [:: \i0].
-
-Lemma nfreshS n : nfresh n.+1 = fresh_seq (nfresh n) :: (nfresh n).
-Proof. by []. Qed.
-
-Lemma fresh_seq_iter n : fresh_seq (nfresh n) = iter n.+1 fresh \i0.
-Proof. by elim: n=> //= ? ->. Qed.
-
-Section NfreshSpec.
-
-Lemma nfresh_sorted n : sorted (>%O) (nfresh n).
-Proof. by elim: n=> //= n IHn; rewrite path_fresh_seq. Qed.
-
-Lemma nfreshE n : nfresh n = rev (traject fresh \i0 n.+1).
+Lemma wfb : well_founded_bool (@ident_lt T).
 Proof.
-  by elim: n=> // n IHn; rewrite nfreshS fresh_seq_iter trajectSr rev_rcons IHn.
+  move=> x; rewrite /ident_lt.
+  rewrite -(encodeK x).
+  elim/(@wfb_ind _ nat_wfType): (encode x).
+  constructor=> y.
+  rewrite decodeK -{2}(encodeK y).
+  by apply /X.
+Qed.  
+
+Definition mixin :=
+  LeOrderMixin lt_def meet_def join_def le_anti le_trans le_total.
+
+End Order.
+
+Module Export Exports.
+
+Implicit Types (T : identType). 
+
+Canonical porderType T := POrderType disp T (@Order.mixin T).
+Canonical latticeType T := LatticeType T (@Order.mixin T).
+Canonical bLatticeType T := BLatticeType T (BottomMixin (@Order.le0x T)).
+Canonical distrLatticeType T := DistrLatticeType T (@Order.mixin T).
+Canonical bDistrLatticeType T := [bDistrLatticeType of T].
+
+Canonical wfType T := 
+  let wf_mixin := @WellFounded.Mixin T 
+     (Order.POrder.class (porderType T)) (@Order.wfb T) 
+  in WfType disp T wf_mixin.
+
+Coercion porderType : type >-> Order.POrder.type.
+Coercion latticeType : type >-> Order.Lattice.type.
+Coercion bLatticeType : type >-> Order.BLattice.type.
+Coercion distrLatticeType : type >-> Order.DistrLattice.type.
+Coercion bDistrLatticeType : type >-> Order.BDistrLattice.type.
+Coercion wfType : type >-> WellFounded.type.
+
+End Exports.
+
+End Order.
+
+Module Export Syntax. 
+
+Notation "'\i0'" := (ident0) : ident_scope.
+Notation "'\i1'" := (ident1) : ident_scope.
+
+Notation ident_le := (@Order.le (Order.disp) _).
+Notation ident_lt := (@Order.lt (Order.disp) _).
+Notation ident_comparable := (@Order.comparable (Order.disp) _).
+Notation ident_ge := (@Order.ge (Order.disp) _).
+Notation ident_gt := (@Order.gt (Order.disp) _).
+Notation ident_leif := (@Order.leif (Order.disp) _).
+Notation ident_lteif := (@Order.lteif (Order.disp) _).
+Notation ident_max := (@Order.max (Order.disp) _).
+Notation ident_min := (@Order.min (Order.disp) _).
+Notation ident_meet := (@Order.meet (Order.disp) _).
+Notation ident_join := (@Order.join (Order.disp) _).
+Notation ident_bottom := (@Order.bottom (Order.disp) _).
+Notation ident_top := (@Order.top (Order.disp) _).
+
+Notation "<=^i%O" := ident_le : fun_scope.
+Notation ">=^i%O" := ident_ge : fun_scope.
+Notation "<^i%O" := ident_lt : fun_scope.
+Notation ">^i%O" := ident_gt : fun_scope.
+Notation "<?=^i%O" := ident_leif : fun_scope.
+Notation "<?<=^i%O" := ident_lteif : fun_scope.
+Notation ">=<^i%O" := ident_comparable : fun_scope.
+Notation "><^i%O" := (fun x y => ~~ ident_comparable x y) : fun_scope.
+
+Notation "<=^i y" := (>=^i%O y) : order_scope.
+Notation "<=^i y :> T" := (<=^i (y : T)) (only parsing) : order_scope.
+Notation ">=^i y" := (<=^i%O y) : order_scope.
+Notation ">=^i y :> T" := (>=^i (y : T)) (only parsing) : order_scope.
+
+Notation "<^i y" := (>^i%O y) : order_scope.
+Notation "<^i y :> T" := (<^i (y : T)) (only parsing) : order_scope.
+Notation ">^i y" := (<^i%O y) : order_scope.
+Notation ">^i y :> T" := (>^i (y : T)) (only parsing) : order_scope.
+
+Notation "x <=^i y" := (<=^i%O x y) : order_scope.
+Notation "x <=^i y :> T" := ((x : T) <=^i (y : T)) (only parsing) : order_scope.
+Notation "x >=^i y" := (y <=^i x) (only parsing) : order_scope.
+Notation "x >=^i y :> T" := ((x : T) >=^i (y : T)) (only parsing) : order_scope.
+
+Notation "x <^i y" := (<^i%O x y) : order_scope.
+Notation "x <^i y :> T" := ((x : T) <^i (y : T)) (only parsing) : order_scope.
+Notation "x >^i y" := (y <^i x) (only parsing) : order_scope.
+Notation "x >^i y :> T" := ((x : T) >^i (y : T)) (only parsing) : order_scope.
+
+Notation "x <=^i y <=^i z" := ((x <=^i y) && (y <=^i z)) : order_scope.
+Notation "x <^i y <=^i z" := ((x <^i y) && (y <=^i z)) : order_scope.
+Notation "x <=^i y <^i z" := ((x <=^i y) && (y <^i z)) : order_scope.
+Notation "x <^i y <^i z" := ((x <^i y) && (y <^i z)) : order_scope.
+
+Notation "x <=^i y ?= 'iff' C" := (<?=^i%O x y C) : order_scope.
+Notation "x <=^i y ?= 'iff' C :> T" := ((x : T) <=^i (y : T) ?= iff C)
+  (only parsing) : order_scope.
+
+Notation "x <^i y ?<= 'if' C" := (<?<=^i%O x y C) : order_scope.
+Notation "x <^i y ?<= 'if' C :> T" := ((x : T) <^i (y : T) ?<= if C)
+  (only parsing) : order_scope.
+
+Notation ">=<^i x" := (>=<^i%O x) : order_scope.
+Notation ">=<^i y :> T" := (>=<^i (y : T)) (only parsing) : order_scope.
+Notation "x >=<^i y" := (>=<^i%O x y) : order_scope.
+
+Notation "><^i y" := [pred x | ~~ ident_comparable x y] : order_scope.
+Notation "><^i y :> T" := (><^i (y : T)) (only parsing) : order_scope.
+Notation "x ><^i y" := (~~ (><^i%O x y)) : order_scope.
+
+End Syntax.
+
+Module Export Theory.
+Section Theory.
+
+Context {T : identType}.
+Implicit Types (x : T) (s : seq T).
+
+Lemma fresh_lt x : 
+  x <^i fresh x.
+Proof. 
+  rewrite /fresh /ident_lt /= /Def.ident_lt decodeK. 
+  (* ssrnatlia --- should work here, but it doesn't :( *)
+  exact /ltnSn.
 Qed.
 
-Lemma nfresh_size n : size (nfresh n) = n.+1.
-Proof. by rewrite nfreshE size_rev size_traject. Qed.
+Lemma fresh_inj : 
+  injective (@fresh T).
+Proof. by rewrite /fresh=> x y /decode_inj [] /pickle_inj. Qed.
 
-Lemma nfresh_last n : last \i0 (nfresh n) = \i0.
-Proof. by rewrite nfreshE trajectS rev_cons -cats1 last_cat. Qed.
+Lemma size_nfresh x n : 
+  size (nfresh x n) = n.
+Proof. by rewrite /nfresh size_traject. Qed.
 
-End NfreshSpec.
+Lemma nth_nfresh x n i : 
+  i < n -> nth x (nfresh x n) i = iter i fresh x.
+Proof. by rewrite /nfresh=> ?; apply /nth_traject. Qed.
 
-Lemma nfresh_le x n : x \in nfresh n.+1 -> x <= fresh_seq (nfresh n).
-Proof. by move=> /= /fresh_seq_le; apply; apply: nfresh_sorted. Qed.
+Lemma nfresh_head x y n : 
+  head x (nfresh y n) = if n == 0 then x else y.
+Proof. by case: n=> //=. Qed.
 
-End IdentTheory.
+Lemma nfresh_sorted x n : 
+  sorted (<%O) (nfresh x n).
+Proof. 
+  rewrite /nfresh; case: n=> //= n.
+  apply /sub_path; last exact/fpath_traject.
+  move=> ?? /= /eqP <-; exact/fresh_lt.
+Qed.  
 
-Import Order.NatOrder.
+Lemma nfreshS x n : 
+  nfresh x n.+1 = x :: nfresh (fresh x) n.
+Proof. by rewrite /nfresh; exact/trajectS. Qed.
 
-Section IdentDataTypes.
+Lemma nfreshSr x n : 
+  nfresh x n.+1 = rcons (nfresh x n) (iter n fresh x).
+Proof. by rewrite /nfresh; exact/trajectSr. Qed.
+
+Lemma fresh_seq_nil : 
+  fresh_seq [::] = (\i1 : T).
+Proof. by rewrite /fresh_seq /ident1 //=. Qed.
+
+Lemma fresh_seq0 s : 
+  \i0 <^i fresh_seq s.
+Proof. by rewrite /fresh_seq /ident0 /ident_lt /= /Def.ident_lt !decodeK. Qed.
+
+Lemma fresh_seq_mem x s : 
+  x \in s -> x <^i fresh_seq s.
+Proof. 
+  rewrite /fresh_seq /ident0 /ident_lt /= /Def.ident_lt !decodeK.
+  elim s=> [|y {}s IH]=> //=.
+  rewrite max0n in_cons=> /orP [/eqP<-|].
+  - rewrite ltEnat /=; apply /leq_ltn_trans; last exact/ltnSn.
+    apply /foldl_maxn_leq_init.
+  move=> /IH H; apply /leq_trans; first exact/H.
+  apply /ssrnat.leP /le_n_S /ssrnat.leP.
+  by apply /foldl_maxn_leq /leq0n. 
+Qed.
+
+Lemma fresh_seq_nmem s : fresh_seq s \notin s.
+Proof. by apply/memPn => x /fresh_seq_mem; rewrite lt_neqAle=> /andP[]. Qed.
+
+Lemma fresh_seq_nfresh x n : 
+  0 < n -> fresh_seq (nfresh x n) = iter n fresh x.
+Proof. 
+  rewrite /fresh_seq foldl_maxn_sorted; last first.
+  - rewrite sorted_map; apply /sub_sorted /nfresh_sorted.
+    rewrite /ident_lt /= /Def.ident_lt=> {}x y /=; exact /ltW.
+  have {2}->: 0%nat = @encode T \i0 by apply/esym/encode0.
+  rewrite last_map; case: n=> [|{}n].
+  - by rewrite encode0=> /=. 
+  by rewrite nfreshSr last_rcons iterS /fresh.
+Qed.
+
+End Theory.
+End Theory.
+
+End Ident.
+
+Export Ident.Exports.
+Export Ident.Order.Exports.
+Export Ident.Def.
+Export Ident.Props.
+Export Ident.Syntax.
+Export Ident.Theory.
+
+(* Context {T : identType}. *)
+(* Variable (x y : T). *)
+(* Check (x <=^i y : bool). *)
+
+Lemma nat_unpickle_tot (n : nat) : (unpickle n : option nat).
+Proof. done. Qed.
+
+Lemma nat_unpickle_inj : injective (unpickle : nat -> option nat).
+Proof. exact/Some_inj. Qed.
 
 Definition nat_identMixin :=
-  @IdentType.Mixin nat (WellFounded.class nat_wfType) succn 0 leq0n ltnSn.
-
-End IdentDataTypes.
+  @Ident.Mixin nat (Countable.class nat_countType) 
+               nat_unpickle_tot nat_unpickle_inj.
 
 Canonical nat_identType :=
-  Eval hnf in IdentType nat_display nat nat_identMixin.
-
+  Eval hnf in IdentType nat nat_identMixin.
