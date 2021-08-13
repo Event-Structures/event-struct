@@ -687,15 +687,13 @@ Section HomExt.
 Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
 
 Definition Ext : lPoset.eventType L.
-  exists E1; constructor. 
-  - exists (class E1). 
-    exists (HomExtOrder.le f) (HomExtOrder.lt f).
+  exists E1; unshelve (econstructor).
+  - exists (class E1), (HomExtOrder.le f) (HomExtOrder.lt f).
     + exact/HomExtOrder.lt_def.
     + exact/HomExtOrder.le_refl.
     + exact/HomExtOrder.le_antisym.
     + exact/HomExtOrder.le_trans. 
-  - constructor; exact/(@lab L E1). 
-  exact/(mixin_count (class E1)).
+  constructor; exact/(@lab L E1). 
 Defined.
 
 Definition ext_bij : E1 ≃> Ext.
