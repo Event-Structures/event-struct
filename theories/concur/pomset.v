@@ -683,7 +683,7 @@ Proof. by rewrite /lt /= => ->. Qed.
 End HomExtOrder.
 End HomExtOrder.
 
-Section HomExt. 
+Section HomExtDef. 
 Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
 
 Definition Ext : lPoset.eventType L.
@@ -696,25 +696,39 @@ Definition Ext : lPoset.eventType L.
   constructor; exact/(@lab L E1). 
 Defined.
 
-Definition ext_bij : E1 ≃> Ext.
-  exists (id : E1 -> Ext).
+End HomExtDef.
+
+Section HomExtTheory.
+Context {L : Type} {E1 E2 : lPoset.eventType L}.
+Implicit Types (f : E1 ~> E2).
+
+Definition bij_ext f : E1 ≃> Ext f.
+  exists (id : E1 -> Ext f).
   repeat constructor. 
   - exact/HomExtOrder.le_id_mono.
-  by exists (id : Ext -> E1).
+  by exists (id : Ext f -> E1).
 Defined.
 
-Definition ext_hom : Ext ~> E2.
-  exists (f : Ext -> E2).
+Definition ext_hom f : Ext f ~> E2.
+  exists (f : Ext f -> E2).
   repeat constructor.
   - exact/(lab_preserv f).
   move=> e1 e2; exact/HomExtOrder.le_mono.
 Defined.  
 
-Lemma ext_lt_rmono (e1 e2 : Ext) :
+Lemma ext_lt_rmono f (e1 e2 : Ext f) :
   f e1 < f e2 -> e1 < e2.
 Proof. rewrite {2}/Order.lt /=; exact/HomExtOrder.lt_rmono. Qed.
 
-Lemma ext_incomp (e1 e2 : Ext) :
+Lemma ext_le_rmono (f : E1 ≃> E2) (e1 e2 : Ext f) :
+  f e1 <= f e2 -> e1 <= e2.
+Proof. 
+  rewrite !le_eqVlt=> /orP[]. 
+  - by move=> /eqP /(bij_inj (event_bij f)) /eqP->. 
+  by move=> /ext_lt_rmono ->.
+Qed.
+
+Lemma ext_incomp f (e1 e2 : Ext f) :
   e1 >< e2 -> (f e1 == f e2) || (f e1 >< f e2).
 Proof. 
   case H: (f e1 <= f e2); move: H.
@@ -726,7 +740,19 @@ Proof.
   by rewrite {2}/comparable=> -> ->.
 Qed.
 
-End HomExt.
+Definition ext_bij (f : E1 ≃> E2) : Ext f ~= E2.
+  pose g := ext_hom f.
+  exists g; constructor=> //; first constructor.
+  - by case: g.
+  - pose f' := (Bij.inv f).
+    pose h := (bij_ext f).
+    exists (h \o f').
+    + move=> ? /=; rewrite Bij.idE; exact/inv_can. 
+    move=> ? /=; rewrite Bij.idE; exact/can_inv. 
+  constructor; exact/ext_le_rmono.
+Defined.
+
+End HomExtTheory.
 
 End lPoset.
 
@@ -847,6 +873,10 @@ Definition extensible P Q : Prop :=
 Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
 
+(* uniformly stronger *)
+Definition unistronger P Q : Prop := 
+  forall p, P p -> exists q, Q q /\ inhabited (q ≃> p).
+
 Definition supported P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (p ≃> q).
 
@@ -860,6 +890,7 @@ End Def.
 
 Module Export Syntax.
 Notation "P ⊑ Q" := (stronger P Q) (at level 69) : pomset_scope.
+Notation "P !⊑ Q" := (unistronger P Q) (at level 69) : pomset_scope.
 Notation "P ↪ Q" := (supported P Q) (at level 69) : pomset_scope.
 End Syntax.
 
@@ -893,6 +924,37 @@ Proof.
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
   exists r; split=> //; constructor; exact/(lPoset.Hom.tr g f).
+Qed.
+
+Lemma unistronger_subset P Q :
+  P ≦ Q -> P !⊑ Q. 
+Proof. 
+  move=> Hs p Hp; exists p; split; first exact /Hs. 
+  constructor; exact/lPoset.Bij.id. 
+Qed.
+  
+Lemma unistronger_refl P : 
+  P !⊑ P.
+Proof. 
+  move=> p HP; exists p; split=> //. 
+  constructor; exact/lPoset.Bij.id.
+Qed.
+
+Lemma unistronger_trans P Q R : 
+  P !⊑ Q -> Q !⊑ R -> P !⊑ R.
+Proof. 
+  move=> H1 H2 p HP. 
+  move: (H1 p HP)=> [q [HQ [f]]].
+  move: (H2 q HQ)=> [r [HR [g]]].
+  exists r; split=> //; constructor; exact/(lPoset.Bij.tr g f).
+Qed.
+
+Lemma unistronger_stronger P Q : 
+  P !⊑ Q -> P ⊑ Q.
+Proof. 
+  move=> H p HP. 
+  move: (H p HP)=> [q [HQ [f]]].
+  exists q; split=> //; constructor; exact/f. 
 Qed.
 
 Lemma supported_subset P Q :
@@ -1117,7 +1179,8 @@ Proof.
   constructor; exists p'=> //=. 
 Qed.  
 
-Lemma schedule_bij p q : (p ≃> q) -> schedule q ≦ schedule p.
+Lemma schedule_bij p q : 
+  (p ≃> q) -> schedule q ≦ schedule p.
 Proof. 
   move=> f p' [Hl [g]]; repeat constructor=> //. 
   exact /(lPoset.Bij.tr f g). 
@@ -1153,13 +1216,13 @@ Proof.
    *  we can enforce the axiom required by (3). 
    *  As for (4) it is not obvious how it can be exploited in practice.
    *)
-  move=> He Hd H1 H2 f q' [] H3 [Hl [g]].
+  move=> He Hd Hp Hq f q' [] Hq' [Hl [g]].
   pose h := lPoset.Hom.tr f g.
   pose p' := lPoset.Ext h. 
-  move: (He _ _ h) H1 H3=> /[apply] /[apply] [[]] + _. 
-  move: (Hd p')=> /[apply] [[]] p'' [] [] HP HL [] k.
+  move: (He _ _ h) Hp Hq'=> /[apply] /[apply] [[]] + _. 
+  move: (Hd p')=> /[apply] [[]] p'' [] [] Hp'' HL [] k.
   exists p''; repeat split=> //.
-  - apply/(lPoset.Bij.tr _ k)/lPoset.ext_bij.
+  - apply/(lPoset.Bij.tr _ k)/lPoset.bij_ext.
   pose h' := (lPoset.ext_hom h).
   pose k' := (lPoset.Bij.inv k).
   exists (h' \o k').
@@ -1180,6 +1243,21 @@ Proof.
   exists p; split=> //; first exact/H.
   split=> //; exact/H. 
 Qed.
+
+Lemma scheduling_unistronger P Q : extensible Q P -> 
+  P !⊑ Q -> scheduling P ≦ scheduling Q.
+Proof. 
+  move=> He Hw p' [p [Hp [Hp']]].
+  move=> /[dup] Hs [Hl [f]].
+  move: (Hw p Hp)=> [q [Hq [g]]].
+  exists q; split=> //; split; last first. 
+  - by apply/(schedule_bij g). 
+  pose h  := lPoset.Bij.tr g f.
+  pose q' := lPoset.Ext h. 
+  pose j  := (lPoset.ext_bij h).
+  apply /(lang_iso_inv j).
+  by apply /(fst (He q p' h Hq Hp')).
+Qed.  
 
 Lemma scheduling_stronger P Q : extensible Q P -> schedulable Q -> 
   P ⊑ Q -> scheduling P ⊑ scheduling Q.
