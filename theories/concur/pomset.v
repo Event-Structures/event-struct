@@ -261,8 +261,8 @@ Proof.
   set (g := lPoset.Iso.sy f).
   move: (T (g e1) (g e2)).
   case H: (g e1 <= g e2); move: H. 
-  - by rewrite -(ord_refl)=> ->.
-  by move=> ? /=; rewrite -(ord_refl)=> ->.    
+  - by rewrite (ca_reflecting g)=> ->.
+  by move=> ? /=; rewrite (ca_reflecting g)=> ->.    
 Qed.
 
 Definition lang : Pomset.lang L := 

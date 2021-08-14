@@ -437,10 +437,10 @@ Module Export Theory.
 Section Theory. 
 Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
 
-Lemma ord_refl e1 e2 :
-  (e1 <= e2) = (f e1 <= f e2).
+Lemma ca_reflecting :
+  { mono f : e1 e2 / e1 <= e2 }.
 Proof.
-  apply/idP/idP; first exact/(ca_monotone f).
+  move=> e1 e2; apply/idP/idP; last exact/(ca_monotone f).
   by case: f=> ? [[? []]] => /= /[apply]. 
 Qed.
 
@@ -459,9 +459,10 @@ Lemma idE {E : eventType L} :
 Proof. done. Qed.
 
 Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3).
-  move=> f g; exists (Hom.tr f g); constructor. 
-  - by case: (Hom.tr f g). 
-  by constructor=> e1 e2 /=; do 2 rewrite -(ord_refl).
+  move=> f g; exists (Hom.tr f g). 
+  constructor; first by case: (Hom.tr f g). 
+  constructor=> e1 e2 /=. 
+  by rewrite -(ca_reflecting f) -(ca_reflecting g).
 Defined.
 
 Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≈> E2) (g : E2 ≈> E3) : 
