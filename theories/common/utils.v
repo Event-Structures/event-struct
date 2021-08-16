@@ -307,3 +307,17 @@ Proof.
 Qed.  
 
 End FSetUtils.
+
+
+Section FinTypeUtils.
+
+Context {T T' : finType}. 
+Implicit Types (f : T -> T').
+
+(* TODO: migrate to `mathcomp` once 
+ * https://github.com/math-comp/math-comp/pull/771 is merged 
+ *)
+Lemma bij_eq_card f : bijective f -> #|T| = #|T'|.
+Proof. by move=> [g /can_inj/leq_card + /can_inj/leq_card]; case: ltngtP. Qed.
+
+End FinTypeUtils.

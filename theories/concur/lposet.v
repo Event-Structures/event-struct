@@ -1,6 +1,6 @@
 From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice order fintype finmap. 
+From mathcomp Require Import eqtype choice order fintype finfun finmap. 
 From eventstruct Require Import utils rel.
 
 (******************************************************************************)
@@ -246,6 +246,17 @@ Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~> E2) (g : E2 ~> E3) :
    Hom.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
+Lemma of_eqfun_class {E1 E2 : eventType L} (f : E1 ~> E2) g : 
+  g =1 f -> Hom.class_of g.
+Proof. 
+  move=> H; repeat constructor.
+  - move=> ?; rewrite !H; exact/lab_preserv.
+  move=> ??; rewrite !H; exact/ca_monotone.
+Qed.
+
+Definition of_eqfun {E1 E2 : eventType L} (f : E1 ~> E2) g : 
+  g =1 f -> E1 ~> E2 := fun eqf => Hom.Pack (of_eqfun_class eqf).
+
 End Cat.
 
 Global Opaque id tr.
@@ -378,6 +389,16 @@ Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≃> E2) (g : E2 ≃> E3) :
    Bij.apply (tr f g) = g \o f.
 Proof. done. Qed.
 
+Lemma of_eqfun_class {E1 E2 : eventType L} (f : E1 ≃> E2) g : 
+  g =1 f -> Bij.class_of g.
+Proof.
+  move=> H; constructor; first exact/(Hom.of_eqfun_class H).
+  exists (inv f)=> ? /=; rewrite !H; [exact/inv_can | exact/can_inv]. 
+Qed.
+
+Definition of_eqfun {E1 E2 : eventType L} (f : E1 ≃> E2) g : 
+  g =1 f -> E1 ≃> E2 := fun eqf => Bij.Pack (of_eqfun_class eqf).
+
 End Cat.
 
 Global Opaque id tr.
@@ -475,6 +496,16 @@ Defined.
 Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≈> E2) (g : E2 ≈> E3) : 
    Emb.apply (tr f g) = g \o f.
 Proof. done. Qed.
+
+Lemma of_eqfun_class {E1 E2 : eventType L} (f : E1 ≈> E2) g :
+  g =1 f -> Emb.class_of g.
+Proof.
+  move=> H; constructor; first exact/(Hom.of_eqfun_class H).
+  by constructor=> ??; rewrite !H (ca_reflecting f).
+Qed.
+
+Definition of_eqfun {E1 E2 : eventType L} (f : E1 ≈> E2) g :
+  g =1 f -> E1 ≈> E2 := fun eqf => Emb.Pack (of_eqfun_class eqf).
 
 End Cat.
 
@@ -574,6 +605,16 @@ Defined.
 Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~= E2) (g : E2 ~= E3) : 
    Iso.apply (tr f g) = g \o f.
 Proof. done. Qed.
+
+Lemma of_eqfun_class {E1 E2 : eventType L} (f : E1 ~= E2) g :
+  g =1 f -> Iso.class_of g.
+Proof.
+  move=> H; constructor; first exact/(Bij.of_eqfun_class H).
+  by constructor=> ??; rewrite !H (ca_reflecting f).
+Qed.
+
+Definition of_eqfun {E1 E2 : eventType L} (f : E1 ~= E2) g :
+  g =1 f -> E1 ~= E2 := fun eqf => Iso.Pack (of_eqfun_class eqf).
 
 Definition of_homs {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~> E1) : 
   cancel f g -> cancel g f -> (E1 ~= E2).
@@ -951,58 +992,164 @@ Section MorphismsDec.
 Context {L : eqType} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Lemma ohom_class f : option (lPoset.Hom.Hom.class_of f).
-Proof. 
+Definition ohom_class f : option (lPoset.Hom.Hom.class_of f).
+(* --- *)
   case: [forall e, lab (f e) == lab e]/fin_lab_preserveP; 
     move=> ?; last exact/None. 
   case: [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]/fin_ca_monotoneP; 
     move=> ?; last exact/None.
   by apply/Some. 
-Qed.
+Defined.
 
 Definition ohom f : option (E1 ~> E2) := 
   omap (fun c => lPoset.Hom.Hom.Pack c) (ohom_class f).
 
-Lemma obij_class f : option (lPoset.Bij.Bij.class_of f).
-Proof.
+Lemma ohom_hom (f : E1 ~> E2) : ohom f.
+Proof. 
+  rewrite /ohom; case H: (ohom_class f)=> //=.
+  move: H; rewrite /ohom_class.
+  move: (lab_preserv f) (ca_monotone f).
+  case: (fin_lab_preserveP f)=> //. 
+  case: (fin_ca_monotoneP f)=> //.
+Qed.
+
+Definition obij_class f : option (lPoset.Bij.Bij.class_of f).
+(* --- *)
   case Hc: (ohom_class f)=> [c|]; last exact/None.
   case: (injectiveb f)/injectiveP=> Hi; last exact/None.
-  case Hn: (#|E2| <= #|E1|); last exact/None. 
-  apply/Some; constructor; first exact/c.
+  case: (#|E2| == #|E1|)%N/eqP; last by (move=> ?; exact/None).
+  move=> /eq_leq Hn.
   pose g := (fun y => iinv (inj_card_onto Hi Hn y)).
-  by exists g=> y; rewrite /g ?iinv_f ?f_iinv. 
-Qed.
+  apply/Some; constructor; first exact/c.
+  by exists g=> y; rewrite /g ?iinv_f ?f_iinv.
+Defined.
 
 Definition obij f : option (E1 ≃> E2) := 
   omap (fun c => lPoset.Bij.Bij.Pack c) (obij_class f).
 
-Lemma oemb_mixin f : option (lPoset.Emb.Emb.mixin_of f).
-Proof.
+Lemma obij_bij (f : E1 ≃> E2) : obij f.
+Proof. 
+  move: (ohom_hom f); case Hh: (ohom f)=> [c|] //=> _.
+  rewrite /obij; case Hb: (obij_class f)=> //=.
+  move: Hb; rewrite /obij_class.
+  move: Hh; rewrite /ohom /omap /obind /oapp. 
+  case: (ohom_class f)=> // ? [] ?.
+  move: (event_bij f)=> /[dup] /bij_inj ? /bij_eq_card /esym.
+  case: (injectiveP f)=> // ?. 
+  by case: eqP.
+Qed.
+
+Definition oemb_mixin f : option (lPoset.Emb.Emb.mixin_of f).
+(* --- *)
   case: [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)]/fin_ca_reflectingP;
     move=> He; last exact/None. 
   by apply/Some; constructor=> ??; rewrite He.
-Qed.
+Defined.
 
-Lemma oemb_class f : option (lPoset.Emb.Emb.class_of f).
-Proof.
+Definition oemb_class f : option (lPoset.Emb.Emb.class_of f).
+(* --- *)
   case Hc: (ohom_class f)=> [c|]; last exact/None.
   case Hm: (oemb_mixin f)=> [m|]; last exact/None.
   by apply/Some.
-Qed.
+Defined.
 
 Definition oemb f : option (E1 ≈> E2) := 
   omap (fun c => lPoset.Emb.Emb.Pack c) (oemb_class f).
 
+Lemma oemb_emb (f : E1 ≈> E2) : oemb f.
+Proof. 
+  move: (ohom_hom f); case Hh: (ohom f)=> [c|] //=> _.
+  rewrite /oemb; case Hm: (oemb_class f)=> //=.
+  move: Hm; rewrite /oemb_class /oemb_mixin.
+  move: Hh; rewrite /ohom /omap /obind /oapp. 
+  case: (ohom_class f)=> // ? [] ?.
+  move: (ca_reflecting f).
+  case: (fin_ca_reflectingP f)=> //. 
+Qed.
+
 Lemma oiso_class f : option (lPoset.Iso.Iso.class_of f).
-Proof.
+(* --- *)
   case Hc: (obij_class f)=> [c|]; last exact/None.
   case He: (oemb_mixin f)=> [m|]; last exact/None.
   by apply/Some.
-Qed.
+Defined.
 
 Definition oiso f : option (E1 ~= E2) := 
   omap (fun c => lPoset.Iso.Iso.Pack c) (oiso_class f).
 
+Lemma oiso_iso (f : E1 ~= E2) : oiso f.
+Proof. 
+  move: (obij_bij f); case Hb: (obij f)=> [cb|] //=> _.
+  move: (oemb_emb f); case He: (oemb f)=> [ce|] //=> _.
+  rewrite /oiso; case Hm: (oiso_class f)=> //=.
+  move: Hm; rewrite /oiso_class.  
+  move: Hb; rewrite /obij /omap /obind /oapp. 
+  move: He; rewrite /oemb /oemb_class /omap /obind /oapp. 
+  case: (ohom_class f)=> // [] ?. 
+  case: (obij_class f)=> // [] ?. 
+  case: (oemb_mixin f)=> // [] ?. 
+Qed.
+
+Global Opaque ohom_class obij_class oemb_mixin oemb_class oiso_class.
+
 End MorphismsDec.
+
+Module Theory.
+Section Theory. 
+
+Context {L : eqType} (E1 E2 : eventType L).
+
+(* TODO: generalize proofs, get rid of copy-paste *)
+
+Lemma hom_inh :
+  reflect (inhabited (E1 ~> E2)) [exists f : {ffun E1 -> E2}, ohom f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (ohom f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Hom.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/ohom_hom.
+Qed.
+
+Lemma bij_inh :
+  reflect (inhabited (E1 ≃> E2)) [exists f : {ffun E1 -> E2}, obij f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (obij f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Bij.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/obij_bij.
+Qed.
+
+Lemma emb_inh :
+  reflect (inhabited (E1 ≈> E2)) [exists f : {ffun E1 -> E2}, oemb f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (oemb f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Emb.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/oemb_emb.
+Qed.
+
+Lemma iso_inh :
+  reflect (inhabited (E1 ~= E2)) [exists f : {ffun E1 -> E2}, oiso f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (oiso f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Iso.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/oiso_iso.
+Qed.
+
+End Theory.
+End Theory.
 
 End lFinPoset.
