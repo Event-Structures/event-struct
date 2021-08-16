@@ -196,6 +196,7 @@ Module Export Theory.
 Section Theory. 
 Context {L : Type} {E1 E2 : eventType L} (f : E1 ~> E2).
 
+(* TODO: rename `lab_preserving`  *)
 Lemma lab_preserv :
   { mono f : e / lab e }.
 Proof. by case: f => ? [[]]. Qed.
@@ -220,6 +221,12 @@ End Theory.
 
 Section Cat.
 Context {L : Type}.
+
+(* TODO: refactor in similar style as lFinPoset.Morphisms, 
+ *   i.e. make `class_of` opaque, but `type` transparent.
+ *   This would allow to get rid of `E` lemmas, but at the same time
+ *   keep large proof terms opaque. 
+ *)
 
 Definition id {E : eventType L} : E ~> E.
   by exists id; do 2 constructor=> //. 
@@ -599,6 +606,7 @@ Notation bij := Bij.type.
 Notation emb := Emb.type.
 Notation iso := Iso.type.
 
+(* TODO: refactor module structure *)
 Module HomExtOrder.
 Section HomExtOrder.
 Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
@@ -908,5 +916,92 @@ Export lFinPoset.Exports.
 
 Notation eventType := lFinPoset.type.
 Notation eventStruct := lFinPoset.class_of.
+
+Import lPoset.Hom.Syntax.
+Import lPoset.Bij.Syntax.
+Import lPoset.Emb.Syntax.
+Import lPoset.Iso.Syntax.
+
+(* Properties of morphisms (reflection lemmas) required by subsequent modules *)
+Module Export MorphismsProps.
+Section MorhpismsProps.
+
+Context {L : eqType} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Lemma fin_lab_preserveP f : 
+  reflect { mono f : e / lab e } [forall e, lab (f e) == lab e].
+Proof. apply/forallPP=> ?; exact/eqP. Qed.
+
+Lemma fin_ca_monotoneP f : 
+  reflect { homo f : e1 e2 / e1 <= e2 } 
+          [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)].
+Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
+
+Lemma fin_ca_reflectingP f : 
+  reflect { mono f : e1 e2 / e1 <= e2 } 
+          [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)].
+Proof. repeat apply/forallPP=> ?; rewrite eq_sym; exact/eqP. Qed.
+
+End MorhpismsProps.
+End MorphismsProps.
+
+(* Decision procedures to check whether given function forms certain morphism *)
+Section MorphismsDec.
+Context {L : eqType} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Lemma ohom_class f : option (lPoset.Hom.Hom.class_of f).
+Proof. 
+  case Hl: [forall e, lab (f e) == lab e]; last exact/None. 
+  case Hc: [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]; 
+    last exact/None.
+  by apply/Some; move: Hl Hc=> /fin_lab_preserveP ? /fin_ca_monotoneP ?.
+Qed.
+
+Definition ohom f : option (E1 ~> E2) := 
+  omap (fun c => lPoset.Hom.Hom.Pack c) (ohom_class f).
+
+Lemma obij_class f : option (lPoset.Bij.Bij.class_of f).
+Proof.
+  case Hc: (ohom_class f)=> [c|]; last exact/None.
+  case: (injectiveb f)/injectiveP=> Hi; last exact/None.
+  case Hn: (#|E2| <= #|E1|); last exact/None. 
+  apply/Some; constructor; first exact/c.
+  pose g := (fun y => iinv (inj_card_onto Hi Hn y)).
+  by exists g=> y; rewrite /g ?iinv_f ?f_iinv. 
+Qed.
+
+Definition obij f : option (E1 ≃> E2) := 
+  omap (fun c => lPoset.Bij.Bij.Pack c) (obij_class f).
+
+Lemma oemb_mixin f : option (lPoset.Emb.Emb.mixin_of f).
+Proof.
+  case: [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)]/fin_ca_reflectingP;
+    move=> He; last exact/None. 
+  by apply/Some; constructor=> ??; rewrite He.
+Qed.
+
+Lemma oemb_class f : option (lPoset.Emb.Emb.class_of f).
+Proof.
+  case Hc: (ohom_class f)=> [c|]; last exact/None.
+  case Hm: (oemb_mixin f)=> [m|]; last exact/None.
+  by apply/Some.
+Qed.
+
+Definition oemb f : option (E1 ≈> E2) := 
+  omap (fun c => lPoset.Emb.Emb.Pack c) (oemb_class f).
+
+Lemma oiso_class f : option (lPoset.Iso.Iso.class_of f).
+Proof.
+  case Hc: (obij_class f)=> [c|]; last exact/None.
+  case He: (oemb_mixin f)=> [m|]; last exact/None.
+  by apply/Some.
+Qed.
+
+Definition oiso f : option (E1 ~= E2) := 
+  omap (fun c => lPoset.Iso.Iso.Pack c) (oiso_class f).
+
+End MorphismsDec.
 
 End lFinPoset.
