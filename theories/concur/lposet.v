@@ -1,7 +1,7 @@
 From RelationAlgebra Require Import lattice monoid rel boolean.
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order fintype finfun finmap. 
-From eventstruct Require Import utils rel.
+From eventstruct Require Import utils.
 
 (******************************************************************************)
 (* This file provides a theory of labelled partially ordered sets             *)
