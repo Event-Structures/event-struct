@@ -1004,7 +1004,7 @@ Defined.
 Definition ohom f : option (E1 ~> E2) := 
   omap (fun c => lPoset.Hom.Hom.Pack c) (ohom_class f).
 
-Lemma ohom_hom (f : E1 ~> E2) : ohom f.
+Lemma hom_ohom (f : E1 ~> E2) : ohom f.
 Proof. 
   rewrite /ohom; case H: (ohom_class f)=> //=.
   move: H; rewrite /ohom_class.
@@ -1027,9 +1027,9 @@ Defined.
 Definition obij f : option (E1 ≃> E2) := 
   omap (fun c => lPoset.Bij.Bij.Pack c) (obij_class f).
 
-Lemma obij_bij (f : E1 ≃> E2) : obij f.
+Lemma bij_obij (f : E1 ≃> E2) : obij f.
 Proof. 
-  move: (ohom_hom f); case Hh: (ohom f)=> [c|] //=> _.
+  move: (hom_ohom f); case Hh: (ohom f)=> [c|] //=> _.
   rewrite /obij; case Hb: (obij_class f)=> //=.
   move: Hb; rewrite /obij_class.
   move: Hh; rewrite /ohom /omap /obind /oapp. 
@@ -1056,9 +1056,9 @@ Defined.
 Definition oemb f : option (E1 ≈> E2) := 
   omap (fun c => lPoset.Emb.Emb.Pack c) (oemb_class f).
 
-Lemma oemb_emb (f : E1 ≈> E2) : oemb f.
+Lemma emb_oemb (f : E1 ≈> E2) : oemb f.
 Proof. 
-  move: (ohom_hom f); case Hh: (ohom f)=> [c|] //=> _.
+  move: (hom_ohom f); case Hh: (ohom f)=> [c|] //=> _.
   rewrite /oemb; case Hm: (oemb_class f)=> //=.
   move: Hm; rewrite /oemb_class /oemb_mixin.
   move: Hh; rewrite /ohom /omap /obind /oapp. 
@@ -1077,10 +1077,10 @@ Defined.
 Definition oiso f : option (E1 ~= E2) := 
   omap (fun c => lPoset.Iso.Iso.Pack c) (oiso_class f).
 
-Lemma oiso_iso (f : E1 ~= E2) : oiso f.
+Lemma iso_oiso (f : E1 ~= E2) : oiso f.
 Proof. 
-  move: (obij_bij f); case Hb: (obij f)=> [cb|] //=> _.
-  move: (oemb_emb f); case He: (oemb f)=> [ce|] //=> _.
+  move: (bij_obij f); case Hb: (obij f)=> [cb|] //=> _.
+  move: (emb_oemb f); case He: (oemb f)=> [ce|] //=> _.
   rewrite /oiso; case Hm: (oiso_class f)=> //=.
   move: Hm; rewrite /oiso_class.  
   move: Hb; rewrite /obij /omap /obind /oapp. 
@@ -1110,7 +1110,7 @@ Proof.
   have Heqf: (finfun f =1 f) by apply/ffunE.
   pose f' := lPoset.Hom.of_eqfun Heqf.
   exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/ohom_hom.
+  exact/hom_ohom.
 Qed.
 
 Lemma bij_inh :
@@ -1122,7 +1122,7 @@ Proof.
   have Heqf: (finfun f =1 f) by apply/ffunE.
   pose f' := lPoset.Bij.of_eqfun Heqf.
   exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/obij_bij.
+  exact/bij_obij.
 Qed.
 
 Lemma emb_inh :
@@ -1134,7 +1134,7 @@ Proof.
   have Heqf: (finfun f =1 f) by apply/ffunE.
   pose f' := lPoset.Emb.of_eqfun Heqf.
   exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/oemb_emb.
+  exact/emb_oemb.
 Qed.
 
 Lemma iso_inh :
@@ -1146,7 +1146,7 @@ Proof.
   have Heqf: (finfun f =1 f) by apply/ffunE.
   pose f' := lPoset.Iso.of_eqfun Heqf.
   exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/oiso_iso.
+  exact/iso_oiso.
 Qed.
 
 End Theory.
