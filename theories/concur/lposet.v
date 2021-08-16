@@ -946,17 +946,18 @@ Proof. repeat apply/forallPP=> ?; rewrite eq_sym; exact/eqP. Qed.
 End MorhpismsProps.
 End MorphismsProps.
 
-(* Decision procedures to check whether given function forms certain morphism *)
+(* Checks whether given function forms certain morphism *)
 Section MorphismsDec.
 Context {L : eqType} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
 Lemma ohom_class f : option (lPoset.Hom.Hom.class_of f).
 Proof. 
-  case Hl: [forall e, lab (f e) == lab e]; last exact/None. 
-  case Hc: [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]; 
-    last exact/None.
-  by apply/Some; move: Hl Hc=> /fin_lab_preserveP ? /fin_ca_monotoneP ?.
+  case: [forall e, lab (f e) == lab e]/fin_lab_preserveP; 
+    move=> ?; last exact/None. 
+  case: [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]/fin_ca_monotoneP; 
+    move=> ?; last exact/None.
+  by apply/Some. 
 Qed.
 
 Definition ohom f : option (E1 ~> E2) := 
