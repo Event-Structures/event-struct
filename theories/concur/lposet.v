@@ -54,7 +54,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.
-Import Order.LTheory.
+Import Order.Theory.
 
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
@@ -1148,3 +1148,81 @@ End lFinPoset.
 Export lFinPoset.lFinPoset.Exports.
 Export lFinPoset.MorphismsProps.
 
+
+Module TuplePoset.
+
+Module TuplePoset.
+Section TuplePoset.
+
+Print Canonical Projections.
+
+Import Order.OrdinalOrder.Exports.
+
+Context {L : Type} (n : nat) (t : n.-tuple L).
+
+Definition tsca : rel 'I_n := (<%O : rel 'I_n).
+
+Definition tca : rel 'I_n := (<=%O : rel 'I_n).
+
+Definition tlab : 'I_n -> L := tnth t.
+
+Definition lposetMixin := 
+  @lPoset.lPoset.Mixin 'I_n L 
+    (Order.FinPOrder.class (OrdinalOrder.finPOrderType n)) tlab. 
+Canonical lposetType := 
+  lPoset.lPoset.Pack (lPoset.lPoset.Class lposetMixin).
+
+(* For some reasons, `finOrderType` requires non-emptiness.
+ * Because of this restriction in order.v hierarchy 
+ * we cannot utilize here the order type which is both finite and total, 
+ * (since we don't want to enforce non-emptiness of tuples/words). 
+ * Therefore, until this issue won't be solved in mathcomp, 
+ * we have to stick to only one branch of the hierarchy. 
+ * Choosing `finPOrderType` looks more pragmatic, 
+ * since then we can just state a lemma that the 
+ * causality order on tuples/words is total and work with that. 
+ * Once the issue is resolved, we can rework this and move 
+ * part of the theory into more generic setting of lLoset types. 
+ *)
+
+(* Canonical llosetType := *)
+(*   lLoset.lLoset.Pack (lLoset.lLoset.Class lposetMixin). *)
+
+Canonical lfinposetType := 
+  lFinPoset.lFinPoset.Pack (lFinPoset.lFinPoset.Class lposetMixin).
+
+Lemma tscaE : tsca = <%O.
+Proof. by []. Qed.
+
+Lemma tcaE : tca = <=%O.
+Proof. by []. Qed.
+
+Lemma tlabE : tlab = (tnth t).
+Proof. by []. Qed.
+
+End TuplePoset.
+
+Module Export Exports.
+Canonical lposetType.
+(* Canonical llosetType. *)
+Canonical lfinposetType.
+
+Definition tscaE n := tscaE n.
+Definition tcaE n := tcaE n.
+Definition tlabE L n t := @tlabE L n t.
+End Exports.
+
+End TuplePoset.
+
+Export TuplePoset.Exports.
+
+Notation eventType := TuplePoset.lfinposetType.
+
+End TuplePoset.
+
+Export TuplePoset.TuplePoset.Exports.
+
+(* Context (L : Type) (n : nat) (t : n.-tuple L). *)
+(* Context (e e1 e2 : TuplePoset.eventType t). *)
+(* Check (lab e : L). *)
+(* Check (e1 <= e2 : bool). *)
