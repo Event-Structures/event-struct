@@ -1158,7 +1158,7 @@ Print Canonical Projections.
 
 Import Order.OrdinalOrder.Exports.
 
-Context {L : Type} (n : nat) (t : n.-tuple L).
+Context {L : Type} {n : nat} (t : n.-tuple L).
 
 Definition tsca : rel 'I_n := (<%O : rel 'I_n).
 
@@ -1191,13 +1191,16 @@ Canonical lposetType :=
 Canonical lfinposetType := 
   lFinPoset.lFinPoset.Pack (lFinPoset.lFinPoset.Class lposetMixin).
 
-Lemma tscaE : tsca = <%O.
+Lemma tscaE : (sca : rel lfinposetType) = (<%O : rel nat).
 Proof. by []. Qed.
 
-Lemma tcaE : tca = <=%O.
+Lemma tleE : (le : rel lfinposetType) = (<=%O : rel nat).
 Proof. by []. Qed.
 
-Lemma tlabE : tlab = (tnth t).
+Lemma tcaE : (ca : rel lfinposetType) = (<=%O : rel nat).
+Proof. by []. Qed.
+
+Lemma tlabE : (lab : lfinposetType -> L) = (tnth t).
 Proof. by []. Qed.
 
 End TuplePoset.
@@ -1207,9 +1210,10 @@ Canonical lposetType.
 (* Canonical llosetType. *)
 Canonical lfinposetType.
 
-Definition tscaE n := tscaE n.
-Definition tcaE n := tcaE n.
-Definition tlabE L n t := @tlabE L n t.
+Definition tscaE := @tscaE.
+Definition tleE := @tleE.
+Definition tcaE := @tcaE.
+Definition tlabE := @tlabE.
 End Exports.
 
 End TuplePoset.
@@ -1218,9 +1222,120 @@ Export TuplePoset.Exports.
 
 Notation eventType := TuplePoset.lfinposetType.
 
+Import lPoset.Hom.Syntax.
+Import lPoset.Bij.Syntax.
+Import lPoset.Emb.Syntax.
+Import lPoset.Iso.Syntax.
+
+Module Theory.
+Section Theory. 
+Context {L : Type} {n : nat} (t : n.-tuple L).
+
+Lemma tca_total : total (ca : rel (eventType t)).
+Proof. rewrite tcaE; exact/leq_total. Qed.
+
+End Theory.
+End Theory.
+
+Section FindNth.
+
+Context {T : Type}. 
+Implicit Types (p : pred T) (s : seq T) (n : nat).
+
+Fixpoint find_nth p s n := 
+  match n with 
+  | 0    => find p s
+  | n.+1 => find p (drop (find_nth p s n) s)
+  end.
+
+Lemma find_nth_nil p n : 
+   find_nth p [::] n = 0%N.
+Proof. admit. Admitted.
+
+End FindNth.
+
+Module MorphismsProps. 
+Section MorphismProps. 
+
+Definition nth_true : bitseq -> nat -> nat := 
+  find_nth id. 
+
+Lemma nth_true_all_false m n : 
+  all negb m -> nth_true m n = size m.
+Proof.  
+  elim: m=> [|b {}m IH] /=.
+  - by rewrite /nth_true find_nth_nil.
+  admit. 
+Admitted.
+
+Lemma nth_true_size {T : Type} (s1 s2 : seq T) m n : 
+   size m = size s2 -> s1 = mask m s2 -> n < size s1 -> nth_true m n < size m.
+Proof. admit. Admitted.
+
+Lemma mask_nth_true {T : Type} (x : T) s1 s2 b n : 
+  size b = size s2 -> s1 = mask b s2 -> (nth x s1 n) = nth x s2 (nth_true b n). 
+Proof. 
+  move: s1 s2; elim=> [s|y ys] /=.
+  admit. 
+  (* - move=> /size_mask /[swap] /[dup] + <- /=. *)
+  (*   rewrite nth_nil. nth_true_all_false.  *)
+Admitted.
+
+Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
+
+Definition liftFOrd n m (f : nat -> nat) : 'I_n -> 'I_m.+1 := 
+  fun i => insubd ord0 (f (val i)).
+
+Lemma thomP (l : L) : 
+  reflect (inhabited (eventType t ~> eventType u)) (subseq t u).
+Proof. 
+  apply/(iffP idP).
+  - move: m u; clear m u.
+    case=> [u|m u].
+    + move: (tuple0 u)=> /= -> /=.
+      rewrite -size_eq0 size_tuple=> /eqP Hn.
+      have efalse: (forall e : eventType t, False).
+      - by rewrite /eventType /= Hn => [[i]]; rewrite ltn0. 
+      have f: (eventType t -> eventType ([tuple] : 0.-tuple L)).
+      - by refine (fun e => match efalse e with end).
+      constructor; exists f; repeat constructor; by move=> ?. 
+    move=> /subseqP=> [[b Hsz Hb]].
+    pose f := @liftFOrd n m (nth_true b). 
+    constructor; exists f. repeat constructor.
+    - move=> e; rewrite !tlabE. 
+      rewrite !(tnth_nth l).
+      rewrite (mask_nth_true l e Hsz Hb).
+      subst f; rewrite /liftFOrd /insubd. 
+      case: insubP=> /=; first by move=> ?? ->.
+      rewrite -leqNgt. 
+      move: (valP e)=> /=; rewrite -{2}(size_tuple t)=> He.
+      move: (nth_true_size Hsz Hb He).
+      rewrite Hsz (size_tuple u). 
+      by move=> /ltn_geF ->.
+    move=> e1 e2. rewrite !tleE.
+    subst f; rewrite /liftFOrd /insubd. 
+    case: insubP=> /=; first move=> ?? ->. 
+    - case: insubP=> /=; first move=> ?? ->. 
+      + admit.
+      + rewrite -leqNgt. 
+        move: (valP e2)=> /=; rewrite -{2}(size_tuple t)=> He.
+        move: (nth_true_size Hsz Hb He).
+        rewrite Hsz (size_tuple u). 
+        by move=> /ltn_geF ->.
+      rewrite -leqNgt. 
+      move: (valP e1)=> /=; rewrite -{2}(size_tuple t)=> He.
+      move: (nth_true_size Hsz Hb He).
+      rewrite Hsz (size_tuple u). 
+      by move=> /ltn_geF ->.
+    
+  admit. 
+Admitted.
+
+End MorphismsProps. 
 End TuplePoset.
 
 Export TuplePoset.TuplePoset.Exports.
+Export TuplePoset.Theory. 
 
 (* Context (L : Type) (n : nat) (t : n.-tuple L). *)
 (* Context (e e1 e2 : TuplePoset.eventType t). *)
