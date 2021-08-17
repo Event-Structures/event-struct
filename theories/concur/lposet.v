@@ -1,5 +1,5 @@
 From RelationAlgebra Require Import lattice monoid rel boolean.
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple path.
 From mathcomp Require Import eqtype choice order fintype finfun finmap. 
 From eventstruct Require Import utils.
 
@@ -1254,6 +1254,89 @@ Proof. admit. Admitted.
 
 End FindNth.
 
+Section MakeMask. 
+
+Fixpoint mkmask (s : seq nat) (m : bitseq) : bitseq :=
+  match s with
+  | [::]    => m
+  | i :: s' => set_nth false (mkmask s' m) i true
+  end.
+
+Lemma mkmask_size (s : seq nat) m :
+  all (fun i => (i < size m)%N) s -> size (mkmask s m) = size m.
+Proof. 
+  elim s=> [|i {}s IH] //=. 
+  move=> /andP[Hi Hs]; rewrite size_set_nth IH //.
+  rewrite /maxn; case: ifP=> //.
+  by move: Hi=> /=; rewrite leq_eqVlt=> /orP[/eqP|->] //. 
+Qed.
+
+Lemma mkmask_mask {T : Type} (x : T) (s1 s2 : seq T) f :
+  (forall i, nth x s1 i = nth x s2 (f i)) -> 
+    mask (mkmask [seq f i | i <- iota 0 (size s1)] (nseq (size s2) false)) s2 = s1.
+Proof. 
+
+  admit. 
+Admitted.
+(*   elim s=> [|i {}s IH] //=.  *)
+(*   move=> /andP[Hi Hs]; rewrite size_set_nth IH //. *)
+(*   rewrite /maxn; case: ifP=> //. *)
+(*   by move: Hi=> /=; rewrite leq_eqVlt=> /orP[/eqP|->] //.  *)
+(* Qed. *)
+
+(* Fixpoint mkmask (s : seq nat) m j : bitseq := *)
+(*   match s with *)
+(*   | [::]    => nseq m false *)
+(*   | i :: s' => (rcons (nseq (i - j) false) true) ++ (mkmask s' (m - (i - j).+1) i.+1) *)
+(*   end. *)
+
+(* Definition mkmask {n} (s : seq 'I_n) : bitseq :=  *)
+(*   let fix mkmask (s : seq 'I_n) (m : nat) : bitseq := *)
+(*     match s with *)
+(*     | [::]    => nseq m false *)
+(*     | i :: s' => (rcons (nseq i false) true) ++ (mkmask s' (m - i)) *)
+(*     end *)
+(*   in *)
+(*   mkmask s n.  *)
+
+(* Lemma mkmask_size (s : seq nat) m j : *)
+(*   sorted (<%O) s -> (last 0%N s - j < m) -> size (mkmask s m j) = m - j. *)
+(* Proof. *)
+(*   move: s j; elim/ltn_ind: m=> m IH s j. *)
+(*   case s=> [|i {}s] /=; first by admit. (* rewrite size_nseq. *) *)
+(*   rewrite lt_path_sortedE=> /andP[] Hi Hs Hl. *)
+(*   rewrite size_cat size_rcons size_nseq IH ?subnKC //.  *)
+
+(*   have Hm: (m - i.+1 < m)%N. *)
+(*   - rewrite ltn_subrL; apply/andP; split=> //. *)
+(*     apply/(leq_ltn_trans _ Hl); exact/leq0n. *)
+(*   rewrite size_cat size_rcons size_nseq IH. ?subnKC //.  *)
+(*   - admit. *)
+(*   - by move: Hp; rewrite lt_path_sortedE=> /andP[]. *)
+    
+  
+
+(* Lemma mkmask_size (s : seq nat) m : *)
+(*   all (< m) s -> size (mkmask s m) = m. *)
+(* Proof. *)
+(*   move: s; elim/ltn_ind: m=> m IH s. *)
+(*   case s=> [|i {}s] /=; first by rewrite size_nseq. *)
+(*   move=> /andP [Hi Hs]. *)
+(*   have Hm: (m - i.+1 < m)%N. *)
+(*   - rewrite ltn_subrL; apply/andP; split=> //. *)
+(*     apply/(leq_ltn_trans _ Hi); exact/leq0n. *)
+(*   rewrite size_cat size_rcons size_nseq IH ?subnKC //.  *)
+  
+    
+
+    
+   
+(*   apply/leq_trans. *)
+  (* leq_subr   *)
+
+
+End MakeMask.
+
 Module MorphismsProps. 
 Section MorphismProps. 
 
@@ -1326,9 +1409,40 @@ Proof.
       move: (valP e1)=> /=; rewrite -{2}(size_tuple t)=> He.
       move: (nth_true_size Hsz Hb He).
       rewrite Hsz (size_tuple u). 
-      by move=> /ltn_geF ->.
+      by move=> /ltn_geF ->.    
+
+  move=> [f]; apply/subseqP.
+  move: n t f; clear t n.
+  case=> [|n].
+  - admit.
+  move: m u; clear m u.
+  case=> [|m].
+  - admit.
+  move=> u t f.
+  pose s := map (fun e => (val \o f \o (insubd ord0)) e) (iota 0 n.+1).
+  exists (mkmask s (nseq m.+1 false)).
+  - rewrite mkmask_size ?size_nseq ?size_tuple //.
+    rewrite all_map /=. 
+    (* by apply /allP=> e H /=. *)
+    admit.
+  symmetry. 
+  subst s. 
+  rewrite -{6}(size_tuple t).
+  rewrite -{6}(size_tuple u).
+  rewrite (@mkmask_mask L l)=> //.
+  move=> i=> /=.
     
-  admit. 
+  rewrite /insubd. case: insubP; last admit.
+  move=> /=. 
+  move=> e HH ?.
+  rewrite -[nth l u (f e)]tnth_nth.
+  have ->: i = val (Ordinal HH). done.
+  rewrite -[nth l t (Ordinal HH)]tnth_nth.
+  do 2 rewrite -tlabE /=. 
+  rewrite lab_preserv /=. 
+  have ->: e = Ordinal HH => //.
+  by apply/val_inj.
+
 Admitted.
 
 End MorphismsProps. 
