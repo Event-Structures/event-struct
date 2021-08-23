@@ -339,42 +339,17 @@ Fixpoint find_nth p s n :=
     (i.+1 + find p (drop i.+1 s))%N
   end.
 
+Lemma hasNcount p s : 
+   ~~ has p s = (count p s == 0).
+Proof. by rewrite has_count -leqNgt leqn0. Qed. 
+
+Lemma hasNtake p s : 
+   ~~ has p (take (find p s) s).
+Proof. by apply/contra; first apply/find_ltn; rewrite ltnn. Qed.
+  
 Lemma count_take_find p s : 
   count p (take (find p s) s) = 0.
-Proof. admit. Admitted.
-  
-Lemma nth_find_nth (x0 : T) p s n :
-  n < count p s -> p (nth x0 s (find_nth p s n)).
-Proof. admit. Admitted.
-
-(* Lemma count_take_find_nth (x0 : T) p s n :  *)
-(*   (count p (take (find_nth p s n) s) = n) && . *)
-(* Proof.  *)
-(*   move: s; elim n=> [|{}n IH] s /=. *)
-(*   - admit.  *)
-(*   pose i := find_nth p s n. *)
-(*   have <-: i = find_nth p s n by done. *)
-(*   rewrite -addn1 !takeD !count_cat IH !addn1.   *)
-(*   rewrite count_take_find addn0. *)
-(*   case H: (drop i s)=> [|x {}xs]/=. admit. *)
-(*   rewrite take0 /= addn0 -addn1. *)
-(*   have->: p x=> //.     *)
-  
-
-(*   rewrite -addn1. *)
-(*   rewrite (drop_nth x0) /=; last admit. *)
-(*   rewrite take0 /= addn0 -addn1.   *)
-(*   rewrite nth_find_nth=> //=. *)
-(*   rewrite -(IH s). admit. *)
-(* Admitted.     *)
-
-Lemma find_nth_hh p s n : 
-  count p (take (find_nth p s n).+1 s) = n.+1.
-Proof. admit. Admitted.    
-
-Lemma count_rcons p x s : 
-  count p (rcons s x) = count p s + count p [:: x].
-Proof. admit. Admitted.
+Proof. apply/eqP; rewrite -hasNcount; apply/hasNtake. Qed.
 
 Variant split_count_find_nth_spec p : seq T -> nat -> nat -> seq T -> seq T -> T -> Type :=
   FindNth x n i s1 s2 of p x & (size s1 = i) & (count p s1 = n) :
@@ -394,61 +369,31 @@ Proof.
   move: H=> _ x m i s1 s2; clear s.
   pose s := rcons s1 x ++ s2.
   have Hs: s = rcons s1 x ++ s2 by done.
-  move=> Hp Hsz Hc Hlt; rewrite -Hs.
-  (* have Hs1 : s1 = take i s. *)
-  (* - rewrite Hs take_cat size_rcons Hsz leqnn.  *)
-    
-  (*   take_rcons. ltnn. subnn. take0 cats0. *)
+  move=> Hp Hsz Hcs1 Hc; rewrite -Hs.
+  have Hs1 : s1 = take i s.
+  - rewrite Hs -cats1 !take_cat size_cat Hsz /=. 
+    by rewrite ltnn addn1 leqnn subnn take0 cats0. 
+  have Hs1' : rcons s1 x = take i.+1 s.
+  - by rewrite Hs take_cat size_rcons Hsz ltnn subnn take0 cats0.
   have Hs2 : s2 = drop i.+1 s.
   - by rewrite Hs drop_cat size_rcons Hsz ltnn subnn drop0. 
   have Hcs2 : 0 < count p s2.
-  - move: Hlt; rewrite count_cat count_rcons /= addn0 Hc Hp. 
+  - move: Hc; rewrite -cats1 !count_cat /= addn0 Hcs1 Hp. 
     by rewrite addn1 -{1}[m.+1]addn0 ltn_add2l.
-
-  (* rewrite -has_count has_find=> Hsz. *)
-  (* rewrite takeD take_drop addnC takeD drop_cat size_takel; last first. *)
-
-  rewrite -[s in split_count_find_nth_spec p s m.+1]
-           (cat_take_drop (i.+1 + find p s2) s).
-  rewrite (drop_nth x0 _); last first.
+  have Hszf : i.+1 + find p s2 < size s.
   - move: Hcs2; rewrite -has_count has_find.
     by rewrite Hs size_cat size_rcons Hsz ltn_add2l=> ->.
-
-  rewrite -cat_rcons; constructor. 
+  rewrite -[s in split_count_find_nth_spec p s m.+1]
+           (cat_take_drop (i.+1 + find p s2) s).
+  rewrite (drop_nth x0 _)=> //.
+  rewrite -cat_rcons; constructor=> //. 
   - by rewrite -nth_drop Hs2 nth_find // has_count -Hs2 //. 
-  - move: Hcs2; rewrite -has_count has_find.
-    by rewrite size_take Hs size_cat size_rcons Hsz ltn_add2l=> ->.
+  - by rewrite size_take Hszf.
   rewrite takeD take_drop addnC takeD drop_cat size_takel; last first.
   - rewrite Hs size_cat size_rcons Hsz; ssrnatlia.
-  rewrite ltnn subnn drop0 count_cat. 
-  have ->: take i.+1 s = rcons s1 x. 
-  - by rewrite Hs take_cat size_rcons Hsz ltnn subnn take0 cats0.
-  rewrite Hs2.
-  by rewrite count_rcons Hc count_take_find /= Hp !addn0 addn1. 
+  rewrite ltnn subnn drop0 count_cat -Hs1' Hs2.  
+  by rewrite -cats1 count_cat Hcs1 count_take_find /= Hp !addn0 addn1. 
 Qed.  
-
-Lemma find_nth_cat p s1 s2 n : 
-  find_nth p (s1 ++ s2) n = 
-    if count p s1 < n.+1 then 
-      find_nth p s1 n 
-    else 
-      size s1 + find_nth p s2 (n - count p s1).
-Proof. admit. Admitted.
-
-(* Lemma find_nth_cat x0 p s1 s2 n :  *)
-(*   count p s1 = n -> p (last x0 s1) -> find_nth p (s1 ++ s2) n.+1 = size s1 + find p s2 *)
-
-Lemma ltn_leqSn n m : n < m -> m <= n.+1 -> m = n.+1.
-Proof. admit. Admitted. 
-
-(* Lemma count_eq_find_nth (x0 : T) p s n :  *)
-(*   (count p s = n) -> (find_nth p s n = size s). *)
-(* Proof.  *)
-(*   move: s; elim n=> [|{}n IH] s /=.   *)
-(*   - admit.      *)
-  
-
-(*   admit. Admitted. *)
 
 Lemma count_Nfind_nth (x0 : T) p s n : 
   (count p s <= n) -> (find_nth p s n >= size s).
@@ -462,7 +407,7 @@ Proof.
     move=> x m i s1 s2 Hp Hsz Hc Hc'.
     rewrite size_cat size_rcons Hsz.
     rewrite leq_add2l leqNgt -has_find has_count -leqNgt.
-    move: Hc'; rewrite count_cat count_rcons /= Hp /= Hc; ssrnatlia.
+    move: Hc'; rewrite count_cat -cats1 count_cat /= Hp /= Hc; ssrnatlia.
   by move=> /ltnSE H; apply/(leq_trans (IH s H)); ssrnatlia.
 Qed.
 
@@ -476,51 +421,5 @@ Proof.
   apply/negP/negP; rewrite -leqNgt; apply/(count_Nfind_nth x0).
   by move: H=> /negP/negP; rewrite -leqNgt.
 Qed.
-
-  exact/count_Nfind_nth. 
-  apply/negP/negP.
-  move: H=> /negP/negP. rewrite -leqNgt -leqNgt.
-  move=> /count_Nfind_nth.
-
-  move: s; elim n=> [|{}n IH] s /=.
-  - by rewrite -has_count has_find.
-  pose i := find_nth p s n.
-  have <-: i = find_nth p s n by done.
-  have Hs: s = take i.+1 s ++ drop i.+1 s.
-  - apply/esym/(cat_take_drop i.+1).
-  rewrite [s in find p (drop i.+1 s)]Hs drop_cat.
-
-  rewrite [s in count p s]Hs.
-  rewrite count_cat find_nth_hh.
-  rewrite -{1}[n.+1]addn0 ltn_add2l.
-
-  case Hsz: (i.+1 < size s); last first.
-  - move: Hsz; rewrite size_take=> /[dup] + ->. 
-    move=> /[dup] + ->; move=> /negP/negP; rewrite -leqNgt=> Hsz.
-    rewrite [drop i.+1 s]drop_oversize=> //=. 
-    rewrite addn0; apply/idP/idP; first by rewrite ltnn.
-    by move: Hsz; rewrite leqNgt=> /negP.
-
-  rewrite size_takel; last by apply/ltnW.    
-
-  rewrite ltnn subnn drop0. 
-  rewrite [s in size s]Hs.
-  rewrite -has_count has_find.         
-  rewrite size_cat size_take size_drop.
-  by rewrite Hsz ltn_add2l.
-Qed.
-
-
-Lemma find_nth0 p s : 
-   find_nth p s 0 = find p s.
-Proof. admit. Admitted.
-
-Lemma find_nthSn p s n : 
-   find_nth p s n.+1 = let m := (find_nth p s n) in (m + find p (drop m s))%N.
-Proof. admit. Admitted.
-
-Lemma find_nth_nil p n : 
-   find_nth p [::] n = 0%N.
-Proof. admit. Admitted.
 
 End FindNth.
