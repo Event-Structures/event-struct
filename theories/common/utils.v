@@ -325,8 +325,6 @@ End FinTypeUtils.
 
 Section FindNth.
 
-Section FindNth.
-
 Context {T : Type}. 
 Implicit Types (p : pred T) (s : seq T) (n : nat).
 
@@ -423,3 +421,20 @@ Proof.
 Qed.
 
 End FindNth.
+
+
+Section MaskUtils.
+
+Context {T : Type}.
+Implicit Types (s : seq T) (m : bitseq) (n : nat).
+
+Lemma find_nth_mask_size s n m : 
+   size m = size s -> n < size (mask m s) -> find_nth id m n < size m.
+Proof. by move=> /size_mask ->; rewrite (count_find_nth false). Qed.
+
+Lemma nth_mask (x : T) s m n : 
+  size m = size s -> nth x (mask m s) n = nth x s (find_nth id m n). 
+Proof. admit. Admitted.
+
+End MaskUtils.
+
