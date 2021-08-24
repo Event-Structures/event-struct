@@ -420,6 +420,16 @@ Proof.
   by move: H=> /negP/negP; rewrite -leqNgt.
 Qed.
 
+Lemma find_nth_leq p s n m : 
+  n <= m -> find_nth p s n <= find_nth p s m.
+Proof. 
+  elim: m=> [|{}m IH]. 
+  - by rewrite leqn0=> /eqP ->.
+  rewrite leq_eqVlt=> /orP[/eqP->|] //=.
+  move=> /ltnSE /IH H; apply/(leq_trans H). 
+  rewrite -addn1 -addnA; exact/leq_addr.
+Qed.
+
 End FindNth.
 
 
