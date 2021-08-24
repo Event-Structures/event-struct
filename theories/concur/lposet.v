@@ -205,6 +205,10 @@ Lemma ca_monotone :
   { homo f : e1 e2 / e1 <= e2 }.
 Proof. by case: f => ? [[]]. Qed.
 
+Lemma sca_monotone :
+  injective f -> { homo f : e1 e2 / e1 < e2 }.
+Proof. move=> ?; apply/inj_homo_lt=> //; exact/ca_monotone. Qed.
+
 Lemma sca_img e1 e2 : (f e1 < f e2) -> (e1 < e2) || (e1 >< e2).
 Proof.
   case H: (e1 < e2)=> //= Hf.
@@ -346,10 +350,6 @@ Proof. by case: f => ? [[? []]] g ? ?; exists g. Qed.
 Lemma inv_lab : 
   { mono (inv f) : e / lab e }.
 Proof. by move=> e /=; rewrite -{2}[e]can_inv (lab_preserv f). Qed.
-
-Lemma sca_monotone :
-  { homo f : e1 e2 / e1 < e2 }.
-Proof. apply/inj_homo_lt; [apply/bij_inj/event_bij | exact/ca_monotone]. Qed.
 
 Lemma ca_img e1 e2 : 
   (f e1 <= f e2) -> (e1 <= e2) || (e1 >< e2).
@@ -1189,6 +1189,12 @@ Canonical lposetType :=
 Canonical lfinposetType := 
   lFinPoset.lFinPoset.Pack (lFinPoset.lFinPoset.Class lposetMixin).
 
+Lemma tltE : (lt : rel lfinposetType) = (<%O : rel nat).
+Proof. by []. Qed.
+
+Lemma tltEnat : (lt : rel lfinposetType) = (fun x y => (x < y)%N).
+Proof. by []. Qed.
+
 Lemma tscaE : (sca : rel lfinposetType) = (<%O : rel nat).
 Proof. by []. Qed.
 
@@ -1208,6 +1214,8 @@ Canonical lposetType.
 (* Canonical llosetType. *)
 Canonical lfinposetType.
 
+Definition tltE := @tltE.
+Definition tltEnat := @tltEnat.
 Definition tscaE := @tscaE.
 Definition tleE := @tleE.
 Definition tcaE := @tcaE.
@@ -1267,30 +1275,31 @@ End Theory.
 
 (* End FindNth. *)
 
-Section MakeMask. 
+(* Section MakeMask.  *)
 
-Fixpoint mkmask (s : seq nat) (m : bitseq) : bitseq :=
-  match s with
-  | [::]    => m
-  | i :: s' => set_nth false (mkmask s' m) i true
-  end.
+(* Fixpoint mkmask (s : seq nat) (m : bitseq) : bitseq := *)
+(*   match s with *)
+(*   | [::]    => m *)
+(*   | i :: s' => set_nth false (mkmask s' m) i true *)
+(*   end. *)
 
-Lemma mkmask_size (s : seq nat) m :
-  all (fun i => (i < size m)%N) s -> size (mkmask s m) = size m.
-Proof. 
-  elim s=> [|i {}s IH] //=. 
-  move=> /andP[Hi Hs]; rewrite size_set_nth IH //.
-  rewrite /maxn; case: ifP=> //.
-  by move: Hi=> /=; rewrite leq_eqVlt=> /orP[/eqP|->] //. 
-Qed.
+(* Lemma mkmask_size (s : seq nat) m : *)
+(*   all (fun i => (i < size m)%N) s -> size (mkmask s m) = size m. *)
+(* Proof.  *)
+(*   elim s=> [|i {}s IH] //=.  *)
+(*   move=> /andP[Hi Hs]; rewrite size_set_nth IH //. *)
+(*   rewrite /maxn; case: ifP=> //. *)
+(*   by move: Hi=> /=; rewrite leq_eqVlt=> /orP[/eqP|->] //.  *)
+(* Qed. *)
 
-Lemma mkmask_mask {T : Type} (x : T) (s1 s2 : seq T) f :
-  (forall i, nth x s1 i = nth x s2 (f i)) -> 
-    mask (mkmask [seq f i | i <- iota 0 (size s1)] (nseq (size s2) false)) s2 = s1.
-Proof. 
+(* Lemma mkmask_mask {T : Type} (x : T) (s1 s2 : seq T) f : *)
+(*   (forall i, nth x s1 i = nth x s2 (f i)) ->  *)
+(*     mask (mkmask [seq f i | i <- iota 0 (size s1)] (nseq (size s2) false)) s2 = s1. *)
+(* Proof.  *)
 
-  admit. 
-Admitted.
+(*   admit.  *)
+(* Admitted. *)
+
 (*   elim s=> [|i {}s IH] //=.  *)
 (*   move=> /andP[Hi Hs]; rewrite size_set_nth IH //. *)
 (*   rewrite /maxn; case: ifP=> //. *)
@@ -1348,69 +1357,15 @@ Admitted.
   (* leq_subr   *)
 
 
-End MakeMask.
+(* End MakeMask. *)
 
 Module MorphismsProps. 
-Section MorphismProps. 
-
-(* Definition nth_true : bitseq -> nat -> nat :=  *)
-(*   find_nth id.  *)
-
-(* Lemma nth_true_all_false m n :  *)
-(*   all negb m -> nth_true m n = size m. *)
-(* Proof.   *)
-(*   elim: m=> [|b {}m IH] /=. *)
-(*   - by rewrite /nth_true find_nth_nil. *)
-(*   admit.  *)
-(* Admitted. *)
-
-(* Lemma nth_true_size {T : Type} (s : seq T) m (n : nat) :  *)
-(*    size m = size s -> (n < size (mask m s))%N -> (nth_true m n < size m)%N. *)
-(* Proof.  *)
-(*   move: m s; rewrite /nth_true. *)
-(*   elim n=> [|{}n IH] m s Hsz. *)
-(*   - rewrite find_nth0. *)
-(*     case H: (mask m s)=> [|x xs].   *)
-(*     + rewrite ?ltn0=> //. *)
-(*     by rewrite -H -has_find has_count size_mask.  *)
-(*   rewrite find_nthSn /=.  *)
-  
-  (* rewrite -has_find. *)
-
-  (*  rewrite IH. *)
-   
-  (* rewrite /nth_true. *)
-  (* move: s1 s2; elim m=> [s1 s2 |b {}m IH s1 s2] /=. *)
-  (* - by rewrite mask0s=> ? -> /=; rewrite ltx0.  *)
-        
-    
-  (*  size0nil *)
-  (*   find_nth_nil *)
-  
-  (* move=> H *)
-
-(* admit. Admitted. *)
-
-(* Lemma mask_nth_true {T : Type} (x : T) s1 s2 b n :  *)
-(*   size b = size s2 -> s1 = mask b s2 -> (nth x s1 n) = nth x s2 (nth_true b n).  *)
-(* Proof.  *)
-(*   move: s1 s2; elim=> [s|y ys] /=. *)
-(*   admit.  *)
-(*   (* - move=> /size_mask /[swap] /[dup] + <- /=. *) *)
-(*   (*   rewrite nth_nil. nth_true_all_false.  *) *)
-(* Admitted. *)
+Section MorphismsProps. 
 
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
-Definition liftFOrd n m (f : nat -> nat) : 'I_n -> 'I_m.+1 := 
-  fun i => insubd ord0 (f (val i)).
-
-(* Definition FOrd n m (f : nat -> nat) : 'I_n -> 'I_m.+1 :=  *)
-(*   fun i => insubd ord0 (f (val i)). *)
-
-
 Lemma thomP : 
-  reflect (inhabited (eventType t ~> eventType u)) (subseq t u).
+  reflect ?|{f : eventType t ~> eventType u | injective f}| (subseq t u).
 Proof. 
   apply/(iffP idP).
 
@@ -1420,40 +1375,54 @@ Proof.
       rewrite -size_eq0 size_tuple=> /eqP Hn.
       have efalse: (forall e : eventType t, False).
       - by rewrite /eventType /= Hn => [[i]]; rewrite ltn0. 
-      have f: (eventType t -> eventType ([tuple] : 0.-tuple L)).
-      - by refine (fun e => match efalse e with end).
+      have f: (eventType t ~> eventType ([tuple] : 0.-tuple L)).
+      - by exists (fun e => match efalse e with end).
       constructor; exists f; repeat constructor; by move=> ?. 
     move=> /subseqP=> [[b Hsz Hb]].
     pose f := sub_down ord_max (find_nth id b) : eventType t -> eventType u.
     pose l := (@lab L (eventType u) ord_max) : L.
     have He: forall (e : eventType t), (find_nth id b e < m.+1)%N. 
     + move=> e; rewrite -[m.+1](size_tuple u) -Hsz. 
-      by rewrite (find_nth_mask_size Hsz) // -Hb (size_tuple t).
-    constructor; exists f; repeat constructor.
+      by rewrite (mask_size_find_nth Hsz) // -Hb (size_tuple t).
+    constructor; unshelve eexists; [exists f|..]; repeat constructor; move=>/=.
     + move=> e; rewrite !tlabE. 
       rewrite !(tnth_nth l) Hb (nth_mask l e Hsz).
       by subst f; rewrite eq_sub_down //. 
-    move=> e1 e2; rewrite !tleE.
-    subst f; rewrite !eq_sub_down //. 
-    exact/find_nth_leq.
+    + move=> e1 e2; rewrite !tleE.
+      subst f; rewrite !eq_sub_down //. 
+      exact/find_nth_leq.
+    move=> e1 e2; subst f=> /= H.
+    admit.  
 
   move: n t; clear t n.
-  case=> [|n] t [f].
+  case=> [|n] t [[f Hf]].
   - by move: (tuple0 t)=> /= -> /=; exact/sub0seq. 
   apply/subseqP.
   pose g := sub_lift ord_max f : nat -> nat.  
   pose s := map g (iota 0 n.+1).
-  exists (mkmask s (nseq m false)).
-  - rewrite mkmask_size ?size_nseq ?size_tuple // all_map /=.
+  exists (mkmask s m).
+  - rewrite size_mkmask ?size_nseq ?size_tuple // all_map /=.
     subst g=> /=; rewrite sub_liftT.
     apply/andP; split=> //; apply/allP=> i /=.
     rewrite mem_iota addnC addn1=> /andP[??]. 
     by rewrite sub_liftT.
   apply/esym; subst s.
   rewrite -[in iota 0 n.+1](size_tuple t). 
-  rewrite -[in nseq m false](size_tuple u).
+  rewrite -[m in mkmask _ m](size_tuple u).
   pose l := lab (f ord_max) : L.
   rewrite (@mkmask_mask L l)=> //.
+  - move=> x y /=; rewrite !sub_liftT.
+    + admit. 
+    + admit. 
+    move=> Hy Hx H. 
+    move: (sca_monotone Hf)=> Hm.
+    have HH: (Ordinal Hx < Ordinal Hy :> eventType t).
+    - done. 
+    by move: (Hm (Ordinal Hx) (Ordinal Hy) HH).
+  - move=> x y /=; rewrite !mem_iota !add0n. 
+    move=> /andP[?] + /andP[?] + /val_inj/(sub_lift_inj Hf).
+    by rewrite !size_tuple=> ?? H; apply/H=> //=.
+  - by rewrite size_tuple=> i Hi; rewrite sub_liftT size_tuple.  
   move=> i=> /=.
   case: (i < n.+1)/idP; last first.
   - move=> Hi; rewrite sub_liftF //.
@@ -1468,8 +1437,9 @@ Proof.
 
 Qed.
 
-
 End MorphismsProps. 
+End MorphismsProps. 
+
 End TuplePoset.
 
 Export TuplePoset.TuplePoset.Exports.

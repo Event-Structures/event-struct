@@ -44,6 +44,14 @@ Proof. by rewrite !orbT. Qed.
 Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
 (* ************************************************************************** *)
+(*     Additional Notations                                                   *)
+(* ************************************************************************** *)
+
+(* TODO: move to `inhtype.v`? add scope? *)
+Notation "?| T |" := (inhabited T)
+  (at level 0, T at level 99, format "?| T |").
+
+(* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
 (* ************************************************************************** *)
 
@@ -349,6 +357,10 @@ Lemma count_take_find p s :
   count p (take (find p s) s) = 0.
 Proof. apply/eqP; rewrite -hasNcount; apply/hasNtake. Qed.
 
+Lemma count_nth x p s :
+  count p s = count p ([seq (nth x s) i | i <- iota 0 (size s)]).
+Proof. admit. Admitted.
+
 Variant split_count_find_nth_spec p : seq T -> nat -> nat -> seq T -> seq T -> T -> Type :=
   FindNth x n i s1 s2 of p x & (size s1 = i) & (count p s1 = n) :
     split_count_find_nth_spec p (rcons s1 x ++ s2) n i s1 s2 x.
@@ -448,6 +460,16 @@ Proof.
   by move=> ?; rewrite IH.
 Qed.
 
+Lemma find_nth_set_nth x p s n i y : 
+  let j := find_nth p s n in 
+  j < i -> find_nth p (set_nth x s i y) n = j.
+Proof. 
+  elim n=> [|{}n IH].
+  - admit. 
+  move=> /=. rewrite IH.
+  admit.
+Admitted.
+
 End FindNth.
 
 
@@ -455,6 +477,18 @@ Section MaskUtils.
 
 Context {T : Type}.
 Implicit Types (s : seq T) (m : bitseq) (n : nat).
+
+(* Fixpoint mkmask (s : seq nat) m : bitseq := *)
+(*   match s with *)
+(*   | [::]    => m *)
+(*   | i :: s' => set_nth false (mkmask s' m) i true *)
+(*   end. *)
+
+Fixpoint mkmask (s : seq nat) n : bitseq :=
+  (fix mkmask (s : seq nat) m := match s with
+    | [::]    => m
+    | i :: s' => set_nth false (mkmask s' m) i true
+  end) s (nseq n false).
 
 Lemma mask_size_find_nth s n m : 
    size m = size s -> n < size (mask m s) -> find_nth id m n < size m.
@@ -489,12 +523,95 @@ Proof.
   by apply/IH.     
 Qed.
 
+Lemma mkmask_cons i (s : seq nat) n :
+  mkmask (i::s) n = set_nth false (mkmask s n) i true.
+Proof. by case s. Qed.
+
+Lemma nth_mkmask (s : seq nat) n i :
+  nth false (mkmask s n) i = (i \in s).
+Proof. 
+  move: n; elim s=> [|x {}s IH] n.  
+  - by rewrite nth_nseq inE; case: ifP.
+  rewrite mkmask_cons nth_set_nth inE /=.   
+  by case: ifP. 
+Qed.    
+
+Lemma size_mkmask (s : seq nat) n :
+  all (fun i => i < n) s -> size (mkmask s n) = n.
+Proof. 
+  elim s=> [|i {}s IH] //.
+  - by rewrite size_nseq. 
+  move=> /andP[Hi Hs]; rewrite mkmask_cons size_set_nth IH //.
+  rewrite /maxn; case: ifP=> //.
+  by move: Hi=> /=; rewrite leq_eqVlt=> /orP[/eqP|->] //. 
+Qed.
+
+Lemma count_set_nth m i :
+   ~~ nth false m i -> count id (set_nth false m i true) = 1 + count id m.
+Proof. 
+  move: i; elim: m=> [|b {}m IH] i /=.
+  - by rewrite set_nth_nil addn0 /= => _; elim i.
+  elim i=> [|{}i IHi] => /=.
+  - by move=> /negbTE ->. 
+  move=> /IH ->; ssrnatlia. 
+Qed.
+
+Lemma count_mkmask (s : seq nat) n :
+  uniq s -> count id (mkmask s n) = size s.
+Proof. 
+  elim s=> [|i {}s IH]. 
+  - by rewrite count_nseq. 
+  rewrite mkmask_cons /= => /andP[Hi Hu]. 
+  rewrite -(IH Hu) count_set_nth ?nth_mkmask //.
+Qed.
+
+Lemma find_nth_mkmask f n k i :
+  {homo f : x y / x < y } -> i < n -> 
+    find_nth id (mkmask [seq f i | i <- iota 0 n] k) i = f i.
+Proof. 
+  move=> Hf; elim n=> [|{}n IH].
+  - by rewrite ltn0. 
+  rewrite -[in iota 0 n.+1]addn1 iotaD /= add0n.
+  rewrite map_cat /=.
+  have ->: mkmask ([seq f i0 | i0 <- iota 0 n] ++ [:: f n]) k = 
+           set_nth false (mkmask [seq f i0 | i0 <- iota 0 n] k) (f n) true.
+  - admit. 
+  rewrite ltnS leq_eqVlt=> /orP[/eqP->|]. 
+  - admit.
+  move=> H; rewrite find_nth_set_nth IH //=; exact/Hf.  
+Admitted.
+
+Lemma mkmask_mask (x : T) (s1 s2 : seq T) f :
+  {homo f : x y / x < y} ->
+  {in iota 0 (size s1) &, injective f} ->
+  (forall i, i < size s1 -> f i < size s2) ->
+  (forall i, nth x s1 i = nth x s2 (f i)) -> 
+    mask (mkmask [seq f i | i <- iota 0 (size s1)] (size s2)) s2 = s1.
+Proof. 
+  move=> Hfh Hf Hsz.
+  have Ha: all (fun i => i < size s2) [seq f i | i <- iota 0 (size s1)].
+  - apply/allP=> y /= /mapP [j Hj] ->.
+    by apply/Hsz; move: Hj; rewrite mem_iota add0n. 
+  move=> H; apply/(@eq_from_nth T x).
+  - rewrite size_mask ?size_mkmask ?size_nseq //.
+    rewrite count_mkmask ?size_map ?size_iota //.
+    rewrite map_inj_in_uniq //; exact/iota_uniq.
+  move=> i Hi.
+  rewrite H; rewrite nth_mask; last first.
+  - rewrite size_mkmask ?size_nseq //.
+  rewrite find_nth_mkmask //.
+  move: Hi; rewrite size_mask; last first.
+  - rewrite size_mkmask ?size_nseq //.
+  rewrite count_mkmask ?size_map ?size_iota //.    
+  rewrite map_inj_in_uniq //; exact/iota_uniq.
+Qed.
+
 End MaskUtils.
 
 
 Section SubTypeUtils.
 
-Context {T U : Type} {P : pred T} {S : subType P}.
+Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
 
 Definition sub_down (x : S) (f : U -> T) : U -> S := 
   fun y => insubd x (f y).
@@ -513,6 +630,14 @@ Proof. by rewrite /sub_lift /insubd insubT /=. Qed.
 Lemma sub_liftF x f y : 
   ~ P y -> sub_lift x f y = f x.
 Proof. move=> ?; rewrite /sub_lift /insubd insubF //=; exact/negP. Qed.
+
+Lemma sub_lift_inj x f : 
+  injective f -> {in P &, injective (sub_lift x f)}.
+Proof. 
+  move=> H y z Hy Hz; rewrite !sub_liftT=> /H ?. 
+  rewrite -(SubK S Hy) -(SubK S Hz).
+  by apply/eqP/val_eqP.  
+Qed.
 
 End SubTypeUtils.
 

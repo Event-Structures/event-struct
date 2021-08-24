@@ -123,7 +123,7 @@ Proof.
   move: s3=> /[swap].
   suff: (r1^+ ≦ (fun s1 s2 => forall s3, r2^+ s1 s3 -> exists2 s4, r2^+ s2 s4 & r1^+ s3 s4)).
   - exact.
-  apply/itr_ind_l1=> {s1 s2} [?? s?|s1 s2 /= [s5 /(dcomm_scomm d) c IH s3 /c]].
+  apply/itr_ind_l1=> {s1 s2} [?? s ? |s1 s2 /= [s5 /(dcomm_scomm d) c IH s3 /c]].
   - case/(dcomm_scomm d _ _ _ s)=> x ? /(itr_ext r1) ?; by exists x.
   case=> s6 /IH[s4 *]; exists s4=> //; apply/(itr_cons r1); by exists s6.
 Qed.
@@ -193,7 +193,7 @@ Proof.
   apply/(itr_cons r); by exists x.
   suff: (r^+ ≦ (fun s1 x => e x s2 -> (r ⋅ e)^+  s1 s2)).
   - exact.
-  apply/itr_ind_l1=> {s1 x} [s1 x ??|s1 x /= [y ? /[apply] ?]].
+  apply/itr_ind_l1=> {s1 x} [s1 x ?? |s1 x /= [y ? /[apply] ?]].
   - apply/(itr_ext (r ⋅ e)); by exists x.
   apply/(itr_cons (r ⋅ e)); do ? exists y=> //; exact/eqv_refl.
 Qed.
@@ -366,7 +366,7 @@ Lemma rst_exlab : rst p (exlab r) ≡ exlab (rst p \o r).
 Proof. by move=> ??; split=> [[[l]]|[l[]]] /=; last split=> //; exists l. Qed.
 
 Lemma rsub l : rst p ((r l)^?) ≦ ((rst p \o r) l)^? .
-Proof. by move=> ?? [[-> ?|??]]; [left | right]. Qed.
+Proof. by move=> ?? [[-> ? | ??]]; [left | right]. Qed.
 
 Lemma eqv_rr {l1 l2 s1 s2 s3 s}: 
   s2 != s3 ->
