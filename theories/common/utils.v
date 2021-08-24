@@ -448,3 +448,45 @@ Proof. admit. Admitted.
 
 End MaskUtils.
 
+
+Section SubTypeUtils.
+
+Context {T U : Type} {P : pred T} {S : subType P}.
+
+Definition sub_down (x : S) (f : U -> T) : U -> S := 
+  fun y => insubd x (f y).
+
+Definition sub_lift (x : S) (f : S -> U) : T -> U := 
+  fun y => f (insubd x y).
+
+Lemma eq_sub_down x f y : 
+  P (f y) -> val (sub_down x f y) = f y. 
+Proof. by rewrite /sub_down val_insubd=> ->. Qed.
+
+Lemma sub_liftT x f y Py : 
+  sub_lift x f y = f (Sub y Py).
+Proof. by rewrite /sub_lift /insubd insubT /=. Qed.
+
+Lemma sub_liftF x f y : 
+  ~ P y -> sub_lift x f y = f x.
+Proof. move=> ?; rewrite /sub_lift /insubd insubF //=; exact/negP. Qed.
+
+End SubTypeUtils.
+
+
+(* TODO: move to `inhtype.v` *)
+Section InhabitedUtils.
+
+Context {T U : Type}.
+
+(* TODO: use this lemma in lposet.v/thomP proof *)
+Lemma nihn_inh_fun : 
+  ~ inhabited T -> inhabited (T -> U).
+Proof. 
+  move=> H; constructor. 
+  have fT: (forall x : T, False).
+  - move=> x; apply/H; constructor; exact/x. 
+  by refine (fun x => match fT x with end).
+Qed.
+
+End InhabitedUtils.
