@@ -1154,8 +1154,6 @@ Module TuplePoset.
 Module TuplePoset.
 Section TuplePoset.
 
-Print Canonical Projections.
-
 Import Order.OrdinalOrder.Exports.
 
 Context {L : Type} {n : nat} (t : n.-tuple L).
@@ -1230,6 +1228,11 @@ Import lPoset.Iso.Syntax.
 Module Theory.
 Section Theory. 
 Context {L : Type} {n : nat} (t : n.-tuple L).
+Implicit Types (e : eventType t).
+
+Lemma event_ltn e :
+  (e < n)%N.
+Proof. by move: (valP e). Qed.
 
 Lemma tca_total : total (ca : rel (eventType t)).
 Proof. rewrite tcaE; exact/leq_total. Qed.
@@ -1237,22 +1240,32 @@ Proof. rewrite tcaE; exact/leq_total. Qed.
 End Theory.
 End Theory.
 
-Section FindNth.
+(* Section FindNth. *)
 
-Context {T : Type}. 
-Implicit Types (p : pred T) (s : seq T) (n : nat).
+(* Context {T : Type}.  *)
+(* Implicit Types (p : pred T) (s : seq T) (n : nat). *)
 
-Fixpoint find_nth p s n := 
-  match n with 
-  | 0    => find p s
-  | n.+1 => find p (drop (find_nth p s n) s)
-  end.
+(* Fixpoint find_nth p s n :=  *)
+(*   match n with  *)
+(*   | 0    => find p s *)
+(*   | n.+1 =>  *)
+(*     let m := find_nth p s n in *)
+(*     (m + find p (drop m s))%N *)
+(*   end. *)
 
-Lemma find_nth_nil p n : 
-   find_nth p [::] n = 0%N.
-Proof. admit. Admitted.
+(* Lemma find_nth0 p s :  *)
+(*    find_nth p s 0 = find p s. *)
+(* Proof. admit. Admitted. *)
 
-End FindNth.
+(* Lemma find_nthSn p s n :  *)
+(*    find_nth p s n.+1 = let m := (find_nth p s n) in (m + find p (drop m s))%N. *)
+(* Proof. admit. Admitted. *)
+
+(* Lemma find_nth_nil p n :  *)
+(*    find_nth p [::] n = 0%N. *)
+(* Proof. admit. Admitted. *)
+
+(* End FindNth. *)
 
 Section MakeMask. 
 
@@ -1340,39 +1353,67 @@ End MakeMask.
 Module MorphismsProps. 
 Section MorphismProps. 
 
-Definition nth_true : bitseq -> nat -> nat := 
-  find_nth id. 
+(* Definition nth_true : bitseq -> nat -> nat :=  *)
+(*   find_nth id.  *)
 
-Lemma nth_true_all_false m n : 
-  all negb m -> nth_true m n = size m.
-Proof.  
-  elim: m=> [|b {}m IH] /=.
-  - by rewrite /nth_true find_nth_nil.
-  admit. 
-Admitted.
+(* Lemma nth_true_all_false m n :  *)
+(*   all negb m -> nth_true m n = size m. *)
+(* Proof.   *)
+(*   elim: m=> [|b {}m IH] /=. *)
+(*   - by rewrite /nth_true find_nth_nil. *)
+(*   admit.  *)
+(* Admitted. *)
 
-Lemma nth_true_size {T : Type} (s1 s2 : seq T) m n : 
-   size m = size s2 -> s1 = mask m s2 -> n < size s1 -> nth_true m n < size m.
-Proof. admit. Admitted.
+(* Lemma nth_true_size {T : Type} (s : seq T) m (n : nat) :  *)
+(*    size m = size s -> (n < size (mask m s))%N -> (nth_true m n < size m)%N. *)
+(* Proof.  *)
+(*   move: m s; rewrite /nth_true. *)
+(*   elim n=> [|{}n IH] m s Hsz. *)
+(*   - rewrite find_nth0. *)
+(*     case H: (mask m s)=> [|x xs].   *)
+(*     + rewrite ?ltn0=> //. *)
+(*     by rewrite -H -has_find has_count size_mask.  *)
+(*   rewrite find_nthSn /=.  *)
+  
+  (* rewrite -has_find. *)
 
-Lemma mask_nth_true {T : Type} (x : T) s1 s2 b n : 
-  size b = size s2 -> s1 = mask b s2 -> (nth x s1 n) = nth x s2 (nth_true b n). 
-Proof. 
-  move: s1 s2; elim=> [s|y ys] /=.
-  admit. 
-  (* - move=> /size_mask /[swap] /[dup] + <- /=. *)
-  (*   rewrite nth_nil. nth_true_all_false.  *)
-Admitted.
+  (*  rewrite IH. *)
+   
+  (* rewrite /nth_true. *)
+  (* move: s1 s2; elim m=> [s1 s2 |b {}m IH s1 s2] /=. *)
+  (* - by rewrite mask0s=> ? -> /=; rewrite ltx0.  *)
+        
+    
+  (*  size0nil *)
+  (*   find_nth_nil *)
+  
+  (* move=> H *)
+
+(* admit. Admitted. *)
+
+(* Lemma mask_nth_true {T : Type} (x : T) s1 s2 b n :  *)
+(*   size b = size s2 -> s1 = mask b s2 -> (nth x s1 n) = nth x s2 (nth_true b n).  *)
+(* Proof.  *)
+(*   move: s1 s2; elim=> [s|y ys] /=. *)
+(*   admit.  *)
+(*   (* - move=> /size_mask /[swap] /[dup] + <- /=. *) *)
+(*   (*   rewrite nth_nil. nth_true_all_false.  *) *)
+(* Admitted. *)
 
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
 Definition liftFOrd n m (f : nat -> nat) : 'I_n -> 'I_m.+1 := 
   fun i => insubd ord0 (f (val i)).
 
-Lemma thomP (l : L) : 
+(* Definition FOrd n m (f : nat -> nat) : 'I_n -> 'I_m.+1 :=  *)
+(*   fun i => insubd ord0 (f (val i)). *)
+
+
+Lemma thomP : 
   reflect (inhabited (eventType t ~> eventType u)) (subseq t u).
 Proof. 
   apply/(iffP idP).
+
   - move: m u; clear m u.
     case=> [u|m u].
     + move: (tuple0 u)=> /= -> /=.
@@ -1383,67 +1424,50 @@ Proof.
       - by refine (fun e => match efalse e with end).
       constructor; exists f; repeat constructor; by move=> ?. 
     move=> /subseqP=> [[b Hsz Hb]].
-    pose f := @liftFOrd n m (nth_true b). 
-    constructor; exists f. repeat constructor.
-    - move=> e; rewrite !tlabE. 
-      rewrite !(tnth_nth l).
-      rewrite (mask_nth_true l e Hsz Hb).
-      subst f; rewrite /liftFOrd /insubd. 
-      case: insubP=> /=; first by move=> ?? ->.
-      rewrite -leqNgt. 
-      move: (valP e)=> /=; rewrite -{2}(size_tuple t)=> He.
-      move: (nth_true_size Hsz Hb He).
-      rewrite Hsz (size_tuple u). 
-      by move=> /ltn_geF ->.
-    move=> e1 e2. rewrite !tleE.
-    subst f; rewrite /liftFOrd /insubd. 
-    case: insubP=> /=; first move=> ?? ->. 
-    - case: insubP=> /=; first move=> ?? ->. 
-      + admit.
-      + rewrite -leqNgt. 
-        move: (valP e2)=> /=; rewrite -{2}(size_tuple t)=> He.
-        move: (nth_true_size Hsz Hb He).
-        rewrite Hsz (size_tuple u). 
-        by move=> /ltn_geF ->.
-      rewrite -leqNgt. 
-      move: (valP e1)=> /=; rewrite -{2}(size_tuple t)=> He.
-      move: (nth_true_size Hsz Hb He).
-      rewrite Hsz (size_tuple u). 
-      by move=> /ltn_geF ->.    
+    pose f := sub_down ord_max (find_nth id b) : eventType t -> eventType u.
+    pose l := (@lab L (eventType u) ord_max) : L.
+    have He: forall (e : eventType t), (find_nth id b e < m.+1)%N. 
+    + move=> e; rewrite -[m.+1](size_tuple u) -Hsz. 
+      by rewrite (find_nth_mask_size Hsz) // -Hb (size_tuple t).
+    constructor; exists f; repeat constructor.
+    + move=> e; rewrite !tlabE. 
+      rewrite !(tnth_nth l) Hb (nth_mask l e Hsz).
+      by subst f; rewrite eq_sub_down //. 
+    move=> e1 e2; rewrite !tleE.
+    subst f; rewrite !eq_sub_down //. 
+    exact/find_nth_leq.
 
-  move=> [f]; apply/subseqP.
-  move: n t f; clear t n.
-  case=> [|n].
-  - admit.
-  move: m u; clear m u.
-  case=> [|m].
-  - admit.
-  move=> u t f.
-  pose s := map (fun e => (val \o f \o (insubd ord0)) e) (iota 0 n.+1).
-  exists (mkmask s (nseq m.+1 false)).
-  - rewrite mkmask_size ?size_nseq ?size_tuple //.
-    rewrite all_map /=. 
-    (* by apply /allP=> e H /=. *)
-    admit.
-  symmetry. 
-  subst s. 
-  rewrite -{6}(size_tuple t).
-  rewrite -{6}(size_tuple u).
+  move: n t; clear t n.
+  case=> [|n] t [f].
+  - by move: (tuple0 t)=> /= -> /=; exact/sub0seq. 
+  apply/subseqP.
+  pose g := sub_lift ord_max f : nat -> nat.  
+  pose s := map g (iota 0 n.+1).
+  exists (mkmask s (nseq m false)).
+  - rewrite mkmask_size ?size_nseq ?size_tuple // all_map /=.
+    subst g=> /=; rewrite sub_liftT.
+    apply/andP; split=> //; apply/allP=> i /=.
+    rewrite mem_iota addnC addn1=> /andP[??]. 
+    by rewrite sub_liftT.
+  apply/esym; subst s.
+  rewrite -[in iota 0 n.+1](size_tuple t). 
+  rewrite -[in nseq m false](size_tuple u).
+  pose l := lab (f ord_max) : L.
   rewrite (@mkmask_mask L l)=> //.
   move=> i=> /=.
-    
-  rewrite /insubd. case: insubP; last admit.
-  move=> /=. 
-  move=> e HH ?.
+  case: (i < n.+1)/idP; last first.
+  - move=> Hi; rewrite sub_liftF //.
+    move: Hi=> /negP; rewrite -leqNgt=> Hi.
+    rewrite nth_default; last by rewrite size_tuple.
+    by rewrite -[nth l u (f ord_max)]tnth_nth -tlabE.
+  move=> Hi; rewrite sub_liftT //=.
+  pose e := Ordinal Hi.
   rewrite -[nth l u (f e)]tnth_nth.
-  have ->: i = val (Ordinal HH). done.
-  rewrite -[nth l t (Ordinal HH)]tnth_nth.
-  do 2 rewrite -tlabE /=. 
-  rewrite lab_preserv /=. 
-  have ->: e = Ordinal HH => //.
-  by apply/val_inj.
+  rewrite -[nth l t e]tnth_nth.
+  by rewrite -tlabE -tlabE lab_preserv. 
 
-Admitted.
+Qed.
+
 
 End MorphismsProps. 
 End TuplePoset.
