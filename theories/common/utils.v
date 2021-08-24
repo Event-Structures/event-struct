@@ -430,6 +430,24 @@ Proof.
   rewrite -addn1 -addnA; exact/leq_addr.
 Qed.
 
+Lemma find_nth_consT p x xs n :
+  p x -> find_nth p (x::xs) n = if n is n'.+1 then 1 + find_nth p xs n' else 0.
+Proof. 
+  elim n=> [|{}n IH] //=.
+  - case: ifP=> ? //=. 
+  move=> ?; rewrite IH //=.
+  case n=> [|{}n'] //=.
+  by rewrite drop0.
+Qed.
+
+Lemma find_nth_consF p x xs n :
+  ~~ p x -> find_nth p (x::xs) n = 1 + find_nth p xs n.
+Proof. 
+  elim n=> [|{}n IH] //=.
+  - case: ifP=> ? //=. 
+  by move=> ?; rewrite IH.
+Qed.
+
 End FindNth.
 
 
@@ -438,13 +456,38 @@ Section MaskUtils.
 Context {T : Type}.
 Implicit Types (s : seq T) (m : bitseq) (n : nat).
 
-Lemma find_nth_mask_size s n m : 
+Lemma mask_size_find_nth s n m : 
    size m = size s -> n < size (mask m s) -> find_nth id m n < size m.
 Proof. by move=> /size_mask ->; rewrite (count_find_nth false). Qed.
 
+Lemma mask_size_Nfind_nth s n m : 
+   size m = size s -> size (mask m s) <= n -> size m <= find_nth id m n.
+Proof. by move=> /size_mask ->; exact/(count_Nfind_nth false). Qed.
+
 Lemma nth_mask (x : T) s m n : 
   size m = size s -> nth x (mask m s) n = nth x s (find_nth id m n). 
-Proof. admit. Admitted.
+Proof. 
+  move=> Hsz; case: (n < size (mask m s))/idP; last first. 
+  - move=> /negP; rewrite -leqNgt.
+    move=> /[dup] ? /(mask_size_Nfind_nth Hsz) ?.
+    by rewrite !nth_default -?Hsz.
+  move=> /[dup] Hn /(mask_size_find_nth Hsz) Hi.
+  move: n m Hsz Hn Hi; elim s=> [|y ys IH] n m /=. 
+  - by rewrite mask0 /=. 
+  case m=> [|b bs] //; rewrite mask_cons /=.
+  move=> [] Hsz; rewrite -cat1s !nth_cat. 
+  case H: b=> /=; last first.
+  - rewrite subn0 !find_nth_consF //.
+    move=> /[dup] Hn /(mask_size_find_nth Hsz) Hi ?.
+    by rewrite IH. 
+  case: ifP.
+  - by rewrite ltnS leqn0=> /eqP -> /=. 
+  move=> /negP/negP; rewrite -leqNgt. 
+  case n=> [|{}n'] //.
+  rewrite find_nth_consT //. 
+  rewrite add1n !ltnS subn1 -pred_Sn=> _ Hn Hi /=.  
+  by apply/IH.     
+Qed.
 
 End MaskUtils.
 
