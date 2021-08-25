@@ -530,12 +530,6 @@ Section MaskUtils.
 Context {T : Type}.
 Implicit Types (s : seq T) (m : bitseq) (n : nat).
 
-(* Fixpoint mkmask (s : seq nat) m : bitseq := *)
-(*   match s with *)
-(*   | [::]    => m *)
-(*   | i :: s' => set_nth false (mkmask s' m) i true *)
-(*   end. *)
-
 Fixpoint mkmask f k n : bitseq :=
   (fix mkmask (s : seq nat) m := match s with
     | [::]    => m
@@ -620,7 +614,12 @@ Proof.
   admit. 
 Admitted.
 
-Lemma find_mkmask f n k :
+Lemma drop_mkmask f k n i :
+  {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) ->
+    drop (f i).+1 (mkmask f k n) = mkmask (fun j => f (i.+1 + j) - (f i).+1) (k - i) n.
+Proof. admit. Admitted.
+
+Lemma find_mkmask f k n :
   {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) ->
     0 < k -> k < n -> find id (mkmask f k n) = f 0.
 Proof. 
@@ -634,7 +633,6 @@ Proof.
   move=> /eqP; rewrite eqn0Ngt=> /negbNE Hk0; case: ifP.   
   - move=> /find_take ->; rewrite IH //.
     + by move=> ??; apply/Hm/ltnW. 
-    + 
     by apply/ltnW. 
   move=> /(has_nthP false)=> H. 
   exfalso; apply/H; exists (f 0).
@@ -645,6 +643,25 @@ Proof.
   + by apply/Hf.
   by rewrite /mkseq mem_map ?mem_iota ?add0n.
 Qed.
+
+Lemma find_mkmask_drop f k n i :
+  {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) ->
+    i < k < n -> find id (drop (f i).+1 (mkmask f k n)) = f (i.+1) - (f i).+1.
+Proof.
+  move=> Hf Hfi Hm Hi.
+  rewrite drop_mkmask; last first.
+  - exact/Hm.
+  - exact/Hfi.
+  - exact/Hf.
+  rewrite find_mkmask ?addn0 //. 
+  - move=> ???; rewrite ltn_sub2r //.
+    + admit. 
+    by apply/Hf; rewrite ltn_add2l.    
+  - move=> l m. admit.
+  - move=> j Hj. admit.
+  - admit. 
+  admit.
+Admitted.
 
 Lemma find_nth_mkmask f n k i :
   {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) -> 
@@ -661,7 +678,6 @@ Proof.
   have Hsz: f k <= size (mkmask f k n).
   - rewrite size_mkmask; first by apply/ltnW/Hm.
     by move=> ??; apply/Hm/ltnW.
-
   move: Hi=> /andP[]; rewrite ltnS=> Hi Hk.
   rewrite mkmaskS set_nthE drop_cat.
   rewrite size_rcons size_takel //.
@@ -684,8 +700,11 @@ Proof.
   case: ifP. 
   - move: Hi; rewrite leq_eqVlt=> /orP[|Hi] //. 
     + move=> /eqP /[dup] Hi ->.
-      move=> /find_take ->.
-      admit.
+      move=> /find_take ->; rewrite -Hi.
+      rewrite find_mkmask_drop //.
+      + admit.
+      + admit.
+      + admit.
     rewrite -IHk; first by move=> /find_take -> //.
     + apply/andP; split=> //; exact/ltnW.
     + by move=> ??; apply/Hm/ltnW.
@@ -706,7 +725,6 @@ Proof.
   - by apply/(ltn_sub2r Hik)/Hf.
   - by apply/Hf. 
   by rewrite /mkseq mem_map ?mem_iota ?add0n.
-
 Admitted.
 
 Lemma mkmask_mask (x : T) (n m : nat) (t : (n.+1).-tuple T) (u : m.-tuple T) (f : 'I_n.+1 -> 'I_m) :
