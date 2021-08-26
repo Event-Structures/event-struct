@@ -746,9 +746,60 @@ Proof.
 Qed.
 
 Lemma sorted_size_subn s n i : 
-  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i.+1 < size s < n -> 
-    size s - i.+1 < n - (nth 0 s i).+1.
-Proof. admit. Admitted.
+  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i < size s < n -> 
+    size s - i < n - (nth 0 s i).
+Proof. 
+  move=> Hs Ha.
+  pose f := fun i => size s - i.
+  pose g := fun i => size s - i.
+  pose p := fun i => i < size s.
+  have K: {in p, cancel f g}.
+  - move=> j; subst f g p=> /= ?.
+    rewrite subKn -?pred_Sn //.
+    exact/ltnW.
+  move=> /andP[Hi Hn].
+  rewrite -[i in nth 0 s i]K; last done.
+  have ->: size s - i = f i by done.
+  have: f i > 0.
+  - by subst f=> /=; rewrite subn_gt0.
+
+  have: size s - f i > 0.
+  - subst f=> /=. rewrite subKn=> //; last exact/ltnW.
+    admit.
+
+  elim (f i)=> [|k]; subst g=> //=.
+  move=> IH H _.
+  case: (0 < k)/idP; last first.
+  - move: H=> /[swap] /negP; rewrite -leqNgt leqn0=> /eqP ->.
+    admit.
+  move=> Hk.
+  apply/leq_ltn_trans; first apply/IH=> //.
+  - ssrnatlia.
+
+  have HH: nth 0 s (size s - k.+1) < nth 0 s (size s - k).  
+  - apply/sorted_ltn_nth=> //.
+    apply/andP; split=> //.
+    apply/ltn_sub2l=> //.
+    + ssrnatlia.
+    ssrnatlia.
+
+    (* + rewrite prednK //. *)
+    (*   + admit. *)
+    (*   apply/ltn_sub2l=> //. *)
+    (*   ssrnatlia. *)
+    (* rewrite prednK. *)
+    (* + exact/leq_subr. *)
+    (* move: H; ssrnatlia. *)
+    
+  apply/ltn_sub2l; rewrite ?ltnS //.
+  apply/(ltn_trans HH).
+  pose l := nth 0 s (size s - k).
+  move: Ha=> /allP Ha; move: (Ha l)=> H'.
+  apply/H'.
+  subst l. apply/mem_nth.
+  ssrnatlia.
+
+Admitted.
 
 Lemma find_nth_mkmask s n i :
   sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
@@ -763,7 +814,10 @@ Proof.
   - apply/andP; split=> //; exact/ltnW.
   - rewrite size_map size_drop; apply/andP; split.
     + by rewrite subn_gt0.
-    by apply/sorted_size_subn=> //; apply/andP.
+    rewrite !subnS ltn_predRL prednK; last first. 
+    - move: Hi; ssrnatlia.
+    apply/sorted_size_subn=> //. 
+    apply/andP; split=> //; ssrnatlia.
   - rewrite all_map; apply/allP=> j Hj /=.
     rewrite -subSn; last first.
     + apply/sorted_nth_drop_lt=> //.
