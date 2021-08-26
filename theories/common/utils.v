@@ -385,6 +385,16 @@ Lemma count_nth x p s :
   count p s = count p ([seq (nth x s) i | i <- iota 0 (size s)]).
 Proof. admit. Admitted.
 
+Lemma count_set_nth m i :
+   ~~ nth false m i -> count id (set_nth false m i true) = 1 + count id m.
+Proof. 
+  move: i; elim: m=> [|b {}m IH] i /=.
+  - by rewrite set_nth_nil addn0 /= => _; elim i.
+  elim i=> [|{}i IHi] => /=.
+  - by move=> /negbTE ->. 
+  move=> /IH ->; ssrnatlia. 
+Qed.
+
 Lemma mkseqS (f : nat -> T) n : 
   mkseq f n.+1 = rcons (mkseq f n) (f n).
 Proof. by rewrite /mkseq -addn1 iotaD add0n map_cat cats1. Qed.
@@ -396,7 +406,6 @@ Proof. admit. Admitted.
 Lemma find_take p s n : 
   has p (take n s) -> find p (take n s) = find p s. 
 Proof. admit. Admitted.
-
   
 End SeqUtils.
 
@@ -530,12 +539,6 @@ Section MaskUtils.
 Context {T : Type}.
 Implicit Types (s : seq T) (m : bitseq) (n : nat).
 
-Fixpoint mkmask f k n : bitseq :=
-  (fix mkmask (s : seq nat) m := match s with
-    | [::]    => m
-    | i :: s' => set_nth false (mkmask s' m) i true
-  end) (mkseq f k) (nseq n false).
-
 Lemma mask_size_find_nth s n m : 
    size m = size s -> n < size (mask m s) -> find_nth id m n < size m.
 Proof. by move=> /size_mask ->; rewrite (count_find_nth false). Qed.
@@ -569,162 +572,166 @@ Proof.
   by apply/IH.     
 Qed.
 
-Lemma mkmaskS f k n :
-  mkmask f k.+1 n = set_nth false (mkmask f k n) (f k) true.
+End MaskUtils.
+
+
+Section MkMask. 
+
+Context {T : Type}.
+Implicit Types (s : seq nat) (m : bitseq) (n : nat).
+
+Fixpoint mkmask s n : bitseq :=
+  (fix mkmask (s : seq nat) m := match s with
+    | [::]    => m
+    | i :: s' => set_nth false (mkmask s' m) i true
+  end) s (nseq n false).
+
+(* Lemma mkmaskS f k n : *)
+(*   mkmask f k.+1 n = set_nth false (mkmask f k n) (f k) true. *)
+(* Proof. admit. Admitted. *)
+
+Lemma mkmask_cons i s n :
+  mkmask (i::s) n = set_nth false (mkmask s n) i true.
 Proof. admit. Admitted.
 
-Lemma size_mkmask f k n :
-  (forall i, i < k -> f i < n) -> size (mkmask f k n) = n.
-Proof. 
-  elim k=> [|{}k IH] H //.
-  - by rewrite size_nseq. 
-  rewrite mkmaskS size_set_nth IH.
-  - by apply/maxn_idPr/H.
-  by move=> ??; apply/H/ltnW.
-Qed.
-
-Lemma nth_mkmask f k n i :
-  nth false (mkmask f k n) i = (i \in mkseq f k).
-Proof. 
-  move: n; elim k=> [|{}k IH] n.  
-  - by rewrite /mkmask /= nth_nseq inE; case: ifP.
-  rewrite mkmaskS nth_set_nth mkseqS mem_rcons in_cons /=. 
-  case: ifP=> //. 
-Qed.  
-
-Lemma count_set_nth m i :
-   ~~ nth false m i -> count id (set_nth false m i true) = 1 + count id m.
-Proof. 
-  move: i; elim: m=> [|b {}m IH] i /=.
-  - by rewrite set_nth_nil addn0 /= => _; elim i.
-  elim i=> [|{}i IHi] => /=.
-  - by move=> /negbTE ->. 
-  move=> /IH ->; ssrnatlia. 
-Qed.
-
-Lemma count_mkmask f k n :
-   count id (mkmask f k n) = k.
-Proof. 
-  elim k=> [|{}k IH]. 
-  - by rewrite count_nseq. 
-  rewrite mkmaskS count_set_nth ?IH //. 
-  rewrite nth_mkmask; apply/(nthP 0).
-  move=> [i]; rewrite size_mkseq=> H. 
-  rewrite nth_mkseq //.    
-  admit. 
-Admitted.
-
-Lemma drop_mkmask f k n i :
-  {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) ->
-    drop (f i).+1 (mkmask f k n) = mkmask (fun j => f (i.+1 + j) - (f i).+1) (k - i) n.
+Lemma size_mkmask s n :
+  (all (fun i => i < n) s) -> size (mkmask s n) = n.
 Proof. admit. Admitted.
+(*   elim k=> [|{}k IH] H //. *)
+(*   - by rewrite size_nseq.  *)
+(*   rewrite mkmaskS size_set_nth IH. *)
+(*   - by apply/maxn_idPr/H. *)
+(*   by move=> ??; apply/H/ltnW. *)
+(* Qed. *)
 
-Lemma find_mkmask f k n :
-  {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) ->
-    0 < k -> k < n -> find id (mkmask f k n) = f 0.
+Lemma nth_mkmask s n i :
+  nth false (mkmask s n) i = (i \in s).
+Proof. admit. Admitted.
+(*   move: n; elim k=> [|{}k IH] n.   *)
+(*   - by rewrite /mkmask /= nth_nseq inE; case: ifP. *)
+(*   rewrite mkmaskS nth_set_nth mkseqS mem_rcons in_cons /=.  *)
+(*   case: ifP=> //.  *)
+(* Qed.   *)
+
+Lemma count_mkmask s n :
+   count id (mkmask s n) = size s.
+Proof. admit. Admitted.
+(*   elim k=> [|{}k IH].  *)
+(*   - by rewrite count_nseq.  *)
+(*   rewrite mkmaskS count_set_nth ?IH //.  *)
+(*   rewrite nth_mkmask; apply/(nthP 0). *)
+(*   move=> [i]; rewrite size_mkseq=> H.  *)
+(*   rewrite nth_mkseq //.     *)
+(*   admit.  *)
+(* Admitted. *)
+
+Lemma drop_mkmask_lt s n j :
+  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> size s < n -> 
+    (all (fun i => j < i) s) ->
+      drop j.+1 (mkmask s n) = mkmask (map (fun k => k - j.+1) s) (n - j.+1).
 Proof. 
-  move=> Hf Hfi.
-  elim k=> [|{}k IH] Hm Hfk Hk //.
-  rewrite mkmaskS set_nthE -cats1 !find_cat has_cat /= orbT.
-  case: (k == 0)/eqP.
-  - move=> -> /=; rewrite take_nseq; last first.
-    - by apply/ltnW/Hm.
-    by rewrite has_nseq andbF size_nseq addn0. 
-  move=> /eqP; rewrite eqn0Ngt=> /negbNE Hk0; case: ifP.   
-  - move=> /find_take ->; rewrite IH //.
-    + by move=> ??; apply/Hm/ltnW. 
-    by apply/ltnW. 
-  move=> /(has_nthP false)=> H. 
-  exfalso; apply/H; exists (f 0).
-  - rewrite size_take size_mkmask; last first.
-    + by move=> ??; apply/Hm/ltnW. 
-    by rewrite Hm //; apply/Hf.
-  rewrite nth_take ?nth_drop ?subnKC ?nth_mkmask; last first.
-  + by apply/Hf.
-  by rewrite /mkseq mem_map ?mem_iota ?add0n.
+  elim s=> [|i {}s IH]. 
+  - by move=> /= ?? Hn ?; rewrite drop_nseq.
+  rewrite map_cons !mkmask_cons !set_nthE !drop_cat /=. 
+  rewrite path_sortedE; last exact/ltn_trans. 
+  move=> /andP[Ha Hs] /andP[Hi Hlt] Hn /andP[Hj Hjs].
+  rewrite size_rcons size_takel ?ltnS ?Hj; last first.
+  - rewrite size_mkmask //; exact/ltnW.
+  rewrite -IH //; last first.
+  - exact/ltnW.
+  rewrite drop_drop -subSn //. 
+  rewrite take_drop !subnK //; last exact/ltnW.
+  rewrite drop_rcons //.
+  rewrite size_takel ?size_mkmask //.  
+  by apply/ltnW.
 Qed.
 
-Lemma find_mkmask_drop f k n i :
-  {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) ->
-    i < k < n -> find id (drop (f i).+1 (mkmask f k n)) = f (i.+1) - (f i).+1.
-Proof.
-  move=> Hf Hfi Hm Hi.
-  rewrite drop_mkmask; last first.
-  - exact/Hm.
-  - exact/Hfi.
-  - exact/Hf.
-  rewrite find_mkmask ?addn0 //. 
-  - move=> ???; rewrite ltn_sub2r //.
-    + admit. 
-    by apply/Hf; rewrite ltn_add2l.    
-  - move=> l m. admit.
-  - move=> j Hj. admit.
-  - admit. 
-  admit.
-Admitted.
-
-Lemma find_nth_mkmask f n k i :
-  {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) -> 
-    i < k < n -> find_nth id (mkmask f k n) i = f i.
+Lemma drop_mkmask s n i (j := nth 0 s i) :
+  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i < size s < n -> 
+    drop j.+1 (mkmask s n) = mkmask (map (fun k => k - j.+1) (drop i.+1 s)) (n - j.+1).
 Proof. 
-  move=> Hf Hfi.
-  move: k; elim i=> [|{}i IH] k Hm /=.
-  - by move=> /andP[] ??; rewrite find_mkmask.
-  move=> Hi; rewrite (IH k); last first.
-  - by move: Hi=> /andP[] /ltnW -> ->. 
-  - by move=> j /Hm.
-  move: i Hi Hm IH; elim k=> [|{}k IHk] i Hi Hm IH.  
-  - by move: Hi; rewrite ltn0. 
-  have Hsz: f k <= size (mkmask f k n).
-  - rewrite size_mkmask; first by apply/ltnW/Hm.
-    by move=> ??; apply/Hm/ltnW.
-  move: Hi=> /andP[]; rewrite ltnS=> Hi Hk.
-  rewrite mkmaskS set_nthE drop_cat.
-  rewrite size_rcons size_takel //.
-  rewrite ltnS Hf //. 
-  rewrite -cats1 drop_cat size_takel //.
-  have: (f i).+1 <= f k.
-  - by apply/Hf. 
-  rewrite leq_eqVlt=> /orP[|]. 
-  - move=> /eqP /[dup] Hik ->.
-    rewrite ltnn subnn drop0 /= addn0.
-    have ->: i.+1 = k=> //.
-    move: Hi; rewrite leq_eqVlt=> /orP[/eqP->|] //. 
-    have: i < i.+1 by done. 
-    by move=> /Hf + /Hf; rewrite Hik=> /leq_gtF ->.
-  move=> /[dup] Hik ->.
-  rewrite !find_cat has_cat /= orbT addn0.
-  rewrite -(@subnKC (f i).+1 (f k)); last first.
-  - by apply/Hf.
-  rewrite (addnC (f i).+1 (f k - (f i).+1)) -take_drop.
-  case: ifP. 
-  - move: Hi; rewrite leq_eqVlt=> /orP[|Hi] //. 
-    + move=> /eqP /[dup] Hi ->.
-      move=> /find_take ->; rewrite -Hi.
-      rewrite find_mkmask_drop //.
-      + admit.
-      + admit.
-      + admit.
-    rewrite -IHk; first by move=> /find_take -> //.
-    + apply/andP; split=> //; exact/ltnW.
-    + by move=> ??; apply/Hm/ltnW.
-    by apply/IH. 
-  move=> /(has_nthP false). 
-  rewrite size_take size_drop size_mkmask; last first.
-  - by move=> j Hj; apply/Hm/ltnW. 
-  rewrite ltn_sub2r ?subnKC; last first.
-  - by apply/Hm.
-  - by apply/(ltn_trans Hik)/Hm.
-  - exact/Hf.
-  move: Hi; rewrite leq_eqVlt=> /orP[/eqP->|Hi] //. 
-  move=> Hh; exfalso; apply/Hh.
-  exists (f (i.+1) - (f i).+1).
-  - rewrite ?ltn_sub2r //.
-    + by apply/Hf. 
-  rewrite nth_take ?nth_drop ?subnKC ?nth_mkmask; last first.
-  - by apply/(ltn_sub2r Hik)/Hf.
-  - by apply/Hf. 
-  by rewrite /mkseq mem_map ?mem_iota ?add0n.
+  subst j; move: i; elim s=> [|j {}s IH] i //.
+  rewrite mkmask_cons /=.
+  rewrite path_sortedE; last exact/ltn_trans. 
+  move=> /andP[Hjs Hs] /andP[Hj Ha].
+  rewrite set_nthE drop_cat size_rcons size_takel; last first.
+  - rewrite size_mkmask //; exact/ltnW.
+  move=> /andP[Hi Hn].
+  have: j <= nth 0 (j :: s) i.
+  - move: Hi; case i=> [|{}i] //=. 
+    rewrite ltnS=> /(mem_nth 0) Hi; apply/ltnW.
+    by move: Hjs=> /allP=> H; move: (H (nth 0 s i) Hi). 
+  case: ifP=> [|_]; first ssrnatlia.
+  move: Hi; case i=> [|{}i] /=.
+  - move=> Hsz _; rewrite subnn !drop0.
+    apply/drop_mkmask_lt=> //; exact/ltnW.    
+  rewrite ltnS=> Hi Hjn. 
+  rewrite drop_drop subnK ?ltnS ?IH //.
+  apply/andP; split=> //; exact/ltnW.  
+Qed.
+
+Lemma find_mkmask s n :
+  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
+    0 < size s < n -> find id (mkmask s n) = nth 0 s 0.
+Proof. 
+  elim s=> [|i {}s IH] Hl //. (* Hm Hfk Hk //. *)
+  rewrite mkmask_cons set_nthE -cats1 !find_cat has_cat /= orbT.
+  move=> /andP[Hi Ha] Hs; case: (size s == 0)/eqP.
+  - move=> /size0nil -> /=.
+    rewrite take_nseq; last by exact/ltnW. 
+    by rewrite has_nseq andbF size_nseq addn0.
+  move=> /eqP; rewrite eqn0Ngt=> /negbNE Hs0. 
+  case: ifP=> [|_]; last first.
+  - by rewrite size_take size_mkmask ?Hi ?addn0.
+  move: Hl=> /=; rewrite lt_path_sortedE=> /andP[Hil Hl].
+  move=> H; exfalso; move: H.
+  move=> /[dup] /find_take; rewrite has_find=> ->.
+  rewrite size_take size_mkmask ?Hi ?addn0 //.
+  rewrite {}IH //; last first.
+  - apply/andP; split=> //; exact/ltnW.
+  move: Ha Hs Hs0 Hil Hl; case: s=> [|j {}s] //.  
+  move=> /= ??? /andP[] + ??. 
+  rewrite /Order.lt /=; ssrnatlia.
+Qed.
+
+Lemma find_nth_mkmask s n i :
+  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
+  (* {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) ->  *)
+    i < size s < n -> find_nth id (mkmask s n) i = nth 0 s i.
+Proof. 
+  move: s; elim i=> [|{}i IH] s /=.
+  - exact/find_mkmask.
+  move=> Hl Ha /andP[Hi Hs]. 
+  rewrite IH=> //; last first.
+  - apply/andP; split=> //; exact/ltnW.
+  rewrite drop_mkmask find_mkmask; last first.
+  - rewrite size_map size_drop; apply/andP; split.
+    + by rewrite subn_gt0.
+    rewrite -subSn ?subSS; last exact/ltnW.
+    apply/leq_sub; first exact/ltnW.
+    (* suff: (nth 0 s i <= i)%O by done. *)
+    (* apply/nth_count_le.  *)
+    (* - by move: Hl; rewrite lt_sorted_uniq_le=> /andP[]. *)
+    (* rewrite count_le_nth.  *)
+    admit.
+  - rewrite all_map; apply/allP=> j Hj /=.
+    rewrite -subSn ?subSS. 
+    + apply/leq_sub=> //; apply/ltnW. 
+      move: Ha=> /allP=> Ha; apply/(Ha j).
+      by apply/mem_drop/Hj.
+    admit.
+  - move: Hl; rewrite !ltn_sorted_uniq_leq=> /andP[Hu Hlt].
+    apply/andP; split.
+    + rewrite map_inj_in_uniq; first by apply/drop_uniq.
+      admit.
+    rewrite sorted_map; apply/drop_sorted; rewrite -sorted_map.  
+    admit. 
+  rewrite (nth_map 0) ?nth_drop ?addn0; last first.
+  - by rewrite size_drop subn_gt0.
+  rewrite subnKC //.
+  suff: (nth 0 s i < nth 0 s i.+1)%O by done.
+  apply/nth_count_lt; last by rewrite count_lt_nth. 
+  by move: Hl; rewrite lt_sorted_uniq_le=> /andP[].
 Admitted.
 
 Lemma mkmask_mask (x : T) (n m : nat) (t : (n.+1).-tuple T) (u : m.-tuple T) (f : 'I_n.+1 -> 'I_m) :
