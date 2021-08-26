@@ -406,6 +406,14 @@ Proof. admit. Admitted.
 Lemma find_take p s n : 
   has p (take n s) -> find p (take n s) = find p s. 
 Proof. admit. Admitted.
+
+Lemma sorted_subn (s : seq nat) n : 
+  sorted ltn s -> all (fun m => m >= n) s -> sorted ltn (map (subn^~ n) s).  
+Proof. admit. Admitted.
+
+Lemma sorted_nth_drop_lt (s : seq nat) i j : 
+  sorted ltn s -> j \in drop i.+1 s -> nth 0 s i < j. 
+Proof. admit. Admitted.
   
 End SeqUtils.
 
@@ -586,10 +594,6 @@ Fixpoint mkmask s n : bitseq :=
     | i :: s' => set_nth false (mkmask s' m) i true
   end) s (nseq n false).
 
-(* Lemma mkmaskS f k n : *)
-(*   mkmask f k.+1 n = set_nth false (mkmask f k n) (f k) true. *)
-(* Proof. admit. Admitted. *)
-
 Lemma mkmask_cons i s n :
   mkmask (i::s) n = set_nth false (mkmask s n) i true.
 Proof. admit. Admitted.
@@ -674,7 +678,7 @@ Lemma find_mkmask s n :
   sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
     0 < size s < n -> find id (mkmask s n) = nth 0 s 0.
 Proof. 
-  elim s=> [|i {}s IH] Hl //. (* Hm Hfk Hk //. *)
+  elim s=> [|i {}s IH] Hl //.
   rewrite mkmask_cons set_nthE -cats1 !find_cat has_cat /= orbT.
   move=> /andP[Hi Ha] Hs; case: (size s == 0)/eqP.
   - move=> /size0nil -> /=.
@@ -694,9 +698,13 @@ Proof.
   rewrite /Order.lt /=; ssrnatlia.
 Qed.
 
+Lemma sorted_size_subn s n i : 
+  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i.+1 < size s < n -> 
+    size s - i.+1 < n - (nth 0 s i).+1.
+Proof. admit. Admitted.
+
 Lemma find_nth_mkmask s n i :
   sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
-  (* {homo f : x y / x < y } -> injective f -> (forall i, i < k -> f i < n) ->  *)
     i < size s < n -> find_nth id (mkmask s n) i = nth 0 s i.
 Proof. 
   move: s; elim i=> [|{}i IH] s /=.
@@ -704,35 +712,28 @@ Proof.
   move=> Hl Ha /andP[Hi Hs]. 
   rewrite IH=> //; last first.
   - apply/andP; split=> //; exact/ltnW.
-  rewrite drop_mkmask find_mkmask; last first.
+  rewrite drop_mkmask ?find_mkmask //; last first.
+  - apply/andP; split=> //; exact/ltnW.
   - rewrite size_map size_drop; apply/andP; split.
     + by rewrite subn_gt0.
-    rewrite -subSn ?subSS; last exact/ltnW.
-    apply/leq_sub; first exact/ltnW.
-    (* suff: (nth 0 s i <= i)%O by done. *)
-    (* apply/nth_count_le.  *)
-    (* - by move: Hl; rewrite lt_sorted_uniq_le=> /andP[]. *)
-    (* rewrite count_le_nth.  *)
-    admit.
+    by apply/sorted_size_subn=> //; apply/andP.
   - rewrite all_map; apply/allP=> j Hj /=.
-    rewrite -subSn ?subSS. 
-    + apply/leq_sub=> //; apply/ltnW. 
-      move: Ha=> /allP=> Ha; apply/(Ha j).
-      by apply/mem_drop/Hj.
-    admit.
-  - move: Hl; rewrite !ltn_sorted_uniq_leq=> /andP[Hu Hlt].
-    apply/andP; split.
-    + rewrite map_inj_in_uniq; first by apply/drop_uniq.
-      admit.
-    rewrite sorted_map; apply/drop_sorted; rewrite -sorted_map.  
-    admit. 
+    rewrite -subSn; last first.
+    + apply/sorted_nth_drop_lt=> //. 
+    apply/leq_sub2r.
+    move: Ha=> /allP=> Ha; apply/(Ha j).
+    by apply/mem_drop/Hj.
+  - apply/sorted_subn=> //.
+    + by apply/drop_sorted.     
+    apply/allP=> j Hj.
+    by apply/sorted_nth_drop_lt. 
   rewrite (nth_map 0) ?nth_drop ?addn0; last first.
   - by rewrite size_drop subn_gt0.
   rewrite subnKC //.
   suff: (nth 0 s i < nth 0 s i.+1)%O by done.
   apply/nth_count_lt; last by rewrite count_lt_nth. 
   by move: Hl; rewrite lt_sorted_uniq_le=> /andP[].
-Admitted.
+Qed.
 
 Lemma mkmask_mask (x : T) (n m : nat) (t : (n.+1).-tuple T) (u : m.-tuple T) (f : 'I_n.+1 -> 'I_m) :
   {homo f : x y / x < y} -> injective f ->
