@@ -695,7 +695,6 @@ Qed.
 
 Lemma drop_mkmask s n i (j := nth 0 s i) :
   sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i < size s <= n ->
-  (* sorted (fun i j => i <= j) s -> (all (fun i => i < n) s) -> i < size s < n ->  *)
     drop j.+1 (mkmask s n) = mkmask (map (fun k => k - j.+1) (drop i.+1 s)) (n - j.+1).
 Proof. 
   subst j; move: i; elim s=> [|j {}s IH] i //.
@@ -720,7 +719,6 @@ Qed.
 
 Lemma find_mkmask s n :
   sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
-  (* sorted (fun i j => i <= j) s -> (all (fun i => i < n) s) -> *)
     0 < size s <= n -> find id (mkmask s n) = nth 0 s 0.
 Proof. 
   elim s=> [|i {}s IH] Hl //.
@@ -751,51 +749,35 @@ Lemma sorted_size_subn s n i :
   sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i.+1 < size s <= n -> 
     size s - i <= n - (nth 0 s i).
 Proof. 
-  move=> Hs Ha.
-
+  move=> Hs Ha /andP[Hi Hn].
   pose f := fun i => size s - i.
   pose g := fun i => size s - i.
   pose p := fun i => i < size s.
   have K: {in p, cancel f g}.
   - move=> j; subst f g p=> /= ?.
     rewrite subKn //; exact/ltnW.
-
-  move=> /andP[Hi Hn].
-  rewrite -[i in nth 0 s i]K; last first. 
-  - exact/ltnW. 
+  rewrite -[i in nth 0 s i]K; last exact/ltnW. 
   have ->: size s - i = f i by done.
-  have: f i > 0.
-  - subst f=> /=; rewrite subn_gt0; exact/ltnW. 
-
-  have: f i <= size s.
-  - exact/leq_subr.
-
+  have: 0 < f i by rewrite subn_gt0; exact/ltnW.
+  have: f i <= size s by exact/leq_subr.
   elim (f i)=> [|k]; subst g=> //=.
   move=> IH Hks.
   case: (0 < k)/idP; last first.
   - move=> /negP; rewrite -leqNgt leqn0=> /eqP-> _.
     rewrite subn1 nth_last ltn_subCr subn0.
-    move: (mem_last 0 s); rewrite in_cons=> /orP[/eqP->|] //. 
-    + ssrnatlia.
+    move: (mem_last 0 s); rewrite in_cons. 
+    move=> /orP[/eqP->|] //; first by ssrnatlia.
     by move: Ha=> /allP /[apply].
-
-  move=> Hk _.
-  apply/leq_ltn_trans; first apply/IH=> //.
-  - ssrnatlia. 
-
-  have HH: nth 0 s (size s - k.+1) < nth 0 s (size s - k).
+  move=> Hk _; move: (IH (ltnW Hks) Hk)=> Hkn.
+  apply/(leq_ltn_trans Hkn). 
+  have Hnth: nth 0 s (size s - k.+1) < nth 0 s (size s - k).
   - apply/sorted_ltn_nth=> //.
     apply/andP; split=> //.
     apply/ltn_sub2l=> //.
-    ssrnatlia.
-
-  apply/ltn_sub2l=> //. 
-  
-  apply/(ltn_trans HH).
-  rewrite -subn_gt0.
-  apply/(leq_trans Hk). apply/IH=> //. exact/ltnW.
-
-Qed.
+    ssrnatlia. 
+  apply/(ltn_sub2l _ Hnth)/(ltn_trans Hnth). 
+  by rewrite -subn_gt0; apply/(leq_trans Hk). 
+Qed.    
 
 Lemma find_nth_mkmask s n i :
   sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
