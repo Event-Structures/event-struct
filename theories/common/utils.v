@@ -338,27 +338,52 @@ Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
 Definition sub_down (x : S) (f : U -> T) : U -> S := 
   fun y => insubd x (f y).
 
-Definition sub_lift (x : S) (f : S -> U) : T -> U := 
-  fun y => f (insubd x y).
+Definition sub_lift (g : T -> U) (f : S -> U) : T -> U := 
+  fun x => odflt (g x) (omap f (insub x)).
+
+Definition compatible (g : T -> U) (f : S -> U) : Prop := 
+  forall x y, g x = f y -> P x. 
+
+Lemma sub_inj (x y : T) (px : P x) (py : P y) : 
+  Sub x px = Sub y py :> S -> x = y.
+Proof. by move=> H; move: (SubK S px) (SubK S py)=> <- <-; rewrite H. Qed.
 
 Lemma eq_sub_down x f y : 
   P (f y) -> val (sub_down x f y) = f y. 
 Proof. by rewrite /sub_down val_insubd=> ->. Qed.
 
-Lemma sub_liftT x f y Py : 
-  sub_lift x f y = f (Sub y Py).
+Lemma sub_liftT g f x Px : 
+  sub_lift g f x = f (Sub x Px).
 Proof. by rewrite /sub_lift /insubd insubT /=. Qed.
 
-Lemma sub_liftF x f y : 
-  ~ P y -> sub_lift x f y = f x.
+Lemma sub_liftF g f x : 
+  ~ P x -> sub_lift g f x = g x.
 Proof. move=> ?; rewrite /sub_lift /insubd insubF //=; exact/negP. Qed.
 
-Lemma sub_lift_inj x f : 
-  injective f -> {in P &, injective (sub_lift x f)}.
+Lemma sub_lift_inj g f : 
+  compatible g f -> injective g -> injective f -> injective (sub_lift g f).
 Proof. 
-  move=> H y z Hy Hz; rewrite !sub_liftT=> /H ?. 
-  rewrite -(SubK S Hy) -(SubK S Hz).
-  by apply/eqP/val_eqP.  
+  move=> Hc Hg Hf x y. 
+  case: (P x)/idP; case: (P y)/idP=> Hx Hy.
+  - rewrite !sub_liftT=> /Hf; exact/sub_inj.
+  - by rewrite sub_liftT sub_liftF // => /esym /Hc. 
+  - by rewrite sub_liftF // sub_liftT=> /Hc. 
+  rewrite !sub_liftF //; exact/Hg.
+Qed.
+
+Lemma sub_lift_homo g f (rT : rel T) (rU : rel U) : 
+  (forall x y, rT x y -> P y -> P x) -> 
+  (forall x y, ~ P y -> rU (f x) (g y)) ->
+  { homo g : x y / rT x y >-> rU x y } -> 
+  { homo f : x y / rT (val x) (val y) >-> rU x y } -> 
+  { homo (sub_lift g f) : x y / rT x y >-> rU x y }.
+Proof. 
+  move=> HrT HrU Hg Hf x y.
+  case: (P x)/idP; case: (P y)/idP=> Hx Hy.
+  - by rewrite !sub_liftT=> ?; apply/Hf; rewrite !SubK. 
+  - by rewrite sub_liftT sub_liftF // => ?; apply/HrU. 
+  - by move: Hx=> /[swap] /HrT /[apply].
+  rewrite !sub_liftF //; exact/Hg.
 Qed.
 
 End SubTypeUtils.
@@ -746,7 +771,7 @@ Proof.
 Qed.
 
 Lemma sorted_size_subn s n i : 
-  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i.+1 < size s <= n -> 
+  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i < size s <= n -> 
     size s - i <= n - (nth 0 s i).
 Proof. 
   move=> Hs Ha /andP[Hi Hn].
@@ -756,9 +781,9 @@ Proof.
   have K: {in p, cancel f g}.
   - move=> j; subst f g p=> /= ?.
     rewrite subKn //; exact/ltnW.
-  rewrite -[i in nth 0 s i]K; last exact/ltnW. 
+  rewrite -[i in nth 0 s i]K //. 
   have ->: size s - i = f i by done.
-  have: 0 < f i by rewrite subn_gt0; exact/ltnW.
+  have: 0 < f i by rewrite subn_gt0.
   have: f i <= size s by exact/leq_subr.
   elim (f i)=> [|k]; subst g=> //=.
   move=> IH Hks.
@@ -794,7 +819,7 @@ Proof.
     + by rewrite subn_gt0.
     rewrite !subnS -subn1 -subn1 leq_sub2r //. 
     apply/sorted_size_subn=> //. 
-    by apply/andP.
+    apply/andP; split=> //; exact/ltnW.
   - rewrite all_map; apply/allP=> j Hj /=.
     rewrite -subSn; last first.
     + apply/sorted_nth_drop_lt=> //.
@@ -813,24 +838,40 @@ Proof.
   by move: Hl; rewrite lt_sorted_uniq_le=> /andP[].
 Qed.
 
-Lemma mkmask_mask (x : T) (n m : nat) (t : (n.+1).-tuple T) (u : m.-tuple T) (f : 'I_n.+1 -> 'I_m) :
-  {homo f : x y / x < y} -> injective f ->
-  (forall i, f i < m) ->
-  (forall i, tnth t i = tnth u (f i)) -> 
-    mask (mkmask (sub_lift ord_max f) n.+1 m) u = t.
+Lemma mkmask_mask (x : T) (n m : nat) (t : (n.+1).-tuple T) (u : m.-tuple T) (f : 'I_n.+1 -> 'I_m) 
+                  (s := mkseq (sub_lift (fun i => m + i) f : nat -> nat) n.+1) :
+  {homo f : x y / x < y} -> injective f -> (forall i, f i < m) -> (forall i, tnth t i = tnth u (f i)) -> 
+    mask (mkmask s m) u = t.
 Proof. 
   move=> Hfh Hf Hm Hn.
-  have Hsz: size (mask (mkmask (sub_lift ord_max f) n.+1 m) u) = size t.
-  - by rewrite size_mask ?size_mkmask ?count_mkmask ?size_tuple.
+  have Ha: all (fun i : nat => i < m) s.
+  - apply/allP=> i /(nthP 0) [j] Hj <-.
+    have Hjn: j < n.+1.
+    + by apply/(leq_trans Hj); rewrite size_mkseq.
+    by rewrite nth_mkseq // sub_liftT.
+  have Hsz: size (mask (mkmask s m) u) = size t.
+  - rewrite size_mask ?size_mkmask ?count_mkmask ?size_tuple //.
+    apply/mkseq_uniq/sub_lift_inj.
+    + by move=> {}x {}y; move: (valP (f y))=> /[swap] /= <-; ssrnatlia.
+    + by move=> ??; apply/addnI. 
+    by move=> ???; apply/Hf/val_inj. 
   apply/(@eq_from_nth T x)=> //; rewrite Hsz size_tuple=> i Hi.
   pose I := Ordinal Hi; move: (Hn I).
   rewrite !(tnth_nth x)=> ->. 
-  rewrite nth_mask ?find_nth_mkmask ?sub_liftT //.  
-  - admit. 
-  - admit. 
-  - admit.
-  by rewrite size_mkmask ?size_tuple.
-Admitted.
+  rewrite nth_mask ?find_nth_mkmask //. 
+  - by rewrite nth_mkseq ? sub_liftT //.
+  - apply/homo_sorted; last by exact/iota_ltn_sorted.
+    apply/sub_lift_homo=> //=; [by ssrnatlia| ..]; last first.
+    + by move=> ?? /=; rewrite ltn_add2l.
+    move=> {}x {}y /= /negP; rewrite -leqNgt=> ?.
+    rewrite -[val (f x)]addn0 -addnS.
+    apply/leq_add; last by ssrnatlia.
+    by apply/ltnW; move: (valP (f x)).  
+  - rewrite size_mkseq; apply/andP; split=> //.
+    move: Hf=> /leq_card /=. 
+    by rewrite !card_ord.
+  by rewrite size_mkmask ?size_tuple //.
+Qed.
 
 End MaskUtils.
 
