@@ -239,6 +239,15 @@ Qed.
 End OptionUtils.
 
 
+Section TupleUtils.
+Context {T : Type}.
+
+Lemma eq_from_tuple {s1 s2 : seq T} (eq_sz : size s1 = size s2) : 
+  tcast eq_sz (in_tuple s1) = in_tuple s2 -> s1 = s2.
+Proof. admit. Admitted.
+
+End TupleUtils.
+
 Section CountableUtils. 
 Context {T : countType}.
 
@@ -838,16 +847,15 @@ Proof.
   by move: Hl; rewrite lt_sorted_uniq_le=> /andP[].
 Qed.
 
-Lemma mkmask_mask (x : T) (n m : nat) (t : (n.+1).-tuple T) (u : m.-tuple T) (f : 'I_n.+1 -> 'I_m) 
-                  (s := mkseq (sub_lift (fun i => m + i) f : nat -> nat) n.+1) :
+Lemma mkmask_mask (n m : nat) (t : n.-tuple T) (u : m.-tuple T) (f : 'I_n -> 'I_m) 
+                  (s := mkseq (sub_lift (fun i => m + i) f : nat -> nat) n) :
   {homo f : x y / x < y} -> injective f -> (forall i, f i < m) -> (forall i, tnth t i = tnth u (f i)) -> 
     mask (mkmask s m) u = t.
 Proof. 
   move=> Hfh Hf Hm Hn.
   have Ha: all (fun i : nat => i < m) s.
-  - apply/allP=> i /(nthP 0) [j] Hj <-.
-    have Hjn: j < n.+1.
-    + by apply/(leq_trans Hj); rewrite size_mkseq.
+  - apply/allP=> i /(nthP 0) [j]. 
+    rewrite size_mkseq=> Hj <-.
     by rewrite nth_mkseq // sub_liftT.
   have Hsz: size (mask (mkmask s m) u) = size t.
   - rewrite size_mask ?size_mkmask ?count_mkmask ?size_tuple //.
@@ -855,25 +863,30 @@ Proof.
     + by move=> {}x {}y; move: (valP (f y))=> /[swap] /= <-; ssrnatlia.
     + by move=> ??; apply/addnI. 
     by move=> ???; apply/Hf/val_inj. 
-  apply/(@eq_from_nth T x)=> //; rewrite Hsz size_tuple=> i Hi.
-  pose I := Ordinal Hi; move: (Hn I).
-  rewrite !(tnth_nth x)=> ->. 
-  rewrite nth_mask ?find_nth_mkmask //. 
-  - by rewrite nth_mkseq ? sub_liftT //.
+  have Hsz': size (mask (mkmask s m) u) = n.
+  - by rewrite Hsz size_tuple.
+  apply/(@eq_from_tuple _ _ _ Hsz).
+  rewrite tvalK; apply/eq_from_tnth.
+  move=> i; rewrite tcastE /tnth /=.
+  have Hi: i < n by move: i=> []; rewrite size_tuple.
+  rewrite nth_mask ?find_nth_mkmask=> //; last first.
+  - by rewrite size_mkmask ?size_tuple //.
+  - rewrite size_mkseq; apply/andP; split=> //.
+    move: Hf Hi=> /leq_card /=. 
+    by rewrite !card_ord.
   - apply/homo_sorted; last by exact/iota_ltn_sorted.
     apply/sub_lift_homo=> //=; [by ssrnatlia| ..]; last first.
     + by move=> ?? /=; rewrite ltn_add2l.
-    move=> {}x {}y /= /negP; rewrite -leqNgt=> ?.
-    rewrite -[val (f x)]addn0 -addnS.
-    apply/leq_add; last by ssrnatlia.
-    by apply/ltnW; move: (valP (f x)).  
-  - rewrite size_mkseq; apply/andP; split=> //.
-    move: Hf=> /leq_card /=. 
-    by rewrite !card_ord.
-  by rewrite size_mkmask ?size_tuple //.
+    move=> {}x {}y /= /negP; rewrite -leqNgt=> Hyn.
+    rewrite -[val (f x)]addn0 -addnS; apply/leq_add. 
+    - by apply/ltnW; move: (valP (f x)). 
+    by apply/(leq_trans _ Hyn); ssrnatlia.
+  rewrite -tnth_nth tcastE esymK Hn. 
+  have ->: cast_ord (size_tuple t) i = Ordinal Hi by exact/val_inj.
+  by subst s; rewrite nth_mkseq // sub_liftT // -tnth_nth.
 Qed.
 
-End MaskUtils.
+End MkMask.
 
 
 (* TODO: move to `inhtype.v` *)

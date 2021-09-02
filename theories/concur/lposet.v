@@ -1283,46 +1283,19 @@ Proof.
     move=> e1 e2; subst f=> /= H.
     admit.  
 
-  move: n t; clear t n.
-  case=> [|n] t [[f Hf]].
-  - by move: (tuple0 t)=> /= -> /=; exact/sub0seq. 
-  apply/subseqP.
-  pose g := sub_lift ord_max f : nat -> nat.  
-  pose s := map g (iota 0 n.+1).
+  move=> [[f Hf]]; apply/subseqP.
+  pose f' := (fun i => val (f i)) : 'I_n -> nat.
+  pose g  := sub_lift (fun i => (m + i)%N) f' : nat -> nat.  
+  pose s  := mkseq g n.
   exists (mkmask s m).
   - rewrite size_mkmask ?size_nseq ?size_tuple // all_map /=.
-    subst g=> /=; rewrite sub_liftT.
-    apply/andP; split=> //; apply/allP=> i /=.
-    rewrite mem_iota addnC addn1=> /andP[??]. 
+    subst g f'=> /=; apply/allP=> i /=.
+    rewrite mem_iota addnC addn0=> /andP[??]. 
     by rewrite sub_liftT.
-  apply/esym; subst s.
-  rewrite -[in iota 0 n.+1](size_tuple t). 
-  rewrite -[m in mkmask _ m](size_tuple u).
-  pose l := lab (f ord_max) : L.
-  rewrite (@mkmask_mask L l)=> //.
-  - move=> x y /=; rewrite !sub_liftT.
-    + admit. 
-    + admit. 
-    move=> Hy Hx H. 
-    move: (sca_monotone Hf)=> Hm.
-    have HH: (Ordinal Hx < Ordinal Hy :> eventType t).
-    - done. 
-    by move: (Hm (Ordinal Hx) (Ordinal Hy) HH).
-  - move=> x y /=; rewrite !mem_iota !add0n. 
-    move=> /andP[?] + /andP[?] + /val_inj/(sub_lift_inj Hf).
-    by rewrite !size_tuple=> ?? H; apply/H=> //=.
-  - by rewrite size_tuple=> i Hi; rewrite sub_liftT size_tuple.  
-  move=> i=> /=.
-  case: (i < n.+1)/idP; last first.
-  - move=> Hi; rewrite sub_liftF //.
-    move: Hi=> /negP; rewrite -leqNgt=> Hi.
-    rewrite nth_default; last by rewrite size_tuple.
-    by rewrite -[nth l u (f ord_max)]tnth_nth -tlabE.
-  move=> Hi; rewrite sub_liftT //=.
-  pose e := Ordinal Hi.
-  rewrite -[nth l u (f e)]tnth_nth.
-  rewrite -[nth l t e]tnth_nth.
-  by rewrite -tlabE -tlabE lab_preserv. 
+  apply/esym; subst s. 
+  rewrite (@mkmask_mask L _ _ t)=> //.
+  - by move=> ???; apply/(sca_monotone Hf).
+  by move=> ?; rewrite -tlabE -tlabE lab_preserv.
 
 Qed.
 
