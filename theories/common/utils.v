@@ -255,9 +255,18 @@ End OptionUtils.
 Section TupleUtils.
 Context {T : Type}.
 
+(* TODO: duplicate of https://github.com/math-comp/math-comp/pull/777 *)
+Lemma val_tcast m n (eq_mn : m = n) (t : m.-tuple T) :
+  tcast eq_mn t = t :> seq T.
+Proof. by case: n / eq_mn. Qed.
+
 Lemma eq_from_tuple {s1 s2 : seq T} (eq_sz : size s1 = size s2) : 
   tcast eq_sz (in_tuple s1) = in_tuple s2 -> s1 = s2.
-Proof. admit. Admitted.
+Proof. 
+  have: s2 = val (in_tuple s2) by done.
+  move=> /[swap] + ->; move=> <-. 
+  by rewrite /val /= val_tcast. 
+Qed.
 
 End TupleUtils.
 
