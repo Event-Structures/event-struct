@@ -193,6 +193,19 @@ Qed.
 
 End Swap.
 
+Section NatUtils. 
+Implicit Types (n m : nat).
+
+Lemma ltn_total n m : 
+  [|| n == m, n < m | m < n].
+Proof. 
+  move: (leq_total n m).
+  rewrite [n <= m]leq_eqVlt [m <= n]leq_eqVlt.
+  by rewrite orbA orbAC orbC eq_sym !orbA orbb.
+Qed.
+
+End NatUtils.
+
 Section OptionUtils. 
 
 Context {T rT : Type}.
@@ -344,8 +357,8 @@ Section SubTypeUtils.
 
 Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
 
-Definition sub_down (x : S) (f : U -> T) : U -> S := 
-  fun y => insubd x (f y).
+Definition sub_down (g : U -> S) (f : U -> T) : U -> S := 
+  fun x => insubd (g x) (f x).
 
 Definition sub_lift (g : T -> U) (f : S -> U) : T -> U := 
   fun x => odflt (g x) (omap f (insub x)).
@@ -357,9 +370,35 @@ Lemma sub_inj (x y : T) (px : P x) (py : P y) :
   Sub x px = Sub y py :> S -> x = y.
 Proof. by move=> H; move: (SubK S px) (SubK S py)=> <- <-; rewrite H. Qed.
 
-Lemma eq_sub_down x f y : 
-  P (f y) -> val (sub_down x f y) = f y. 
-Proof. by rewrite /sub_down val_insubd=> ->. Qed.
+Lemma sub_downT y g f x : 
+  P (f x) -> sub_down g f x = insubd y (f x). 
+Proof. by move=> ?; rewrite /sub_down /insubd insubT //. Qed.
+
+Lemma val_sub_downT g f x : 
+  P (f x) -> val (sub_down g f x) = f x. 
+Proof. by rewrite /sub_down val_insubd; case: ifP. Qed.
+
+Lemma sub_downF g f x : 
+  ~ P (f x) -> sub_down g f x = g x. 
+Proof. move=> ?; rewrite /sub_down /insubd insubF //; exact/negP. Qed.
+
+Lemma val_sub_downF g f x : 
+  ~ P (f x) -> val (sub_down g f x) = val (g x). 
+Proof. by rewrite /sub_down val_insubd; case: ifP. Qed.
+
+Lemma sub_down_inj_inT (g : U -> S) f (pU := fun x => f x \in P) : 
+  injective f -> { in pU &, injective (sub_down g f) }.
+Proof. 
+  subst pU; move=> Hf x y; rewrite /in_mem /= => Hx Hy.
+  by rewrite /sub_down /insubd !insubT /= => /sub_inj/Hf. 
+Qed.
+
+Lemma sub_down_inj_inF (g : U -> S) f (pU := fun x => f x \notin P) : 
+  injective g -> { in pU &, injective (sub_down g f) }.
+Proof. 
+  subst pU; move=> Hg x y; rewrite /in_mem /= => /negP Hx /negP Hy.
+  rewrite !sub_downF //; exact/Hg.
+Qed.
 
 Lemma sub_liftT g f x Px : 
   sub_lift g f x = f (Sub x Px).
@@ -579,16 +618,29 @@ Proof.
   by move: H=> /negP/negP; rewrite -leqNgt.
 Qed.
 
-Lemma find_nth_leq p s n m : 
-  n <= m -> find_nth p s n <= find_nth p s m.
-Proof. 
-  elim: m=> [|{}m IH]. 
-  - by rewrite leqn0=> /eqP ->.
-  rewrite leq_eqVlt=> /orP[/eqP->|] //=.
-  move=> /ltnSE /IH H; apply/(leq_trans H). 
-  rewrite -addn1 -addnA; exact/leq_addr.
+Lemma find_nth_ltn p s n m :
+  n < m -> find_nth p s n < find_nth p s m.
+Proof.
+  elim: m=> [|{}m IH] // /ltnSE.
+  rewrite leq_eqVlt=> /orP[/eqP->|/IH] /=.
+  - exact/leq_addr. 
+  move=> H; apply/(ltn_trans H); exact/leq_addr. 
 Qed.
 
+Lemma find_nth_leq p s n m : 
+  n <= m -> find_nth p s n <= find_nth p s m.
+Proof.
+  rewrite leq_eqVlt=> /orP[/eqP->|] //. 
+  by move=> ?; apply/ltnW/find_nth_ltn.
+Qed.
+
+Lemma find_nth_inj p s :
+  injective (find_nth p s).
+Proof. 
+  move=> i j; move: (ltn_total i j). 
+  by move=> /orP[/eqP|/orP[]] // /(find_nth_ltn p s); ssrnatlia.
+Qed.  
+  
 Lemma find_nth_consT p x xs n :
   p x -> find_nth p (x::xs) n = if n is n'.+1 then 1 + find_nth p xs n' else 0.
 Proof. 

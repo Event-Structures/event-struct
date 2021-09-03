@@ -1268,7 +1268,9 @@ Proof.
       - by exists (fun e => match efalse e with end).
       constructor; exists f; repeat constructor; by move=> ?. 
     move=> /subseqP=> [[b Hsz Hb]].
-    pose f := sub_down ord_max (find_nth id b) : eventType t -> eventType u.
+    pose g := (find_nth id b).
+    pose h := (fun => ord_max) : eventType t -> eventType u.
+    pose f := sub_down h g.
     pose l := (@lab L (eventType u) ord_max) : L.
     have He: forall (e : eventType t), (find_nth id b e < m.+1)%N. 
     + move=> e; rewrite -[m.+1](size_tuple u) -Hsz. 
@@ -1276,12 +1278,11 @@ Proof.
     constructor; unshelve eexists; [exists f|..]; repeat constructor; move=>/=.
     + move=> e; rewrite !tlabE. 
       rewrite !(tnth_nth l) Hb (nth_mask l e Hsz).
-      by subst f; rewrite eq_sub_down //. 
-    + move=> e1 e2; rewrite !tleE.
-      subst f; rewrite !eq_sub_down //. 
-      exact/find_nth_leq.
-    move=> e1 e2; subst f=> /= H.
-    admit.  
+      by rewrite val_sub_downT //. 
+    + move=> e1 e2; rewrite !tleE !val_sub_downT //; exact/find_nth_leq.
+    move=> e1 e2=> /=.
+    apply/(@sub_down_inj_inT _ _ _ _ h g)=> //; subst g; rewrite ?/in_mem //=.
+    by move=>?? /find_nth_inj/val_inj. 
 
   move=> [[f Hf]]; apply/subseqP.
   pose f' := (fun i => val (f i)) : 'I_n -> nat.
