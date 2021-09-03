@@ -25,15 +25,27 @@ From eventstruct Require Import utils.
 (*                               All conventional order notations are         *)
 (*                               defined as well.                             *)
 (*                                                                            *)
-(*           LPoset.hom E1 E2 == a homomorphism between lposet types E1 and   *)
-(*                               E1 and E2, that is a label preserving        *) 
-(*                               monotone function.                           *)
-(*          LPoset.Hom.id     == identity homomorphism.                       *)
-(*          LPoset.Hom.tr f g == composition of homomorphisms (g \o f).       *)
+(*      LPoset.hom E1 E2 == homomorphism between lposets E1 and E2, that is   *)
+(*                          label preserving monotone function.               *)
+(*      LPoset.bij E1 E2 == bijective homomorphism between lposets E1 and E2. *)
+(*      LPoset.emb E1 E2 == embedding between lposets E1 and E2, that is      *)
+(*                          order-reflecting homomorphism.                    *)
+(*      LPoset.iso E1 E2 == isomorphism between lposets E1 and E2, that is    *)
+(*                          bijective order-reflecting homomorphism.          *)
 (*                                                                            *)
 (* Additionally, this file provides notations for homomorphisms which can     *)
-(* be used by importing corresponding module: `Import LPoset.Hom.Syntax`.     *)
+(* be used by importing corresponding module: Import LPoset.Mod.Syntax        *)
+(* for Mod in {Hom, Bij, Emb, Iso}.                                           *)
 (*                   E1 ~> E2 == homomorphism.                                *)
+(*                   E1 ≃> E2 == bijective homomorphism.                      *)
+(*                   E1 ≈> E2 == embedding.                                   *)
+(*                   E1 ~= E2 == isomorphism.                                 *)
+(*                                                                            *)
+(* Each module Mod in {Hom, Bij, Emb, Iso} also defines combinators which     *)
+(* can be used to build morphisms compositonally.                             *)
+(*          LPoset.Mod.id     == identity morphism.                           *)
+(*          LPoset.Mod.sy f   == inverse morphisms (for Iso only).            *)
+(*          LPoset.Mod.tr f g == composition of morphisms (g \o f).           *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -132,7 +144,9 @@ End Def.
 Prenex Implicits lab ca sca.
 
 Module Export Hom.
-Section Hom. 
+
+Module Hom.
+Section ClassDef. 
 
 (* TODO: homomorphism between pomsets labelled by different labels? *)
 Context {L : Type} (E1 E2 : eventType L).
@@ -162,15 +176,19 @@ Definition clone f c of phant_id class c := @Pack f c.
 (*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
 (*   fun m => Pack (@Class E L b m). *)
 
-End Hom.
+End ClassDef.
 
 Module Export Exports.
 Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 End Exports.
 
+End Hom.
+
+Export Hom.Exports.
+
 Module Export Syntax. 
-Notation hom := type.
+Notation hom := Hom.type.
 Notation "E1 ~> E2" := (hom E1 E2) (at level 50) : pomset_scope.
 End Syntax. 
 
@@ -196,20 +214,361 @@ Definition id {E : eventType L} : E ~> E.
   by exists id; do 2 constructor=> //. 
 Defined.
 
+Lemma idE {E : eventType L} : 
+  Hom.apply (id : E ~> E) = ssrfun.id.
+Proof. done. Qed.
+
 Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
   move=> f g; exists (g \o f); do 2 constructor=> /=.
   - by move=> e; rewrite !lab_preserv.
   by move=> e1 e2 /(monotone f) /(monotone g).
 Defined.
 
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~> E2) (g : E2 ~> E3) : 
+   Hom.apply (tr f g) = g \o f.
+Proof. done. Qed.
+
 End Cat.
 
+Global Opaque id tr.
+
 End Hom.
+
+Module Export Bij.
+
+Module Bij.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  g : E2 -> E1;
+  _ : cancel f g;
+  _ : cancel g f;
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Hom.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Hom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := Hom.Pack class.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Hom.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+Canonical homType.
+End Exports.
+
+End Bij.
+
+Export Bij.Exports.
+
+Section Def.
+Context {L : Type} {E1 E2 : eventType L} (f : Bij.type E1 E2).
+
+Definition inv : E2 -> E1 := Bij.g (Bij.class f).
+
+End Def.
+
+Module Export Syntax. 
+Notation bij := Bij.type.
+Notation "E1 ≃> E2" := (bij E1 E2) (at level 50) : pomset_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ≃> E2).
+
+Lemma inv_can : 
+  cancel f (inv f).
+Proof. by case: f => ? [[? []]] ???. Qed.
+
+Lemma can_inv : 
+  cancel (inv f) f.
+Proof. by case: f => ? [[? []]] ???. Qed.
+
+Lemma event_bij :
+  bijective f.
+Proof. by case: f => ? [[? []]] g ? ?; exists g. Qed.
+
+End Theory.
+End Theory.
+
+Section Cat.
+Context {L : Type}.
+
+Definition id {E : eventType L} : E ≃> E.
+  by exists id; do 1 constructor=> //; exists id. 
+Defined.
+
+Lemma idE {E : eventType L} : 
+  Bij.apply (id : E ≃> E) = ssrfun.id.
+Proof. done. Qed.
+
+Definition tr {E1 E2 E3 : eventType L} : (E1 ≃> E2) -> (E2 ≃> E3) -> (E1 ≃> E3).
+  move=> f g; exists (Hom.tr f g); constructor. 
+  - by case: (Hom.tr f g). 
+  case: f=> [? [? []]]; case: g=> [? [? []]].
+  by move=> g ?? h ??; exists (h \o g)=> /=; apply /can_comp.
+Defined.
+
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≃> E2) (g : E2 ≃> E3) : 
+   Bij.apply (tr f g) = g \o f.
+Proof. done. Qed.
+
+End Cat.
+
+Global Opaque id tr.
+
+End Bij.
+
+Module Export Emb.
+
+Module Emb.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  _ : forall e1 e2, f e1 <= f e2 -> e1 <= e2;
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Hom.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Hom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := Hom.Pack class.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Hom.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+Canonical homType.
+End Exports.
+
+End Emb.
+
+Export Emb.Exports.
+
+Module Export Syntax. 
+Notation emb := Emb.type.
+Notation "E1 ≈> E2" := (emb E1 E2) (at level 50) : pomset_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
+
+Lemma ord_refl e1 e2 :
+  (e1 <= e2) = (f e1 <= f e2).
+Proof.
+  apply/idP/idP; first exact/(monotone f).
+  by case: f=> ? [[? []]] => /= /[apply]. 
+Qed.
+
+End Theory.
+End Theory.
+
+Section Cat.
+Context {L : Type}.
+
+Definition id {E : eventType L} : E ≈> E.
+  by exists id; do 1 constructor=> //; exists id. 
+Defined.
+
+Lemma idE {E : eventType L} : 
+  Emb.apply (id : E ≈> E) = ssrfun.id.
+Proof. done. Qed.
+
+Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3).
+  move=> f g; exists (Hom.tr f g); constructor. 
+  - by case: (Hom.tr f g). 
+  by constructor=> e1 e2 /=; do 2 rewrite -(ord_refl).
+Defined.
+
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≈> E2) (g : E2 ≈> E3) : 
+   Emb.apply (tr f g) = g \o f.
+Proof. done. Qed.
+
+End Cat.
+
+Global Opaque id tr.
+
+End Emb.
+
+Module Export Iso.
+
+Module Iso.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Bij.class_of f; 
+  mixin : Emb.mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Bij.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := Hom.Pack class.
+Definition bijType := Bij.Pack class.
+Definition embType := Emb.Pack (Emb.Class class (mixin class)).
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Bij.class_of.
+Coercion mixin : class_of >-> Emb.mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+Coercion bijType : type >-> Bij.type.
+Coercion embType : type >-> Emb.type.
+Canonical homType.
+Canonical bijType.
+Canonical embType.
+End Exports.
+
+End Iso.
+
+Export Iso.Exports.
+
+Module Export Syntax. 
+Notation iso := Iso.type.
+Notation "E1 ~= E2" := (iso E1 E2) (at level 50) : pomset_scope.
+End Syntax. 
+
+Section Cat.
+Context {L : Type}.
+
+Definition id {E : eventType L} : E ~= E.
+  by exists Bij.id; constructor=> //; case: Bij.id. 
+Defined.
+
+Lemma idE {E : eventType L} : 
+  Iso.apply (id : E ~= E) = ssrfun.id.
+Proof. done. Qed.
+
+Definition sy {E1 E2 : eventType L} : (E1 ~= E2) -> (E2 ~= E1).
+  move=> [] f [[]] [] [] HL HM [] g HK HK' [] HR.
+  exists g; repeat constructor.
+  - by move=> e; rewrite -{2}[e]HK' !HL.
+  - by move=> e1 e2; rewrite -{1}[e1]HK' -{1}[e2]HK'; exact/HR.
+  - by exists f.
+  move=> e1 e2; rewrite -{2}[e1]HK' -{2}[e2]HK'; exact/HM.
+Defined.
+
+Lemma syE {E1 E2 : eventType L} (f : E1 ~= E2) : 
+  Iso.apply (sy f) = Bij.inv f.
+Proof. by move: f=> [] f [[]] [[]] ?? [] g ?? [] ?; rewrite /inv=> //=. Qed.
+
+Definition tr {E1 E2 E3 : eventType L} : (E1 ~= E2) -> (E2 ~= E3) -> (E1 ~= E3).
+  move=> f g; exists (Bij.tr f g); constructor.
+  - by case: (Bij.tr f g).
+  rewrite Hom.trE.
+  have ->: (g \o f = Emb.tr f g) by done.
+  by case: (Emb.tr f g)=> ? []. 
+Defined.
+
+Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~= E2) (g : E2 ~= E3) : 
+   Iso.apply (tr f g) = g \o f.
+Proof. done. Qed.
+
+Definition of_homs {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~> E1) : 
+  cancel f g -> cancel g f -> (E1 ~= E2).
+(* --- *)
+  move=> HK HK'; exists f.
+  repeat constructor; try by move: HK HK'; case: f=> ? [[]]. 
+  - by exists g.
+  move=> e1 e2; rewrite -{2}[e1]HK -{2}[e2]HK.
+  by move: HK HK'; case: g=> ? [[? H]] ?? /= => /H. 
+Defined.
+
+Lemma of_homsE {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~= E1) 
+               (K : cancel f g) (K' : cancel g f) : 
+   Iso.apply (of_homs K K') = f.
+Proof. done. Qed.
+
+Lemma of_homs_invE {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~= E1) 
+                   (K : cancel f g) (K' : cancel g f) : 
+   Bij.inv (of_homs K K') = g.
+Proof. done. Qed.
+
+End Cat.
+
+Global Opaque id sy tr of_homs.
+
+End Iso.
+
+Notation hom := Hom.type.
+Notation bij := Bij.type.
+Notation emb := Emb.type.
+Notation iso := Iso.type.
 
 End LPoset.
 
 Export LPoset.LPoset.Exports.
-Export LPoset.Hom.Exports.
 Export LPoset.Def.
-Export LPoset.Hom.Theory.
 
+Export LPoset.Hom.Hom.Exports.
+Export LPoset.Hom.Theory.
