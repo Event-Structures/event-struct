@@ -920,10 +920,10 @@ Proof.
 Qed.
 
 Definition lposetMixin :=
-  @LPoset.LPoset.Mixin E (Order.POrder.class porderType) L lab. 
+  @lPoset.lPoset.Mixin E (Order.POrder.class porderType) L lab. 
 
 Canonical lposetType := 
-  @LPoset.LPoset.Pack L E (LPoset.LPoset.Class lposetMixin).
+  @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lposetMixin).
 
 Definition elem_porfMixin := 
   @Elem.EventStruct.Mixin E L _ fin_cause_ca.

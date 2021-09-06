@@ -7,15 +7,15 @@ From eventstruct Require Import utils.
 (* This file provides a theory of pomsets.                                    *)
 (* The hierarchy of pomsets is based mathcomp's porderType.                   *)
 (*                                                                            *)
-(*     LPoset.eventStruct E L == the type of partially ordered sets over      *) 
+(*     lPoset.eventStruct E L == the type of partially ordered sets over      *) 
 (*                               elements of type E labeled by type L.        *)
-(*                               LPoset of partial causality order (<=) and   *) 
+(*                               lPoset of partial causality order (<=) and   *) 
 (*                               labelling function lab.                      *)
 (*                               We use the name `eventStruct` to denote the  *)
 (*                               lposet structure itself (as opposed to       *)
 (*                               `eventType`) and for uniformity with the     *)
 (*                               theory of event structures.                  *)
-(*         LPoset.eventType L == a type of events with labels of type L,      *)
+(*         lPoset.eventType L == a type of events with labels of type L,      *)
 (*                               i.e. a type equipped with canonical labelled *)
 (*                               poset structure instance.                    *)
 (*                        lab == labelling function.                          *)
@@ -25,16 +25,16 @@ From eventstruct Require Import utils.
 (*                               All conventional order notations are         *)
 (*                               defined as well.                             *)
 (*                                                                            *)
-(*      LPoset.hom E1 E2 == homomorphism between lposets E1 and E2, that is   *)
+(*      lPoset.hom E1 E2 == homomorphism between lposets E1 and E2, that is   *)
 (*                          label preserving monotone function.               *)
-(*      LPoset.bij E1 E2 == bijective homomorphism between lposets E1 and E2. *)
-(*      LPoset.emb E1 E2 == embedding between lposets E1 and E2, that is      *)
+(*      lPoset.bij E1 E2 == bijective homomorphism between lposets E1 and E2. *)
+(*      lPoset.emb E1 E2 == embedding between lposets E1 and E2, that is      *)
 (*                          order-reflecting homomorphism.                    *)
-(*      LPoset.iso E1 E2 == isomorphism between lposets E1 and E2, that is    *)
+(*      lPoset.iso E1 E2 == isomorphism between lposets E1 and E2, that is    *)
 (*                          bijective order-reflecting homomorphism.          *)
 (*                                                                            *)
 (* Additionally, this file provides notations for homomorphisms which can     *)
-(* be used by importing corresponding module: Import LPoset.Mod.Syntax        *)
+(* be used by importing corresponding module: Import lPoset.Mod.Syntax        *)
 (* for Mod in {Hom, Bij, Emb, Iso}.                                           *)
 (*                   E1 ~> E2 == homomorphism.                                *)
 (*                   E1 ≃> E2 == bijective homomorphism.                      *)
@@ -43,9 +43,9 @@ From eventstruct Require Import utils.
 (*                                                                            *)
 (* Each module Mod in {Hom, Bij, Emb, Iso} also defines combinators which     *)
 (* can be used to build morphisms compositonally.                             *)
-(*          LPoset.Mod.id     == identity morphism.                           *)
-(*          LPoset.Mod.sy f   == inverse morphisms (for Iso only).            *)
-(*          LPoset.Mod.tr f g == composition of morphisms (g \o f).           *)
+(*          lPoset.Mod.id     == identity morphism.                           *)
+(*          lPoset.Mod.sy f   == inverse morphisms (for Iso only).            *)
+(*          lPoset.Mod.tr f g == composition of morphisms (g \o f).           *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -64,9 +64,9 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module LPoset.
+Module lPoset.
 
-Module Export LPoset.
+Module Export lPoset.
 Section ClassDef. 
 
 Record mixin_of (E0 : Type) (eb : Order.POrder.class_of E0)
@@ -112,13 +112,13 @@ Coercion porderType : type >-> Order.POrder.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Notation LPosetType E L m := (@pack E L _ _ id m).
+Notation lPosetType E L m := (@pack E L _ _ id m).
 End Exports.
 
-End LPoset.
+End lPoset.
 
-Notation eventType := LPoset.type.
-Notation eventStruct := LPoset.class_of.
+Notation eventType := lPoset.type.
+Notation eventStruct := lPoset.class_of.
 
 Module Export Def.
 Section Def.
@@ -126,7 +126,7 @@ Section Def.
 Context {L : Type} {E : eventType L}.
 
 (* labeling function *)
-Definition lab : E -> L := LPoset.lab (LPoset.class E).
+Definition lab : E -> L := lPoset.lab (lPoset.class E).
 
 (* causality alias *)
 Definition ca : rel E := le.
@@ -565,7 +565,7 @@ Notation bij := Bij.type.
 Notation emb := Emb.type.
 Notation iso := Iso.type.
 
-End LPoset.
+End lPoset.
 
 Export lPoset.lPoset.Exports.
 Export lPoset.Def.
