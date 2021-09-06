@@ -65,19 +65,19 @@ Module Elem.
 Module Export EventStruct.
 Section ClassDef. 
 
-Record mixin_of (E0 : Type) (L : Type) (eb : LPoset.LPoset.class_of E0 L)
-                (E := LPoset.LPoset.Pack eb) := Mixin {
+Record mixin_of (E0 : Type) (L : Type) (eb : lPoset.lPoset.class_of E0 L)
+                (E := lPoset.lPoset.Pack eb) := Mixin {
   _ : fin_cause (ca : rel E)
 }.
 
 Set Primitive Projections.
 Record class_of (E : Type) (L : Type) := Class {
-  base  : LPoset.LPoset.class_of E L;
+  base  : lPoset.lPoset.class_of E L;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> LPoset.LPoset.class_of.
+Local Coercion base : class_of >-> lPoset.lPoset.class_of.
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -90,23 +90,23 @@ Definition clone c of phant_id class c := @Pack E c.
 (* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
 
 Definition pack :=
-  fun bE b & phant_id (@LPoset.LPoset.class L bE) b =>
+  fun bE b & phant_id (@lPoset.lPoset.class L bE) b =>
   fun m => Pack (@Class E L b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
-Definition lposetType := @LPoset.LPoset.Pack L cT class.
+Definition lposetType := @lPoset.lPoset.Pack L cT class.
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> LPoset.LPoset.class_of.
+Coercion base : class_of >-> lPoset.lPoset.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
-Coercion lposetType : type >-> LPoset.eventType.
+Coercion lposetType : type >-> lPoset.eventType.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
@@ -181,7 +181,7 @@ Definition pack :=
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
-Definition lposetType := @LPoset.LPoset.Pack L cT class.
+Definition lposetType := @lPoset.lPoset.Pack L cT class.
 Definition elemEventType := @Elem.EventStruct.Pack L cT class.
 End ClassDef.
 
@@ -192,7 +192,7 @@ Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
-Coercion lposetType : type >-> LPoset.eventType.
+Coercion lposetType : type >-> lPoset.eventType.
 Coercion elemEventType : type >-> Elem.eventType.
 Canonical eqType.
 Canonical choiceType.
@@ -282,7 +282,7 @@ Module EventStruct.
 Section ClassDef.
 
 Record mixin_of (E0 : Type) (L : Type) (b : Elem.EventStruct.class_of E0 L)
-                (E := LPoset.LPoset.Pack b) := Mixin {
+                (E := lPoset.lPoset.Pack b) := Mixin {
   gcf : pred {fset E};
 
   _ : forall (e : E), ~~ (gcf [fset e]);
@@ -316,7 +316,7 @@ Definition pack :=
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
-Definition lposetType := @LPoset.LPoset.Pack L cT class.
+Definition lposetType := @lPoset.lPoset.Pack L cT class.
 Definition elemEventType := @Elem.EventStruct.Pack L cT class.
 End ClassDef.
 
@@ -327,7 +327,7 @@ Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
-Coercion lposetType : type >-> LPoset.eventType.
+Coercion lposetType : type >-> lPoset.eventType.
 Coercion elemEventType : type >-> Elem.eventType.
 Canonical eqType.
 Canonical choiceType.
@@ -488,7 +488,7 @@ Definition pack :=
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
-Definition lposetType := @LPoset.LPoset.Pack L cT class.
+Definition lposetType := @lPoset.lPoset.Pack L cT class.
 Definition elemEventType := @Elem.EventStruct.Pack L cT class.
 End ClassDef.
 
@@ -499,7 +499,7 @@ Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
-Coercion lposetType : type >-> LPoset.eventType.
+Coercion lposetType : type >-> lPoset.eventType.
 Coercion elemEventType : type >-> Elem.eventType.
 Canonical eqType.
 Canonical choiceType.

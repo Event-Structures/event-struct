@@ -7,15 +7,15 @@ From eventstruct Require Import utils.
 (* This file provides a theory of pomsets.                                    *)
 (* The hierarchy of pomsets is based mathcomp's porderType.                   *)
 (*                                                                            *)
-(*     LPoset.eventStruct E L == the type of partially ordered sets over      *) 
+(*     lPoset.eventStruct E L == the type of partially ordered sets over      *) 
 (*                               elements of type E labeled by type L.        *)
-(*                               LPoset of partial causality order (<=) and   *) 
+(*                               lPoset of partial causality order (<=) and   *) 
 (*                               labelling function lab.                      *)
 (*                               We use the name `eventStruct` to denote the  *)
 (*                               lposet structure itself (as opposed to       *)
 (*                               `eventType`) and for uniformity with the     *)
 (*                               theory of event structures.                  *)
-(*         LPoset.eventType L == a type of events with labels of type L,      *)
+(*         lPoset.eventType L == a type of events with labels of type L,      *)
 (*                               i.e. a type equipped with canonical labelled *)
 (*                               poset structure instance.                    *)
 (*                        lab == labelling function.                          *)
@@ -25,16 +25,16 @@ From eventstruct Require Import utils.
 (*                               All conventional order notations are         *)
 (*                               defined as well.                             *)
 (*                                                                            *)
-(*      LPoset.hom E1 E2 == homomorphism between lposets E1 and E2, that is   *)
+(*      lPoset.hom E1 E2 == homomorphism between lposets E1 and E2, that is   *)
 (*                          label preserving monotone function.               *)
-(*      LPoset.bij E1 E2 == bijective homomorphism between lposets E1 and E2. *)
-(*      LPoset.emb E1 E2 == embedding between lposets E1 and E2, that is      *)
+(*      lPoset.bij E1 E2 == bijective homomorphism between lposets E1 and E2. *)
+(*      lPoset.emb E1 E2 == embedding between lposets E1 and E2, that is      *)
 (*                          order-reflecting homomorphism.                    *)
-(*      LPoset.iso E1 E2 == isomorphism between lposets E1 and E2, that is    *)
+(*      lPoset.iso E1 E2 == isomorphism between lposets E1 and E2, that is    *)
 (*                          bijective order-reflecting homomorphism.          *)
 (*                                                                            *)
 (* Additionally, this file provides notations for homomorphisms which can     *)
-(* be used by importing corresponding module: Import LPoset.Mod.Syntax        *)
+(* be used by importing corresponding module: Import lPoset.Mod.Syntax        *)
 (* for Mod in {Hom, Bij, Emb, Iso}.                                           *)
 (*                   E1 ~> E2 == homomorphism.                                *)
 (*                   E1 ≃> E2 == bijective homomorphism.                      *)
@@ -43,9 +43,9 @@ From eventstruct Require Import utils.
 (*                                                                            *)
 (* Each module Mod in {Hom, Bij, Emb, Iso} also defines combinators which     *)
 (* can be used to build morphisms compositonally.                             *)
-(*          LPoset.Mod.id     == identity morphism.                           *)
-(*          LPoset.Mod.sy f   == inverse morphisms (for Iso only).            *)
-(*          LPoset.Mod.tr f g == composition of morphisms (g \o f).           *)
+(*          lPoset.Mod.id     == identity morphism.                           *)
+(*          lPoset.Mod.sy f   == inverse morphisms (for Iso only).            *)
+(*          lPoset.Mod.tr f g == composition of morphisms (g \o f).           *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -64,9 +64,9 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module LPoset.
+Module lPoset.
 
-Module Export LPoset.
+Module Export lPoset.
 Section ClassDef. 
 
 Record mixin_of (E0 : Type) (eb : Order.POrder.class_of E0)
@@ -112,13 +112,13 @@ Coercion porderType : type >-> Order.POrder.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
-Notation LPosetType E L m := (@pack E L _ _ id m).
+Notation lPosetType E L m := (@pack E L _ _ id m).
 End Exports.
 
-End LPoset.
+End lPoset.
 
-Notation eventType := LPoset.type.
-Notation eventStruct := LPoset.class_of.
+Notation eventType := lPoset.type.
+Notation eventStruct := lPoset.class_of.
 
 Module Export Def.
 Section Def.
@@ -126,7 +126,7 @@ Section Def.
 Context {L : Type} {E : eventType L}.
 
 (* labeling function *)
-Definition lab : E -> L := LPoset.lab (LPoset.class E).
+Definition lab : E -> L := lPoset.lab (lPoset.class E).
 
 (* causality alias *)
 Definition ca : rel E := le.
@@ -565,10 +565,194 @@ Notation bij := Bij.type.
 Notation emb := Emb.type.
 Notation iso := Iso.type.
 
-End LPoset.
+End lPoset.
 
-Export LPoset.LPoset.Exports.
-Export LPoset.Def.
+Export lPoset.lPoset.Exports.
+Export lPoset.Def.
 
-Export LPoset.Hom.Hom.Exports.
-Export LPoset.Hom.Theory.
+Export lPoset.Hom.Hom.Exports.
+Export lPoset.Bij.Bij.Exports.
+Export lPoset.Emb.Emb.Exports.
+Export lPoset.Iso.Iso.Exports.
+Export lPoset.Hom.Theory.
+Export lPoset.Bij.Theory.
+Export lPoset.Emb.Theory.
+
+Notation lposet := (lPoset.eventStruct).
+
+
+Module Pomset. 
+
+Implicit Types (L : Type).
+
+Import lPoset.Hom.Syntax.
+Import lPoset.Iso.Syntax.
+
+Definition iso_inv {L} (P : lPoset.eventType L -> Prop) := 
+  forall {E1 E2} (f : E1 ~= E2), P E1 -> P E2.
+
+Record lang L := Lang { 
+  apply : lPoset.eventType L -> Prop;
+  _     : forall E1 E2 (f : E1 ~= E2), apply E1 -> apply E2;
+            
+}.
+
+Module Export Exports.
+Coercion apply : lang >-> Funclass.
+End Exports.
+
+Module Lattice.
+Section Lattice.
+
+Context {L : Type}.
+Implicit Types (P Q : lang L).
+
+Definition leq P Q := lattice.leq (P : lPoset.eventType L -> Prop) Q.
+
+Definition weq P Q := lattice.weq (P : lPoset.eventType L -> Prop) Q.
+
+Lemma botP : iso_inv (lattice.bot : lPoset.eventType L -> Prop).
+Proof. done. Qed.
+Canonical bot := Lang (@botP).
+
+Lemma topP : iso_inv (lattice.top : lPoset.eventType L -> Prop).
+Proof. done. Qed.
+Canonical top := Lang (@topP).
+
+Lemma cupP P Q : iso_inv ((P : lPoset.eventType L -> Prop) ⊔ Q).
+Proof. 
+  move: P Q=> [] P + [] Q + p q /=.
+  rewrite /iso_inv=> HP HQ f []. 
+  - by move: (HP _ _ f)=> /[apply] ?; left. 
+  by move: (HQ _ _ f)=> /[apply] ?; right. 
+Qed.
+Canonical cup P Q := Lang (@cupP P Q).
+
+Lemma capP P Q : iso_inv ((P : lPoset.eventType L -> Prop) ⊓ Q).
+Proof. 
+  move: P Q=> [] P + [] Q + p q /=.
+  rewrite /iso_inv=> HP HQ f []. 
+  move: (HP _ _ f)=> /[apply] /[swap].
+  by move: (HQ _ _ f)=> /[apply] /[swap].
+Qed.
+Canonical cap P Q := Lang (@capP P Q).
+
+Lemma negP P : iso_inv (neg (P : lPoset.eventType L -> Prop)).
+Proof. 
+  move: P=> [] P + p q /=.
+  rewrite /iso_inv=> HP f.
+  apply/contra_not.
+  by move: (HP _ _ (lPoset.Iso.sy f)).
+Qed.  
+Canonical neg P := Lang (@negP P).
+
+End Lattice.
+
+Module Export Exports.
+
+Canonical Structure pomset_lang_lattice_ops L : lattice.ops := 
+  lattice.mk_ops (lang L) leq weq cup cap neg bot top.
+
+Global Instance pomset_lang_lattice_morph L : 
+  lattice.morphism BDL (@apply L).
+Proof. by constructor. Qed.
+
+Global Instance pomset_lang_lattice_laws L : 
+  lattice.laws (BDL+STR+CNV+DIV) (@pomset_lang_lattice_ops L).
+Proof.
+  have H: (lattice.laws BDL (@pomset_lang_lattice_ops L)). 
+  - by apply/(laws_of_injective_morphism (@apply L)).
+  by constructor; apply H. 
+Qed.
+
+End Exports.
+
+End Lattice.
+
+Export Lattice.Exports.
+
+Module Export Def.
+Section Def.
+
+Context {L : Type}.
+Implicit Types (P Q : lang L).
+
+Definition stronger P Q : Prop := 
+  forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
+
+Definition supported P Q : Prop := 
+  forall p, P p -> exists q, Q q /\ inhabited (p ~> q).
+
+End Def.
+End Def.
+
+Module Export Syntax.
+Notation "P ⊑ Q" := (stronger P Q) (at level 69) : pomset_scope.
+Notation "P ↪ Q" := (supported P Q) (at level 69) : pomset_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory.
+
+Context {L : Type}.
+Implicit Types (P Q R : lang L).
+
+Lemma lang_iso_inv P : iso_inv P.
+Proof. by case: P. Qed.
+
+Lemma subsumes_subset P Q :
+  P ≦ Q -> P ⊑ Q. 
+Proof. 
+  move=> Hs p Hp; exists p; split; first exact /Hs. 
+  constructor; exact/lPoset.Hom.id. 
+Qed.
+  
+Lemma subsumes_refl P : 
+  P ⊑ P.
+Proof. 
+  move=> p HP; exists p; split=> //. 
+  constructor; exact/lPoset.Hom.id.
+Qed.
+
+Lemma subsumes_trans P Q R : 
+  P ⊑ Q -> Q ⊑ R -> P ⊑ R.
+Proof. 
+  move=> H1 H2 p HP. 
+  move: (H1 p HP)=> [q [HQ [f]]].
+  move: (H2 q HQ)=> [r [HR [g]]].
+  exists r; split=> //; constructor; exact/(lPoset.Hom.tr g f).
+Qed.
+
+Lemma supported_subset P Q :
+  P ≦ Q -> P ↪ Q. 
+Proof. 
+  move=> Hs p Hp; exists p; split; first exact /Hs. 
+  constructor; exact/lPoset.Bij.id. 
+Qed.
+
+Lemma supported_refl P : 
+  P ↪ P. 
+Proof. 
+  move=> p HP; exists p; split=> //.
+  constructor; exact/lPoset.Hom.id.
+Qed.
+
+Lemma supported_trans P Q R : 
+  (P ↪ Q) -> (Q ↪ R) -> (P ↪ R). 
+Proof. 
+  move=> H1 H2 p HP. 
+  move: (H1 p HP)=> [q [HQ [f]]].
+  move: (H2 q HQ)=> [r [HR [g]]].
+  exists r; split=> //; constructor; exact/(lPoset.Hom.tr f g).
+Qed.
+
+End Theory.
+End Theory.
+
+End Pomset.
+
+Export Pomset.Exports.
+Export Pomset.Lattice.Exports.
+Export Pomset.Def.
+Export Pomset.Syntax.
+Export Pomset.Theory.
