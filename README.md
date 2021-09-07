@@ -27,9 +27,10 @@ All files include a more detailed description of their contents.
 
 - `concur` - semantic domains for concurrency
 
-    - `pomset.v` - pomsets (WIP)
-    - `prime_eventstruct.v` - prime event structures (WIP)
-    - `eventstructure.v` - prime event structure built from program-order and reads-from relations
+    - `lposet.v` - labelled partially ordered sets
+    - `pomset.v` - pomsets languages
+    - `prime_eventstruct.v` - prime event structures 
+    - `porf_eventstruct.v` - prime event structure built from program-order and reads-from relations
     - `transitionsystem.v` - incremental construction of event structure
 
 - `lang` - syntax and semantics of concurrent languages and systems
