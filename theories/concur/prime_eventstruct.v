@@ -1,7 +1,7 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice order finmap fintype. 
 From RelationAlgebra Require Import lattice boolean.
-From eventstruct Require Import utils relalg pomset.
+From eventstruct Require Import utils relalg lposet pomset.
 
 (******************************************************************************)
 (* This file provides a theory of prime event structures.                     *)
