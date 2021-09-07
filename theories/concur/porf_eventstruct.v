@@ -920,7 +920,7 @@ Proof.
 Qed.
 
 Definition lposetMixin :=
-  @lPoset.lPoset.Mixin E (Order.POrder.class porderType) L lab. 
+  @lPoset.lPoset.Mixin E L (Order.POrder.class porderType) lab.
 
 Canonical lposetType := 
   @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lposetMixin).

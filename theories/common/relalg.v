@@ -12,6 +12,20 @@ Unset Printing Implicit Defensive.
 Unset Strict Implicit.
 
 (* ************************************************************************** *)
+(*     Utilities                                                              *)
+(* ************************************************************************** *)
+
+Section PropUtils.
+Context {T : Type}.
+Implicit Types (P : T -> Prop).
+
+Lemma inh_nempty P : 
+  inhabited { x | P x } -> ~ (P ≦ bot).
+Proof. by move=> [] [] x Hx H; move: (H x Hx)=> //=. Qed.
+
+End PropUtils.
+
+(* ************************************************************************** *)
 (*     Cartesian product for lattice-valued functions                         *)
 (* ************************************************************************** *)
 
