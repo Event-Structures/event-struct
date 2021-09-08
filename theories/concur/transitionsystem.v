@@ -1,8 +1,8 @@
 From RelationAlgebra Require Import lattice monoid rel kat_tac kleene.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice seq path.
 From mathcomp Require Import order finmap fintype ssrnat finfun.
-From eventstruct Require Import utils ident porf_eventstruct.
-From eventstruct Require Import rewriting_system inhtype.
+From eventstruct Require Import utils countable inhtype ident rewriting_system.
+From eventstruct Require Import porf_eventstruct.
 
 (******************************************************************************)
 (* Here we want to make function that by event and event structure creates a  *)
@@ -105,10 +105,10 @@ Notation pred := (add_po al).
    event *)
 Notation write := (add_rf al).
 
-Lemma po_fresh_id : pred <^i fresh_id.
+Lemma po_fresh_id : pred <^n fresh_id.
 Proof. by move/add_po_in_dom/fresh_seq_mem: al. Qed.
 
-Lemma rf_fresh_id : write <^i fresh_id.
+Lemma rf_fresh_id : write <^n fresh_id.
 Proof. by move/add_rf_in_dom/fresh_seq_mem: al. Qed.
 
 Definition contain := 
@@ -168,7 +168,7 @@ Proof.
 Qed.
 
 Fact add_fpo_le : 
-  [forall e : finsupp add_fed, (val e != \i0) ==> (add_fpo (val e) <^i val e)].
+  [forall e : finsupp add_fed, (val e != \i0) ==> (add_fpo (val e) <^n val e)].
 Proof.
   apply/forallP=> [[/=]] e. 
   rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE.
@@ -178,7 +178,7 @@ Proof.
 Qed.
 
 Fact add_frf_le : 
-  [forall e : finsupp add_fed, (val e != \i0) ==> (add_frf (val e) <^i val e)].
+  [forall e : finsupp add_fed, (val e != \i0) ==> (add_frf (val e) <^n val e)].
 Proof.
   apply/forallP=> [[/=]] e. 
   rewrite (eqP add_fed_finsupp) ?inE seq_fsetE ?inE.

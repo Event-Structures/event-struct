@@ -3,7 +3,7 @@ From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
 From monae Require Import hierarchy monad_model.
-From eventstruct Require Import utils relalg rel wftype ident inhtype.
+From eventstruct Require Import utils relalg countable rel wftype ident inhtype.
 From eventstruct Require Import lposet pomset prime_eventstruct.
 
 (******************************************************************************)
@@ -391,8 +391,8 @@ Structure porf_eventstruct := Pack {
   _      : [forall e : finsupp fed, fpo (val e) \in dom];
   _      : [forall e : finsupp fed, frf (val e) \in dom];
 
-  _      : [forall e : finsupp fed, (val e != \i0) ==> (fpo (val e) <^i val e)];
-  _      : [forall e : finsupp fed, (val e != \i0) ==> (frf (val e) <^i val e)];
+  _      : [forall e : finsupp fed, (val e != \i0) ==> (fpo (val e) <^n val e)];
+  _      : [forall e : finsupp fed, (val e != \i0) ==> (frf (val e) <^n val e)];
 
   _      : [forall e : finsupp fed, lab (fpo (val e)) (po)>> lab (val e)]; 
   _      : [forall e : finsupp fed, lab (frf (val e)) (rf)>> lab (val e)]; 
@@ -619,14 +619,14 @@ Qed.
 Lemma fpo_ndom e : e \notin dom -> fpo e = e.
 Proof. by move=> ndom; rewrite /fpo fsfun_dflt // fed_supp ndom. Qed.
 
-Lemma fpo_n0 e : e \in dom -> e != \i0 -> fpo e <^i e.
+Lemma fpo_n0 e : e \in dom -> e != \i0 -> fpo e <^n e.
 Proof.
   rewrite /fpo -fed_supp.
   case: es=> /= > ????? /forallP H ??? eI.
   by move/(_ [` eI])/implyP: H=> /= /[apply].
 Qed.
 
-Lemma fpo_le e : fpo e <=^i e.
+Lemma fpo_le e : fpo e <=^n e.
 Proof.
   case: (boolP (e \in dom))=> [/fpo_n0|/fpo_ndom-> //].
   by case: (e =P \i0)=> [->|_ /(_ erefl)/ltW //]; rewrite fpo0.
@@ -673,14 +673,14 @@ Qed.
 Lemma frf_ndom e : e \notin dom -> frf e = e.
 Proof. by move=> ndom; rewrite /frf fsfun_dflt // fed_supp ndom. Qed.
 
-Lemma frf_n0 e : e \in dom -> e != \i0 -> frf e <^i e.
+Lemma frf_n0 e : e \in dom -> e != \i0 -> frf e <^n e.
 Proof.
   rewrite /frf -fed_supp.
   case: es=> /= > ?????? /forallP H ?? eI.
   by move/(_ [` eI])/implyP: H=> /= /[apply].
 Qed.
 
-Lemma frf_le e : frf e <=^i e.
+Lemma frf_le e : frf e <=^n e.
 Proof.
   case: (boolP (e \in dom))=> [/frf_n0|/frf_ndom-> //].
   by case: (e =P \i0)=> [->|_ /(_ erefl)/ltW //]; rewrite frf0.
@@ -767,7 +767,7 @@ Lemma ica_ndom e1 e2 :
   ica e1 e2 -> e2 \notin dom -> e1 == e2.
 Proof. by move=> /[swap] ?; rewrite icaE /= fca_ndom // !inE orbb. Qed.
 
-Lemma ica_le e1 e2 : ica e1 e2 -> e1 <=^i e2.
+Lemma ica_le e1 e2 : ica e1 e2 -> e1 <=^n e2.
 Proof. exact: fca_ge. Qed.
 
 Lemma ica_fresh e : ica fresh_id e -> e = fresh_id.
@@ -842,7 +842,7 @@ Proof.
   by move/H2=> /eqP<- /H1.
 Qed.
 
-Lemma ca_le e1 e2 : ca e1 e2 -> e1 <=^i e2.
+Lemma ca_le e1 e2 : ca e1 e2 -> e1 <=^n e2.
 Proof. 
   rewrite /ca /= /dhrel_cnv. 
   apply /rt_closure_ge.
@@ -876,7 +876,7 @@ Proof. by move/ca_trans/(_ (ca_fpo _)). Qed.
 Lemma ca_stepR e1 e3 :
   e1 != e3 ->
   ca e1 e3 ->
-  exists e2, [&& ca e1 e2, ica e2 e3 & e2 <^i e3].
+  exists e2, [&& ca e1 e2, ica e2 e3 & e2 <^n e3].
 Proof.
   move/[swap]/closure_n1P; elim=> [/eqP//|] e2 {}e3.
   case: (eqVneq e2 e3)=> [-> _ //| neq23 I23 /closure_n1P C12 _ neq13].
@@ -1056,7 +1056,7 @@ Qed.
 Lemma cf_irrelf : irreflexive cf.
 Proof.
   move=> m; apply/negbTE/negP. 
-  elim/(@wfb_ind Ident.Order.disp E): m=> m IHm.
+  elim/(@wfb_ind countable.Order.disp E): m=> m IHm.
   suff: ~ cf m (fpo m).
   - move=> /negP /(contraNF id) C. 
     rewrite cfE. rewrite orbb icfxx //=. 
