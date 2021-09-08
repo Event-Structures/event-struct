@@ -375,7 +375,7 @@ End PwEqvReflect.
 (*     Reconciling relation-algebra relation closures with vanilla Coq        *)
 (* ************************************************************************** *)
 
-Hint Resolve r_refl rt_refl : core.
+#[export] Hint Resolve r_refl rt_refl : core.
 
 Section RelClos.
 

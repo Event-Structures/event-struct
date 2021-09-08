@@ -40,7 +40,7 @@ Proof. by rewrite !orbT. Qed.
 Lemma orbbbbT a b c d: [|| a, b, c, d | true].
 Proof. by rewrite !orbT. Qed.
 
-Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
+#[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
 (* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
