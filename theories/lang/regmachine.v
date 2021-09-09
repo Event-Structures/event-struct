@@ -1,6 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice finfun finmap tuple.
-From monae Require Import hierarchy monad_model.
 From eventstruct Require Import utils porf_eventstruct inhtype.
 From eventstruct Require Import transitionsystem ident.
 
