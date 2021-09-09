@@ -51,12 +51,9 @@ Unset Printing Implicit Defensive.
 Section RegMachine.
 
 Open Scope fmap_scope.
-Open Scope do_notation.
 Open Scope exec_eventstruct_scope.
 
 Import Label.Syntax.
-
-Local Notation M := ModelMonad.ListMonad.t.
 
 Context {E : identType} {Val : inhType}.
 
