@@ -37,7 +37,7 @@ tags: [
   "keyword:weak memory models"
   "keyword:operational semantics"
   "category:Computer Science/Concurrency/Weak Memory Models"
-  "logpath:event_struct"
+  "logpath:eventstruct"
 ]
 authors: [
   "Vladimir Gladstein <vovaglad00@gmail.com>"

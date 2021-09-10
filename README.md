@@ -22,7 +22,6 @@ All files include a more detailed description of their contents.
     - `ident.v` - interface for types that can be used as identifiers
     - `rel.v` - additional facts about decidable binary relations
     - `monoid.v` - theory of monoids and partial monoids
-    - `monad.v` - additional facts about monads
     - `rewriting_system.v` - some bits of the theory of rewrite systems
 
 - `concur` - semantic domains for concurrency
