@@ -539,6 +539,16 @@ Proof.
   by apply/ltnW/sorted_ltn_nth=> //; apply/andP.  
 Qed.  
 
+Lemma subseq_anti {U : eqType} : 
+  antisymmetric (@subseq U).
+Proof. 
+  move=> s1 s2 /andP[].
+  move=> /size_subseq_leqif /leqifP. 
+  case: ifP=> [/eqP->|_] //.
+  move=> /[swap] /size_subseq. 
+  by rewrite leqNgt=> /negP. 
+Qed.
+
 End SeqUtils.
 
 

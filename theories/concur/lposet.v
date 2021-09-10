@@ -1252,8 +1252,8 @@ End Theory.
 End Theory.
 
 Module MorphismsTheory. 
-Section MorphismsTheory. 
 
+Section Hom. 
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
 Lemma thomP : 
@@ -1297,6 +1297,28 @@ Proof.
   apply/sub_down_inj_inT; rewrite ?/in_mem //=.
   by move=>?? /find_nth_inj/val_inj. 
 Qed.
+
+End Hom. 
+
+Section Iso. 
+Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
+
+Lemma tisoP : 
+  reflect ?|eventType t ~= eventType u| (t == u :> seq L).
+Proof. 
+  apply/(iffP idP); last first.  
+  - move=> [f]; move: (lPoset.Iso.sy f)=> g.
+    apply/eqP/subseq_anti/andP. 
+    split; apply/thomP; repeat eexists; apply/bij_inj/event_bij; 
+      [exact f| exact g].
+  move=> /eqP H; have Hn: n = m. 
+  - by rewrite -(size_tuple t) -(size_tuple u) H.
+  move: u H; clear u; case Hn=> u.
+  move=> /val_inj ->.
+  constructor; exact/lPoset.Iso.id. 
+Qed.
+
+End Iso.
 
 End MorphismsTheory. 
 End MorphismsTheory. 
