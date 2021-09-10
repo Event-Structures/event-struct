@@ -11,7 +11,7 @@ From eventstruct Require Import utils.
 (*                             equipped with partial order.                   *)
 (*     lFinPoset.evenType L == a finite type of events equipped with labelled *)
 (*                             poset structure.                               *)
-(*    TuplePoset.evenType t == a lposet structure over tuple t : n.-tuple L.  *)
+(*        tPoset.evenType t == a lposet structure over tuple t : n.-tuple L.  *)
 (*                             A tuple t is treated as labelled total order.  *)
 (*                             Events are ordinals 'I_n, label of event i is  *)
 (*                             i-th element of tuple, and order is the        *)
@@ -44,22 +44,21 @@ From eventstruct Require Import utils.
 (*          lPoset.Mod.sy f   == inverse morphisms (for Iso only).            *)
 (*          lPoset.Mod.tr f g == composition of morphisms (g \o f).           *)
 (*                                                                            *)
-(* In case of finite labelled posets it is possible to check whether given    *)
-(* function possesses properties of certain morphism and also to check        *)
-(* whether there exists a morphism of certain king between two posets.        *)
+(* In case of finite lposets it is possible to check whether given function   *)
+(* has properties of certain morphism and also to check if there exists       *)
+(* a morphism of certain king between two lposets.                            *)
 (*       lFinPoset.ohom f == Some f' if f is homomorphism None otherwise,     *)
 (*                           where f' is computationally equal to f but       *) 
 (*                           has type of homomorphism                         *)
 (*     lFinPoset.homP p q == reflection lemma to check for existence of       *)
 (*                           a homomorphism between p and q.                  *)
 (* Similar lemmas are available for bij, emb, iso.                            *)
-(* Additionally, for a tuple lposet the following characterization of         *)
-(* morphisms is available.                                                    *)
-(*    TuplePoset.homP p q == there exists injective homomorphism between      *)
-(*                           p and q iff p is a subsequence of q.             *)
-(*    TuplePoset.isoP p q == there exists isomorphism between p and q iff     *)
-(*                           p is equal to q.                                 *)
-(*                           Note that for tuple lposet bij/emb/iso collapse. *)
+(* Additionally, for a tuple lposet the following lemmas are available.       *)
+(*     tPoset.homP p q == there exists injective homomorphism between p and q *)
+(*                        iff p is a subsequence of q.                        *)
+(*     tPoset.isoP p q == there exists isomorphism between p and q            *)
+(*                        iff p is equal to q.                                *)
+(*                        Note that for tuple lposet bij/emb/iso collapse.    *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -1053,6 +1052,19 @@ Proof.
   case: (fin_ca_monotoneP f)=> //.
 Qed.
 
+(* TODO: generalize proofs of morphism reflect lemmas, get rid of copy-paste *)
+Lemma homP :
+  reflect ?|E1 ~> E2| [exists f : {ffun E1 -> E2}, ohom f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (ohom f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Hom.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/hom_ohom.
+Qed.
+
 Definition obij_class f : option (lPoset.Bij.Bij.class_of f).
 (* --- *)
   case Hc: (ohom_class f)=> [c|]; last exact/None.
@@ -1077,6 +1089,18 @@ Proof.
   move: (event_bij f)=> /[dup] /bij_inj ? /bij_eq_card /esym.
   case: (injectiveP f)=> // ?. 
   by case: eqP.
+Qed.
+
+Lemma bijP :
+  reflect ?|E1 ≃> E2| [exists f : {ffun E1 -> E2}, obij f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (obij f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Bij.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/bij_obij.
 Qed.
 
 Definition oemb_mixin f : option (lPoset.Emb.Emb.mixin_of f).
@@ -1107,6 +1131,18 @@ Proof.
   case: (fin_ca_reflectingP f)=> //. 
 Qed.
 
+Lemma embP :
+  reflect ?|E1 ≈> E2| [exists f : {ffun E1 -> E2}, oemb f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (oemb f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Emb.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/emb_oemb.
+Qed.
+
 Lemma oiso_class f : option (lPoset.Iso.Iso.class_of f).
 (* --- *)
   case Hc: (obij_class f)=> [c|]; last exact/None.
@@ -1130,53 +1166,7 @@ Proof.
   case: (oemb_mixin f)=> // [] ?. 
 Qed.
 
-Global Opaque ohom_class obij_class oemb_mixin oemb_class oiso_class.
-
-End MorphismsDef.
-
-Module MorphismsTheory.
-Section MorphismsTheory.
-Context {L : eqType} (E1 E2 : eventType L).
-Implicit Types (f : E1 -> E2).
-
-(* TODO: generalize proofs of morphism reflect lemmas, get rid of copy-paste *)
-Lemma fin_homP :
-  reflect ?|E1 ~> E2| [exists f : {ffun E1 -> E2}, ohom f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (ohom f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Hom.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/hom_ohom.
-Qed.
-
-Lemma fin_bijP :
-  reflect ?|E1 ≃> E2| [exists f : {ffun E1 -> E2}, obij f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (obij f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Bij.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/bij_obij.
-Qed.
-
-Lemma fin_embP :
-  reflect ?|E1 ≈> E2| [exists f : {ffun E1 -> E2}, oemb f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (oemb f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Emb.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/emb_oemb.
-Qed.
-
-Lemma fin_isoP :
+Lemma isoP :
   reflect ?|E1 ~= E2| [exists f : {ffun E1 -> E2}, oiso f].
 Proof.
   apply/(iffP idP).
@@ -1188,20 +1178,20 @@ Proof.
   exact/iso_oiso.
 Qed.
 
-End MorphismsTheory.
-End MorphismsTheory.
+Global Opaque ohom_class obij_class oemb_mixin oemb_class oiso_class.
+
+End MorphismsDef.
 
 End lFinPoset.
 
 Export lFinPoset.lFinPoset.Exports.
 Export lFinPoset.MorphismsProps.
-Export lFinPoset.MorphismsTheory.
 
 
-Module TuplePoset.
+Module tPoset.
 
-Module TuplePoset.
-Section TuplePoset.
+Module tPoset.
+Section tPoset.
 
 Import Order.OrdinalOrder.Exports.
 
@@ -1253,7 +1243,7 @@ Proof. by []. Qed.
 Lemma tlabE : (lab : lfinposetType -> L) = (tnth t).
 Proof. by []. Qed.
 
-End TuplePoset.
+End tPoset.
 
 Module Export Exports.
 Canonical lposetType.
@@ -1267,11 +1257,11 @@ Definition tcaE := @tcaE.
 Definition tlabE := @tlabE.
 End Exports.
 
-End TuplePoset.
+End tPoset.
 
-Export TuplePoset.Exports.
+Export tPoset.Exports.
 
-Notation eventType := TuplePoset.lfinposetType.
+Notation eventType := tPoset.lfinposetType.
 
 Import lPoset.Hom.Syntax.
 Import lPoset.Bij.Syntax.
@@ -1293,23 +1283,24 @@ Proof. rewrite tcaE; exact/leq_total. Qed.
 End Theory.
 End Theory.
 
+
 Module Iso.
-Section Iso.
+
+Section Def.
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
 Definition of_bij : 
   (eventType t ≃> eventType u) -> (eventType t ≈> eventType u) := 
     fun f => lPoset.Iso.of_tot_bij f (@tca_total L n t).
 
-End Iso.
+End Def.
+
 End Iso. 
 
-Module MorphismsTheory. 
-
-Section Hom. 
+Section HomP. 
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
-Lemma thomP : 
+Lemma homP : 
   reflect ?|{f : eventType t ~> eventType u | injective f}| (subseq t u).
 Proof. 
   apply/(iffP idP); last first.
@@ -1351,18 +1342,18 @@ Proof.
   by move=>?? /find_nth_inj/val_inj. 
 Qed.
 
-End Hom. 
+End HomP.
 
-Section Iso. 
+Section IsoP.
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
-Lemma tisoP : 
+Lemma isoP : 
   reflect ?|eventType t ~= eventType u| (t == u :> seq L).
 Proof. 
   apply/(iffP idP); last first.  
   - move=> [f]; move: (lPoset.Iso.sy f)=> g.
     apply/eqP/subseq_anti/andP. 
-    split; apply/thomP; repeat eexists; apply/bij_inj/event_bij; 
+    split; apply/homP; repeat eexists; apply/bij_inj/event_bij; 
       [exact f| exact g].
   move=> /eqP H; have Hn: n = m. 
   - by rewrite -(size_tuple t) -(size_tuple u) H.
@@ -1371,17 +1362,14 @@ Proof.
   constructor; exact/lPoset.Iso.id. 
 Qed.
 
-End Iso.
+End IsoP. 
 
-End MorphismsTheory. 
+End tPoset.
 
-End TuplePoset.
-
-Export TuplePoset.TuplePoset.Exports.
-Export TuplePoset.Theory. 
-Export TuplePoset.MorphismsTheory. 
+Export tPoset.tPoset.Exports.
+Export tPoset.Theory. 
 
 (* Context (L : Type) (n : nat) (t : n.-tuple L). *)
-(* Context (e e1 e2 : TuplePoset.eventType t). *)
+(* Context (e e1 e2 : tPoset.eventType t). *)
 (* Check (lab e : L). *)
 (* Check (e1 <= e2 : bool). *)
