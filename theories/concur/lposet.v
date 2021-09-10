@@ -963,10 +963,8 @@ Import lPoset.Bij.Syntax.
 Import lPoset.Emb.Syntax.
 Import lPoset.Iso.Syntax.
 
-(* Properties of morphisms (reflection lemmas) required by subsequent modules *)
 Module Export MorphismsProps.
-Section MorhpismsProps.
-
+Section MorphismsProps.
 Context {L : eqType} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
@@ -984,11 +982,11 @@ Lemma fin_ca_reflectingP f :
           [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)].
 Proof. repeat apply/forallPP=> ?; rewrite eq_sym; exact/eqP. Qed.
 
-End MorhpismsProps.
+End MorphismsProps.
 End MorphismsProps.
 
 (* Checks whether given function forms certain morphism *)
-Section MorphismsDec.
+Section MorphismsDef.
 Context {L : eqType} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
@@ -1011,19 +1009,6 @@ Proof.
   move: (lab_preserv f) (ca_monotone f).
   case: (fin_lab_preserveP f)=> //. 
   case: (fin_ca_monotoneP f)=> //.
-Qed.
-
-(* TODO: generalize proofs of `_inh` lemmas, get rid of copy-paste *)
-Lemma hom_inh :
-  reflect (inhabited (E1 ~> E2)) [exists f : {ffun E1 -> E2}, ohom f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (ohom f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Hom.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/hom_ohom.
 Qed.
 
 Definition obij_class f : option (lPoset.Bij.Bij.class_of f).
@@ -1050,18 +1035,6 @@ Proof.
   move: (event_bij f)=> /[dup] /bij_inj ? /bij_eq_card /esym.
   case: (injectiveP f)=> // ?. 
   by case: eqP.
-Qed.
-
-Lemma bij_inh :
-  reflect (inhabited (E1 ≃> E2)) [exists f : {ffun E1 -> E2}, obij f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (obij f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Bij.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/bij_obij.
 Qed.
 
 Definition oemb_mixin f : option (lPoset.Emb.Emb.mixin_of f).
@@ -1092,18 +1065,6 @@ Proof.
   case: (fin_ca_reflectingP f)=> //. 
 Qed.
 
-Lemma emb_inh :
-  reflect (inhabited (E1 ≈> E2)) [exists f : {ffun E1 -> E2}, oemb f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (oemb f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Emb.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/emb_oemb.
-Qed.
-
 Lemma oiso_class f : option (lPoset.Iso.Iso.class_of f).
 (* --- *)
   case Hc: (obij_class f)=> [c|]; last exact/None.
@@ -1127,8 +1088,54 @@ Proof.
   case: (oemb_mixin f)=> // [] ?. 
 Qed.
 
-Lemma iso_inh :
-  reflect (inhabited (E1 ~= E2)) [exists f : {ffun E1 -> E2}, oiso f].
+Global Opaque ohom_class obij_class oemb_mixin oemb_class oiso_class.
+
+End MorphismsDef.
+
+Module MorphismsTheory.
+Section MorphismsTheory.
+Context {L : eqType} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+(* TODO: generalize proofs of morphism reflect lemmas, get rid of copy-paste *)
+Lemma fin_homP :
+  reflect ?|E1 ~> E2| [exists f : {ffun E1 -> E2}, ohom f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (ohom f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Hom.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/hom_ohom.
+Qed.
+
+Lemma fin_bijP :
+  reflect ?|E1 ≃> E2| [exists f : {ffun E1 -> E2}, obij f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (obij f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Bij.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/bij_obij.
+Qed.
+
+Lemma fin_embP :
+  reflect ?|E1 ≈> E2| [exists f : {ffun E1 -> E2}, oemb f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (oemb f)=> //.
+  move=> [f]; apply /existsP. 
+  have Heqf: (finfun f =1 f) by apply/ffunE.
+  pose f' := lPoset.Emb.of_eqfun Heqf.
+  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
+  exact/emb_oemb.
+Qed.
+
+Lemma fin_isoP :
+  reflect ?|E1 ~= E2| [exists f : {ffun E1 -> E2}, oiso f].
 Proof.
   apply/(iffP idP).
   - by move=> /existsP [f]; case: (oiso f)=> //.
@@ -1139,14 +1146,14 @@ Proof.
   exact/iso_oiso.
 Qed.
 
-Global Opaque ohom_class obij_class oemb_mixin oemb_class oiso_class.
-
-End MorphismsDec.
+End MorphismsTheory.
+End MorphismsTheory.
 
 End lFinPoset.
 
 Export lFinPoset.lFinPoset.Exports.
 Export lFinPoset.MorphismsProps.
+Export lFinPoset.MorphismsTheory.
 
 
 Module TuplePoset.
@@ -1192,9 +1199,6 @@ Canonical lfinposetType :=
 Lemma tltE : (lt : rel lfinposetType) = (<%O : rel nat).
 Proof. by []. Qed.
 
-Lemma tltEnat : (lt : rel lfinposetType) = (fun x y => (x < y)%N).
-Proof. by []. Qed.
-
 Lemma tscaE : (sca : rel lfinposetType) = (<%O : rel nat).
 Proof. by []. Qed.
 
@@ -1215,7 +1219,6 @@ Canonical lposetType.
 Canonical lfinposetType.
 
 Definition tltE := @tltE.
-Definition tltEnat := @tltEnat.
 Definition tscaE := @tscaE.
 Definition tleE := @tleE.
 Definition tcaE := @tcaE.
@@ -1248,8 +1251,8 @@ Proof. rewrite tcaE; exact/leq_total. Qed.
 End Theory.
 End Theory.
 
-Module MorphismsProps. 
-Section MorphismsProps. 
+Module MorphismsTheory. 
+Section MorphismsTheory. 
 
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
@@ -1295,13 +1298,14 @@ Proof.
   by move=>?? /find_nth_inj/val_inj. 
 Qed.
 
-End MorphismsProps. 
-End MorphismsProps. 
+End MorphismsTheory. 
+End MorphismsTheory. 
 
 End TuplePoset.
 
 Export TuplePoset.TuplePoset.Exports.
 Export TuplePoset.Theory. 
+Export TuplePoset.MorphismsTheory. 
 
 (* Context (L : Type) (n : nat) (t : n.-tuple L). *)
 (* Context (e e1 e2 : TuplePoset.eventType t). *)
