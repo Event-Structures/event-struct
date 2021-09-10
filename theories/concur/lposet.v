@@ -364,6 +364,23 @@ Lemma ca_img_inv e1 e2 :
   (e1 <= e2) -> (inv f e1 <= inv f e2) || (inv f e1 >< inv f e2).
 Proof. by rewrite -{1}[e1]can_inv -{1}[e2]can_inv=> /ca_img. Qed.
 
+Lemma bij_total : 
+  total (<=%O : rel E1) -> total (<=%O : rel E2).
+Proof. 
+  move=> Ht e1 e2.
+  rewrite -[e1]can_inv -[e2]can_inv.
+  move: (Ht (inv f e1) (inv f e2)). 
+  by move=> /orP[] /(ca_monotone f) ->.
+Qed.  
+
+Lemma bij_ca_reflecting : total (<=%O : rel E1) ->
+  { mono f : e1 e2 / e1 <= e2 }.
+Proof.
+  move=> Ht e1 e2; apply/idP/idP; last exact/(ca_monotone f).
+  move=> /ca_img /orP[] //. 
+  by rewrite /comparable; move: (Ht e1 e2) ->.
+Qed.
+
 End Theory.
 End Theory.
 
@@ -635,6 +652,17 @@ Lemma of_homs_invE {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~= E1)
                    (K : cancel f g) (K' : cancel g f) : 
    Bij.inv (of_homs K K') = g.
 Proof. done. Qed.
+
+Lemma of_tot_bij_class {E1 E2 : eventType L} (f : E1 ≃> E2) : 
+  total (<=%O : rel E1) -> Iso.class_of f.
+Proof. 
+  move=> Ht; constructor; first exact/(Bij.class f).
+  by constructor=> ??; rewrite bij_ca_reflecting.
+Qed.
+
+Definition of_tot_bij {E1 E2 : eventType L} (f : E1 ≃> E2) : 
+  total (<=%O : rel E1) -> E1 ~= E2 := 
+    fun Ht => Iso.Pack (of_tot_bij_class f Ht).
 
 End Cat.
 
@@ -1236,7 +1264,7 @@ Import lPoset.Bij.Syntax.
 Import lPoset.Emb.Syntax.
 Import lPoset.Iso.Syntax.
 
-Module Theory.
+Module Export Theory.
 Section Theory. 
 Context {L : Type} {n : nat} (t : n.-tuple L).
 Implicit Types (e : eventType t).
@@ -1250,6 +1278,17 @@ Proof. rewrite tcaE; exact/leq_total. Qed.
 
 End Theory.
 End Theory.
+
+Module Iso.
+Section Iso.
+Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
+
+Definition of_bij : 
+  (eventType t ≃> eventType u) -> (eventType t ≈> eventType u) := 
+    fun f => lPoset.Iso.of_tot_bij f (@tca_total L n t).
+
+End Iso.
+End Iso. 
 
 Module MorphismsTheory. 
 
@@ -1320,7 +1359,6 @@ Qed.
 
 End Iso.
 
-End MorphismsTheory. 
 End MorphismsTheory. 
 
 End TuplePoset.
