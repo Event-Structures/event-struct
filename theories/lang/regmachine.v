@@ -1,6 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice finfun finmap tuple.
-From monae Require Import hierarchy monad_model.
 From eventstruct Require Import utils porf_eventstruct inhtype.
 From eventstruct Require Import transitionsystem ident.
 
@@ -52,12 +51,9 @@ Unset Printing Implicit Defensive.
 Section RegMachine.
 
 Open Scope fmap_scope.
-Open Scope do_notation.
 Open Scope exec_eventstruct_scope.
 
 Import Label.Syntax.
-
-Local Notation M := ModelMonad.ListMonad.t.
 
 Context {E : identType} {Val : inhType}.
 

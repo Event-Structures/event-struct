@@ -2,7 +2,6 @@ From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
-From monae Require Import hierarchy monad_model.
 From eventstruct Require Import utils relalg rel wftype ident inhtype.
 From eventstruct Require Import lposet pomset prime_eventstruct.
 
@@ -710,13 +709,13 @@ Proof. by rewrite /frf; case: (fed e). Qed.
 (*     Immediate Causality                                                   *)
 (* ************************************************************************* *)
 
-Definition fca e : ModelNondet.list E := [:: fpo e; frf e].
+Definition fca e : seq E := [:: fpo e; frf e].
 
 (* TODO: `sfrel` - infer [canonical] instance automatically, 
  *   then get rid of `ica` and use `sfrel fca` inplace
  *)
 Definition ica : {dhrel E & E} := 
-  (@sfrel _ monad.id_ndmorph E fca)°.
+  (sfrel fca)°.
 
 Lemma fca0 : fca \i0 = [:: \i0 ; \i0].
 Proof. by rewrite /fca fpo0 frf0. Qed.
@@ -732,7 +731,7 @@ Qed.
 Lemma fca_ndom e : e \notin dom -> fca e = [:: e; e].
 Proof. by move=> ndom; rewrite /fca (fpo_ndom e ndom) (frf_ndom e ndom). Qed.
 
-Lemma fca_ge : (@sfrel _ monad.id_ndmorph E) fca ≦ (>=%O : rel E).
+Lemma fca_ge : sfrel fca ≦ (>=%O : rel E).
 Proof. 
   move=> ?? /=; red; rewrite /sfrel /=.
   rewrite ?inE=> /orP[]/eqP->; [exact: fpo_le | exact: frf_le]. 
@@ -740,7 +739,7 @@ Qed.
 
 (* TODO: consider to generalize this lemma and move to `relations.v` *)
 Lemma fca_gt :
-  (@sfrel _ monad.id_ndmorph E (strictify E _ fca)) ≦ (>%O : rel E).
+  (sfrel (strictify fca)) ≦ (>%O : rel E).
 Proof. 
   rewrite strictify_weq.
   (* TODO: can ssreflect rewrite do setoid rewrites? *)
