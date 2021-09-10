@@ -446,7 +446,7 @@ Proof.
   pose dom0 := ([:: \i0] : seq E).
   pose fed0 := [fsfun [fsfun] with ident0 |-> mk_edescr \init \i0 \i0] :
     {fsfun for fun e => mk_edescr \eps e e : edescr}.
-  have S: finsupp fed0 =i [:: \i0] => [?|].
+  have S: finsupp fed0 =i [:: \i0] => [? |].
   - rewrite /fed0 finsupp_with /= /eq_op /= /eq_op /= /eq_op /=.
     by rewrite (negbTE init_eps) finsupp0 ?inE orbF.
   have F: fed0 \i0 = mk_edescr \init \i0 \i0 by rewrite ?fsfun_with.

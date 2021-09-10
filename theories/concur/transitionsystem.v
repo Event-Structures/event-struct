@@ -302,7 +302,7 @@ Qed.
 Lemma rf_ncf_add_event :  
   ~~ (cf add_event fresh_id write) <-> rf_ncf_dom add_event.
 Proof.
-  split=> [?|].
+  split=> [? |].
   - rewrite /rf_ncf_dom; apply /allP=> e1.
     rewrite /frf /= fsfun_withE ?inE.
     case: ifP=> /= [/eqP-> _|/negbT N /(allP rf_ncf_dom_)] //; first exact/implyP.
