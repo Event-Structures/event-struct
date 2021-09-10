@@ -354,7 +354,7 @@ Context {T T' : finType}.
 Implicit Types (f : T -> T').
 
 (* TODO: migrate to `mathcomp` once 
- * https://github.com/math-comp/math-comp/pull/771 is merged 
+ *   https://github.com/math-comp/math-comp/pull/771 is merged 
  *)
 Lemma bij_eq_card f : bijective f -> #|T| = #|T'|.
 Proof. by move=> [g /can_inj/leq_card + /can_inj/leq_card]; case: ltngtP. Qed.
@@ -547,7 +547,7 @@ Section FindNth.
 Context {T : Type}. 
 Implicit Types (p : pred T) (s : seq T) (n : nat).
 
-(* TODO: rename to avoid collision with find_nth_spec from mathcomp *)
+(* TODO: rename to avoid collision with find_nth_spec from mathcomp? *)
 Fixpoint find_nth p s n := 
   match n with 
   | 0    => find p s
@@ -556,9 +556,10 @@ Fixpoint find_nth p s n :=
     (i.+1 + find p (drop i.+1 s))%N
   end.
 
-Variant split_count_find_nth_spec p : seq T -> nat -> nat -> seq T -> seq T -> T -> Type :=
-  FindNth x n i s1 s2 of p x & (size s1 = i) & (count p s1 = n) :
-    split_count_find_nth_spec p (rcons s1 x ++ s2) n i s1 s2 x.
+Variant split_count_find_nth_spec p : 
+  seq T -> nat -> nat -> seq T -> seq T -> T -> Type :=
+    FindNth x n i s1 s2 of p x & (size s1 = i) & (count p s1 = n) :
+      split_count_find_nth_spec p (rcons s1 x ++ s2) n i s1 s2 x.
 
 Lemma split_count_find_nth x0 p s n : n < count p s ->
   let i := find_nth p s n in
@@ -591,7 +592,7 @@ Proof.
   rewrite -[s in split_count_find_nth_spec p s m.+1]
            (cat_take_drop (i.+1 + find p s2) s).
   rewrite (drop_nth x0 _)=> //.
-  rewrite -cat_rcons; constructor=> //. 
+  rewrite -cat_rcons. constructor=> //. 
   - by rewrite -nth_drop Hs2 nth_find // has_count -Hs2 //. 
   - by rewrite size_take Hszf.
   rewrite takeD take_drop addnC takeD drop_cat size_takel; last first.
@@ -713,7 +714,6 @@ End MaskUtils.
 
 
 Section MkMask. 
-
 Context {T : Type}.
 Implicit Types (s : seq nat) (m : bitseq) (n : nat).
 
@@ -758,93 +758,32 @@ Proof.
   by rewrite mem_nth.
 Qed.
 
-Lemma drop_mkmask_lt s n j :
-  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> size s <= n ->
-    (all (fun i => j < i) s) ->
-      drop j.+1 (mkmask s n) = mkmask (map (fun k => k - j.+1) s) (n - j.+1).
-Proof. 
-  elim s=> [|i {}s IH]. 
-  - by move=> /= ?? Hn ?; rewrite drop_nseq.
-  rewrite map_cons !mkmask_cons /=. 
-  rewrite path_sortedE; last exact/ltn_trans. 
-  move=> /andP[Ha Hs] /andP[Hi Hlt] Hn /andP[Hj Hjs].
-  rewrite !set_nthE ?drop_cat /=; last first.
-  - rewrite size_mkmask //; exact/ltnW.
-  - rewrite size_mkmask //. 
-    + apply/ltn_sub2r=> //.
-      by apply/(leq_ltn_trans Hj). 
-    rewrite all_map /preim; apply/allP.
-    move=> k Hk /=; rewrite ltn_sub2r //.
-    + by apply/(leq_ltn_trans Hj). 
-    by move: Hlt Hk=> /allP /[apply].
-  rewrite size_rcons size_takel ?ltnS ?Hj; last first.
-  - rewrite size_mkmask //; exact/ltnW.
-  rewrite -IH //; last first.
-  - exact/ltnW.
-  rewrite drop_drop -subSn //.
-  rewrite take_drop !subnK //; last exact/ltnW. 
-  rewrite drop_rcons //.
-  rewrite size_takel ?size_mkmask //.  
-  by apply/ltnW.
-Qed.
+End MkMask.
 
-Lemma drop_mkmask s n i (j := nth 0 s i) :
-  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i < size s <= n ->
-    drop j.+1 (mkmask s n) = mkmask (map (fun k => k - j.+1) (drop i.+1 s)) (n - j.+1).
-Proof. 
-  subst j; move: i; elim s=> [|j {}s IH] i //.
-  rewrite mkmask_cons /=.
-  rewrite path_sortedE; last exact/ltn_trans. 
-  move=> /andP[Hjs Hs] /andP[Hj Ha].
-  rewrite set_nthE ?drop_cat ?size_rcons ?size_takel ?size_mkmask //; 
-    last exact/ltnW. 
-  move=> /andP[Hi Hn].
-  have: j <= nth 0 (j :: s) i.
-  - move: Hi; case i=> [|{}i] //=. 
-    rewrite ltnS=> /(mem_nth 0) Hi. 
-    move: Hjs=> /allP=> H; move: (H (nth 0 s i) Hi)=> //; exact/ltnW. 
-  case: ifP=> [|_]; first ssrnatlia.
-  move: Hi; case i=> [|{}i] /=.
-  - move=> Hsz _; rewrite subnn !drop0.
-    apply/drop_mkmask_lt=> //; last exact/ltnW. 
-  rewrite ltnS=> Hi Hjn. 
-  rewrite drop_drop subnK ?ltnS ?IH //.
-  apply/andP; split=> //; exact/ltnW.  
-Qed.
+(* The following lemmas rely on a similar set of assumptions about a sequence s.
+ * Putting all of these assumptions in front of each lemma makes it harder 
+ * to read the code and grasp the idea.
+ * However, because of some techinical problems of the section mechanism 
+ * we cannot declare all these assumptions in a single section.
+ * It looks like in the case of a single section 
+ * the lemmas' arguments (hypothesis) cannot be generalized and 
+ * we cannot apply previous lemmas in subsequent lemmas.
+ * Thus we pick a middle ground: we put each lemma in a separate section. 
+ * Then we can declare all the assumptions as Hypothesis. 
+ * It improves readability and preserves the lemma statments generalized enough.
+ *)
 
-Lemma find_mkmask s n :
-  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
-    0 < size s <= n -> find id (mkmask s n) = nth 0 s 0.
-Proof. 
-  elim s=> [|i {}s IH] Hl //.
-  rewrite mkmask_cons /=. 
-  move=> /andP[Hi Ha] Hs.
-  rewrite set_nthE; last first.
-  - by rewrite size_mkmask. 
-  rewrite -?cats1 !find_cat has_cat /= orbT.
-  case: (size s == 0)/eqP.
-  - move=> /size0nil -> /=.
-    rewrite take_nseq; last by exact/ltnW. 
-    by rewrite has_nseq andbF size_nseq addn0.
-  move=> /eqP; rewrite eqn0Ngt=> /negbNE Hs0. 
-  case: ifP=> [|_]; last first.
-  - by rewrite size_take size_mkmask ?Hi ?addn0.
-  move: Hl=> /=; rewrite lt_path_sortedE=> /andP[Hil Hl]. 
-  move=> H; exfalso; move: H.
-  move=> /[dup] /find_take; rewrite has_find=> ->.
-  rewrite size_take size_mkmask ?Hi ?addn0 //.
-  rewrite {}IH //; last first.
-  - apply/andP; split=> //; exact/ltnW.
-  move: Ha Hs Hs0 Hil Hl; case: s=> [|j {}s] //.  
-  move=> /= ??? /andP[] + ??. 
-  rewrite /Order.lt /=; ssrnatlia.
-Qed.
+Section SortedSizeSubn.
+Context {T : Type}.
+Variables (s : seq nat) (n i : nat).
+Hypothesis (Hs : sorted ltn s) (Ha : all (ltn^~ n) s).
+Hypothesis (Hsz : i < size s <= n).
 
-Lemma sorted_size_subn s n i : 
-  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) -> i < size s <= n -> 
-    size s - i <= n - (nth 0 s i).
+Lemma sorted_size_subn : 
+  size s - i <= n - (nth 0 s i).
 Proof. 
-  move=> Hs Ha /andP[Hi Hn].
+  (* move: s i Hs Ha Hsz; clear s i Hs Ha Hsz. *)
+  move: Hsz=> /andP[Hi Hn].
   pose f := fun i => size s - i.
   pose g := fun i => size s - i.
   pose p := fun i => i < size s.
@@ -874,11 +813,125 @@ Proof.
   by rewrite -subn_gt0; apply/(leq_trans Hk). 
 Qed.    
 
-Lemma find_nth_mkmask s n i :
-  sorted (fun i j => i < j) s -> (all (fun i => i < n) s) ->
-    i < size s <= n -> find_nth id (mkmask s n) i = nth 0 s i.
+End SortedSizeSubn.
+
+Section DropMkMaskLt.
+Context {T : Type}.
+Variables (s : seq nat) (n j : nat).
+Hypothesis (Hs : sorted ltn s) (Ha : all (ltn^~ n) s) (Hj : all (ltn j) s).
+Hypothesis (Hsz : size s <= n).
+
+Lemma drop_mkmask_lt :
+  drop j.+1 (mkmask s n) = mkmask [seq k - j.+1 | k <- s] (n - j.+1).
 Proof. 
-  move: s; elim i=> [|{}i IH] s /=.
+  move: s Hs Ha Hj Hsz; clear s Hs Ha Hj Hsz.
+  elim=> [|i {}s IH].
+  - by move=> /= ?? Hn ?; rewrite drop_nseq.
+  rewrite map_cons !mkmask_cons /=. 
+  rewrite path_sortedE; last exact/ltn_trans. 
+  move=> /andP[Ha Hs] /andP[Hi Hlt] /andP[Hj Hjs] Hn.
+  rewrite !set_nthE ?drop_cat /=; last first.
+  - rewrite size_mkmask //; exact/ltnW.
+  - rewrite size_mkmask //. 
+    + apply/ltn_sub2r=> //.
+      by apply/(leq_ltn_trans Hj). 
+    rewrite all_map /preim; apply/allP.
+    move=> k Hk /=; rewrite ltn_sub2r //.
+    + by apply/(leq_ltn_trans Hj). 
+    by move: Hlt Hk=> /allP /[apply].
+  rewrite size_rcons size_takel ?ltnS ?Hj; last first.
+  - rewrite size_mkmask //; exact/ltnW.
+  rewrite -IH //; last first.
+  - exact/ltnW.
+  rewrite drop_drop -subSn //.
+  rewrite take_drop !subnK //; last exact/ltnW. 
+  rewrite drop_rcons //.
+  rewrite size_takel ?size_mkmask //.  
+  by apply/ltnW.
+Qed.
+
+End DropMkMaskLt.
+
+Section DropMkMask.
+Context {T : Type}.
+Variables (s : seq nat) (n i : nat).
+Let j : nat := nth 0 s i.
+Hypothesis (Hs : sorted ltn s) (Ha : all (ltn^~ n) s).
+Hypothesis (Hsz : i < size s <= n).
+
+Lemma drop_mkmask :
+  drop j.+1 (mkmask s n) = mkmask [seq k - j.+1 | k <- drop i.+1 s] (n - j.+1).
+Proof. 
+  subst j; move: s i Hs Ha Hsz; clear s i Hs Ha Hsz. 
+  elim=> [|j {}s IH] i //.
+  rewrite mkmask_cons /=.
+  rewrite path_sortedE; last exact/ltn_trans. 
+  move=> /andP[Hjs Hs] /andP[Hj Ha].
+  rewrite set_nthE ?drop_cat ?size_rcons ?size_takel ?size_mkmask //; 
+    last exact/ltnW. 
+  move=> /andP[Hi Hn].
+  have: j <= nth 0 (j :: s) i.
+  - move: Hi; case i=> [|{}k] //=. 
+    rewrite ltnS=> /(mem_nth 0) Hi. 
+    move: Hjs=> /allP=> H; move: (H (nth 0 s k) Hi)=> //; exact/ltnW. 
+  case: ifP=> [|_]; first ssrnatlia.
+  move: Hi; case i=> [|{}k] /=.
+  - move=> Hsz _; rewrite subnn !drop0.
+    apply/drop_mkmask_lt=> //; last exact/ltnW. 
+  rewrite ltnS=> Hi Hjn. 
+  rewrite drop_drop subnK ?ltnS ?IH //.
+  apply/andP; split=> //; exact/ltnW.  
+Qed.
+
+End DropMkMask.
+
+Section FindMkMask.
+Context {T : Type}.
+Variables (s : seq nat) (n : nat).
+Hypothesis (Hs : sorted ltn s) (Ha : all (ltn^~ n) s).
+Hypothesis (Hsz : 0 < size s <= n).
+
+Lemma find_mkmask :
+  find id (mkmask s n) = nth 0 s 0.
+Proof. 
+  move: s Hs Ha Hsz; clear s Hs Ha Hsz.
+  elim=> [|i {}s IH] Hl //.
+  rewrite mkmask_cons /=. 
+  move=> /andP[Hi Ha] Hs.
+  rewrite set_nthE; last first.
+  - by rewrite size_mkmask. 
+  rewrite -?cats1 !find_cat has_cat /= orbT.
+  case: (size s == 0)/eqP.
+  - move=> /size0nil -> /=.
+    rewrite take_nseq; last by exact/ltnW. 
+    by rewrite has_nseq andbF size_nseq addn0.
+  move=> /eqP; rewrite eqn0Ngt=> /negbNE Hs0. 
+  case: ifP=> [|_]; last first.
+  - by rewrite size_take size_mkmask ?Hi ?addn0.
+  move: Hl=> /=; rewrite lt_path_sortedE=> /andP[Hil Hl]. 
+  move=> H; exfalso; move: H.
+  move=> /[dup] /find_take; rewrite has_find=> ->.
+  rewrite size_take size_mkmask ?Hi ?addn0 //.
+  rewrite {}IH //; last first.
+  - apply/andP; split=> //; exact/ltnW.
+  move: Ha Hs Hs0 Hil Hl; case: s=> [|j {}s'] //.  
+  move=> /= ??? /andP[] + ??. 
+  rewrite /Order.lt /=; ssrnatlia.
+Qed.
+
+End FindMkMask.
+
+Section FindNthMkMask.
+Context {T : Type}.
+Variables (s : seq nat) (n i : nat).
+Hypothesis (Hs : sorted ltn s) (Ha : all (ltn^~ n) s).
+Hypothesis (Hsz : i < size s <= n).
+
+Lemma find_nth_mkmask :
+  find_nth id (mkmask s n) i = nth 0 s i.
+Proof. 
+  move: i s Hs Ha Hsz; clear s i Hs Ha Hsz.
+  elim=> [|{}i IH] s /=.
   - by apply/find_mkmask. 
   move=> Hl Ha /andP[Hi Hs]. 
   rewrite IH=> //; last first.
@@ -893,9 +946,7 @@ Proof.
   - rewrite all_map; apply/allP=> j Hj /=.
     rewrite -subSn; last first.
     + apply/sorted_nth_drop_lt=> //.
-    apply/leq_sub2r.
-    move: Ha=> /allP=> Ha; apply/(Ha j).
-    by apply/mem_drop/Hj.
+    by apply/leq_sub2r/(allP Ha)/mem_drop/Hj.
   - apply/sorted_subn=> //.
     + by apply/drop_sorted.     
     apply/allP=> j Hj.
@@ -908,12 +959,22 @@ Proof.
   by move: Hl; rewrite lt_sorted_uniq_le=> /andP[].
 Qed.
 
-Lemma mkmask_mask (n m : nat) (t : n.-tuple T) (u : m.-tuple T) (f : 'I_n -> 'I_m) 
-                  (s := mkseq (sub_lift (fun i => m + i) f : nat -> nat) n) :
-  {homo f : x y / x < y} -> injective f -> (forall i, f i < m) -> (forall i, tnth t i = tnth u (f i)) -> 
-    mask (mkmask s m) u = t.
+End FindNthMkMask.
+
+Section MkMaskMask.
+Context {T : Type} {n m : nat}.
+Variables (t : n.-tuple T) (u : m.-tuple T) (f : 'I_n -> 'I_m).
+Let s := mkseq (sub_lift (addn m) f) n.
+
+Hypothesis (Hhm  : {homo f : x y / x < y}).
+Hypothesis (Hinj : injective f).
+Hypothesis (Hnm  : forall i, f i < m).
+Hypothesis (Hnth : forall i, tnth t i = tnth u (f i)).
+
+Lemma mkmask_mask :
+  mask (mkmask s m) u = t.
 Proof. 
-  move=> Hfh Hf Hm Hn.
+  (* move=> Hfh Hf Hm Hn. *)
   have Ha: all (fun i : nat => i < m) s.
   - apply/allP=> i /(nthP 0) [j]. 
     rewrite size_mkseq=> Hj <-.
@@ -923,7 +984,7 @@ Proof.
     apply/mkseq_uniq/sub_lift_inj.
     + by move=> {}x {}y; move: (valP (f y))=> /[swap] /= <-; ssrnatlia.
     + by move=> ??; apply/addnI. 
-    by move=> ???; apply/Hf/val_inj. 
+    by move=> ???; apply/Hinj/val_inj. 
   have Hsz': size (mask (mkmask s m) u) = n.
   - by rewrite Hsz size_tuple.
   apply/(@eq_from_tuple _ _ _ Hsz).
@@ -933,7 +994,7 @@ Proof.
   rewrite nth_mask ?find_nth_mkmask=> //; last first.
   - by rewrite size_mkmask ?size_tuple //.
   - rewrite size_mkseq; apply/andP; split=> //.
-    move: Hf Hi=> /leq_card /=. 
+    move: Hinj Hi=> /leq_card /=. 
     by rewrite !card_ord.
   - apply/homo_sorted; last by exact/iota_ltn_sorted.
     apply/sub_lift_homo=> //=; [by ssrnatlia| ..]; last first.
@@ -942,13 +1003,12 @@ Proof.
     rewrite -[val (f x)]addn0 -addnS; apply/leq_add. 
     - by apply/ltnW; move: (valP (f x)). 
     by apply/(leq_trans _ Hyn); ssrnatlia.
-  rewrite -tnth_nth tcastE esymK Hn. 
+  rewrite -tnth_nth tcastE esymK Hnth. 
   have ->: cast_ord (size_tuple t) i = Ordinal Hi by exact/val_inj.
   by subst s; rewrite nth_mkseq // sub_liftT // -tnth_nth.
 Qed.
 
-End MkMask.
-
+End MkMaskMask.
 
 (* TODO: move to `inhtype.v` *)
 Section InhabitedUtils.
