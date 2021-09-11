@@ -1,7 +1,7 @@
 From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice order finmap. 
-From eventstruct Require Import utils rel lposet.
+From eventstruct Require Import utils lposet.
 
 (******************************************************************************)
 (* This file provides a theory of pomset languages.                           *)
@@ -261,8 +261,8 @@ Proof.
   set (g := lPoset.Iso.sy f).
   move: (T (g e1) (g e2)).
   case H: (g e1 <= g e2); move: H. 
-  - by rewrite -(ord_refl)=> ->.
-  by move=> ? /=; rewrite -(ord_refl)=> ->.    
+  - by rewrite (ca_reflecting g)=> ->.
+  by move=> ? /=; rewrite (ca_reflecting g)=> ->.    
 Qed.
 
 Definition lang : Pomset.lang L := 
