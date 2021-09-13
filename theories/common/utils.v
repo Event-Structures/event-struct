@@ -251,6 +251,18 @@ Qed.
 
 End OptionUtils.
 
+Section SeqUtils.
+Context {T : Type}.
+Implicit Types (s : seq T).
+
+(* copy-paste of Tauto.ocons *)
+Definition ocons o s := 
+  match o with 
+  | Some x => x :: s
+  | None   => s
+  end.
+
+End SeqUtils. 
 
 Section TupleUtils.
 Context {T : Type}.
