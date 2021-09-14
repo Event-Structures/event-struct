@@ -463,6 +463,14 @@ Section SeqUtils.
 Context {T : Type}. 
 Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
 
+Lemma headNnil x y s : 
+  ~~ nilp s -> head y s = head x s.
+Proof. by case: s. Qed.
+
+Lemma lastNnil x y s : 
+  ~~ nilp s -> last y s = last x s.
+Proof. by case: s. Qed.
+
 Lemma hasNcount p s : 
    ~~ has p s = (count p s == 0).
 Proof. by rewrite has_count -leqNgt leqn0. Qed. 

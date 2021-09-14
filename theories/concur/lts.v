@@ -202,7 +202,7 @@ Proof. by case: tr; rewrite /is_trace=> ? /= /andP[]. Qed.
 Definition joint : rel (trace_seq S) := 
   fun s1 s2 => 
     match s2 with 
-    | [::]      => true
+    | [::]     => true
     | st :: s2 => lnk (last (rev_step st) s1) st
     end.
 
@@ -263,7 +263,7 @@ Proof. by rewrite /joint; case: s=> [|??] //=; rewrite rev_lnk. Qed.
 
 Lemma joints0 s :
   joint s [::].
-Proof. by rewrite /joint. Qed.
+Proof. by rewrite /joint. Qed.    
 
 Lemma joint_cons st s1 s2 :
   joint s1 (st :: s2) = joint s1 [:: st]. 
@@ -272,6 +272,19 @@ Proof. by rewrite /joint; case: s2=> [|??] //=; rewrite last_rcons. Qed.
 Lemma joint_rcons st s1 s2 :
   joint (rcons s1 st) s2 = joint [:: st] s2. 
 Proof. by rewrite /joint; case: s2=> [|??] //=; rewrite last_rcons. Qed.
+
+Lemma joint_lastE s st : 
+  joint s [:: st] = (last (src st) (states s) == src st).
+Proof. 
+  rewrite /joint /lnk /=.
+  case: (lastP s)=> [|{}s st'] //=.
+  rewrite last_rcons.
+  case: (nilp s)/nilP=> [->|Hnil] //=.
+  rewrite headI /states /=.
+  rewrite -behead_map map_rcons. 
+  move: Hnil; case: s => [|st'' {}s] //= _.
+  by rewrite last_rcons.
+Qed.
 
 Lemma cons_is_trace st s : 
   is_step st -> joint [:: st] s -> is_trace s -> is_trace (st :: s).
@@ -293,6 +306,10 @@ Proof.
   rewrite (sorted_rcons s (rev_lnk st)). 
   by rewrite /joint.
 Qed.
+
+Lemma labels_rcons s st : 
+  labels (rcons s st) = rcons (labels s) (lbl st).
+Proof. by rewrite /labels map_rcons. Qed.
                          
 Lemma states_cons st s : joint [:: st] s ->
   states (st :: s) = src st :: dst st :: behead (states s).
@@ -317,7 +334,23 @@ Proof.
   rewrite !states_rcons_src map_rcons.
   rewrite -cats1 -cats1 -catA -catA /=.
   by move: Hlnk; rewrite /lnk=> /eqP ->.
-Qed.  
+Qed.
+
+Lemma head_states_rcons x s st : is_trace s -> joint s [:: st] ->
+  head x (states (rcons s st)) = if nilp s then src st else head x (states s).
+Proof. 
+  case: (nilp s)/nilP=> [->|Hnil] Htr Hj //=.
+  rewrite states_rcons //; last exact/nilP.
+  rewrite headI (headNnil x) //. 
+  admit.
+Admitted.
+
+Lemma last_states_rcons x s st : is_trace s -> joint s [:: st] ->
+  last x (states (rcons s st)) = dst st.
+Proof. 
+  case: (nilp s)/nilP=> [->|Hnil] Htr Hj //=.
+  rewrite states_rcons ?last_rcons //=; exact/nilP.
+Qed.
 
 Lemma states_cat s1 s2 : ~~ nilp s1 -> is_trace s1 -> joint s1 s2 -> 
   states (s1 ++ s2) = states s1 ++ behead (states s2).
@@ -388,31 +421,49 @@ End Syntax.
 
 Section Theory.
 Import Syntax. 
-Context {L : Type} {S T : ltsType L}.
+Context {L : eqType} {S T : ltsType L}.
 Implicit Types (R : S ~>~ T).
 
 Lemma sim_step R l s1 t1 t2 :
   R s1 t1 -> (t1 --[l]--> t2) -> exists s2, R s2 t2 /\ (s1 --[l]--> s2).
 Proof. case: R=> ? [[H]] /=; exact/H. Qed.
 
-(* Lemma sim_stepE R l :  *)
-(*   (R : hrel S T) ⋅ (tr l : hrel T T) ≦ (tr l : hrel S S) ⋅ (R : hrel S T). *)
-(* Proof. admit. Admitted. *)
-
 Lemma sim_traces R s t : 
-  R s t -> ltslang s ≦ ltslang t.
+  R s t -> ltslang t ≦ ltslang s.
 Proof. 
   move=> HR w [[tr Htr]] [->]; clear w. 
   rewrite /ltslang /traces_at /=.
-  rewrite /labels /= => /eqP.
-  move: Htr; elim/last_ind: tr=> [|{}tr st IH] /=.
+  rewrite /labels /= => /eqP Hh.
+  suff: (exists (tr' : trace S), 
+           [/\ R (last s (states tr')) (last t (states tr)), 
+               labels tr = labels tr' 
+             & s == head s (states tr')
+           ]).
+  - by move=> [tr' []] ???; exists tr'.
+  move: Htr Hh; elim/last_ind: tr=> [|{}tr st IH] /=.
   - by exists [trace] => /=.
-  rewrite is_trace_rcons=> /andP[Hs /andP[Htr Hj]].
-  case: (nilp tr)/nilP=> [->|Hnil] /=.
+  rewrite is_trace_rcons=> /andP[Hs /andP[]].
+  move=> Htr Hj; rewrite head_states_rcons //.  
+  case: (nilp tr)/nilP=> [->|Hnil] /=. 
   - admit.
-  rewrite states_rcons //; last exact/nilP.
-  rewrite headI /=.  
-  admit. 
+  move=> Ht; move: (IH Htr Ht); clear IH. 
+  move=> [tr' []] /[swap].
+  rewrite !labels_rcons.    
+  move: Hj; rewrite joint_lastE=> /eqP. 
+  rewrite (lastNnil t (src st)); last first.
+  - admit.
+  move: Hs=> + ->; rewrite /is_step=> Hs Hlbl HRl.
+  move: (sim_step HRl Hs)=> [s' []].
+  move=> HR' Hs' /eqP Hh.
+  pose st' := mk_step (lbl st) (last s (states tr')) s'.
+  have Htr' : is_trace (rcons tr' st'). 
+  - admit.
+  exists (Trace Htr')=> /=; split.
+  - admit.
+  - admit.
+  rewrite {1}Hh head_states_rcons //=.
+  2-3: admit.
+  case: (nilp tr')/nilP=> [->|] //.
 Admitted.
 
 End Theory.
