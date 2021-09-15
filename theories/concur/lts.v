@@ -532,9 +532,14 @@ Proof.
   - by exists [trace] => /=.
   rewrite is_trace_rcons=> /andP[Hs /andP[Htr Hj]].
   rewrite fst_state_rcons.
-  case: (nilp tr)/nilP=> [->|Hnil] /=. 
-  - admit.
-  move=> Ht; move: (IH Htr Ht); clear IH. 
+  case: (nilp tr)/nilP=> [->|Hnil] /= Ht. 
+  - move: Hs; rewrite /is_step -Ht=> Hs.
+    move: (sim_step HR Hs)=> [s' [HR' Hs']].
+    pose st' := mk_step (lbl st) s s'.     
+    have Htr' : is_trace [:: st']. 
+    - apply/cons_is_trace=> //.
+    by exists (Trace Htr')=> //=. 
+  move: (IH Htr Ht); clear IH. 
   move=> [tr' []] /[swap].
   rewrite !labels_rcons.    
   move: Hj; rewrite joint_lastE=> /eqP. 
@@ -558,7 +563,7 @@ Proof.
   rewrite fst_state_rcons. 
   move: Hnil'=> /nilP /negbTE ->. 
   exact/eqP/Hfst.  
-Admitted.
+Qed.
 
 End Theory.
 
