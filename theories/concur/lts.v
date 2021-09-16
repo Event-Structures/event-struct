@@ -272,6 +272,10 @@ Lemma fst_state0 s :
   fst_state s ([::] : trace_seq S) = s.
 Proof. by rewrite /fst_state /states (thead_head s) /=. Qed.
 
+Lemma fst_state1 s st :
+  fst_state s [:: st] = src st.
+Proof. by rewrite /fst_state /states (thead_head s) /=. Qed.
+
 Lemma fst_state_cons s ts st :
   fst_state s (st :: ts) = src st.
 Proof. by rewrite /fst_state (thead_head (src st)) /states /=. Qed.
@@ -280,34 +284,13 @@ Lemma fst_state_rcons s ts st :
   fst_state s (rcons ts st) = if nilp ts then src st else fst_state s ts.
 Proof. by case: ts=> [|??] /=; rewrite fst_state_cons. Qed.
 
-Lemma lst_state0 s :
-  lst_state s ([::] : trace_seq S) = s.
-Proof. by rewrite /lst_state /states (tlast_last s) /=. Qed.
+Lemma fst_stateE st s ts :  
+  fst_state s ts = if nilp ts then s else src (head st ts).
+Proof. by case: ts. Qed.
 
-Lemma lst_state1 s st :
-  lst_state s ([:: st]) = dst st.
-Proof. by rewrite /lst_state /states (tlast_last s) /=. Qed.
-
-Lemma lst_state_rcons s ts st :
-  lst_state s (rcons ts st) = dst st.
-Proof. 
-  rewrite /lst_state (tlast_last (dst st)) /states /=.
-  rewrite headI /= last_map behead_rcons.
-  case: (nilp ts)/nilP=> [->|] //=.
-  by rewrite last_rcons.
-Qed.
-
-Lemma lst_state_cons s ts st :
-  lst_state s (st :: ts) = if nilp ts then dst st else lst_state s ts.
-Proof. 
-  move: st.
-  case: (lastP ts)=> [|{}ts st'] st /=.
-  - exact/lst_state1. 
-  rewrite lst_state_rcons; case: ifP=> [|_].
-  - by rewrite /nilp size_rcons. 
-  rewrite /lst_state (tlast_last (dst st')) /states /=.
-  by rewrite map_rcons last_rcons.
-Qed.
+Lemma fst_stateNnil s s' ts : ts <> [::] ->
+  fst_state s' ts = fst_state s ts.
+Proof. by case: ts. Qed.
 
 Lemma lst_stateE st s ts :  
   lst_state s ts = if nilp ts then s else dst (last st ts). 
@@ -319,11 +302,44 @@ Proof.
   by rewrite last_map.
 Qed.
 
+Lemma lst_state_consE s st ts :  
+  lst_state s (st :: ts) = dst (last st ts). 
+Proof. by rewrite (lst_stateE st). Qed.
+
+Lemma lst_state0 s :
+  lst_state s ([::] : trace_seq S) = s.
+Proof. by rewrite /lst_state /states (tlast_last s) /=. Qed.
+
+(* Lemma lst_state1 s st : *)
+(*   lst_state s ([:: st]) = dst st. *)
+(* Proof. by rewrite lst_state_consE. *)
+(* by rewrite /lst_state /states (tlast_last s) /=. Qed. *)
+
+Lemma lst_state_rcons s ts st :
+  lst_state s (rcons ts st) = dst st.
+Proof. 
+  rewrite headI lst_state_consE behead_rcons.
+  case: (nilp ts)/nilP=> [->|] //=.
+  by rewrite last_rcons.
+Qed.
+
+(* Lemma lst_state_cons s ts st : *)
+(*   lst_state s (st :: ts) = if nilp ts then dst st else lst_state s ts. *)
+(* Proof.  *)
+(*   move: st. *)
+(*   case: (lastP ts)=> [|{}ts st'] st /=. *)
+(*   - exact/lst_state1.  *)
+(*   rewrite lst_state_rcons; case: ifP=> [|_]. *)
+(*   - by rewrite /nilp size_rcons.  *)
+(*   rewrite /lst_state (tlast_last (dst st')) /states /=. *)
+(*   by rewrite map_rcons last_rcons. *)
+(* Qed. *)
+
 Lemma lst_stateNnil s s' ts : ts <> [::] ->
   lst_state s' ts = lst_state s ts.
 Proof. 
   case: ts=> [|st {}ts] //.
-  by rewrite !(lst_stateE st) /nilp /=.
+  by rewrite !lst_state_consE.  
 Qed.
 
 Lemma joint0s ts :
@@ -336,21 +352,32 @@ Proof. by rewrite /joint. Qed.
 
 Lemma joint_cons st ts1 ts2 :
   joint ts1 (st :: ts2) = joint ts1 [:: st]. 
-Proof. by rewrite /joint; case: ts2=> [|??] //=; rewrite last_rcons. Qed.
+Proof. by rewrite /joint; case: ts2=> [|??] //=. Qed.
 
-Lemma cons_joint st ts1 st' :
-  joint (st :: ts1) [:: st'] = lnk (last st ts1) st'. 
-Proof. 
-  rewrite /joint lst_state_cons.
-  rewrite (lst_stateE st).
-  by case: (nilp ts1)/nilP=> [->|].
-Qed.
+(* Lemma joint_lnk_last st ts1 st' : *)
+(*   joint (st :: ts1) [:: st'] = lnk (last st ts1) st'.  *)
+(* Proof.  *)
+(*   rewrite /joint lst_state_cons. *)
+(*   rewrite (lst_stateE st). *)
+(*   by case: (nilp ts1)/nilP=> [->|]. *)
+(* Qed. *)
 
 Lemma joint_rcons st ts1 ts2 :
   joint (rcons ts1 st) ts2 = joint [:: st] ts2. 
 Proof. 
   rewrite /joint; case: ts2=> [|st' {}ts2] //=. 
   by rewrite -rcons0 !lst_state_rcons.
+Qed.
+
+Lemma joint_lnk st1 st2 : 
+  joint [:: st1] [:: st2] = lnk st1 st2.
+Proof. by rewrite /joint /lnk lst_state_consE /=. Qed.
+
+Lemma joint_firstE st ts : 
+  joint [:: st] ts = (dst st == fst_state (dst st) ts).
+Proof. 
+  rewrite /joint; case: ts=> [|st' {}ts] //=.
+  by rewrite fst_state0 eq_refl.
 Qed.
 
 Lemma joint_lastE ts st : 
@@ -364,33 +391,34 @@ Proof.
   repeat (apply/andP; split)=> //.
   - by move: Htr; rewrite /is_trace=> /andP[]. 
   move: Hj Htr; case: ts=> [|st' {}ts] //=.
-  rewrite joint_cons /joint /= => Hlnk.
+  rewrite joint_cons joint_lnk /= => Hlnk.
   rewrite /is_trace /= => /andP[/andP[]].
   move=> ???; exact/andP.
 Qed.
 
-Lemma rcons_is_trace st ts : 
-  is_step st -> joint ts [:: st] -> is_trace ts -> is_trace (rcons ts st).
-Proof. 
-  move=> Hs Hj Htr; rewrite /is_trace /=.
-  repeat (apply/andP; split)=> //.
-  - rewrite all_rcons; apply/andP; split=> //.
-    by move: Htr; rewrite /is_trace=> /andP[].
-  move: Hj Htr; case: ts=> [|st' {}ts] //=.
-  rewrite /is_trace /= => + /andP[/andP[]].
-  rewrite cons_joint rcons_path=> ????; exact/andP.
-Qed.
+(* Lemma rcons_is_trace st ts :  *)
+(*   is_step st -> joint ts [:: st] -> is_trace ts -> is_trace (rcons ts st). *)
+(* Proof.  *)
+(*   move=> Hs Hj Htr; rewrite /is_trace /=. *)
+(*   repeat (apply/andP; split)=> //. *)
+(*   - rewrite all_rcons; apply/andP; split=> //. *)
+(*     by move: Htr; rewrite /is_trace=> /andP[]. *)
+(*   move: Hj Htr; case: (lastP ts)=> [|{}ts st'] //=. *)
+(*   rewrite joint_rcons joint_lnk /= => Hlnk. *)
+(*   rewrite /is_trace all_rcons /= => /andP[/andP[]]. *)
+(*   rewrite (sorted_rcons _ Hlnk) last_rcons.  *)
+(*   move=> ???; exact/andP. *)
+(* Qed. *)
 
 Lemma is_trace_rcons ts st : 
   is_trace (rcons ts st) = [&& is_step st, is_trace ts & joint ts [:: st]].
-Proof. 
-  rewrite /is_trace all_rcons -andbA -andbA.
-  rewrite (sorted_rcons ts (rev_lnk st)).
-  do 3 (apply/andb_id2l=> _).
-  rewrite /lnk joint_lastE. 
-  case: (lastP ts)=> [|{}ts st'].
-  - by rewrite lst_state0=> /=. 
-  by rewrite last_rcons lst_state_rcons.
+Proof.
+  rewrite /is_trace /joint all_rcons -andbA -andbA.
+  do 2 (apply/andb_id2l=> _).
+  case: (lastP ts)=> [|{}ts st'] //=.
+  - by rewrite lst_state0 eq_refl.
+  rewrite lst_state_rcons (sorted_rcons st). 
+  by rewrite /nilp /lnk size_rcons last_rcons /=.
 Qed.
 
 Lemma size_labels ts : 
@@ -553,7 +581,7 @@ Proof.
   move=> /nilP Hnil'.
   pose st' := mk_step (lbl st) (lst_state s tr') s'.
   have Htr' : is_trace (rcons tr' st'). 
-  - apply/rcons_is_trace=> //; last first. 
+  - rewrite is_trace_rcons; apply /and3P; split=> //.
     - exact/(valP tr').
     rewrite joint_lastE /=.
     by apply/eqP/lst_stateNnil.

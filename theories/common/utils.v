@@ -541,12 +541,8 @@ Lemma find_take p s n :
 Proof. by rewrite -[in find p s](@cat_take_drop n _ s) find_cat=> ->. Qed.
 
 Lemma sorted_rcons x r s y : 
-  r x y -> sorted r (rcons s y) = sorted r s && r (last x s) y.
-Proof. 
-  move=> Hxy; case s=> [|z {}s] /=. 
-  - by rewrite Hxy. 
-  exact/rcons_path.
-Qed.
+  sorted r (rcons s y) = sorted r s && (nilp s || r (last x s) y).
+Proof. case s=> [|??] //=; exact/rcons_path. Qed.
 
 Lemma sorted_subn (s : seq nat) n : 
   sorted ltn s -> all (fun m => n <= m) s -> sorted ltn (map (subn^~ n) s).  
@@ -598,6 +594,7 @@ Qed.
 
 End SeqUtils.
 
+Arguments sorted_rcons {T} x.
 
 Section FindNth.
 
