@@ -276,6 +276,10 @@ Lemma fst_stateNnil s s' ts : ts <> [::] ->
   fst_state s' ts = fst_state s ts.
 Proof. by case: ts. Qed.
 
+Lemma lst_state_dst ts st : 
+  lst_state (dst st) ts = dst (last st ts).
+Proof. by case ts. Qed.
+
 Lemma lst_state_rcons s ts st :
   lst_state s (rcons ts st) = dst st.
 Proof. 
@@ -345,6 +349,10 @@ Proof. by rewrite /labels size_map. Qed.
 Lemma labels_rcons s st : 
   labels (rcons s st) = rcons (labels s) (lbl st).
 Proof. by rewrite /labels map_rcons. Qed.
+
+Lemma labels_cat ts1 ts2 : 
+  labels (ts1 ++ ts2) = labels ts1 ++ labels ts2.
+Proof. by rewrite /labels map_cat. Qed.
 
 Lemma size_states s ts : size (states s ts) == (size ts).+1.
 Proof. by rewrite /states; case: ts=> [|??] //=; rewrite size_map. Qed.
@@ -425,9 +433,8 @@ Proof. case: R=> ? [[H]] /=; exact/H. Qed.
 Lemma sim_traces R s t : 
   R s t -> ltslang t ≦ ltslang s.
 Proof. 
-  move=> HR w [[tr Htr]] [->]; clear w. 
-  rewrite /ltslang /traces_at /=.
-  rewrite /labels /= => /eqP Hh.
+  move=> HR w [[tr Htr]] [->]; clear w.
+  rewrite /ltslang /traces_at /= => /eqP Hh. 
   suff: (exists (tr' : trace S), 
            [/\ R (lst_state s tr') (lst_state t tr), 
                labels tr = labels tr' 
