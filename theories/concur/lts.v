@@ -466,3 +466,98 @@ Qed.
 End Theory.
 
 End Simulation. 
+
+
+Module Export Bisimulation.
+
+Module Bisimulation.
+Section ClassDef. 
+
+(* TODO: simulation between lts labelled by different labels? *)
+Context {L : Type} (S T : ltsType L).
+Implicit Types (R : hrel S T).
+
+(* Record mixin_of R := Mixin { *)
+(*   _ : forall (l : L) (s1 : S) (t1 t2 : T),  *)
+(*         R s1 t1 -> t1 --[l]--> t2 -> exists s2,  *)
+(*         R s2 t2 /\ s1 --[l]--> s2;   *)
+(* }. *)
+
+Set Primitive Projections.
+Record class_of R := Class {
+  base  : Simulation.class_of R ; 
+  mixin : Simulation.mixin_of R°;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Simulation.class_of.
+
+Structure type := Pack { apply : S -> T -> Prop ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition simType := Simulation.Pack class.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Simulation.Simulation.class_of.
+(* Coercion mixin : class_of >-> mixin_of. *)
+Coercion apply : type >-> Funclass.
+Coercion simType : type >-> Simulation.type.
+Canonical simType.
+End Exports.
+
+End Bisimulation.
+
+Export Bisimulation.Exports.
+
+Notation bisim := Bisimulation.type.
+
+Module Import Syntax. 
+Notation "S ~=~ T" := (bisim S T) (at level 50) : lts_scope.
+End Syntax. 
+
+Import Simulation.Syntax.
+
+Section Build.
+Context {L : Type}.
+Implicit Types (S T : ltsType L).
+
+Lemma inv_class S T (R : S ~=~ T) : Bisimulation.class_of (R : hrel S T)°.
+Proof. by case: R=> [? [[] []]] /=. Qed.
+
+Definition inv S T : (S ~=~ T) -> (T ~=~ S) := 
+  fun R => Bisimulation.Pack (inv_class R). 
+
+End Build.
+
+Section Theory.
+Import Syntax. 
+Context {L : eqType} {S T : ltsType L}.
+Implicit Types (R : S ~=~ T).
+
+Lemma sim_step_cnv R l s1 s2 t1 :
+  R s1 t1 -> (s1 --[l]--> s2) -> exists t2, R s2 t2 /\ (t1 --[l]--> t2).
+Proof. case: R=> ? [[? [H]]] /=; exact/H. Qed.
+
+Lemma bisim_traces R s t : 
+  R s t -> ltslang t ≡ ltslang s.
+Proof. 
+  move=> HR; apply/weq_spec; split. 
+  - exact/(sim_traces HR).
+  by apply/(@sim_traces _ _ _ (inv R))=> /=.
+Qed.
+
+End Theory.
+
+End Bisimulation. 
