@@ -112,29 +112,28 @@ Module Export Step.
 Section Def.
 Context {L : Type} (S : ltsType L).
 
-Record step : Type := mk_step {
+Record stepTuple : Type := mk_step {
   lbl : L; src : S; dst : S;  
 }.
 
-Definition is_step : pred step := 
+Definition is_step : pred stepTuple := 
   fun s => (src s) --[lbl s]--> (dst s).
+
+Structure step : Type := Step {step_val :> stepTuple; _ : is_step step_val}.
+
+Canonical step_subType := Eval hnf in [subType for step_val].
 
 (* TODO: better name? *)
 Definition lnk : rel step := 
   fun s t => dst s == src t. 
-
-Definition rev_step : step -> step := 
-  fun s => mk_step (lbl s) (dst s) (src s).
-
 End Def.
 
-Prenex Implicits lbl src dst.
-Prenex Implicits is_step lnk rev_step.
+Prenex Implicits lbl src dst is_step lnk.
 
 Section EQ. 
 Context {L : eqType} (S : ltsType L).
 
-Definition prod_of_step : step S -> L * S * S := 
+Definition prod_of_step : stepTuple S -> L * S * S := 
   fun s => (lbl s, src s, dst s).
 
 Lemma prod_of_step_inj : injective prod_of_step.
@@ -143,33 +142,17 @@ Proof.
   by case x; case y=> /= ?????? -> -> ->. 
 Qed.
 
-Definition step_eqMixin := InjEqMixin prod_of_step_inj.
+Definition stepTuple_eqMixin := InjEqMixin prod_of_step_inj.
+Canonical stepTuple_eqType := 
+  Eval hnf in EqType (stepTuple S) stepTuple_eqMixin.
+
+Definition step_eqMixin := Eval hnf in [eqMixin of step S by <:].
 Canonical step_eqType := Eval hnf in EqType (step S) step_eqMixin.
 
-(* Lemma prod_of_step_inj : injective (prod_of_step : step S -> L * S * S). *)
-(* Proof.  *)
-(*   case=> [s1 H1]; case=> [s2 H2] /=. *)
-(*   move=> /prod_of_step_tup_inj. *)
-(*   move: H2=> /[swap]; move: H1=> /[swap] -> H1 H2. *)
-(*   have ->: H1 = H2=> //; exact/bool_irrelevance. *)
-(* Qed. *)
-
-(* Definition step_eqMixin := InjEqMixin prod_of_step_inj. *)
-(* Canonical step_eqType := Eval hnf in EqType (step S) step_eqMixin. *)
+(* Variables (st1 st2 : step S). *)
+(* Check (st1 == st2). *)
 
 End EQ.
-
-Section Theory.
-Context {L : Type} (S : ltsType L).
-Implicit Types (st : step S).
-
-Lemma lnk_rev st : lnk st (rev_step st).
-Proof. by rewrite /lnk. Qed.
-
-Lemma rev_lnk st : lnk (rev_step st) st.
-Proof. by rewrite /lnk. Qed.
-
-End Theory.
 
 End Step.
 
@@ -182,7 +165,7 @@ Section Def.
 Context {L : Type} (S : ltsType L).
 
 Definition is_trace : pred (trace_seq S) := 
-  fun s => (all is_step s) && (sorted lnk s).
+  fun s => sorted lnk s.
 
 Structure trace : Type := Trace { 
   trace_val :> trace_seq S; 
@@ -193,19 +176,13 @@ Canonical trace_subType := Eval hnf in [subType for trace_val].
 
 Implicit Types (ts : trace_seq S) (tr : trace).
 
-Lemma trace_steps tr : all is_step tr.
-Proof. by case: tr; rewrite /is_trace=> ? /= /andP[]. Qed.
-
-Lemma trace_lnk tr : sorted lnk tr.
-Proof. by case: tr; rewrite /is_trace=> ? /= /andP[]. Qed.
-
-Definition labels : trace_seq S -> seq L := map lbl. 
+Definition labels : trace_seq S -> seq L := map (lbl : step S -> L). 
 
 Definition states : S -> trace_seq S -> seq S := 
   fun s ts => 
     match ts with 
     | [::]    => [:: s]
-    | st :: _ => src st :: map dst ts
+    | st :: _ => src st :: map (dst : step S -> S) ts
     end. 
 
 Definition fst_state : S -> trace_seq S -> S := 
@@ -263,6 +240,9 @@ End EQ.
 Section Theory. 
 Context {L : Type} (S : ltsType L).
 Implicit Types (st : step S) (ts : trace_seq S) (tr : trace S).
+
+Lemma trace_lnk tr : sorted lnk tr.
+Proof. by case: tr. Qed.
 
 Lemma fst_state_src st ts : 
   fst_state (src st) ts = src (head st ts).
@@ -323,19 +303,17 @@ Lemma joint_lastE ts st :
 Proof. done. Qed.
 
 Lemma is_trace_cons st ts : 
-  is_trace (st :: ts) = [&& is_step st, is_trace ts & joint [:: st] ts].
+  is_trace (st :: ts) = [&& is_trace ts & joint [:: st] ts].
 Proof. 
-  rewrite /is_trace /joint /= -andbA -andbA.
-  do 2 (apply/andb_id2l=> _).
+  rewrite /is_trace /joint /=.
   case: ts=> [|st' {}ts] //=.
   by rewrite andbC; apply/andb_id2l=> _.
 Qed.
 
 Lemma is_trace_rcons ts st : 
-  is_trace (rcons ts st) = [&& is_step st, is_trace ts & joint ts [:: st]].
+  is_trace (rcons ts st) = [&& is_trace ts & joint ts [:: st]].
 Proof.
-  rewrite /is_trace /joint all_rcons -andbA -andbA.
-  do 2 (apply/andb_id2l=> _).
+  rewrite /is_trace /joint. 
   case: (lastP ts)=> [|{}ts st'] //=.
   - by rewrite eq_refl.
   rewrite lst_state_rcons (sorted_rcons st). 
@@ -443,12 +421,17 @@ Proof.
   - by move=> [tr' []] ???; exists tr'.
   move: Htr Hh; elim/last_ind: tr=> [|{}tr st IH] /=.
   - by exists [trace] => /=.
-  rewrite is_trace_rcons=> /andP[Hs /andP[Htr Hj]].
+  rewrite is_trace_rcons=> /andP[Htr Hj].
   rewrite fst_state_rcons -fst_state_src. 
   case: (nilp tr)/nilP=> [->|Hnil] /=. 
-  - move: Hs; rewrite /is_step=> /[swap] <- => Hs. 
+  - move: (valP st); rewrite /is_step=> /[swap] <- => Hs. 
     move: (sim_step HR Hs)=> [s' [HR' Hs']].
-    pose st' := mk_step (lbl st) s s'.     
+    (* TODO: introduce a nicer way to construct steps 
+     *   (using canonical structures and phantom types?) 
+     *)
+    pose st_' := mk_step (lbl st) s s'. 
+    have Hst' : is_step st_' by done. 
+    pose st'  := Step Hst'.     
     have Htr' : is_trace [:: st']. 
     - by rewrite is_trace_cons //=; apply/andP.
     by exists (Trace Htr')=> //=. 
@@ -458,16 +441,18 @@ Proof.
   rewrite !labels_rcons.    
   move: Hj; rewrite joint_lastE=> /eqP. 
   rewrite (lst_stateNnil t (src st))=> // ->. 
-  move: Hs; rewrite /is_step=> Hs Hlbl HRl.
+  move: (valP st); rewrite /is_step=> Hs Hlbl HRl.
   move: (sim_step HRl Hs)=> [s' []].
   move=> HR' Hs' /eqP Hfst.
   have: ~~ nilp tr'.
   - rewrite /nilp -size_labels -Hlbl size_labels. 
     by move: Hnil=> /nilP.
   move=> /nilP Hnil'.
-  pose st' := mk_step (lbl st) (lst_state s tr') s'.
+  pose st_' := mk_step (lbl st) (lst_state s tr') s'.
+  have Hst' : is_step st_' by done.
+  pose st'  := Step Hst'.
   have Htr' : is_trace (rcons tr' st'). 
-  - rewrite is_trace_rcons; apply /and3P; split=> //.
+  - rewrite is_trace_rcons; apply /andP; split=> //.
     - exact/(valP tr').
     rewrite joint_lastE /=.
     by apply/eqP/lst_stateNnil.
@@ -481,4 +466,3 @@ Qed.
 End Theory.
 
 End Simulation. 
-
