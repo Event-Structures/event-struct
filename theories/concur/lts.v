@@ -4,8 +4,57 @@ From mathcomp Require Import seq tuple path.
 From eventstruct Require Import utils relalg.
 
 (******************************************************************************)
-(* This file provides a theory of labelled transition systems.                *)
-(* TODO.                                                                      *)
+(* This file provides a theory of labelled transition systems (LTS),          *)
+(* traces and languages of LTS, and simulation relations between LTS.         *)
+(*                                                                            *)
+(*         ltsType L == a type of states of labelled transition system with   *)
+(*                      labels from L. Currently the library supports only    *)
+(*                      discrete states, i.e. the type of states should have  *)
+(*                      decidable equality.                                   *)
+(*             trans == transition relation of type L -> S -> S -> bool.      *)
+(*    s1 --[l]--> s2 == there exists a transition from s1 to s2 labelled by l.*)
+(*         s1 --> s2 == there exists a transition from s1 to s2.              *)
+(*        s1 -->? s2 == s1 is equal to s2 or s1 --> s2.                       *)
+(*        s1 -->+ s2 == there exists a non-empty sequence of steps            *)
+(*                      from s1 to s2.                                        *)
+(*        s1 -->* s2 == there exists a possibly empty sequence of steps       *)
+(*                      from s1 to s2.                                        *)
+(*            step S == a type of steps of the LTS.                           *)
+(*                   := { (lbl, src, dst) | src --[lbl]--> dst }.             *)
+(*           trace S == a type of traces of the LTS, that is finite sequences *)
+(*                      of steps performed by the transition system.          *)
+(*                   := { tr : seq (step S) | dst st[i] == src st[i+1] }.     *)
+(*     [trace of ts] == a trace whose underlying sequence (value) is ts.      *)
+(*                      Coq must be able to infer a proof that ts satisfies   *)
+(*                      trace property (i.e the ends of steps should match).  *)
+(*           [trace] == empty trace.                                          *)
+(*         labels tr == a sequence of labels of tr.                           *)
+(*       states s tr == a sequence of states of tr or [:: s] is tr is empty.  *)
+(*    fst_state s tr == the first state of of tr or s is tr is empty.         *)
+(*    lst_state s tr == the last state of of tr or s is tr is empty.          *)
+(*   adjoint tr1 tr2 == a relation asserting that two traces are adjoint,     *)
+(*                      meaning that the last state of tr1 is equal to        *)
+(*                      the first state of tr2.                               *)
+(*      trace_lang s == a (decidable) predicate defining a trace language     *)
+(*                      (a set of traces) of the LTS at the state s,          *)
+(*                      i.e. valid traces starting at the state s.            *)
+(*        lts_lang s == a predicate defining a language (a set of label       *)
+(*                      sequences) of the LTS at the state s.                 *)
+(*                                                                            *)
+(* We also develop a theory of simulations between transition systems.        *)
+(*           sim S T == a type of simulation relations between S and T.       *)
+(*         bisim S T == a type of bisimulation relations between S and T.     *)
+(* The following important lemmas about simulations are available.            *)
+(*    sim_lang R s t == if R is simulation and R s t holds then               *)
+(*                      lts_lang s ≦ lts_lang t.                              *)
+(*    sim_lang R s t == if R is simulation and R s t holds then               *)
+(*                      lts_lang s ≡ lts_lang t.                              *)
+(*                                                                            *)
+(* The following notations can be used by importing corresponding module:     *)
+(* Import Mod.Syntax for Mod in {Simulation, Bisimulation}.                   *)
+(*                  S ~>~ T == simulation.                                    *)
+(*                  S ~=~ T == bisimulation.                                  *)
+(*                                                                            *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -93,13 +142,11 @@ Definition trans : L -> rel S := LTS.trans (LTS.class S).
 
 End Def.
 
-Module Export Syntax.
 Notation "s1 '--[' l ']-->' s2" := (trans l s1 s2) : lts_scope.
 Notation "s1 '-->' s2"  := (exlab trans)   : lts_scope.
 Notation "s1 '-->?' s2" := (exlab trans)^? : lts_scope.
 Notation "s1 '-->+' s2" := (exlab trans)^+ : lts_scope. 
 Notation "s1 '-->*' s2" := (exlab trans)^* : lts_scope.
-End Syntax.
 
 End LTS.
 
@@ -191,15 +238,15 @@ Definition fst_state : S -> trace_seq S -> S :=
 Definition lst_state : S -> trace_seq S -> S := 
   fun s ts => if ts is st :: ts then dst (last st ts) else s. 
 
-Definition traces_at : S -> pred trace := 
+Definition trace_lang : S -> pred trace := 
   fun s tr => s == fst_state s tr.
 
 (* TODO: this is actually a fmap on (A -> Prop) functor. *)
-Definition ltslang : S -> lang L := 
-  fun s w => exists tr, w = labels tr /\ traces_at s tr.
+Definition lts_lang : S -> lang L := 
+  fun s w => exists tr, w = labels tr /\ trace_lang s tr.
 
 (* TODO: better name? *)
-Definition joint : rel (trace_seq S) := 
+Definition adjoint : rel (trace_seq S) := 
   fun ts1 ts2 => 
     match ts2 with 
     | [::]    => true
@@ -211,7 +258,7 @@ Definition mk_trace tr mkTr : trace :=
 
 End Def. 
 
-Arguments joint : simpl never.
+Arguments adjoint : simpl never.
 
 Section Seq.
 Context {L : Type} (S : ltsType L).
@@ -271,49 +318,49 @@ Lemma lst_stateNnil s s' ts : ts <> [::] ->
   lst_state s' ts = lst_state s ts.
 Proof. by case: ts=> [|??] //; rewrite !lst_stateE. Qed. 
 
-Lemma joint0s ts :
-  joint [::] ts.
-Proof. by rewrite /joint; case: ts=> [|??] //=. Qed.
+Lemma adjoint0s ts :
+  adjoint [::] ts.
+Proof. by rewrite /adjoint; case: ts=> [|??] //=. Qed.
 
-Lemma joints0 ts :
-  joint ts [::].
-Proof. by rewrite /joint. Qed.    
+Lemma adjoints0 ts :
+  adjoint ts [::].
+Proof. by rewrite /adjoint. Qed.    
 
-Lemma joint_cons st ts1 ts2 :
-  joint ts1 (st :: ts2) = joint ts1 [:: st]. 
-Proof. by rewrite /joint; case: ts2=> [|??] //=. Qed.
+Lemma adjoint_cons st ts1 ts2 :
+  adjoint ts1 (st :: ts2) = adjoint ts1 [:: st]. 
+Proof. by rewrite /adjoint; case: ts2=> [|??] //=. Qed.
 
-Lemma joint_rcons st ts1 ts2 :
-  joint (rcons ts1 st) ts2 = joint [:: st] ts2. 
+Lemma adjoint_rcons st ts1 ts2 :
+  adjoint (rcons ts1 st) ts2 = adjoint [:: st] ts2. 
 Proof. 
-  rewrite /joint; case: ts2=> [|??] //=. 
+  rewrite /adjoint; case: ts2=> [|??] //=. 
   by rewrite lst_state_rcons.
 Qed.
 
-Lemma joint_lnk st1 st2 :
-  joint [:: st1] [:: st2] = lnk st1 st2.
+Lemma adjoint_lnk st1 st2 :
+  adjoint [:: st1] [:: st2] = lnk st1 st2.
 Proof. done. Qed.
 
-Lemma joint_firstE st ts : 
-  joint [:: st] ts = (dst st == fst_state (dst st) ts).
-Proof. by case: ts=> //=; rewrite /joint eq_refl. Qed.
+Lemma adjoint_firstE st ts : 
+  adjoint [:: st] ts = (dst st == fst_state (dst st) ts).
+Proof. by case: ts=> //=; rewrite /adjoint eq_refl. Qed.
 
-Lemma joint_lastE ts st : 
-  joint ts [:: st] = (lst_state (src st) ts == src st).
+Lemma adjoint_lastE ts st : 
+  adjoint ts [:: st] = (lst_state (src st) ts == src st).
 Proof. done. Qed.
 
 Lemma is_trace_cons st ts : 
-  is_trace (st :: ts) = [&& is_trace ts & joint [:: st] ts].
+  is_trace (st :: ts) = [&& is_trace ts & adjoint [:: st] ts].
 Proof. 
-  rewrite /is_trace /joint /=.
+  rewrite /is_trace /adjoint /=.
   case: ts=> [|st' {}ts] //=.
   by rewrite andbC; apply/andb_id2l=> _.
 Qed.
 
 Lemma is_trace_rcons ts st : 
-  is_trace (rcons ts st) = [&& is_trace ts & joint ts [:: st]].
+  is_trace (rcons ts st) = [&& is_trace ts & adjoint ts [:: st]].
 Proof.
-  rewrite /is_trace /joint. 
+  rewrite /is_trace /adjoint. 
   case: (lastP ts)=> [|{}ts st'] //=.
   - by rewrite eq_refl.
   rewrite lst_state_rcons (sorted_rcons st). 
@@ -389,18 +436,18 @@ Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 End Exports.
 
+Module Syntax. 
+Notation "S ~>~ T" := (type S T) (at level 50) : lts_scope.
+End Syntax. 
+
 End Simulation.
 
 Export Simulation.Exports.
+Import Simulation.Syntax.
 
 Notation sim := Simulation.type.
 
-Module Syntax. 
-Notation "S ~>~ T" := (sim S T) (at level 50) : lts_scope.
-End Syntax. 
-
 Section Theory.
-Import Syntax. 
 Context {L : eqType} {S T : ltsType L}.
 Implicit Types (R : S ~>~ T).
 
@@ -408,11 +455,11 @@ Lemma sim_step R l s1 t1 t2 :
   R s1 t1 -> (t1 --[l]--> t2) -> exists s2, R s2 t2 /\ (s1 --[l]--> s2).
 Proof. case: R=> ? [[H]] /=; exact/H. Qed.
 
-Lemma sim_traces R s t : 
-  R s t -> ltslang t ≦ ltslang s.
+Lemma sim_lang R s t : 
+  R s t -> lts_lang t ≦ lts_lang s.
 Proof. 
   move=> HR w [[tr Htr]] [->]; clear w.
-  rewrite /ltslang /traces_at /= => /eqP Hh. 
+  rewrite /lts_lang /trace_lang /= => /eqP Hh. 
   suff: (exists (tr' : trace S), 
            [/\ R (lst_state s tr') (lst_state t tr), 
                labels tr = labels tr' 
@@ -439,7 +486,7 @@ Proof.
   move: (IH Htr Ht); clear IH. 
   move=> [tr' []] /[swap].
   rewrite !labels_rcons.    
-  move: Hj; rewrite joint_lastE=> /eqP. 
+  move: Hj; rewrite adjoint_lastE=> /eqP. 
   rewrite (lst_stateNnil t (src st))=> // ->. 
   move: (valP st); rewrite /is_step=> Hs Hlbl HRl.
   move: (sim_step HRl Hs)=> [s' []].
@@ -454,7 +501,7 @@ Proof.
   have Htr' : is_trace (rcons tr' st'). 
   - rewrite is_trace_rcons; apply /andP; split=> //.
     - exact/(valP tr').
-    rewrite joint_lastE /=.
+    rewrite adjoint_lastE /=.
     by apply/eqP/lst_stateNnil.
   exists (Trace Htr')=> /=; split.
   - by rewrite !lst_state_rcons /=.
@@ -517,17 +564,16 @@ Coercion simType : type >-> Simulation.type.
 Canonical simType.
 End Exports.
 
+Module Import Syntax. 
+Notation "S ~=~ T" := (type S T) (at level 50) : lts_scope.
+End Syntax. 
+
 End Bisimulation.
 
 Export Bisimulation.Exports.
+Import Bisimulation.Syntax.
 
 Notation bisim := Bisimulation.type.
-
-Module Import Syntax. 
-Notation "S ~=~ T" := (bisim S T) (at level 50) : lts_scope.
-End Syntax. 
-
-Import Simulation.Syntax.
 
 Section Build.
 Context {L : Type}.
@@ -542,7 +588,6 @@ Definition inv S T : (S ~=~ T) -> (T ~=~ S) :=
 End Build.
 
 Section Theory.
-Import Syntax. 
 Context {L : eqType} {S T : ltsType L}.
 Implicit Types (R : S ~=~ T).
 
@@ -550,8 +595,8 @@ Lemma sim_step_cnv R l s1 s2 t1 :
   R s1 t1 -> (s1 --[l]--> s2) -> exists t2, R s2 t2 /\ (t1 --[l]--> t2).
 Proof. case: R=> ? [[? [H]]] /=; exact/H. Qed.
 
-Lemma bisim_traces R s t : 
-  R s t -> ltslang t ≡ ltslang s.
+Lemma bisim_lang R s t : 
+  R s t -> lts_lang t ≡ lts_lang s.
 Proof. 
   move=> HR; apply/weq_spec; split. 
   - exact/(sim_traces HR).
