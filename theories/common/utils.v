@@ -267,8 +267,8 @@ Lemma rcons0 x :
 Proof. done. Qed.
 
 Lemma behead_rcons x s :
-  behead (rcons s x) = if nilp s then [::] else rcons (behead s) x.
-Proof. case: s=> //=. Qed.
+  behead (rcons s x) = if s is [::] then [::] else rcons (behead s) x.
+Proof. by case: s. Qed.
 
 End SeqUtils. 
 
