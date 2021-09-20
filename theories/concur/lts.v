@@ -1,5 +1,5 @@
 From RelationAlgebra Require Import lattice monoid rel.
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype choice.
 From mathcomp Require Import seq tuple path.
 From eventstruct Require Import utils relalg.
 
@@ -97,12 +97,12 @@ Record mixin_of (S0 : Type) (L : Type)
 
 Set Primitive Projections.
 Record class_of (S : Type) (L : Type) := Class {
-  base  : Equality.class_of S;
+  base  : Countable.class_of S;
   mixin : mixin_of L base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Equality.class_of.
+Local Coercion base : class_of >-> Countable.class_of.
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -114,18 +114,24 @@ Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c
 Definition clone c of phant_id class c := @Pack S c.
 
 Definition pack :=
-  fun bS b & phant_id (@Equality.class bS) b =>
+  fun bS b & phant_id (@Countable.class bS) b =>
   fun m => Pack (@Class S L b m).
 
 Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition countType := @Countable.Pack cT class.
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Equality.class_of.
+Coercion base : class_of >-> Countable.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion countType : type >-> Countable.type.
 Canonical eqType.
+Canonical choiceType.
+Canonical countType.
 End Exports.
 
 End LTS.
@@ -177,11 +183,14 @@ End Def.
 
 Prenex Implicits lbl src dst is_step lnk.
 
-Section EQ. 
-Context {L : eqType} (S : ltsType L).
+Section Prod.
+Context {L : Type} (S : ltsType L).
 
 Definition prod_of_step : stepTuple S -> L * S * S := 
   fun s => (lbl s, src s, dst s).
+
+Definition step_of_prod : L * S * S -> option (step S) := 
+  fun '(lbl, src, dst) => insub (mk_step lbl src dst).
 
 Lemma prod_of_step_inj : injective prod_of_step.
 Proof. 
@@ -189,7 +198,21 @@ Proof.
   by case x; case y=> /= ?????? -> -> ->. 
 Qed.
 
-Definition stepTuple_eqMixin := InjEqMixin prod_of_step_inj.
+Lemma prod_of_stepK : 
+  pcancel (prod_of_step : step S -> L * S * S) step_of_prod.
+Proof. 
+  move=> st /=; rewrite insubT=> /=.
+  - by move: (valP st); rewrite /is_step.
+  move=> H /=; congr Some; apply/val_inj=> /=. 
+  by move: H=> _; case: st=> [[]] /=.  
+Qed.
+
+End Prod.
+
+Section EQ. 
+Context {L : eqType} (S : ltsType L).
+
+Definition stepTuple_eqMixin := InjEqMixin (@prod_of_step_inj L S).
 Canonical stepTuple_eqType := 
   Eval hnf in EqType (stepTuple S) stepTuple_eqMixin.
 
@@ -201,6 +224,19 @@ Canonical step_eqType := Eval hnf in EqType (step S) step_eqMixin.
 
 End EQ.
 
+Section Count. 
+Context {L : countType} (S : ltsType L).
+
+Definition step_choiceMixin := PcanChoiceMixin (@prod_of_stepK L S).
+Canonical step_choiceType := 
+  Eval hnf in ChoiceType (step S) step_choiceMixin.
+
+Definition step_countMixin := PcanCountMixin (@prod_of_stepK L S).
+Canonical step_countType := 
+  Eval hnf in CountType (step S) step_countMixin.
+
+End Count.
+
 End Step.
 
 
@@ -209,7 +245,7 @@ Module Export Trace.
 Notation trace_seq S := (seq (step S)).
 
 Section Def. 
-Context {L : Type} (S : ltsType L).
+Context {L : eqType} (S : ltsType L).
 
 Definition is_trace : pred (trace_seq S) := 
   fun s => sorted lnk s.
@@ -238,12 +274,15 @@ Definition fst_state : S -> trace_seq S -> S :=
 Definition lst_state : S -> trace_seq S -> S := 
   fun s ts => if ts is st :: ts then dst (last st ts) else s. 
 
+Definition nth_state : S -> trace_seq S -> nat -> S := 
+  fun s ts n => if ts is st :: ts then src (nth st ts n) else s. 
+
 Definition trace_lang : S -> pred trace := 
   fun s tr => s == fst_state s tr.
 
 (* TODO: this is actually a fmap on (A -> Prop) functor. *)
 Definition lts_lang : S -> lang L := 
-  fun s w => exists tr, w = labels tr /\ trace_lang s tr.
+  fun s w => exists tr, (w == labels tr) && (trace_lang s tr).
 
 (* TODO: better name? *)
 Definition adjoint : rel (trace_seq S) := 
@@ -261,7 +300,7 @@ End Def.
 Arguments adjoint : simpl never.
 
 Section Seq.
-Context {L : Type} (S : ltsType L).
+Context {L : eqType} (S : ltsType L).
 Implicit Types (st : step S) (s : trace_seq S) (tr : trace S).
 
 Lemma nil_traceP : is_trace ([::] : seq (step S)).
@@ -284,8 +323,19 @@ Canonical trace_eqType := Eval hnf in EqType (trace S) trace_eqMixin.
 
 End EQ.
 
+Section Count. 
+Context {L : countType} (S : ltsType L).
+
+Definition trace_choiceMixin := Eval hnf in [choiceMixin of trace S by <:].
+Canonical trace_choiceType := Eval hnf in ChoiceType (trace S) trace_choiceMixin.
+
+Definition trace_countMixin := Eval hnf in [countMixin of trace S by <:].
+Canonical trace_counType := Eval hnf in CountType (trace S) trace_countMixin.
+
+End Count.
+
 Section Theory. 
-Context {L : Type} (S : ltsType L).
+Context {L : eqType} (S : ltsType L).
 Implicit Types (st : step S) (ts : trace_seq S) (tr : trace S).
 
 Lemma trace_lnk tr : sorted lnk tr.
@@ -390,6 +440,10 @@ Lemma states_cat s ts1 ts2 : s = fst_state s ts2 ->
   states s (ts1 ++ ts2) = states s ts1 ++ behead (states s ts2).
 Proof. by rewrite /states map_cat; case: ts1; case: ts2=> //= ?? ->. Qed.
 
+Lemma lts_lang_labels t tr : 
+  trace_lang t tr -> lts_lang t (labels tr).
+Proof. move=> ?; exists tr; exact/andP. Qed.
+
 End Theory.
 
 End Trace.
@@ -448,8 +502,9 @@ Import Simulation.Syntax.
 Notation sim := Simulation.type.
 
 Section Theory.
-Context {L : eqType} {S T : ltsType L}.
+Context {L : countType} {S T : ltsType L}.
 Implicit Types (R : S ~>~ T).
+Implicit Types (s : S) (t : T).
 
 Lemma sim_step R l s1 t1 t2 :
   R s1 t1 -> (t1 --[l]--> t2) -> exists s2, R s2 t2 /\ (s1 --[l]--> s2).
@@ -458,14 +513,14 @@ Proof. case: R=> ? [[H]] /=; exact/H. Qed.
 Lemma sim_lang R s t : 
   R s t -> lts_lang t ≦ lts_lang s.
 Proof. 
-  move=> HR w [[tr Htr]] [->]; clear w.
+  move=> HR w [[tr Htr]] /andP[] /eqP-> /=; clear w.
   rewrite /lts_lang /trace_lang /= => /eqP Hh. 
   suff: (exists (tr' : trace S), 
            [/\ R (lst_state s tr') (lst_state t tr), 
-               labels tr = labels tr' 
+               labels tr == labels tr' 
              & s == fst_state s tr'
            ]).
-  - by move=> [tr' []] ???; exists tr'.
+  - move=> [tr' []] => ???; exists tr'; exact/andP. 
   move: Htr Hh; elim/last_ind: tr=> [|{}tr st IH] /=.
   - by exists [trace] => /=.
   rewrite is_trace_rcons=> /andP[Htr Hj].
@@ -488,7 +543,7 @@ Proof.
   rewrite !labels_rcons.    
   move: Hj; rewrite adjoint_lastE=> /eqP. 
   rewrite (lst_stateNnil t (src st))=> // ->. 
-  move: (valP st); rewrite /is_step=> Hs Hlbl HRl.
+  move: (valP st); rewrite /is_step=> Hs /eqP Hlbl HRl.
   move: (sim_step HRl Hs)=> [s' []].
   move=> HR' Hs' /eqP Hfst.
   have: ~~ nilp tr'.
@@ -510,6 +565,64 @@ Proof.
   by apply/eqP/fst_stateNnil.
 Qed.
 
+Definition helper s t (tr : trace T) 
+                      (Htr : trace_lang t tr) 
+                      (Hlg : lts_lang t ≦ lts_lang s) :
+  { tr' : trace S | (labels tr == labels tr') && trace_lang s tr' }.
+Proof. 
+  pose Htr' := (Hlg (labels tr) (lts_lang_labels Htr)).
+  pose tr'  := xchoose Htr'.
+  refine (@exist _ _ tr' (xchooseP Htr')).
+Defined.
+
+Lemma lang_sim s t : 
+  lts_lang t ≦ lts_lang s -> exists (R : S ~>~ T), R s t.
+Proof. 
+  move=> Hlg.
+  unshelve eexists; first (unshelve eexists).
+  - move=> s' t'.
+    refine (exists (tr : { tr : trace T | trace_lang t tr}), _).
+    move: tr=> [tr Htr].
+    pose X := helper Htr Hlg.
+    move: X=> [tr' _].
+    refine (exists n, (t' == nth_state t tr n) && (s' == nth_state s tr' n)).    
+  repeat constructor=> /=.
+  move=> l s1 t1 t2 [[tr1 Htr1]] /=. 
+  move=> [n] /andP[] /eqP Ht1 /eqP Hs1 Hst.
+  pose tr1' := xchoose (Hlg (labels tr1) (lts_lang_labels Htr1)).
+  have HH : tr1' = xchoose (Hlg (labels tr1) (lts_lang_labels Htr1)) by done.
+  rewrite <- HH in *.
+  
+  have tr2 : trace T.
+  - admit.
+  have Hst' : is_step (mk_step l t1 t2).
+  - done.
+  have HtrE : tr2 = rcons (take n tr1) (Step Hst') :> trace_seq T.
+  - admit.
+  have Htr2 : trace_lang t tr2. 
+  - admit.
+  pose tr2' := xchoose (Hlg (labels tr2) (lts_lang_labels Htr2)).
+  have HH' : tr2' = xchoose (Hlg (labels tr2) (lts_lang_labels Htr2)) by done.
+  move: (xchooseP (Hlg (labels tr2) (lts_lang_labels Htr2))).
+  rewrite <- HH' in *.
+  move=> /andP[] /eqP Hl' Htr2'. 
+  exists (nth_state s tr2' n.+1).
+  eexists; last first.
+  - admit.
+  unshelve eexists. 
+  - by exists tr2. 
+  move=> /=; exists n.+1.
+  apply/andP; split=> //.
+  admit.
+  
+  move=> /=. unshelve eexists.
+  - exists [trace]. by rewrite /trace_lang. 
+  move=> /=; exists 0%nat. 
+  apply/andP; split=> //.
+  admit.
+
+Admitted.
+
 End Theory.
 
 End Simulation. 
@@ -523,12 +636,6 @@ Section ClassDef.
 (* TODO: simulation between lts labelled by different labels? *)
 Context {L : Type} (S T : ltsType L).
 Implicit Types (R : hrel S T).
-
-(* Record mixin_of R := Mixin { *)
-(*   _ : forall (l : L) (s1 : S) (t1 t2 : T),  *)
-(*         R s1 t1 -> t1 --[l]--> t2 -> exists s2,  *)
-(*         R s2 t2 /\ s1 --[l]--> s2;   *)
-(* }. *)
 
 Set Primitive Projections.
 Record class_of R := Class {
