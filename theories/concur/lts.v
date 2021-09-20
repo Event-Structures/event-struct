@@ -599,8 +599,8 @@ Lemma bisim_lang R s t :
   R s t -> lts_lang t ≡ lts_lang s.
 Proof. 
   move=> HR; apply/weq_spec; split. 
-  - exact/(sim_traces HR).
-  by apply/(@sim_traces _ _ _ (inv R))=> /=.
+  - exact/(sim_lang HR).
+  by apply/(@sim_lang _ _ _ (inv R))=> /=.
 Qed.
 
 End Theory.
