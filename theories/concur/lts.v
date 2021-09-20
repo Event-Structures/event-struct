@@ -336,7 +336,7 @@ End Count.
 
 Section Theory. 
 Context {L : eqType} (S : ltsType L).
-Implicit Types (st : step S) (ts : trace_seq S) (tr : trace S).
+Implicit Types (s : S) (st : step S) (ts : trace_seq S) (tr : trace S).
 
 Lemma trace_lnk tr : sorted lnk tr.
 Proof. by case: tr. Qed.
@@ -421,8 +421,8 @@ Lemma size_labels ts :
   size (labels ts) = size ts.
 Proof. by rewrite /labels size_map. Qed.
 
-Lemma labels_rcons s st : 
-  labels (rcons s st) = rcons (labels s) (lbl st).
+Lemma labels_rcons ts st : 
+  labels (rcons ts st) = rcons (labels ts) (lbl st).
 Proof. by rewrite /labels map_rcons. Qed.
 
 Lemma labels_cat ts1 ts2 : 
@@ -440,11 +440,59 @@ Lemma states_cat s ts1 ts2 : s = fst_state s ts2 ->
   states s (ts1 ++ ts2) = states s ts1 ++ behead (states s ts2).
 Proof. by rewrite /states map_cat; case: ts1; case: ts2=> //= ?? ->. Qed.
 
-Lemma lts_lang_labels t tr : 
-  trace_lang t tr -> lts_lang t (labels tr).
+Lemma trace_lang0 s : 
+  trace_lang s [trace].
+Proof. by rewrite /trace_lang. Qed. 
+
+Lemma lts_lang_labels s tr : 
+  trace_lang s tr -> lts_lang s (labels tr).
 Proof. move=> ?; exists tr; exact/andP. Qed.
 
 End Theory.
+
+Section Carry.
+Context {L : countType} (S : ltsType L) (T : ltsType L).
+Variables (s : S) (t : T) (tr : trace T).
+
+Hypothesis (Htr : trace_lang t tr).
+Hypothesis (Hlg : lts_lang t ≦ lts_lang s).
+
+Definition carry_traceP : lts_lang s (labels tr) := 
+  Hlg (lts_lang_labels Htr).
+
+Definition carry_trace : trace S := xchoose carry_traceP.
+
+Lemma labels_carry : 
+  labels carry_trace = labels tr. 
+Proof. by move: (xchooseP carry_traceP)=> /andP[/eqP<- _]. Qed.
+
+Lemma size_carry : 
+  size carry_trace = size tr. 
+Proof. by rewrite -size_labels -size_labels labels_carry. Qed.
+  
+Lemma lts_lang_carry : 
+  lts_lang s (labels carry_trace). 
+Proof. 
+  exists carry_trace; rewrite /carry_trace; apply/andP; split=> //. 
+  by move: (xchooseP carry_traceP)=> /andP[_].
+Qed.
+
+End Carry.
+
+Section Carry0.
+Context {L : countType} (S : ltsType L) (T : ltsType L).
+Variables (s : S) (t : T).
+
+Hypothesis (Hlg : lts_lang t ≦ lts_lang s).
+
+Lemma carry_trace0 : carry_trace (trace_lang0 t) Hlg = [trace].
+Proof. 
+  move: (xchooseP (carry_traceP (trace_lang0 t) Hlg)). 
+  move=> /andP[/eqP Hl _]; apply/val_inj/nilP=> /=. 
+  by rewrite /nilp size_carry. 
+Qed.
+
+End Carry0. 
 
 End Trace.
 
@@ -565,15 +613,15 @@ Proof.
   by apply/eqP/fst_stateNnil.
 Qed.
 
-Definition helper s t (tr : trace T) 
-                      (Htr : trace_lang t tr) 
-                      (Hlg : lts_lang t ≦ lts_lang s) :
-  { tr' : trace S | (labels tr == labels tr') && trace_lang s tr' }.
-Proof. 
-  pose Htr' := (Hlg (labels tr) (lts_lang_labels Htr)).
-  pose tr'  := xchoose Htr'.
-  refine (@exist _ _ tr' (xchooseP Htr')).
-Defined.
+(* Definition helper s t (tr : trace T)  *)
+(*                       (Htr : trace_lang t tr)  *)
+(*                       (Hlg : lts_lang t ≦ lts_lang s) : *)
+(*   { tr' : trace S | (labels tr == labels tr') && trace_lang s tr' }. *)
+(* Proof.  *)
+(*   pose Htr' := (Hlg (labels tr) (lts_lang_labels Htr)). *)
+(*   pose tr'  := xchoose Htr'. *)
+(*   refine (@exist _ _ tr' (xchooseP Htr')). *)
+(* Defined. *)
 
 Lemma lang_sim s t : 
   lts_lang t ≦ lts_lang s -> exists (R : S ~>~ T), R s t.
@@ -583,15 +631,11 @@ Proof.
   - move=> s' t'.
     refine (exists (tr : { tr : trace T | trace_lang t tr}), _).
     move: tr=> [tr Htr].
-    pose X := helper Htr Hlg.
-    move: X=> [tr' _].
-    refine (exists n, (t' == nth_state t tr n) && (s' == nth_state s tr' n)).    
-  repeat constructor=> /=.
+    pose tr' := carry_trace Htr Hlg.
+    refine (exists n, (t' == nth_state t tr n) && (s' == nth_state s (val tr') n)).    
+  repeat constructor=> /=. 
   move=> l s1 t1 t2 [[tr1 Htr1]] /=. 
   move=> [n] /andP[] /eqP Ht1 /eqP Hs1 Hst.
-  pose tr1' := xchoose (Hlg (labels tr1) (lts_lang_labels Htr1)).
-  have HH : tr1' = xchoose (Hlg (labels tr1) (lts_lang_labels Htr1)) by done.
-  rewrite <- HH in *.
   
   have tr2 : trace T.
   - admit.
@@ -601,11 +645,11 @@ Proof.
   - admit.
   have Htr2 : trace_lang t tr2. 
   - admit.
-  pose tr2' := xchoose (Hlg (labels tr2) (lts_lang_labels Htr2)).
-  have HH' : tr2' = xchoose (Hlg (labels tr2) (lts_lang_labels Htr2)) by done.
-  move: (xchooseP (Hlg (labels tr2) (lts_lang_labels Htr2))).
-  rewrite <- HH' in *.
-  move=> /andP[] /eqP Hl' Htr2'. 
+  pose tr2' := carry_trace Htr2 Hlg.
+  (* move: (xchooseP (Hlg (labels tr2) (lts_lang_labels Htr2))). *)
+  (* rewrite <- HH' in *. *)
+  (* move=> /andP[] /eqP Hl' Htr2'.  *)
+
   exists (nth_state s tr2' n.+1).
   eexists; last first.
   - admit.
@@ -616,10 +660,10 @@ Proof.
   admit.
   
   move=> /=. unshelve eexists.
-  - exists [trace]. by rewrite /trace_lang. 
+  - exact/(@exist _ _ [trace] (trace_lang0 t)).
   move=> /=; exists 0%nat. 
   apply/andP; split=> //.
-  admit.
+  by rewrite carry_trace0.    
 
 Admitted.
 
