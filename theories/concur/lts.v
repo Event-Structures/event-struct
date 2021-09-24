@@ -23,7 +23,7 @@ From eventstruct Require Import utils relalg.
 (*                   := { (lbl, src, dst) | src --[lbl]--> dst }.             *)
 (*           trace S == a type of traces of the LTS, that is finite sequences *)
 (*                      of steps performed by the transition system.          *)
-(*                   := { tr : seq (step S) | dst st[i] == src st[i+1] }.     *)
+(*                   := { tr : seq (step S) | dst tr[i] == src tr[i+1] }.     *)
 (*     [trace of ts] == a trace whose underlying sequence (value) is ts.      *)
 (*                      Coq must be able to infer a proof that ts satisfies   *)
 (*                      trace property (i.e the ends of steps should match).  *)
@@ -171,11 +171,11 @@ Structure step : Type := Step {step_val :> stepTuple; _ : is_step step_val}.
 Canonical step_subType := Eval hnf in [subType for step_val].
 
 (* TODO: better name? *)
-Definition lnk : rel step := 
+Definition adj : rel step := 
   fun s t => dst s == src t. 
 End Def.
 
-Prenex Implicits lbl src dst is_step lnk.
+Prenex Implicits lbl src dst is_step adj.
 
 Section EQ. 
 Context {L : eqType} (S : ltsType L).
@@ -212,10 +212,12 @@ Section Def.
 Context {L : Type} (S : ltsType L).
 
 Definition is_trace : pred (trace_seq S) := 
-  fun s => sorted lnk s.
+  fun ts => sorted adj ts.
 
+(* TODO: try definition with initial state *)
 Structure trace : Type := Trace { 
   trace_val :> trace_seq S; 
+  (* init_st   :  S; *)
   _         :  is_trace trace_val;
 }.
 
@@ -228,7 +230,7 @@ Definition labels : trace_seq S -> seq L := map (lbl : step S -> L).
 Definition states : S -> trace_seq S -> seq S := 
   fun s ts => 
     match ts with 
-    | [::]    => [:: s]
+    | [::]    => [:: s] 
     | st :: _ => src st :: map (dst : step S -> S) ts
     end. 
 
@@ -243,7 +245,7 @@ Definition trace_lang : S -> pred trace :=
 
 (* TODO: this is actually a fmap on (A -> Prop) functor. *)
 Definition lts_lang : S -> lang L := 
-  fun s w => exists tr, w = labels tr /\ trace_lang s tr.
+  fun s w => exists2 tr, trace_lang s tr & w = labels tr.
 
 (* TODO: better name? *)
 Definition adjoint : rel (trace_seq S) := 
@@ -288,7 +290,7 @@ Section Theory.
 Context {L : Type} (S : ltsType L).
 Implicit Types (st : step S) (ts : trace_seq S) (tr : trace S).
 
-Lemma trace_lnk tr : sorted lnk tr.
+Lemma trace_adj tr : sorted adj tr.
 Proof. by case: tr. Qed.
 
 Lemma fst_state_src st ts : 
@@ -337,8 +339,8 @@ Proof.
   by rewrite lst_state_rcons.
 Qed.
 
-Lemma adjoint_lnk st1 st2 :
-  adjoint [:: st1] [:: st2] = lnk st1 st2.
+Lemma adjoint_adj st1 st2 :
+  adjoint [:: st1] [:: st2] = adj st1 st2.
 Proof. done. Qed.
 
 Lemma adjoint_firstE st ts : 
@@ -364,7 +366,7 @@ Proof.
   case: (lastP ts)=> [|{}ts st'] //=.
   - by rewrite eq_refl.
   rewrite lst_state_rcons (sorted_rcons st). 
-  by rewrite /nilp /lnk size_rcons last_rcons /=.
+  by rewrite /nilp /adj size_rcons last_rcons /=.
 Qed.
 
 Lemma size_labels ts : 
@@ -406,8 +408,8 @@ Implicit Types (R : hrel S T).
 
 Record mixin_of R := Mixin {
   _ : forall (l : L) (s1 : S) (t1 t2 : T), 
-        R s1 t1 -> t1 --[l]--> t2 -> exists s2, 
-        R s2 t2 /\ s1 --[l]--> s2;  
+        R s1 t1 -> t1 --[l]--> t2 -> exists2 s2, 
+        R s2 t2  & s1 --[l]--> s2;  
 }.
 
 Set Primitive Projections.
@@ -452,13 +454,13 @@ Context {L : eqType} {S T : ltsType L}.
 Implicit Types (R : S ~>~ T).
 
 Lemma sim_step R l s1 t1 t2 :
-  R s1 t1 -> (t1 --[l]--> t2) -> exists s2, R s2 t2 /\ (s1 --[l]--> s2).
+  R s1 t1 -> (t1 --[l]--> t2) -> exists2 s2, R s2 t2 & (s1 --[l]--> s2).
 Proof. case: R=> ? [[H]] /=; exact/H. Qed.
 
 Lemma sim_lang R s t : 
   R s t -> lts_lang t ≦ lts_lang s.
 Proof. 
-  move=> HR w [[tr Htr]] [->]; clear w.
+  move=> HR w [[tr Htr]] + ->; clear w.
   rewrite /lts_lang /trace_lang /= => /eqP Hh. 
   suff: (exists (tr' : trace S), 
            [/\ R (lst_state s tr') (lst_state t tr), 
@@ -472,7 +474,7 @@ Proof.
   rewrite fst_state_rcons -fst_state_src. 
   case: (nilp tr)/nilP=> [->|Hnil] /=. 
   - move: (valP st); rewrite /is_step=> /[swap] <- => Hs. 
-    move: (sim_step HR Hs)=> [s' [HR' Hs']].
+    move: (sim_step HR Hs)=> [s' HR' Hs'].
     (* TODO: introduce a nicer way to construct steps 
      *   (using canonical structures and phantom types?) 
      *)
@@ -489,7 +491,7 @@ Proof.
   move: Hj; rewrite adjoint_lastE=> /eqP. 
   rewrite (lst_stateNnil t (src st))=> // ->. 
   move: (valP st); rewrite /is_step=> Hs Hlbl HRl.
-  move: (sim_step HRl Hs)=> [s' []].
+  move: (sim_step HRl Hs)=> [s'].
   move=> HR' Hs' /eqP Hfst.
   have: ~~ nilp tr'.
   - rewrite /nilp -size_labels -Hlbl size_labels. 
@@ -592,7 +594,7 @@ Context {L : eqType} {S T : ltsType L}.
 Implicit Types (R : S ~=~ T).
 
 Lemma sim_step_cnv R l s1 s2 t1 :
-  R s1 t1 -> (s1 --[l]--> s2) -> exists t2, R s2 t2 /\ (t1 --[l]--> t2).
+  R s1 t1 -> (s1 --[l]--> s2) -> exists2 t2, R s2 t2 & (t1 --[l]--> t2).
 Proof. case: R=> ? [[? [H]]] /=; exact/H. Qed.
 
 Lemma bisim_lang R s t : 
