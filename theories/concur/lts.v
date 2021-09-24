@@ -69,11 +69,12 @@ Delimit Scope lts_scope with lts.
 
 Local Open Scope lts_scope.
 
-Reserved Notation "s1 '--[' l ']-->' s2" (at level 22, no associativity).
-Reserved Notation "s1 '-->' s2" (at level 55, right associativity).
+Reserved Notation "s1 '--[' l ']-->' s2" (at level 55, no associativity).
+
+Reserved Notation "s1 '-->' s2"  (at level 55, right associativity).
 Reserved Notation "s1 '-->?' s2" (at level 55, right associativity).
-Reserved Notation "s1 '-->+' s2" (at level 22, right associativity).
-Reserved Notation "s1 '-->*' s2" (at level 22, right associativity).
+Reserved Notation "s1 '-->+' s2" (at level 55, right associativity).
+Reserved Notation "s1 '-->*' s2" (at level 55, right associativity).
 
 Module Export LTS.
 
@@ -149,6 +150,7 @@ Definition trans : L -> rel S := LTS.trans (LTS.class S).
 End Def.
 
 Notation "s1 '--[' l ']-->' s2" := (trans l s1 s2) : lts_scope.
+
 Notation "s1 '-->' s2"  := (exlab trans)   : lts_scope.
 Notation "s1 '-->?' s2" := (exlab trans)^? : lts_scope.
 Notation "s1 '-->+' s2" := (exlab trans)^+ : lts_scope. 
@@ -156,21 +158,19 @@ Notation "s1 '-->*' s2" := (exlab trans)^* : lts_scope.
 
 End LTS.
 
-(* Context {L : Type} {S : ltsType L}. *)
-(* Variable (l : L) (s1 s2 : S). *)
-(* Check (s1 --[l]--> s2). *)
 
 Module Export Step. 
 
 Section Def.
 Context {L : Type} (S : ltsType L).
+Implicit Types (s : S).
 
 Record stepTuple : Type := mk_step {
   lbl : L; src : S; dst : S;  
 }.
 
 Definition is_step : pred stepTuple := 
-  fun s => (src s) --[lbl s]--> (dst s).
+  fun st => (src st) --[lbl st]--> (dst st).
 
 Structure step : Type := Step {step_val :> stepTuple; _ : is_step step_val}.
 
@@ -178,7 +178,8 @@ Canonical step_subType := Eval hnf in [subType for step_val].
 
 (* TODO: better name? *)
 Definition lnk : rel step := 
-  fun s t => dst s == src t. 
+  fun st1 st2 => dst st1 == src st2. 
+
 End Def.
 
 Prenex Implicits lbl src dst is_step lnk.
@@ -219,9 +220,6 @@ Canonical stepTuple_eqType :=
 Definition step_eqMixin := Eval hnf in [eqMixin of step S by <:].
 Canonical step_eqType := Eval hnf in EqType (step S) step_eqMixin.
 
-(* Variables (st1 st2 : step S). *)
-(* Check (st1 == st2). *)
-
 End EQ.
 
 Section Count. 
@@ -236,6 +234,39 @@ Canonical step_countType :=
   Eval hnf in CountType (step S) step_countMixin.
 
 End Count.
+
+Section StepOf.
+Context {L : eqType} (S : ltsType L).
+Variables (l : L) (s s' : S).
+
+Structure stepOf : Type := StepOf {
+  step_of_val :> step S; 
+  _ : step_of_val == mk_step l s s' :> stepTuple S
+}.
+
+Canonical stepOf_subType := Eval hnf in [subType for step_of_val].
+
+Definition stepOf_eqMixin := Eval hnf in [eqMixin of stepOf by <:].
+Canonical stepOf_eqType := Eval hnf in EqType stepOf stepOf_eqMixin.
+
+Definition step_of : (s --[l]--> s') -> stepOf := 
+  fun p => let st := mk_step l s s' in 
+    @StepOf (Step (p : is_step st)) (eqxx st).
+
+End StepOf.
+
+Notation "{ 'step' 'of' s1 '==[' l ']==>' s2 }" := (stepOf l s1 s2)
+  (at level 1) : form_scope.
+
+Section Theory.
+Context {L : eqType} (S : ltsType L).
+Implicit Types (l : L) (s : S).
+
+Lemma step_ofE l s1 s2 (st : { step of s1 ==[l]==> s2 }) : 
+  (lbl st = l) * (src st = s1) * (dst st = s2).
+Proof. by case st=> [[[]]] /= ???? /eqP[]. Qed.
+
+End Theory.
 
 End Step.
 
@@ -299,18 +330,23 @@ End Def.
 
 Arguments adjoint : simpl never.
 
-Section Seq.
+Section Nil.
 Context {L : eqType} (S : ltsType L).
-Implicit Types (st : step S) (s : trace_seq S) (tr : trace S).
 
 Lemma nil_traceP : is_trace ([::] : seq (step S)).
 Proof. done. Qed.
 Canonical nil_trace := Trace nil_traceP.
 
-End Seq.
+End Nil.
 
 Notation "[ 'trace' 'of' tr ]" := (mk_trace (fun trP => @Trace _ _ tr trP))
   (at level 0, format "[ 'trace'  'of'  tr ]") : form_scope.
+
+Notation "[ 'trace' 'of' st '::<' tr ]" := [trace of (st : step _) :: tr]
+  (at level 0, format "[ 'trace'  'of'  st '::<' tr ]") : form_scope.
+
+Notation "[ 'trace' 'of' tr '>::' st ]" := [trace of rcons tr (st : step _)]
+  (at level 0, format "[ 'trace'  'of'  tr '>::' st ]") : form_scope.
 
 Notation "[ 'trace' ]" := [trace of [::]]
   (at level 0, format "[ 'trace' ]") : form_scope.
@@ -450,6 +486,42 @@ Proof. move=> ?; exists tr; exact/andP. Qed.
 
 End Theory.
 
+Section Build.
+Context {L : eqType} (S : ltsType L).
+Implicit Types (st : step S) (ts : trace_seq S) (tr : trace S).
+
+Lemma singl_traceP st : is_trace [:: st].
+Proof. done. Qed.
+Canonical singl_trace st := Trace (singl_traceP st).
+
+Lemma cons_traceP tr l s s' (st : {step of s ==[l]==> fst_state s' tr}) : 
+  is_trace (cons (st : step S) tr).
+Proof. 
+  rewrite is_trace_cons adjoint_firstE.
+  apply/andP; split; first exact/(valP tr).
+  case: (nilp tr)/nilP=> [{3}->|] //=. 
+  by rewrite {1}step_ofE=> ?; apply/eqP/fst_stateNnil.
+Qed.
+Canonical cons_trace tr l s s' (st : {step of s ==[l]==> fst_state s' tr}) := 
+  Trace (cons_traceP st).
+
+Lemma rcons_traceP tr l s s' (st : {step of lst_state s tr ==[l]==> s'}) : 
+  is_trace (rcons tr (st : step S)).
+Proof. 
+  rewrite is_trace_rcons adjoint_lastE.
+  apply/andP; split; first exact/(valP tr).
+  case: (nilp tr)/nilP=> [{2}->|] //=. 
+  by rewrite {2}step_ofE=> ?; apply/eqP/lst_stateNnil.
+Qed.
+Canonical rcons_trace tr l s s' (st : {step of lst_state s tr ==[l]==> s'}) := 
+  Trace (rcons_traceP st).
+
+Lemma take_traceP n tr : is_trace (take n tr).
+Proof. move: (valP tr); rewrite /is_trace; exact/take_sorted. Qed.
+Canonical take_trace n tr := Trace (take_traceP n tr).
+
+End Build.
+
 Section Carry.
 Context {L : countType} (S : ltsType L) (T : ltsType L).
 Variables (s : S) (t : T) (tr : trace T).
@@ -576,15 +648,8 @@ Proof.
   case: (nilp tr)/nilP=> [->|Hnil] /=. 
   - move: (valP st); rewrite /is_step=> /[swap] <- => Hs. 
     move: (sim_step HR Hs)=> [s' [HR' Hs']].
-    (* TODO: introduce a nicer way to construct steps 
-     *   (using canonical structures and phantom types?) 
-     *)
-    pose st_' := mk_step (lbl st) s s'. 
-    have Hst' : is_step st_' by done. 
-    pose st'  := Step Hst'.     
-    have Htr' : is_trace [:: st']. 
-    - by rewrite is_trace_cons //=; apply/andP.
-    by exists (Trace Htr')=> //=. 
+    pose st' := step_of Hs'.
+    by exists [trace of [:: val st']].
   rewrite (fst_stateNnil t) // => Ht.
   move: (IH Htr Ht); clear IH. 
   move=> [tr' []] /[swap].
@@ -598,18 +663,11 @@ Proof.
   - rewrite /nilp -size_labels -Hlbl size_labels. 
     by move: Hnil=> /nilP.
   move=> /nilP Hnil'.
-  pose st_' := mk_step (lbl st) (lst_state s tr') s'.
-  have Hst' : is_step st_' by done.
-  pose st'  := Step Hst'.
-  have Htr' : is_trace (rcons tr' st'). 
-  - rewrite is_trace_rcons; apply /andP; split=> //.
-    - exact/(valP tr').
-    rewrite adjoint_lastE /=.
-    by apply/eqP/lst_stateNnil.
-  exists (Trace Htr')=> /=; split.
+  pose st' := step_of Hs'.
+  exists [trace of tr' >:: st']; split.
   - by rewrite !lst_state_rcons /=.
   - by rewrite labels_rcons Hlbl.
-  rewrite fst_state_rcons Hfst -fst_state_src. 
+  rewrite fst_state_rcons -fst_state_src step_ofE Hfst.
   by apply/eqP/fst_stateNnil.
 Qed.
 
