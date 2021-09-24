@@ -306,7 +306,10 @@ Definition lst_state : S -> trace_seq S -> S :=
   fun s ts => if ts is st :: ts then dst (last st ts) else s. 
 
 Definition nth_state : S -> trace_seq S -> nat -> S := 
-  fun s ts n => if ts is st :: ts then src (nth st ts n) else s. 
+  fun s ts n => 
+    if ts is st :: _ then 
+      if n is 0 then src st else dst (nth st ts n.-1)
+    else s. 
 
 Definition trace_lang : S -> pred trace := 
   fun s tr => s == fst_state s tr.
@@ -343,10 +346,10 @@ Notation "[ 'trace' 'of' tr ]" := (mk_trace (fun trP => @Trace _ _ tr trP))
   (at level 0, format "[ 'trace'  'of'  tr ]") : form_scope.
 
 Notation "[ 'trace' 'of' st '::<' tr ]" := [trace of (st : step _) :: tr]
-  (at level 0, format "[ 'trace'  'of'  st '::<' tr ]") : form_scope.
+  (at level 0, format "[ 'trace'  'of'  st  '::<'  tr ]") : form_scope.
 
 Notation "[ 'trace' 'of' tr '>::' st ]" := [trace of rcons tr (st : step _)]
-  (at level 0, format "[ 'trace'  'of'  tr '>::' st ]") : form_scope.
+  (at level 0, format "[ 'trace'  'of'  tr  '>::'  st ]") : form_scope.
 
 Notation "[ 'trace' ]" := [trace of [::]]
   (at level 0, format "[ 'trace' ]") : form_scope.
@@ -465,10 +468,23 @@ Lemma labels_cat ts1 ts2 :
   labels (ts1 ++ ts2) = labels ts1 ++ labels ts2.
 Proof. by rewrite /labels map_cat. Qed.
 
-Lemma size_states s ts : size (states s ts) == (size ts).+1.
+Lemma size_states s ts : size (states s ts) = (size ts).+1.
 Proof. by rewrite /states; case: ts=> [|??] //=; rewrite size_map. Qed.
-                         
-Lemma states_rcons s ts st : s = fst_state (src st) ts -> 
+
+Lemma head_states s ts : head s (states s ts) = fst_state s ts.
+Proof. by case: ts. Qed.
+
+Lemma last_states s ts : last s (states s ts) = lst_state s ts.
+Proof. by case: ts=> //= ??; rewrite /states map_comp !last_map. Qed.
+
+Lemma states_cons s st ts : adjoint [:: st] ts ->
+  states s (st :: ts) = src st :: states (dst st) ts.
+Proof.
+  case: ts=> [|st' {}ts] //=.
+  by rewrite adjoint_firstE => /= /eqP->.
+Qed.
+
+Lemma states_rcons s ts st : s = fst_state (src st) ts ->
   states s (rcons ts st) = rcons (states s ts) (dst st).
 Proof. by case: ts=> [->|??] //=; rewrite map_rcons. Qed.
 
@@ -476,6 +492,57 @@ Lemma states_cat s ts1 ts2 : s = fst_state s ts2 ->
   states s (ts1 ++ ts2) = states s ts1 ++ behead (states s ts2).
 Proof. by rewrite /states map_cat; case: ts1; case: ts2=> //= ?? ->. Qed.
 
+Lemma nth_state_fst s ts :
+  nth_state s ts 0 = fst_state s ts.
+Proof. done. Qed.
+
+Lemma nth_state_lst s ts :
+  nth_state s ts (size ts) = lst_state s ts.
+Proof. 
+  case: ts=> [|st {}ts] //.
+  by rewrite /nth_state /lst_state nth_last /=.
+Qed.
+
+Lemma nth_state_src s ts n : n < size ts -> 
+  nth_state s ts n = nth s [seq (src : step S -> S) st | st <- ts] n.
+Proof. 
+  move=> Hn. admit. Admitted.
+
+Lemma nth_stateE s tr n : 
+  n <= size tr -> nth_state s tr n = nth s (states s tr) n.
+Proof. 
+  case: tr=> [tr Htr]; rewrite /trace_val; move: s tr Htr. 
+  elim n=> [|{}n IH] s; case=> [|st {}ts] => //.
+  rewrite /trace_val is_trace_cons. 
+  move=> /andP[Htr Hst] Hn.
+  rewrite states_cons //. 
+  rewrite /= (set_nth_default (dst st)); last first.
+  - by rewrite size_states.
+  rewrite -{}IH //.
+  move: Htr Hst Hn; case: ts=> [|st' {}ts] //=.
+  - by rewrite ltnS leqn0=> ?? /eqP ->. 
+  rewrite adjoint_cons adjoint_lnk /lnk=> _ /eqP Hst.
+  case: n=> [|{}n] //=.
+  rewrite ltnS=> Hn.
+  by rewrite (set_nth_default st). 
+Qed.
+
+Lemma nth_state_src st ts n :
+  nth_state (src st) ts n = src (nth st ts n).
+Proof. admit. Admitted.
+
+Lemma states_take s ts n : s = nth_state s ts n -> n < size ts -> 
+  states s (take n ts) = take n.+1 (states s ts).
+Proof. 
+  move=> Hs Hn.
+  rewrite -[in states _ ts](cat_take_drop n ts) states_cat.
+  - rewrite take_size_cat //. 
+    by rewrite size_states size_take Hn. 
+  move: Hs Hn; case: ts=> [|st {}ts] Hs //=.
+  rewrite ltnS=> Hn.
+  by rewrite (drop_nth st) //= -nth_state_src. 
+Qed.
+                         
 Lemma trace_lang0 s : 
   trace_lang s [trace].
 Proof. by rewrite /trace_lang. Qed. 
@@ -691,32 +758,39 @@ Proof.
     move: tr=> [tr Htr].
     pose tr' := carry_trace Htr Hlg.
     refine (exists n, (t' == nth_state t tr n) && (s' == nth_state s (val tr') n)).    
-  repeat constructor=> /=. 
-  move=> l s1 t1 t2 [[tr1 Htr1]] /=. 
-  move=> [n] /andP[] /eqP Ht1 /eqP Hs1 Hst.
-  
-  have tr2 : trace T.
-  - admit.
-  have Hst' : is_step (mk_step l t1 t2).
-  - done.
-  have HtrE : tr2 = rcons (take n tr1) (Step Hst') :> trace_seq T.
-  - admit.
-  have Htr2 : trace_lang t tr2. 
-  - admit.
-  pose tr2' := carry_trace Htr2 Hlg.
-  (* move: (xchooseP (Hlg (labels tr2) (lts_lang_labels Htr2))). *)
-  (* rewrite <- HH' in *. *)
-  (* move=> /andP[] /eqP Hl' Htr2'.  *)
+  - repeat constructor=> /=. 
+    move=> l s1 t1 t2 [[tr1 Htr1]] /=. 
+    move=> [n] /andP[] /eqP Ht1 /eqP Hs1.
+    case: (n < size tr1)/idP => Hn; last first.
+    - admit.
 
-  exists (nth_state s tr2' n.+1).
-  eexists; last first.
-  - admit.
-  unshelve eexists. 
-  - by exists tr2. 
-  move=> /=; exists n.+1.
-  apply/andP; split=> //.
-  admit.
-  
+    (* have ->: (n = size (take n tr1)). *)
+    (* + move: Hn; rewrite leq_eqVlt size_take.  *)
+    (*   by move=> /orP[/eqP->|->] //; case: ifP.  *)
+    pose tr2 := [trace of take n tr1].
+    have ->: t1 = lst_state t tr2.
+    + rewrite -nth_state_lst nth_stateE size_take Hn //. 
+      rewrite states_take //; last admit.
+      rewrite nth_take // -nth_stateE //.
+      exact/ltnW.
+    move=> /step_of st.
+    pose tr3 := [trace of tr2 >:: st].
+    have Htr3 : trace_lang t tr3. 
+    - rewrite /trace_lang -head_states. 
+      rewrite states_rcons ?states_take //.
+      - 
+        rewrite head_states. -fst_state_rcons. rewrite head_rcons.
+      admit.
+    pose tr3' := carry_trace Htr3 Hlg.
+    exists (nth_state s tr3' n.+1).
+    eexists; last first.
+    - 
+      admit.
+    unshelve eexists. 
+    - by exists tr3. 
+    move=> /=; exists n.+1.
+    apply/andP; split=> //.
+    admit.
   move=> /=. unshelve eexists.
   - exact/(@exist _ _ [trace] (trace_lang0 t)).
   move=> /=; exists 0%nat. 
