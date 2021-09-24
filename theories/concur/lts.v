@@ -1,7 +1,7 @@
 From RelationAlgebra Require Import lattice monoid rel.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype choice.
 From mathcomp Require Import seq tuple path.
-From eventstruct Require Import utils relalg.
+From eventstruct Require Import utils relalg ssrnatlia.
 
 (******************************************************************************)
 (* This file provides a theory of labelled transition systems (LTS),          *)
@@ -468,6 +468,14 @@ Lemma labels_cat ts1 ts2 :
   labels (ts1 ++ ts2) = labels ts1 ++ labels ts2.
 Proof. by rewrite /labels map_cat. Qed.
 
+Lemma statesE s ts : s = fst_state s ts ->
+  states s ts = s :: map (dst : step S -> S) ts.
+Proof. by rewrite /states; case: ts=> [|??] //= ->. Qed.
+
+Lemma statesNnil s1 s2 ts : ts <> [::] -> 
+  states s2 ts = states s1 ts.
+Proof. by case: ts. Qed.
+
 Lemma size_states s ts : size (states s ts) = (size ts).+1.
 Proof. by rewrite /states; case: ts=> [|??] //=; rewrite size_map. Qed.
 
@@ -503,44 +511,40 @@ Proof.
   by rewrite /nth_state /lst_state nth_last /=.
 Qed.
 
-Lemma nth_state_src s ts n : n < size ts -> 
-  nth_state s ts n = nth s [seq (src : step S -> S) st | st <- ts] n.
+Lemma nth_stateSn s ts n : n < size ts -> 
+  nth_state s ts n.+1 = nth s (map (dst : step S -> S) ts) n.
 Proof. 
-  move=> Hn. admit. Admitted.
-
-Lemma nth_stateE s tr n : 
-  n <= size tr -> nth_state s tr n = nth s (states s tr) n.
-Proof. 
-  case: tr=> [tr Htr]; rewrite /trace_val; move: s tr Htr. 
-  elim n=> [|{}n IH] s; case=> [|st {}ts] => //.
-  rewrite /trace_val is_trace_cons. 
-  move=> /andP[Htr Hst] Hn.
-  rewrite states_cons //. 
-  rewrite /= (set_nth_default (dst st)); last first.
-  - by rewrite size_states.
-  rewrite -{}IH //.
-  move: Htr Hst Hn; case: ts=> [|st' {}ts] //=.
-  - by rewrite ltnS leqn0=> ?? /eqP ->. 
-  rewrite adjoint_cons adjoint_lnk /lnk=> _ /eqP Hst.
-  case: n=> [|{}n] //=.
-  rewrite ltnS=> Hn.
-  by rewrite (set_nth_default st). 
+  rewrite /nth_state.
+  case: ts=> [|st {}ts] => // Hn.
+  by rewrite (nth_map st) //.
 Qed.
 
-Lemma nth_state_src st ts n :
-  nth_state (src st) ts n = src (nth st ts n).
-Proof. admit. Admitted.
+Lemma nth_stateE s ts n : 
+  n <= size ts -> nth_state s ts n = nth s (states s ts) n.
+Proof. 
+  case n=> [|{}n] Hn.
+  - by rewrite nth_state_fst nth0 head_states. 
+  rewrite nth_stateSn //. 
+  by move: Hn; case: ts. 
+Qed.
 
-Lemma states_take s ts n : s = nth_state s ts n -> n < size ts -> 
+Lemma states_take s ts n : s = fst_state s ts -> n < size ts -> 
   states s (take n ts) = take n.+1 (states s ts).
 Proof. 
-  move=> Hs Hn.
-  rewrite -[in states _ ts](cat_take_drop n ts) states_cat.
-  - rewrite take_size_cat //. 
-    by rewrite size_states size_take Hn. 
-  move: Hs Hn; case: ts=> [|st {}ts] Hs //=.
-  rewrite ltnS=> Hn.
-  by rewrite (drop_nth st) //= -nth_state_src. 
+  move=> Hs Hn; apply/esym. 
+  case: (nilp ts)/nilP=> [->|Hts] //.
+  case: (n == 0%nat)/eqP=> [->|Hn0] //.
+  - by rewrite statesE //= -map_take !take0 /=.
+  rewrite (statesNnil (fst_state s (drop n ts))) //.
+  rewrite -[in states _ ts](cat_take_drop n ts). 
+  rewrite states_cat; last first.
+  - rewrite drop_size_cat ?size_take ?Hn //. 
+    apply/fst_stateNnil/nilP.
+    rewrite /nilp size_drop. 
+    by ssrnatlia.
+  rewrite take_size_cat ?size_states ?size_take ?Hn //.
+  apply/statesNnil/nilP.
+  rewrite /nilp size_take Hn; exact/eqP.  
 Qed.
                          
 Lemma trace_lang0 s : 
@@ -770,9 +774,9 @@ Proof.
     pose tr2 := [trace of take n tr1].
     have ->: t1 = lst_state t tr2.
     + rewrite -nth_state_lst nth_stateE size_take Hn //. 
-      rewrite states_take //; last admit.
-      rewrite nth_take // -nth_stateE //.
-      exact/ltnW.
+      rewrite states_take ?nth_take -?nth_stateE //.
+      * exact/ltnW.
+      exact/eqP/Htr1.
     move=> /step_of st.
     pose tr3 := [trace of tr2 >:: st].
     have Htr3 : trace_lang t tr3. 
