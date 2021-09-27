@@ -388,6 +388,11 @@ Lemma fst_state_rcons s ts st :
   fst_state s (rcons ts st) = src (head st ts).
 Proof. by case: ts. Qed.
 
+(* TODO: genrealize it to any prefix? *)
+Lemma fst_state_take s n ts : 
+  fst_state s ts = s -> fst_state s (take n ts) = s.
+Proof. by case: ts; case: n. Qed.
+
 Lemma fst_stateNnil s s' ts : ts <> [::] ->
   fst_state s' ts = fst_state s ts.
 Proof. by case: ts. Qed.
@@ -406,6 +411,25 @@ Qed.
 Lemma lst_stateNnil s s' ts : ts <> [::] ->
   lst_state s' ts = lst_state s ts.
 Proof. by case: ts=> [|??] //; rewrite !lst_stateE. Qed. 
+
+Lemma nth_state_fst s ts :
+  nth_state s ts 0 = fst_state s ts.
+Proof. done. Qed.
+
+Lemma nth_state_lst s ts :
+  nth_state s ts (size ts) = lst_state s ts.
+Proof. 
+  case: ts=> [|st {}ts] //.
+  by rewrite /nth_state /lst_state nth_last /=.
+Qed.
+
+Lemma nth_stateSn s ts n : n < size ts -> 
+  nth_state s ts n.+1 = nth s (map (dst : step S -> S) ts) n.
+Proof. 
+  rewrite /nth_state.
+  case: ts=> [|st {}ts] => // Hn.
+  by rewrite (nth_map st) //.
+Qed.
 
 Lemma adjoint0s ts :
   adjoint [::] ts.
@@ -485,6 +509,15 @@ Proof. by case: ts. Qed.
 Lemma last_states s ts : last s (states s ts) = lst_state s ts.
 Proof. by case: ts=> //= ??; rewrite /states map_comp !last_map. Qed.
 
+Lemma nth_statesE s ts n : 
+  n <= size ts -> nth s (states s ts) n = nth_state s ts n.
+Proof. 
+  case n=> [|{}n] Hn.
+  - by rewrite nth_state_fst nth0 head_states. 
+  rewrite nth_stateSn //. 
+  by move: Hn; case: ts. 
+Qed.
+
 Lemma states_cons s st ts : adjoint [:: st] ts ->
   states s (st :: ts) = src st :: states (dst st) ts.
 Proof.
@@ -500,53 +533,14 @@ Lemma states_cat s ts1 ts2 : s = fst_state s ts2 ->
   states s (ts1 ++ ts2) = states s ts1 ++ behead (states s ts2).
 Proof. by rewrite /states map_cat; case: ts1; case: ts2=> //= ?? ->. Qed.
 
-Lemma nth_state_fst s ts :
-  nth_state s ts 0 = fst_state s ts.
-Proof. done. Qed.
-
-Lemma nth_state_lst s ts :
-  nth_state s ts (size ts) = lst_state s ts.
-Proof. 
-  case: ts=> [|st {}ts] //.
-  by rewrite /nth_state /lst_state nth_last /=.
-Qed.
-
-Lemma nth_stateSn s ts n : n < size ts -> 
-  nth_state s ts n.+1 = nth s (map (dst : step S -> S) ts) n.
-Proof. 
-  rewrite /nth_state.
-  case: ts=> [|st {}ts] => // Hn.
-  by rewrite (nth_map st) //.
-Qed.
-
-Lemma nth_stateE s ts n : 
-  n <= size ts -> nth_state s ts n = nth s (states s ts) n.
-Proof. 
-  case n=> [|{}n] Hn.
-  - by rewrite nth_state_fst nth0 head_states. 
-  rewrite nth_stateSn //. 
-  by move: Hn; case: ts. 
-Qed.
-
 Lemma states_take s ts n : s = fst_state s ts -> n < size ts -> 
   states s (take n ts) = take n.+1 (states s ts).
-Proof. 
-  move=> Hs Hn; apply/esym. 
-  case: (nilp ts)/nilP=> [->|Hts] //.
-  case: (n == 0%nat)/eqP=> [->|Hn0] //.
-  - by rewrite statesE //= -map_take !take0 /=.
-  rewrite (statesNnil (fst_state s (drop n ts))) //.
-  rewrite -[in states _ ts](cat_take_drop n ts). 
-  rewrite states_cat; last first.
-  - rewrite drop_size_cat ?size_take ?Hn //. 
-    apply/fst_stateNnil/nilP.
-    rewrite /nilp size_drop. 
-    by ssrnatlia.
-  rewrite take_size_cat ?size_states ?size_take ?Hn //.
-  apply/statesNnil/nilP.
-  rewrite /nilp size_take Hn; exact/eqP.  
-Qed.
-                         
+Proof. by move=> ??; rewrite !statesE ?map_take ?fst_state_take //=. Qed.
+
+Lemma nth_trans l s ts n : 
+  nth_state s ts n --[nth l (labels ts) n]--> nth_state s ts n.+1.
+Proof. admit. Admitted.
+                           
 Lemma trace_lang0 s : 
   trace_lang s [trace].
 Proof. by rewrite /trace_lang. Qed. 
@@ -773,29 +767,41 @@ Proof.
     (*   by move=> /orP[/eqP->|->] //; case: ifP.  *)
     pose tr2 := [trace of take n tr1].
     have ->: t1 = lst_state t tr2.
-    + rewrite -nth_state_lst nth_stateE size_take Hn //. 
-      rewrite states_take ?nth_take -?nth_stateE //.
+    + rewrite -nth_state_lst -nth_statesE size_take Hn //. 
+      rewrite states_take ?nth_take ?nth_statesE //.
       * exact/ltnW.
       exact/eqP/Htr1.
     move=> /step_of st.
     pose tr3 := [trace of tr2 >:: st].
     have Htr3 : trace_lang t tr3. 
-    - rewrite /trace_lang -head_states. 
-      rewrite states_rcons ?states_take //.
-      - 
-        rewrite head_states. -fst_state_rcons. rewrite head_rcons.
-      admit.
+    + rewrite /trace_lang fst_state_rcons -fst_state_src.
+      rewrite (fst_stateNnil t). 
+      * rewrite fst_state_take //. 
+        by apply/esym/eqP/Htr1. 
+      apply/nilP; rewrite /nilp size_takel; last exact/ltnW.
+      admit.      
     pose tr3' := carry_trace Htr3 Hlg.
     exists (nth_state s tr3' n.+1).
     eexists; last first.
-    - 
-      admit.
+    + have ->: s1 = nth_state s tr3' n.
+      * admit.
+      have ->: l = nth l (labels tr3') n.
+      * rewrite labels_carry labels_rcons labels_take.
+        rewrite 
+        admit.
+      exact/nth_trans.
     unshelve eexists. 
     - by exists tr3. 
     move=> /=; exists n.+1.
     apply/andP; split=> //.
-    admit.
-  move=> /=. unshelve eexists.
+    rewrite -nth_statesE ?states_rcons; last first.
+    + rewrite size_rcons size_takel //; exact/ltnW.
+    + rewrite (fst_stateNnil t) ?fst_state_take //. 
+      * by apply/esym/eqP/Htr1. 
+      admit.
+    rewrite nth_rcons size_states size_takel ?step_ofE ?ltnn ?eq_refl //.
+    exact/ltnW.
+  move=> /=; unshelve eexists.
   - exact/(@exist _ _ [trace] (trace_lang0 t)).
   move=> /=; exists 0%nat. 
   apply/andP; split=> //.
