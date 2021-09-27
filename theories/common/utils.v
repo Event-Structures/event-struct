@@ -255,17 +255,6 @@ Section SeqUtils.
 Context {T : Type}.
 Implicit Types (x : T) (s : seq T).
 
-(* copy-paste of Tauto.ocons *)
-Definition ocons o s := 
-  match o with 
-  | Some x => x :: s
-  | None   => s
-  end.
-
-Lemma rcons0 x : 
-  rcons [::] x = [:: x].
-Proof. done. Qed.
-
 Lemma behead_rcons x s :
   behead (rcons s x) = if s is [::] then [::] else rcons (behead s) x.
 Proof. by case: s. Qed.
@@ -274,17 +263,6 @@ End SeqUtils.
 
 Section TupleUtils.
 Context {T : Type}.
-
-Definition tlast n (t : n.+1.-tuple T) : T := tnth t ord_max. 
-
-Lemma thead_head x n (t : n.+1.-tuple T) : thead t = head x t.
-Proof. by rewrite /thead (tnth_nth x). Qed.
-
-Lemma tlast_last x n (t : n.+1.-tuple T) : tlast t = last x t.
-Proof. by rewrite /tlast (tnth_nth x) -nth_last size_tuple /=. Qed.
-
-Lemma tlast_rcons n (t : n.-tuple T) x : tlast [tuple of rcons t x] = x.
-Proof. by rewrite (tlast_last x) last_rcons. Qed.
 
 (* TODO: duplicate of https://github.com/math-comp/math-comp/pull/777 *)
 Lemma val_tcast m n (eq_mn : m = n) (t : m.-tuple T) :

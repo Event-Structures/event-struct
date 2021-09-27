@@ -69,11 +69,12 @@ Delimit Scope lts_scope with lts.
 
 Local Open Scope lts_scope.
 
-Reserved Notation "s1 '--[' l ']-->' s2" (at level 22, no associativity).
-Reserved Notation "s1 '-->' s2" (at level 55, right associativity).
+Reserved Notation "s1 '--[' l ']-->' s2" (at level 55, no associativity).
+
+Reserved Notation "s1 '-->' s2"  (at level 55, right associativity).
 Reserved Notation "s1 '-->?' s2" (at level 55, right associativity).
-Reserved Notation "s1 '-->+' s2" (at level 22, right associativity).
-Reserved Notation "s1 '-->*' s2" (at level 22, right associativity).
+Reserved Notation "s1 '-->+' s2" (at level 55, right associativity).
+Reserved Notation "s1 '-->*' s2" (at level 55, right associativity).
 
 Module Export LTS.
 
@@ -170,7 +171,6 @@ Structure step : Type := Step {step_val :> stepTuple; _ : is_step step_val}.
 
 Canonical step_subType := Eval hnf in [subType for step_val].
 
-(* TODO: better name? *)
 Definition adj : rel step := 
   fun s t => dst s == src t. 
 End Def.
@@ -214,10 +214,8 @@ Context {L : Type} (S : ltsType L).
 Definition is_trace : pred (trace_seq S) := 
   fun ts => sorted adj ts.
 
-(* TODO: try definition with initial state *)
 Structure trace : Type := Trace { 
   trace_val :> trace_seq S; 
-  (* init_st   :  S; *)
   _         :  is_trace trace_val;
 }.
 
@@ -247,7 +245,6 @@ Definition trace_lang : S -> pred trace :=
 Definition lts_lang : S -> lang L := 
   fun s w => exists2 tr, trace_lang s tr & w = labels tr.
 
-(* TODO: better name? *)
 Definition adjoint : rel (trace_seq S) := 
   fun ts1 ts2 => 
     match ts2 with 
@@ -525,12 +522,6 @@ Section ClassDef.
 (* TODO: simulation between lts labelled by different labels? *)
 Context {L : Type} (S T : ltsType L).
 Implicit Types (R : hrel S T).
-
-(* Record mixin_of R := Mixin { *)
-(*   _ : forall (l : L) (s1 : S) (t1 t2 : T),  *)
-(*         R s1 t1 -> t1 --[l]--> t2 -> exists s2,  *)
-(*         R s2 t2 /\ s1 --[l]--> s2;   *)
-(* }. *)
 
 Set Primitive Projections.
 Record class_of R := Class {
