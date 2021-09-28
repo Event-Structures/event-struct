@@ -785,6 +785,10 @@ Module Export Def.
 Section Def. 
 Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
 
+(* TODO: try alternative design with lPoset instance for ext
+ *   being parametrized by `f` and give rise to type `E1^f`,
+ *   and also define corresponding notations `e1 <=[f] e2`.
+ *)
 Definition ext : lPoset.eventType L := Order.lposetType f.
 
 End Def.
