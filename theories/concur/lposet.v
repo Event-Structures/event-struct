@@ -682,9 +682,10 @@ Notation bij := bHom.type.
 Notation emb := Emb.type.
 Notation iso := Iso.type.
 
-(* TODO: refactor module structure *)
-Module HomExtOrder.
-Section HomExtOrder.
+Module Ext.
+
+Module Order.
+Section Order.
 Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
 Implicit Types (x y : E1).
 
@@ -712,7 +713,7 @@ Lemma le_refl :
   reflexive le.
 Proof. by move=> x /=; rewrite /le eq_refl. Qed.
 
-Lemma le_antisym :
+Lemma le_anti :
   antisymmetric le.
 Proof. 
   rewrite /le=> x y /=.
@@ -765,47 +766,40 @@ Lemma lt_rmono x y :
   f x < f y -> lt x y.
 Proof. by rewrite /lt /= => ->. Qed.
 
-End HomExtOrder.
-End HomExtOrder.
+Definition porderMixin := 
+  @LePOrderMixin E1 le lt lt_def le_refl le_anti le_trans.
 
-Section HomExtDef. 
+Definition porderType := 
+  POrderType tt E1 porderMixin.
+
+Definition lposetMixin := 
+  lPoset.Mixin (lab : porderType -> L). 
+
+Definition lposetType := 
+  lPoset.Pack (@lPoset.Class E1 L (POrder.class porderType) lposetMixin).
+
+End Order.
+End Order.
+
+Module Export Def.
+Section Def. 
 Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
 
-Definition Ext : lPoset.eventType L.
-  exists E1; unshelve (econstructor).
-  - exists (lPoset.class E1), (HomExtOrder.le f) (HomExtOrder.lt f).
-    + exact/HomExtOrder.lt_def.
-    + exact/HomExtOrder.le_refl.
-    + exact/HomExtOrder.le_antisym.
-    + exact/HomExtOrder.le_trans. 
-  constructor; exact/(@lab L E1). 
-Defined.
+Definition ext : lPoset.eventType L := Order.lposetType f.
 
-End HomExtDef.
+End Def.
+End Def.
 
-Section HomExtTheory.
+Module Export Theory.
+Section Theory.
 Context {L : Type} {E1 E2 : lPoset.eventType L}.
 Implicit Types (f : E1 ~> E2).
 
-Definition bij_ext f : E1 ≃> Ext f.
-  exists (id : E1 -> Ext f).
-  repeat constructor. 
-  - exact/HomExtOrder.le_id_mono.
-  by exists (id : Ext f -> E1).
-Defined.
-
-Definition ext_hom f : Ext f ~> E2.
-  exists (f : Ext f -> E2).
-  repeat constructor.
-  - exact/(lab_preserv f).
-  move=> e1 e2; exact/HomExtOrder.le_mono.
-Defined.  
-
-Lemma ext_lt_rmono f (e1 e2 : Ext f) :
+Lemma ext_lt_rmono f (e1 e2 : ext f) :
   f e1 < f e2 -> e1 < e2.
-Proof. rewrite {2}/Order.lt /=; exact/HomExtOrder.lt_rmono. Qed.
+Proof. exact/Order.lt_rmono. Qed.
 
-Lemma ext_le_rmono (f : E1 ≃> E2) (e1 e2 : Ext f) :
+Lemma ext_le_rmono (f : E1 ≃> E2) (e1 e2 : ext f) :
   f e1 <= f e2 -> e1 <= e2.
 Proof. 
   rewrite !le_eqVlt=> /orP[]. 
@@ -813,7 +807,7 @@ Proof.
   by move=> /ext_lt_rmono ->.
 Qed.
 
-Lemma ext_incomp f (e1 e2 : Ext f) :
+Lemma ext_incomp f (e1 e2 : ext f) :
   e1 >< e2 -> (f e1 == f e2) || (f e1 >< f e2).
 Proof. 
   case H: (f e1 <= f e2); move: H.
@@ -825,19 +819,51 @@ Proof.
   by rewrite {2}/comparable=> -> ->.
 Qed.
 
-Definition ext_bij (f : E1 ≃> E2) : Ext f ~= E2.
-  pose g := ext_hom f.
-  exists g; constructor=> //; first constructor.
-  - by case: g.
-  - pose f' := (bHom.invF f).
-    pose h := (bij_ext f).
-    exists (h \o f').
-    + move=> ? /=; exact/inv_can. 
-    move=> ? /=; exact/can_inv. 
-  constructor; exact/ext_le_rmono.
-Defined.
+End Theory.
+End Theory.
 
-End HomExtTheory.
+Section Build.
+Context {L : Type} {E1 E2 : lPoset.eventType L}.
+Implicit Types (f : E1 ~> E2).
+Implicit Types (g : E1 ≃> E2).
+
+Lemma bhom_class f : bHom.class_of (id : E1 -> ext f).
+Proof. 
+  repeat constructor. 
+  - exact/Order.le_id_mono.
+  by exists (id : ext f -> E1).
+Qed.
+
+Definition bhom f : E1 ≃> ext f := 
+  bHom.Pack (bhom_class f).
+
+Lemma hom_class f : Hom.class_of (f : ext f -> E2).
+Proof. 
+  repeat constructor.
+  - exact/(lab_preserv f).
+  move=> e1 e2; exact/Order.le_mono.
+Qed.  
+
+Definition hom f : ext f ~> E2 := 
+  Hom.Pack (hom_class f).
+
+Lemma iso_class g : Iso.class_of (g : ext g -> E2).
+Proof. 
+  constructor; constructor. 
+  - exact/(hom_class g).
+  - exists ((bhom g) \o (bHom.invF g))=> ? /=; 
+      [exact/inv_can | exact/can_inv].
+  exact/ext_le_rmono.
+Qed.
+
+Definition iso (g : E1 ≃> E2) : ext g ~= E2 := 
+  Iso.Pack (iso_class g).
+
+End Build.
+
+End Ext.
+
+Notation ext := (Ext.Def.ext).
 
 End lPoset.
 
@@ -848,9 +874,12 @@ Export lPoset.Hom.Hom.Exports.
 Export lPoset.bHom.bHom.Exports.
 Export lPoset.Emb.Emb.Exports.
 Export lPoset.Iso.Iso.Exports.
+
 Export lPoset.Hom.Theory.
 Export lPoset.bHom.Theory.
 Export lPoset.Emb.Theory.
+
+Export lPoset.Ext.Theory.
 
 Notation lposet := (lPoset.eventStruct).
 

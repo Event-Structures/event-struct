@@ -122,7 +122,7 @@ Context {L : Type}.
 Implicit Types (P Q : lang L).
 
 Definition extensible P Q : Prop := 
-  forall p q (f : p ~> q), P p -> Q q -> (P ⊓ Q) (lPoset.Ext f).
+  forall p q (f : p ~> q), P p -> Q q -> (P ⊓ Q) (lPoset.ext f).
 
 Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
@@ -406,19 +406,19 @@ Proof.
    *)
   move=> He Hd Hp Hq f q' [] Hq' [Hl [g]].
   pose h := lPoset.Hom.comp f g.
-  pose p' := lPoset.Ext h. 
+  pose p' := lPoset.ext h. 
   move: (He _ _ h) Hp Hq'=> /[apply] /[apply] [[]] + _. 
   move: (Hd p')=> /[apply] [[]] p'' [] [] Hp'' HL [] k.
   exists p''; repeat split=> //.
-  - apply/(lPoset.bHom.comp _ k)/lPoset.bij_ext.
-  pose h' := (lPoset.ext_hom h).
+  - apply/(lPoset.bHom.comp _ k)/lPoset.Ext.bhom.
+  pose h' := (lPoset.Ext.hom h).
   pose k' := (lPoset.bHom.invF k).
   exists (h' \o k').
   repeat constructor.
   - by move=> x /=; rewrite (lab_preserv h) -(inv_lab k).
   move=> e1 e2=> /= /(ca_img_inv k) /orP[].
   - by move=> /(ca_monotone h').
-  move=> /lPoset.ext_incomp /orP[]. 
+  move=> /ext_incomp /orP[]. 
   - by subst h k'; move=> /= /eqP->. 
   rewrite /comparable.
   move: Hl=> /=; rewrite /LinPomset.Lang.prop=> Ht.
@@ -442,8 +442,8 @@ Proof.
   exists q; split=> //; split; last first. 
   - by apply/(schedule_bij g). 
   pose h  := lPoset.bHom.comp g f.
-  pose q' := lPoset.Ext h. 
-  pose j  := (lPoset.ext_bij h).
+  pose q' := lPoset.ext h. 
+  pose j  := (lPoset.Ext.iso h).
   apply /(lang_iso_inv j).
   by apply /(fst (He q p' h Hq Hp')).
 Qed.  
