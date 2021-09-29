@@ -251,6 +251,15 @@ Qed.
 
 End OptionUtils.
 
+Section SeqUtils.
+Context {T : Type}.
+Implicit Types (x : T) (s : seq T).
+
+Lemma behead_rcons x s :
+  behead (rcons s x) = if s is [::] then [::] else rcons (behead s) x.
+Proof. by case: s. Qed.
+
+End SeqUtils. 
 
 Section TupleUtils.
 Context {T : Type}.
@@ -449,7 +458,15 @@ End SubTypeUtils.
 Section SeqUtils.
 
 Context {T : Type}. 
-Implicit Types (p : pred T) (s : seq T) (n : nat).
+Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
+
+Lemma headNnil x y s : 
+  ~~ nilp s -> head y s = head x s.
+Proof. by case: s. Qed.
+
+Lemma lastNnil x y s : 
+  ~~ nilp s -> last y s = last x s.
+Proof. by case: s. Qed.
 
 Lemma hasNcount p s : 
    ~~ has p s = (count p s == 0).
@@ -501,6 +518,10 @@ Lemma find_take p s n :
   has p (take n s) -> find p (take n s) = find p s. 
 Proof. by rewrite -[in find p s](@cat_take_drop n _ s) find_cat=> ->. Qed.
 
+Lemma sorted_rcons x r s y : 
+  sorted r (rcons s y) = sorted r s && (nilp s || r (last x s) y).
+Proof. case s=> [|??] //=; exact/rcons_path. Qed.
+
 Lemma sorted_subn (s : seq nat) n : 
   sorted ltn s -> all (fun m => n <= m) s -> sorted ltn (map (subn^~ n) s).  
 Proof. 
@@ -551,6 +572,7 @@ Qed.
 
 End SeqUtils.
 
+Arguments sorted_rcons {T} x.
 
 Section FindNth.
 

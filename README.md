@@ -26,6 +26,7 @@ All files include a more detailed description of their contents.
 
 - `concur` - semantic domains for concurrency
 
+    - `ltr.v` - labelled transition systems and (linear) traces
     - `lposet.v` - labelled partially ordered sets
     - `pomset.v` - pomsets languages
     - `prime_eventstruct.v` - prime event structures 

@@ -19,6 +19,7 @@ theories/common/rewriting_system.v
 theories/common/rel.v
 theories/common/monoid.v
 
+theories/concur/lts.v
 theories/concur/lposet.v
 theories/concur/pomset.v
 theories/concur/prime_eventstruct.v
