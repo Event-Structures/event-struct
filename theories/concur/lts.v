@@ -206,36 +206,36 @@ End Step.
 
 Module Export Trace. 
 
-Notation trace_seq S := (seq (step S)).
+Notation traceSeq S := (seq (step S)).
 
 Section Def. 
 Context {L : Type} (S : ltsType L).
 
-Definition is_trace : pred (trace_seq S) := 
+Definition is_trace : pred (traceSeq S) := 
   fun ts => sorted adj ts.
 
 Structure trace : Type := Trace { 
-  trace_val :> trace_seq S; 
+  trace_val :> traceSeq S; 
   _         :  is_trace trace_val;
 }.
 
 Canonical trace_subType := Eval hnf in [subType for trace_val].
 
-Implicit Types (ts : trace_seq S) (tr : trace).
+Implicit Types (ts : traceSeq S) (tr : trace).
 
-Definition labels : trace_seq S -> seq L := map (lbl : step S -> L). 
+Definition labels : traceSeq S -> seq L := map (lbl : step S -> L). 
 
-Definition states : S -> trace_seq S -> seq S := 
+Definition states : S -> traceSeq S -> seq S := 
   fun s ts => 
     match ts with 
     | [::]    => [:: s] 
     | st :: _ => src st :: map (dst : step S -> S) ts
     end. 
 
-Definition fst_state : S -> trace_seq S -> S := 
+Definition fst_state : S -> traceSeq S -> S := 
   fun s ts => if ts is st :: ts then src st else s.
 
-Definition lst_state : S -> trace_seq S -> S := 
+Definition lst_state : S -> traceSeq S -> S := 
   fun s ts => if ts is st :: ts then dst (last st ts) else s. 
 
 Definition trace_lang : S -> pred trace := 
@@ -245,7 +245,7 @@ Definition trace_lang : S -> pred trace :=
 Definition lts_lang : S -> lang L := 
   fun s w => exists2 tr, trace_lang s tr & w = labels tr.
 
-Definition adjoint : rel (trace_seq S) := 
+Definition adjoint : rel (traceSeq S) := 
   fun ts1 ts2 => 
     match ts2 with 
     | [::]    => true
@@ -261,7 +261,7 @@ Arguments adjoint : simpl never.
 
 Section Seq.
 Context {L : Type} (S : ltsType L).
-Implicit Types (st : step S) (s : trace_seq S) (tr : trace S).
+Implicit Types (st : step S) (s : traceSeq S) (tr : trace S).
 
 Lemma nil_traceP : is_trace ([::] : seq (step S)).
 Proof. done. Qed.
@@ -285,7 +285,7 @@ End EQ.
 
 Section Theory. 
 Context {L : Type} (S : ltsType L).
-Implicit Types (st : step S) (ts : trace_seq S) (tr : trace S).
+Implicit Types (st : step S) (ts : traceSeq S) (tr : trace S).
 
 Lemma trace_adj tr : sorted adj tr.
 Proof. by case: tr. Qed.
