@@ -252,6 +252,9 @@ Definition adjoint : rel (traceSeq S) :=
     | st :: _ => lst_state (src st) ts1 == src st
     end.
 
+Definition adjoin : traceSeq S -> traceSeq S -> traceSeq S := 
+  fun ts1 ts2 => if adjoint ts1 ts2 then ts1 ++ ts2 else ts1. 
+
 Definition mk_trace tr mkTr : trace :=
   mkTr (let: Trace _ trP := tr return is_trace tr in trP).
 
@@ -259,21 +262,56 @@ End Def.
 
 Arguments adjoint : simpl never.
 
-Section Seq.
-Context {L : Type} (S : ltsType L).
-Implicit Types (st : step S) (s : traceSeq S) (tr : trace S).
-
-Lemma nil_traceP : is_trace ([::] : seq (step S)).
-Proof. done. Qed.
-Canonical nil_trace := Trace nil_traceP.
-
-End Seq.
-
 Notation "[ 'trace' 'of' tr ]" := (mk_trace (fun trP => @Trace _ _ tr trP))
   (at level 0, format "[ 'trace'  'of'  tr ]") : form_scope.
 
 Notation "[ 'trace' ]" := [trace of [::]]
   (at level 0, format "[ 'trace' ]") : form_scope.
+
+Notation "tr1 '<+>' tr2" := [trace of adjoin tr1 tr2]
+  (at level 51, left associativity) : lts_scope.
+
+Notation "st '<+' tr" := [trace of adjoin [:: st] tr]
+  (at level 49, right associativity) : lts_scope.
+
+Notation "tr '+>' st" := [trace of adjoin tr [:: st]]
+  (at level 48, left associativity) : lts_scope.
+
+Section Build.
+Context {L : Type} (S : ltsType L).
+Implicit Types (st : step S) (ts : traceSeq S) (tr : trace S).
+
+Lemma nil_traceP : is_trace ([::] : seq (step S)).
+Proof. done. Qed.
+Canonical nil_trace := Trace nil_traceP.
+
+Lemma singl_traceP st : is_trace [:: st].
+Proof. done. Qed.
+Canonical singl_trace st := Trace (singl_traceP st).
+
+Lemma adjoin_traceP tr1 tr2 : is_trace (adjoin tr1 tr2).
+Proof. 
+  case: tr1=> [ts1]; case: tr2=> [ts2] /=.
+  rewrite /adjoin /is_trace. 
+  case: ifP=> [|?] //.
+  case: ts1=> [|st1 {}ts1] //=; rewrite cat_path.
+  case: ts2=> [|st2 {}ts2] //= ???; [exact/andP | exact/and3P].
+Qed.
+Canonical adjoin_trace tr1 tr2 := Trace (adjoin_traceP tr1 tr2).
+
+Lemma adjoin_val tr1 tr2 : 
+  adjoint tr1 tr2 -> tr1 <+> tr2 = tr1 ++ tr2 :> traceSeq S.
+Proof. by rewrite /adjoin /=; case: ifP. Qed.
+
+Lemma adjoin_cons_val st tr : 
+  adjoint [:: st] tr -> st <+ tr = st :: tr :> traceSeq S.
+Proof. by rewrite /adjoin /=; case: ifP. Qed.
+
+Lemma adjoin_rcons_val st tr : 
+  adjoint tr [:: st] -> tr +> st = rcons tr st :> traceSeq S.
+Proof. by rewrite /adjoin -cats1 /=; case: ifP. Qed.
+
+End Build.
 
 Section EQ.
 Context {L : eqType} (S : ltsType L).
