@@ -277,9 +277,6 @@ Notation "st '<+' tr" := [trace of adjoin [:: st] tr]
 Notation "tr '+>' st" := [trace of adjoin tr [:: st]]
   (at level 48, left associativity) : lts_scope.
 
-(* TODO: make traces an intance of partial monoid, 
- *   reuse general monoid notations.
- *)
 
 Section Build.
 Context {L : Type} (S : ltsType L).
