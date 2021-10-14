@@ -252,8 +252,8 @@ Definition adjoint : rel (traceSeq S) :=
     | st :: _ => lst_state (src st) ts1 == src st
     end.
 
-Definition adjoin : traceSeq S -> traceSeq S -> traceSeq S := 
-  fun ts1 ts2 => if adjoint ts1 ts2 then ts1 ++ ts2 else ts1. 
+Definition adjoin : traceSeq S -> traceSeq S -> traceSeq S :=
+  fun ts1 ts2 => if adjoint ts1 ts2 then ts1 ++ ts2 else [::].
 
 Definition mk_trace tr mkTr : trace :=
   mkTr (let: Trace _ trP := tr return is_trace tr in trP).
@@ -276,6 +276,10 @@ Notation "st '<+' tr" := [trace of adjoin [:: st] tr]
 
 Notation "tr '+>' st" := [trace of adjoin tr [:: st]]
   (at level 48, left associativity) : lts_scope.
+
+(* TODO: make traces an intance of partial monoid, 
+ *   reuse general monoid notations.
+ *)
 
 Section Build.
 Context {L : Type} (S : ltsType L).
@@ -416,7 +420,8 @@ Lemma labels_cat ts1 ts2 :
   labels (ts1 ++ ts2) = labels ts1 ++ labels ts2.
 Proof. by rewrite /labels map_cat. Qed.
 
-Lemma size_states s ts : size (states s ts) == (size ts).+1.
+Lemma size_states s ts : 
+  size (states s ts) == (size ts).+1.
 Proof. by rewrite /states; case: ts=> [|??] //=; rewrite size_map. Qed.
                          
 Lemma states_rcons s ts st : s = fst_state (src st) ts -> 
@@ -426,6 +431,14 @@ Proof. by case: ts=> [->|??] //=; rewrite map_rcons. Qed.
 Lemma states_cat s ts1 ts2 : s = fst_state s ts2 -> 
   states s (ts1 ++ ts2) = states s ts1 ++ behead (states s ts2).
 Proof. by rewrite /states map_cat; case: ts1; case: ts2=> //= ?? ->. Qed.
+
+Lemma adjoin0s tr : 
+  [trace] <+> tr = tr.
+Proof. by apply/val_inj=> /=; rewrite adjoin_val ?adjoint0s //=. Qed.  
+
+Lemma adjoins0 tr : 
+  tr <+> [trace] = tr.
+Proof. by apply/val_inj=> /=; rewrite adjoin_val ?adjoints0 ?cats0 //=. Qed.
 
 End Theory.
 
