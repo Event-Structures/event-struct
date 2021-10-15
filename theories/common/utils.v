@@ -44,14 +44,6 @@ Proof. by rewrite !orbT. Qed.
 Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
 (* ************************************************************************** *)
-(*     Additional Notations                                                   *)
-(* ************************************************************************** *)
-
-(* TODO: move to `inhtype.v`? add scope? *)
-Notation "?| T |" := (inhabited T)
-  (at level 0, T at level 99, format "?| T |").
-
-(* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
 (* ************************************************************************** *)
 
@@ -1019,20 +1011,3 @@ Proof.
 Qed.
 
 End MkMaskMask.
-
-(* TODO: move to `inhtype.v` *)
-Section InhabitedUtils.
-
-Context {T U : Type}.
-
-(* TODO: use this lemma in lposet.v/thomP proof *)
-Lemma nihn_inh_fun : 
-  ~ inhabited T -> inhabited (T -> U).
-Proof. 
-  move=> H; constructor. 
-  have fT: (forall x : T, False).
-  - move=> x; apply/H; constructor; exact/x. 
-  by refine (fun x => match fT x with end).
-Qed.
-
-End InhabitedUtils.

@@ -6,6 +6,44 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(* TODO: add scope? *)
+Notation "?| T |" := (inhabited T)
+  (at level 0, T at level 99, format "?| T |").
+
+(* TODO: add scope? *)
+Notation "??| A |" := (~~ pred0b A)
+  (at level 0, A at level 99, format "??| A |").
+
+Section Theory.
+
+Lemma nihn_inh_fun aT rT : 
+  ~ ?|aT| -> ?|aT -> rT|.
+Proof. 
+  move=> H; constructor. 
+  have fT: (forall x : aT, False).
+  - move=> x; apply/H; constructor; exact/x. 
+  by refine (fun x => match fT x with end).
+Qed.
+
+Lemma inh_impl aT rT : 
+  (aT -> rT) -> ?|aT| -> ?|rT|.
+Proof. move=> f [x]; exists; exact/(f x). Qed.
+
+Lemma inh_iff aT rT : 
+  (aT -> rT) -> (rT -> aT) -> ?|aT| <-> ?|rT|.
+Proof. by move=> f g; split; apply/inh_impl. Qed.
+
+Lemma fin_inhP (T : finType) : 
+  reflect ?|T| ??|T|.
+Proof. 
+  apply/(equivP pred0Pn). 
+  split; move=> [] //. 
+  by move=> x; exists x.
+Qed.
+
+End Theory.
+
+
 Module Inhabitant.
 
 Section ClassDef.
