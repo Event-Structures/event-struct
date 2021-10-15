@@ -159,23 +159,28 @@ Module Export Step.
 
 Section Def.
 Context {L : Type} (S : ltsType L).
+Implicit Types (l : L) (s : S).
 
 Record stepTuple : Type := mk_step {
   lbl : L; src : S; dst : S;  
 }.
 
 Definition is_step : pred stepTuple := 
-  fun s => (src s) --[lbl s]--> (dst s).
+  fun st => (src st) --[lbl st]--> (dst st).
 
 Structure step : Type := Step {step_val :> stepTuple; _ : is_step step_val}.
 
 Canonical step_subType := Eval hnf in [subType for step_val].
 
+Definition step_of l s s' : (s --[l]--> s') -> step := 
+  fun p => @Step (mk_step l s s') p.
+
 Definition adj : rel step := 
-  fun s t => dst s == src t. 
+  fun st st' => dst st == src st'. 
+
 End Def.
 
-Prenex Implicits lbl src dst is_step adj.
+Prenex Implicits lbl src dst is_step step_of adj.
 
 Section EQ. 
 Context {L : eqType} (S : ltsType L).
@@ -200,6 +205,16 @@ Canonical step_eqType := Eval hnf in EqType (step S) step_eqMixin.
 (* Check (st1 == st2). *)
 
 End EQ.
+
+Section Theory.
+Context {L : eqType} (S : ltsType L).
+Implicit Types (l : L) (s : S).
+
+Lemma step_of_val l s s' (Hst : s --[l]--> s') : 
+  step_of Hst = mk_step l s s' :> stepTuple S.
+Proof. done. Qed.
+
+End Theory.
 
 End Step.
 
@@ -520,15 +535,8 @@ Proof.
   case: (nilp tr)/nilP=> [->|Hnil] /=. 
   - move: (valP st); rewrite /is_step=> /[swap] <- => Hs. 
     move: (sim_step HR Hs)=> [s' HR' Hs'].
-    (* TODO: introduce a nicer way to construct steps 
-     *   (using canonical structures and phantom types?) 
-     *)
-    pose st_' := mk_step (lbl st) s s'. 
-    have Hst' : is_step st_' by done. 
-    pose st'  := Step Hst'.     
-    have Htr' : is_trace [:: st']. 
-    - by rewrite is_trace_cons //=; apply/andP.
-    by exists (Trace Htr')=> //=. 
+    pose st' := step_of Hs'. 
+    by exists [trace of [:: st']]. 
   rewrite (fst_stateNnil t) // => Ht.
   move: (IH Htr Ht); clear IH. 
   move=> [tr' []] /[swap].
@@ -542,15 +550,10 @@ Proof.
   - rewrite /nilp -size_labels -Hlbl size_labels. 
     by move: Hnil=> /nilP.
   move=> /nilP Hnil'.
-  pose st_' := mk_step (lbl st) (lst_state s tr') s'.
-  have Hst' : is_step st_' by done.
-  pose st'  := Step Hst'.
-  have Htr' : is_trace (rcons tr' st'). 
-  - rewrite is_trace_rcons; apply /andP; split=> //.
-    - exact/(valP tr').
-    rewrite adjoint_lastE /=.
-    by apply/eqP/lst_stateNnil.
-  exists (Trace Htr')=> /=; split.
+  pose st' := step_of Hs'.
+  exists (tr' +> st')=> /=.
+  rewrite !adjoin_rcons_val; last first; [|split].
+  - by rewrite /adjoint step_of_val (lst_stateNnil s) /=. 
   - by rewrite !lst_state_rcons /=.
   - by rewrite labels_rcons Hlbl.
   rewrite fst_state_rcons Hfst -fst_state_src. 
