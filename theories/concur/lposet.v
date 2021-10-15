@@ -1170,6 +1170,112 @@ Proof. repeat apply/forallPP=> ?; rewrite eq_sym; exact/eqP. Qed.
 End MorphismsProps.
 End MorphismsProps.
 
+Module Export Hom.
+
+Module Theory.
+Section Theory.
+Context {L : eqType} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Lemma fin_lab_preserveP f : 
+  reflect { mono f : e / lab e } [forall e, lab (f e) == lab e].
+Proof. apply/forallPP=> ?; exact/eqP. Qed.
+
+Lemma fin_ca_monotoneP f : 
+  reflect { homo f : e1 e2 / e1 <= e2 } 
+          [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)].
+Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
+
+End Theory.
+End Theory.
+
+Section FinHom.
+Context {L : eqType} (E1 E2 : eventType L).
+
+Definition finHom_pred (f : E1 -> E2) := 
+  [&& [forall e, lab (f e) == lab e]  
+    & [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]
+  ].
+
+Structure finHom : Type := FinHom { 
+  apply :> E1 -> E2;
+  _     : finHom_pred apply;
+}.
+
+Canonical finHom_subType := Eval hnf in [subType for apply].
+
+Implicit Types (f : finHom).
+
+Lemma finHom_lab_preserve f : 
+  [forall e, lab (f e) == lab e]. 
+Proof. by case: f=> [{}f] /= /andP[]. Qed.
+
+Lemma finHom_ca_monotone f : 
+  [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]. 
+Proof. by case: f=> [{}f] /= /andP[]. Qed.
+
+Lemma homMixin f : lPoset.Hom.Hom.mixin_of f.
+Proof. 
+  constructor.
+  - apply/fin_lab_preserveP/finHom_lab_preserve.
+  apply/fin_ca_monotoneP/finHom_ca_monotone.
+Defined.
+
+Definition hom_of_finHom : finHom -> (E1 ~> E2) := 
+  fun f => lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (homMixin f)).
+
+Lemma finHom_pred_of_hom (f : E1 ~> E2) : 
+     [forall e, lab (f e) == lab e] 
+  && [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)].
+Proof. 
+  apply/andP; split.
+  - by apply/fin_lab_preserveP/(lab_preserv f).
+  by apply/fin_ca_monotoneP/(ca_monotone f).
+Defined.
+
+Definition finHom_of_hom : (E1 ~> E2) -> finHom := 
+  fun (f : E1 ~> E2) => FinHom (finHom_pred_of_hom f).
+
+Lemma hom_of_finHomK : cancel hom_of_finHom finHom_of_hom.
+Proof. 
+  rewrite /hom_of_finHom /finHom_of_hom=> /=. 
+  by move=> f; apply/val_inj=> /=.
+Qed.
+
+End FinHom.
+
+Prenex Implicits hom_of_finHom finHom_of_hom.
+
+Section OptionHom.
+Context {L : eqType} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Definition ohom f : option (E1 ~> E2) := 
+  omap hom_of_finHom (insub f).
+
+Lemma hom_ohom (f : E1 ~> E2) : ohom f.
+Proof. 
+  rewrite /ohom insubT=> //=.
+  pose ff := finHom_of_hom f.
+  exact/(valP ff).
+Qed.
+
+Lemma homP :
+  reflect ?|E1 ~> E2| [exists f : {ffun E1 -> E2}, ohom f].
+Proof.
+  apply/(iffP idP).
+  - by move=> /existsP [f]; case: (ohom f)=> //.
+  move=> [f]; apply /existsP; exists (finfun f). 
+  pose ff := lPoset.Hom.of_eqfun (ffunE f).
+  have->: (finfun f : E1 -> E2) = ff by done. 
+  exact/hom_ohom.
+Qed.
+
+End OptionHom.
+
+End Hom.
+
+
 (* Checks whether given function forms certain morphism *)
 Section MorphismsDef.
 Context {L : eqType} (E1 E2 : eventType L).
