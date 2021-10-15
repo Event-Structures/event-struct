@@ -21,6 +21,8 @@ From eventstruct Require Import utils relalg.
 (*                      from s1 to s2.                                        *)
 (*            step S == a type of steps of the LTS.                           *)
 (*                   := { (lbl, src, dst) | src --[lbl]--> dst }.             *)
+(*         step_of H == given a proof of step property H : s --[l]--> s'      *)
+(*                      constructs a step { (l, s, s') | s --[l]--> s' }.     *)
 (*           trace S == a type of traces of the LTS, that is finite sequences *)
 (*                      of steps performed by the transition system.          *)
 (*                   := { tr : seq (step S) | dst tr[i] == src tr[i+1] }.     *)
@@ -28,10 +30,16 @@ From eventstruct Require Import utils relalg.
 (*                      Coq must be able to infer a proof that ts satisfies   *)
 (*                      trace property (i.e the ends of steps should match).  *)
 (*           [trace] == empty trace.                                          *)
-(*         labels tr == a sequence of labels of tr.                           *)
-(*       states s tr == a sequence of states of tr or [:: s] is tr is empty.  *)
-(*    fst_state s tr == the first state of of tr or s is tr is empty.         *)
-(*    lst_state s tr == the last state of of tr or s is tr is empty.          *)
+(*       tr1 <+> tr2 == concatenation of traces tr1 ++ tr2 if tr1 and tr2     *)
+(*                      are adjoint, empty trace otherwise.                   *)
+(*          st <+ tr == cons of step st and trace tr if they are are adjoint, *)
+(*                      empty trace otherwise.                                *)
+(*          tr +> st == rcons of step st and trace tr if they are are adjoint,*)
+(*                      empty trace otherwise.                                *)
+(*         labels tr == a sequence of labels of a trace.                      *)
+(*       states s tr == a sequence of states of tr or [:: s] if tr is empty.  *)
+(*    fst_state s tr == the first state of tr or s is tr is empty.            *)
+(*    lst_state s tr == the last state of tr or s is tr is empty.             *)
 (*   adjoint tr1 tr2 == a relation asserting that two traces are adjoint,     *)
 (*                      meaning that the last state of tr1 is equal to        *)
 (*                      the first state of tr2.                               *)
@@ -247,6 +255,7 @@ Definition states : S -> traceSeq S -> seq S :=
     | st :: _ => src st :: map (dst : step S -> S) ts
     end. 
 
+(* TODO: try `starts_with` and `ends_with` predicates instead? *)
 Definition fst_state : S -> traceSeq S -> S := 
   fun s ts => if ts is st :: ts then src st else s.
 
