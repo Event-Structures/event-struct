@@ -28,10 +28,7 @@ Module Pomset.
 
 Implicit Types (L : Type).
 
-Import lPoset.Hom.Syntax.
-Import lPoset.bHom.Syntax.
-Import lPoset.Emb.Syntax.
-Import lPoset.Iso.Syntax.
+Import lPoset.Syntax.
 
 Definition iso_inv {L} (P : lPoset.eventType L -> Prop) := 
   forall {E1 E2} (f : E1 ~= E2), P E1 -> P E2.

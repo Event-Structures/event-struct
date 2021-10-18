@@ -793,7 +793,8 @@ End Build.
 End Iso.
 
 Notation hom := Hom.type.
-Notation bij := bHom.type.
+Notation ihom := iHom.type.
+Notation bhom := bHom.type.
 Notation emb := Emb.type.
 Notation iso := Iso.type.
 
@@ -984,6 +985,14 @@ End Ext.
 
 Notation ext := (Ext.Def.ext).
 
+Module Syntax. 
+Export Hom.Syntax.
+Export iHom.Syntax.
+Export bHom.Syntax.
+Export Emb.Syntax.
+Export Iso.Syntax.
+End Syntax.
+
 End lPoset.
 
 Export lPoset.lPoset.Exports.
@@ -1143,11 +1152,7 @@ Export lFinPoset.Exports.
 Notation eventType := lFinPoset.type.
 Notation eventStruct := lFinPoset.class_of.
 
-Import lPoset.Hom.Syntax.
-Import lPoset.iHom.Syntax.
-Import lPoset.bHom.Syntax.
-Import lPoset.Emb.Syntax.
-Import lPoset.Iso.Syntax.
+Import lPoset.Syntax.
 
 Module Export Theory.
 Section Theory.
@@ -1462,7 +1467,7 @@ End Iso.
 End lFinPoset.
 
 Export lFinPoset.lFinPoset.Exports.
-Export lFinPoset.MorphismsProps.
+Export lFinPoset.Theory.
 
 
 Module tPoset.
@@ -1540,11 +1545,7 @@ Export tPoset.Exports.
 
 Notation eventType := tPoset.lfinposetType.
 
-Import lPoset.Hom.Syntax.
-Import lPoset.bHom.Syntax.
-Import lPoset.iHom.Syntax.
-Import lPoset.Emb.Syntax.
-Import lPoset.Iso.Syntax.
+Import lPoset.Syntax.
 
 Module Export Theory.
 Section Theory. 
