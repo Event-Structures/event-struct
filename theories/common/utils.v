@@ -343,13 +343,21 @@ End FSetUtils.
 Section FinTypeUtils.
 
 Context {T T' : finType}. 
-Implicit Types (f : T -> T').
+Implicit Types (r : rel T) (f : T -> T').
 
 (* TODO: migrate to `mathcomp` once 
  *   https://github.com/math-comp/math-comp/pull/771 is merged 
  *)
 Lemma bij_eq_card f : bijective f -> #|T| = #|T'|.
 Proof. by move=> [g /can_inj/leq_card + /can_inj/leq_card]; case: ltngtP. Qed.
+
+Lemma forall2P r : 
+  reflect (forall x y, r x y) [forall x, forall y, r x y].
+Proof. 
+  apply/(equivP forallP); split.
+  - by move=> H x y; move: (H x)=> /forallP.
+  by move=> H x; apply/forallP.  
+Qed.
 
 End FinTypeUtils.
 
