@@ -1,7 +1,7 @@
 From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple path.
 From mathcomp Require Import eqtype choice order fintype finfun finmap. 
-From eventstruct Require Import utils.
+From eventstruct Require Import utils inhtype.
 
 (******************************************************************************)
 (* This file provides a theory of labelled partially ordered sets             *)
@@ -1148,9 +1148,6 @@ Import lPoset.bHom.Syntax.
 Import lPoset.Emb.Syntax.
 Import lPoset.Iso.Syntax.
 
-
-Module Export Hom.
-
 Module Export Theory.
 Section Theory.
 Context {L : eqType} (E1 E2 : eventType L).
@@ -1173,57 +1170,20 @@ Proof. repeat apply/forallPP=> ?; rewrite eq_sym; exact/eqP. Qed.
 End Theory.
 End Theory.
 
-Section FinHom.
+Module Export Hom.
+
+Section Def.
 Context {L : eqType} (E1 E2 : eventType L).
 
-Definition finHom_pred (f : {ffun E1 -> E2}) := 
+Definition fin_hom_pred (f : {ffun E1 -> E2}) := 
   [&& [forall e, lab (f e) == lab e]  
     & [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]
   ].
 
-Structure finHom : Type := FinHom { 
-  apply :> {ffun E1 -> E2};
-  _     : finHom_pred apply;
-}.
+Notation fin_hom := ({ffun E1 -> E2 | fin_hom_pred}).
 
-Canonical finHom_subType := Eval hnf in [subType for apply].
-
-Definition finHom_eqMixin := Eval hnf in [eqMixin of finHom by <:].
-Canonical finHom_eqType := Eval hnf in EqType finHom finHom_eqMixin.
-
-Definition finHom_choiceMixin := Eval hnf in [choiceMixin of finHom by <:].
-Canonical finHom_choiceType := Eval hnf in ChoiceType finHom finHom_choiceMixin.
-
-Definition finHom_countMixin := Eval hnf in [countMixin of finHom by <:].
-Canonical finHom_countType := Eval hnf in CountType finHom finHom_countMixin.
-
-Canonical finHom_subCountType := Eval hnf in [subCountType of finHom].
-
-Definition finHom_finMixin := Eval hnf in [finMixin of finHom by <:].
-Canonical finHom_finType := Eval hnf in FinType finHom finHom_finMixin.
-
-Implicit Types (f : finHom).
-
-Lemma finHom_lab_preserv f : 
-  [forall e, lab (f e) == lab e]. 
-Proof. by case: f=> [{}f] /= /andP[]. Qed.
-
-Lemma finHom_ca_monotone f : 
-  [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]. 
-Proof. by case: f=> [{}f] /= /andP[]. Qed.
-
-Lemma homMixin f : lPoset.Hom.Hom.mixin_of f.
-Proof. 
-  constructor.
-  - apply/fin_lab_preservP/finHom_lab_preserv.
-  apply/fin_ca_monotoneP/finHom_ca_monotone.
-Qed.
-
-Definition hom_of_finHom : finHom -> (E1 ~> E2) := 
-  fun f => lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (homMixin f)).
-
-Lemma finHom_pred_of_hom (f : E1 ~> E2) : 
-  finHom_pred [ffun x => f x].
+Lemma fin_hom_pred_of_hom (f : E1 ~> E2) : 
+  fin_hom_pred [ffun x => f x].
 Proof. 
   apply/andP; split.
   - apply/forallP=> e; rewrite ffunE /=. 
@@ -1233,61 +1193,60 @@ Proof.
   by apply/(ca_monotone f).
 Qed.
 
-Definition finHom_of_hom : (E1 ~> E2) -> finHom := 
-  fun (f : E1 ~> E2) => FinHom (finHom_pred_of_hom f).
+Definition fin_hom_of_hom : (E1 ~> E2) -> fin_hom := 
+  fun (f : E1 ~> E2) => Sub [ffun x => f x] (fin_hom_pred_of_hom f).
 
-Lemma hom_of_finHom_inj : injective hom_of_finHom.
-Proof. 
-  rewrite /hom_of_finHom=> f g /= [] H. 
-  by apply/val_inj/ffunP=> //=; rewrite H.
+Lemma fin_hom_lab_preserv (f : fin_hom) :
+  [forall e, lab (f e) == lab e].
+Proof. by case: f=> [{}f] /= /andP[]. Qed.
+
+Lemma fin_hom_ca_monotone (f : fin_hom) :
+  [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)].
+Proof. by case: f=> [{}f] /= /andP[]. Qed.
+
+Lemma hom_mixin (f : fin_hom) : lPoset.Hom.Hom.mixin_of f.
+Proof.
+  constructor.
+  - apply/fin_lab_preservP/fin_hom_lab_preserv.
+  apply/fin_ca_monotoneP/fin_hom_ca_monotone.
 Qed.
 
-Lemma hom_of_finHomK : cancel hom_of_finHom finHom_of_hom.
-Proof. 
-  rewrite /hom_of_finHom /finHom_of_hom=> /=. 
-  move=> f; apply/val_inj=> /=.
-  case f=> {}f ? /=.
-  by apply/ffunP=> e; rewrite ffunE. 
-Qed.
+Definition hom_of_fin_hom : fin_hom -> (E1 ~> E2) :=
+  fun f => lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin f)).
 
-End FinHom.
+End Def.
 
-Section Exports.
+(* Lemma hom_of_finHom_inj : injective hom_of_finHom. *)
+(* Proof.  *)
+(*   rewrite /hom_of_finHom=> f g /= [] H.  *)
+(*   by apply/val_inj/ffunP=> //=; rewrite H. *)
+(* Qed. *)
 
-Prenex Implicits hom_of_finHom finHom_of_hom.
+(* Lemma hom_of_finHomK : cancel hom_of_finHom finHom_of_hom. *)
+(* Proof.  *)
+(*   rewrite /hom_of_finHom /finHom_of_hom=> /=.  *)
+(*   move=> f; apply/val_inj=> /=. *)
+(*   case f=> {}f ? /=. *)
+(*   by apply/ffunP=> e; rewrite ffunE.  *)
+(* Qed. *)
+
+(* End FinHom. *)
+
+Prenex Implicits hom_of_fin_hom fin_hom_of_hom.
 
 Section OptionHom.
 Context {L : eqType} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
 Definition ohom f : option (E1 ~> E2) := 
-  omap hom_of_finHom (insub (finfun f)).
+  omap hom_of_fin_hom (insub [ffun x => f x]).
 
 Lemma homP :
-  reflect ?|E1 ~> E2| ??|{ffun of E1 ~> E2}|.
-  (* reflect ?|E1 ~> E2| [exists f : finHom E1 E2, true]. *)
+  reflect ?|E1 ~> E2| ??|{ffun E1 -> E2 | @fin_hom_pred L E1 E2}|.
 Proof.
-  apply/(iffP idP).
-  - move=> /existsP [f ?]; exists. 
-    exact/(hom_of_finHom f).
-  move=> [f]; apply /existsP.
-  by exists (finHom_of_hom f).
-  pose ff := finHom_of_hom f.
-  exists (finHom_of_hom f : {ffun E1 -> E2}).
-  exact/valP.
-Qed.
-
-
-Lemma homP :
-  reflect ?|E1 ~> E2| [exists f : {ffun E1 -> E2}, finHom_pred f].
-Proof.
-  apply/(iffP idP).
-  - move=> /existsP [f Hf]; exists. 
-    exact/(hom_of_finHom (FinHom Hf)).
-  move=> [f]; apply /existsP. 
-  pose ff := finHom_of_hom f.
-  exists (finHom_of_hom f : {ffun E1 -> E2}).
-  exact/valP.
+  apply/equivP; first exact/fin_inhP.
+  apply/(inh_iff hom_of_fin_hom).  
+  exact/fin_hom_of_hom.
 Qed.
 
 End OptionHom.
