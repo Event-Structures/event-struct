@@ -1171,19 +1171,16 @@ End Theory.
 End Theory.
 
 Module Export Hom.
-
-Section Def.
+Section Hom.
 Context {L : eqType} (E1 E2 : eventType L).
 
-Definition fin_hom_pred (f : {ffun E1 -> E2}) := 
+Definition fhom_pred (f : {ffun E1 -> E2}) := 
   [&& [forall e, lab (f e) == lab e]  
     & [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]
   ].
 
-Notation fin_hom := ({ffun E1 -> E2 | fin_hom_pred}).
-
-Lemma fin_hom_pred_of_hom (f : E1 ~> E2) : 
-  fin_hom_pred [ffun x => f x].
+Lemma fhom_pred_of_hom (f : E1 ~> E2) : 
+  fhom_pred [ffun x => f x].
 Proof. 
   apply/andP; split.
   - apply/forallP=> e; rewrite ffunE /=. 
@@ -1193,66 +1190,58 @@ Proof.
   by apply/(ca_monotone f).
 Qed.
 
-Definition fin_hom_of_hom : (E1 ~> E2) -> fin_hom := 
-  fun (f : E1 ~> E2) => Sub [ffun x => f x] (fin_hom_pred_of_hom f).
+Definition fhom_of_hom : (E1 ~> E2) -> {ffun E1 -> E2 | fhom_pred} := 
+  fun (f : E1 ~> E2) => Sub [ffun x => f x] (fhom_pred_of_hom f).
 
-Lemma fin_hom_lab_preserv (f : fin_hom) :
+Lemma fhom_lab_preserv (f : {ffun E1 -> E2 | fhom_pred}) :
   [forall e, lab (f e) == lab e].
 Proof. by case: f=> [{}f] /= /andP[]. Qed.
 
-Lemma fin_hom_ca_monotone (f : fin_hom) :
+Lemma fhom_ca_monotone (f : {ffun E1 -> E2 | fhom_pred}) :
   [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)].
 Proof. by case: f=> [{}f] /= /andP[]. Qed.
 
-Lemma hom_mixin (f : fin_hom) : lPoset.Hom.Hom.mixin_of f.
+Lemma hom_mixin (f : {ffun E1 -> E2 | fhom_pred}) : 
+  lPoset.Hom.Hom.mixin_of f.
 Proof.
   constructor.
-  - apply/fin_lab_preservP/fin_hom_lab_preserv.
-  apply/fin_ca_monotoneP/fin_hom_ca_monotone.
+  - apply/fin_lab_preservP/fhom_lab_preserv.
+  apply/fin_ca_monotoneP/fhom_ca_monotone.
 Qed.
 
-Definition hom_of_fin_hom : fin_hom -> (E1 ~> E2) :=
+Definition hom_of_fhom : {ffun E1 -> E2 | fhom_pred} -> (E1 ~> E2) :=
   fun f => lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin f)).
 
-End Def.
-
-(* Lemma hom_of_finHom_inj : injective hom_of_finHom. *)
-(* Proof.  *)
-(*   rewrite /hom_of_finHom=> f g /= [] H.  *)
-(*   by apply/val_inj/ffunP=> //=; rewrite H. *)
-(* Qed. *)
-
-(* Lemma hom_of_finHomK : cancel hom_of_finHom finHom_of_hom. *)
-(* Proof.  *)
-(*   rewrite /hom_of_finHom /finHom_of_hom=> /=.  *)
-(*   move=> f; apply/val_inj=> /=. *)
-(*   case f=> {}f ? /=. *)
-(*   by apply/ffunP=> e; rewrite ffunE.  *)
-(* Qed. *)
-
-(* End FinHom. *)
-
-Prenex Implicits hom_of_fin_hom fin_hom_of_hom.
-
-Section OptionHom.
-Context {L : eqType} (E1 E2 : eventType L).
-Implicit Types (f : E1 -> E2).
-
-Definition ohom f : option (E1 ~> E2) := 
-  omap hom_of_fin_hom (insub [ffun x => f x]).
-
-Lemma homP :
-  reflect ?|E1 ~> E2| ??|{ffun E1 -> E2 | @fin_hom_pred L E1 E2}|.
+Lemma hom_of_finHom_inj : injective hom_of_fhom.
 Proof.
-  apply/equivP; first exact/fin_inhP.
-  apply/(inh_iff hom_of_fin_hom).  
-  exact/fin_hom_of_hom.
+  rewrite /hom_of_fhom=> f g /= [] H.
+  by apply/val_inj/ffunP=> //=; rewrite H.
 Qed.
 
-End OptionHom.
+Lemma hom_of_fhomK : cancel hom_of_fhom fhom_of_hom.
+Proof.
+  rewrite /hom_of_fhom /fhom_of_hom=> /=.
+  move=> f; apply/val_inj=> /=.
+  case f=> {}f ? /=.
+  by apply/ffunP=> e; rewrite ffunE.
+Qed.
+
+Definition ohom f : option (E1 ~> E2) := 
+  omap hom_of_fhom (insub [ffun x => f x]).
+
+Lemma homP :
+  reflect ?|E1 ~> E2| ??|{ffun E1 -> E2 | fhom_pred}|.
+Proof.
+  apply/equivP; first exact/fin_inhP.
+  apply/(inh_iff hom_of_fhom).  
+  exact/fhom_of_hom.
+Qed.
 
 End Hom.
 
+Prenex Implicits fhom_pred hom_of_fhom fhom_of_hom ohom.
+
+End Hom.
 
 (* Checks whether given function forms certain morphism *)
 Section MorphismsDef.
