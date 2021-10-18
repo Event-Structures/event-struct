@@ -62,6 +62,13 @@ From eventstruct Require Import utils inhtype.
 (*                        iff p is equal to q.                                *)
 (*                        Note that for tuple lposet bij/emb/iso collapse.    *)
 (*                                                                            *)
+(* The following constructions are defined on lposets.                        *)
+(*        lPoset.ext f == an extension of labelled poset along the            *)
+(*                        homomorphism f : E1 -> E2 with events               *)
+(*                        of type E1 and the strict causality order defined   *)
+(*                        as follows:                                         *)
+(*            e1 < e2 <-> e1 < e2 or f e1 < f e2.                             *)
+(*                                                                            *)
 (******************************************************************************)
 
 Set Implicit Arguments.
