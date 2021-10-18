@@ -1,6 +1,6 @@
 From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype choice.
-From mathcomp Require Import order seq tuple path fintype finmap.
+From mathcomp Require Import order seq tuple path fintype finfun finmap.
 From eventstruct Require Import ssrnatlia.
 
 Set Implicit Arguments.
@@ -1011,3 +1011,56 @@ Proof.
 Qed.
 
 End MkMaskMask.
+
+Module Export SubFinFun.
+
+Section Def.
+Context {aT : finType} {rT : Type}.
+Implicit Types (P : pred {ffun aT -> rT}).
+
+Structure subFinfun P : Type := SubFinfun { 
+  apply :> {ffun aT -> rT};
+  _     : P apply;
+}.
+
+Canonical subFinfun_subType P := Eval hnf in [subType for (@apply P)].
+
+Definition sub_finfun_of (ph : phant (aT -> rT)) P : predArgType :=
+  [subType of (subFinfun P)].
+
+End Def.
+
+Notation "{ 'ffun' fT '|' P }" := (sub_finfun_of (Phant fT) P).
+
+Section Instances.
+Context {aT : finType}.
+
+Definition subFinfun_eqMixin (rT : eqType) (P : pred {ffun aT -> rT}) := 
+  Eval hnf in [eqMixin of {ffun aT -> rT | P} by <:].
+Canonical subFinfun_eqType (rT : eqType) (P : pred {ffun aT -> rT}) := 
+  Eval hnf in EqType {ffun aT -> rT | P} (subFinfun_eqMixin P).
+
+Definition subFinfun_choiceMixin (rT : choiceType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [choiceMixin of {ffun aT -> rT | P} by <:].
+Canonical subFinfun_choiceType (rT : choiceType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in ChoiceType {ffun aT -> rT | P} (subFinfun_choiceMixin P).
+
+Definition subFinfun_countMixin (rT : countType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [countMixin of {ffun aT -> rT | P} by <:].
+Canonical subFinfun_countType (rT : countType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in CountType {ffun aT -> rT | P} (subFinfun_countMixin P).
+
+Canonical subFinfun_subCountType (rT : countType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [subCountType of {ffun aT -> rT | P}].
+
+Definition subFinfun_finMixin (rT : finType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [finMixin of {ffun aT -> rT | P} by <:].
+Canonical subFinfun_finType (rT : finType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in FinType {ffun aT -> rT | P} (subFinfun_finMixin P).
+
+Canonical subFinfun_subFinType (rT : finType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [subFinType of {ffun aT -> rT | P}].
+
+End Instances.
+
+End SubFinFun.
