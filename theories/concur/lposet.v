@@ -1175,21 +1175,31 @@ Module Export Hom.
 Section Hom.
 Context {L : eqType} (E1 E2 : eventType L).
 
-Definition fhom_pred (f : {ffun E1 -> E2}) := 
+Definition hom_pred (f : {ffun E1 -> E2}) := 
   [&& [forall e, lab (f e) == lab e]  
     & [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]
   ].
 
-Lemma fhom_lab_preserv (f : {ffun E1 -> E2 | fhom_pred}) :
+(* TODO: try to shorten copy-paste in hom definitions, 
+ *   try to generalize to arbitary pair of P and p, 
+ *   s.t. reflect P p  
+ *)
+
+(* TODO: try alternative notations: 
+ *   {hom E1 -> E2} for homomorphism
+ *   {fhom E1 -> E2} for finite homomorphism
+ *)
+
+Lemma fhom_lab_preserv (f : {ffun E1 -> E2 | hom_pred}) :
   [forall e, lab (f e) == lab e].
 Proof. by case: f=> [{}f] /= /andP[]. Qed.
 
-Lemma fhom_ca_monotone (f : {ffun E1 -> E2 | fhom_pred}) :
+Lemma fhom_ca_monotone (f : {ffun E1 -> E2 | hom_pred}) :
   [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)].
 Proof. by case: f=> [{}f] /= /andP[]. Qed.
 
-Lemma fhom_pred_of_hom (f : E1 ~> E2) : 
-  fhom_pred [ffun x => f x].
+Lemma hom_pred_of_hom (f : E1 ~> E2) : 
+  hom_pred [ffun x => f x].
 Proof. 
   apply/andP; split.
   - apply/forallP=> e; rewrite ffunE /=. 
@@ -1199,10 +1209,10 @@ Proof.
   by apply/(ca_monotone f).
 Qed.
 
-Definition fhom_of_hom : (E1 ~> E2) -> {ffun E1 -> E2 | fhom_pred} := 
-  fun (f : E1 ~> E2) => Sub [ffun x => f x] (fhom_pred_of_hom f).
+Definition fhom_of_hom : (E1 ~> E2) -> {ffun E1 -> E2 | hom_pred} := 
+  fun (f : E1 ~> E2) => Sub [ffun x => f x] (hom_pred_of_hom f).
 
-Lemma hom_mixin (f : {ffun E1 -> E2 | fhom_pred}) : 
+Lemma hom_mixin (f : {ffun E1 -> E2 | hom_pred}) : 
   lPoset.Hom.Hom.mixin_of f.
 Proof.
   constructor.
@@ -1210,14 +1220,14 @@ Proof.
   apply/fin_ca_monotoneP/fhom_ca_monotone.
 Qed.
 
-Definition hom_of_fhom : {ffun E1 -> E2 | fhom_pred} -> (E1 ~> E2) :=
+Definition hom_of_fhom : {ffun E1 -> E2 | hom_pred} -> (E1 ~> E2) :=
   fun f => lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin f)).
 
 Definition ohom f : option (E1 ~> E2) := 
   omap hom_of_fhom (insub [ffun x => f x]).
 
 Lemma homP :
-  reflect ?|E1 ~> E2| ??|{ffun E1 -> E2 | fhom_pred}|.
+  reflect ?|E1 ~> E2| ??|{ffun E1 -> E2 | hom_pred}|.
 Proof.
   apply/equivP; first exact/fin_inhP.
   apply/(inh_iff hom_of_fhom).  
@@ -1226,7 +1236,7 @@ Qed.
 
 End Hom.
 
-Prenex Implicits fhom_pred hom_of_fhom fhom_of_hom ohom.
+Prenex Implicits hom_pred hom_of_fhom fhom_of_hom ohom.
 
 End Hom.
 
@@ -1234,49 +1244,49 @@ Module Export iHom.
 Section iHom.
 Context {L : eqType} (E1 E2 : eventType L).
 
-Definition ifhom_pred (f : {ffun E1 -> E2}) := 
-  fhom_pred f && injectiveb f.
+Definition ihom_pred (f : {ffun E1 -> E2}) := 
+  hom_pred f && injectiveb f.
 
-Lemma ifhom_inj (f : {ffun E1 -> E2 | ifhom_pred}) :
+Lemma fihom_inj (f : {ffun E1 -> E2 | ihom_pred}) :
   injective f.
 Proof. by case: f=> [{}f] /= /andP[] ? /injectiveP. Qed.
 
-Lemma ifhom_pred_of_ihom (f : E1 ≈> E2) : 
-  ifhom_pred [ffun x => f x].
+Lemma ihom_pred_of_ihom (f : E1 ≈> E2) : 
+  ihom_pred [ffun x => f x].
 Proof. 
-  apply/andP; split; first exact/fhom_pred_of_hom.
+  apply/andP; split; first exact/hom_pred_of_hom.
   apply/injectiveP=> x y; rewrite !ffunE; exact/ihom_inj.
 Qed.
 
-Definition fhom_of_ifhom (f : {ffun E1 -> E2 | ifhom_pred}) : 
-  {ffun E1 -> E2 | fhom_pred} := Sub _ (proj1 (andP (valP f))).
+Definition fhom_of_fihom (f : {ffun E1 -> E2 | ihom_pred}) : 
+  {ffun E1 -> E2 | hom_pred} := Sub _ (proj1 (andP (valP f))).
 
-Definition ifhom_of_ihom (f : E1 ≈> E2) : {ffun E1 -> E2 | ifhom_pred} := 
-  Sub [ffun x => f x] (ifhom_pred_of_ihom f).
+Definition fihom_of_ihom (f : E1 ≈> E2) : {ffun E1 -> E2 | ihom_pred} := 
+  Sub [ffun x => f x] (ihom_pred_of_ihom f).
 
-Lemma ihom_mixin (f : {ffun E1 -> E2 | ifhom_pred}) : 
+Lemma ihom_mixin (f : {ffun E1 -> E2 | ihom_pred}) : 
   lPoset.iHom.iHom.mixin_of f.
-Proof. constructor; exact/ifhom_inj. Qed.
+Proof. constructor; exact/fihom_inj. Qed.
 
-Definition ihom_of_ifhom (f : {ffun E1 -> E2 | ifhom_pred}) : (E1 ≈> E2) :=
-  let base  := lPoset.Hom.Hom.class (hom_of_fhom (fhom_of_ifhom f)) in
+Definition ihom_of_fihom (f : {ffun E1 -> E2 | ihom_pred}) : (E1 ≈> E2) :=
+  let base  := lPoset.Hom.Hom.class (hom_of_fhom (fhom_of_fihom f)) in
   let mixin := ihom_mixin f in 
   lPoset.iHom.iHom.Pack (lPoset.iHom.iHom.Class base mixin).
 
 Definition oihom f : option (E1 ≈> E2) := 
-  omap ihom_of_ifhom (insub [ffun x => f x]).
+  omap ihom_of_fihom (insub [ffun x => f x]).
 
 Lemma ihomP :
-  reflect ?|E1 ≈> E2| ??|{ffun E1 -> E2 | ifhom_pred}|.
+  reflect ?|E1 ≈> E2| ??|{ffun E1 -> E2 | ihom_pred}|.
 Proof.
   apply/equivP; first exact/fin_inhP.
-  apply/(inh_iff ihom_of_ifhom).  
-  exact/ifhom_of_ihom.
+  apply/(inh_iff ihom_of_fihom).  
+  exact/fihom_of_ihom.
 Qed.
 
 End iHom.
 
-Prenex Implicits ifhom_pred ihom_of_ifhom ifhom_of_ihom oihom.
+Prenex Implicits ihom_pred ihom_of_fihom fihom_of_ihom oihom.
 
 End iHom.
 
@@ -1284,30 +1294,30 @@ Module Export bHom.
 Section bHom.
 Context {L : eqType} (E1 E2 : eventType L).
 
-Definition bfhom_pred (f : {ffun E1 -> E2}) := 
-  ifhom_pred f && (#|E2| <= #|E1|).
+Definition bhom_pred (f : {ffun E1 -> E2}) := 
+  ihom_pred f && (#|E2| <= #|E1|).
 
-Lemma bfhom_bij (f : {ffun E1 -> E2 | bfhom_pred}) :
+Lemma fbhom_bij (f : {ffun E1 -> E2 | bhom_pred}) :
   bijective f.
 Proof. 
   case: f=> [{}f] /= /andP[] /andP[] ?.
   move=> /injectiveP; exact/inj_card_bij.  
 Qed.
 
-Lemma bfhom_pred_of_bhom (f : E1 ≃> E2) : 
-  bfhom_pred [ffun x => f x].
+Lemma bhom_pred_of_bhom (f : E1 ≃> E2) : 
+  bhom_pred [ffun x => f x].
 Proof. 
-  apply/andP; split; first exact/ifhom_pred_of_ihom.
+  apply/andP; split; first exact/ihom_pred_of_ihom.
   by apply/eq_leq/esym/bij_eq_card/(bhom_bij f).
 Qed.
 
-Definition ifhom_of_bfhom (f : {ffun E1 -> E2 | bfhom_pred}) : 
-  {ffun E1 -> E2 | ifhom_pred} := Sub _ (proj1 (andP (valP f))).
+Definition fihom_of_fbhom (f : {ffun E1 -> E2 | bhom_pred}) : 
+  {ffun E1 -> E2 | ihom_pred} := Sub _ (proj1 (andP (valP f))).
 
-Definition bfhom_of_bhom (f : E1 ≃> E2) : {ffun E1 -> E2 | bfhom_pred} := 
-  Sub [ffun x => f x] (bfhom_pred_of_bhom f).
+Definition fbhom_of_bhom (f : E1 ≃> E2) : {ffun E1 -> E2 | bhom_pred} := 
+  Sub [ffun x => f x] (bhom_pred_of_bhom f).
 
-Lemma bhom_mixin (f : {ffun E1 -> E2 | bfhom_pred}) : 
+Lemma bhom_mixin (f : {ffun E1 -> E2 | bhom_pred}) : 
   lPoset.bHom.bHom.mixin_of f.
 Proof. 
   move: (valP f)=> /andP[] /andP[] ? /injectiveP Hi Hn.
@@ -1315,26 +1325,26 @@ Proof.
   by exists g=> y; rewrite /g ?iinv_f ?f_iinv.
 Qed.
 
-Definition bhom_of_bfhom (f : {ffun E1 -> E2 | bfhom_pred}) : (E1 ≃> E2) :=
-  let ifhom := ifhom_of_bfhom f in
-  let base  := lPoset.Hom.Hom.class (hom_of_fhom (fhom_of_ifhom ifhom)) in
+Definition bhom_of_fbhom (f : {ffun E1 -> E2 | bhom_pred}) : (E1 ≃> E2) :=
+  let fihom := fihom_of_fbhom f in
+  let base  := lPoset.Hom.Hom.class (hom_of_fhom (fhom_of_fihom fihom)) in
   let mixin := bhom_mixin f in 
   lPoset.bHom.bHom.Pack (lPoset.bHom.bHom.Class base mixin).
 
 Definition obhom f : option (E1 ≃> E2) := 
-  omap bhom_of_bfhom (insub [ffun x => f x]).
+  omap bhom_of_fbhom (insub [ffun x => f x]).
 
 Lemma bhomP :
-  reflect ?|E1 ≃> E2| ??|{ffun E1 -> E2 | bfhom_pred}|.
+  reflect ?|E1 ≃> E2| ??|{ffun E1 -> E2 | bhom_pred}|.
 Proof.
   apply/equivP; first exact/fin_inhP.
-  apply/(inh_iff bhom_of_bfhom).  
-  exact/bfhom_of_bhom.
+  apply/(inh_iff bhom_of_fbhom).  
+  exact/fbhom_of_bhom.
 Qed.
 
 End bHom.
 
-Prenex Implicits bfhom_pred bhom_of_bfhom bfhom_of_bhom obhom.
+Prenex Implicits bhom_pred bhom_of_fbhom fbhom_of_bhom obhom.
 
 End bHom.
 
@@ -1342,10 +1352,10 @@ Module Export Emb.
 Section Emb.
 Context {L : eqType} (E1 E2 : eventType L).
 
-Definition femb_pred (f : {ffun E1 -> E2}) := 
-  fhom_pred f && [forall e1, forall e2, (f e1 <= f e2) ==> (e1 <= e2)].
+Definition emb_pred (f : {ffun E1 -> E2}) := 
+  hom_pred f && [forall e1, forall e2, (f e1 <= f e2) ==> (e1 <= e2)].
 
-Lemma femb_ca_reflecting (f : {ffun E1 -> E2 | femb_pred}) :
+Lemma femb_ca_reflecting (f : {ffun E1 -> E2 | emb_pred}) :
   [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)].
 Proof. 
   case: f=> [{}f] /= /andP[] /andP[] ?.
@@ -1354,15 +1364,15 @@ Proof.
   split; apply/implyP; [exact/H1 | exact/H2].
 Qed.
 
-Lemma femb_pred_of_emb (f : E1 ~≥ E2) : 
-  femb_pred [ffun x => f x].
+Lemma emb_pred_of_emb (f : E1 ~≥ E2) : 
+  emb_pred [ffun x => f x].
 Proof. 
-  apply/andP; split; first exact/fhom_pred_of_hom. 
+  apply/andP; split; first exact/hom_pred_of_hom. 
   apply/forall2P=> e1 e2; rewrite !ffunE.
   by apply/implyP; rewrite (ca_reflecting f).
 Qed.
 
-Lemma emb_mixin (f : {ffun E1 -> E2 | femb_pred}) : 
+Lemma emb_mixin (f : {ffun E1 -> E2 | emb_pred}) : 
   lPoset.Emb.Emb.mixin_of f.
 Proof. 
   constructor=> e1 e2.
@@ -1371,13 +1381,13 @@ Proof.
   by move: (H e1 e2)=> ->.
 Qed.
 
-Definition fhom_of_femb (f : {ffun E1 -> E2 | femb_pred}) : 
-  {ffun E1 -> E2 | fhom_pred} := Sub _ (proj1 (andP (valP f))).
+Definition fhom_of_femb (f : {ffun E1 -> E2 | emb_pred}) : 
+  {ffun E1 -> E2 | hom_pred} := Sub _ (proj1 (andP (valP f))).
 
-Definition femb_of_emb (f : E1 ~≥ E2) : {ffun E1 -> E2 | femb_pred} := 
-  Sub [ffun x => f x] (femb_pred_of_emb f).
+Definition femb_of_emb (f : E1 ~≥ E2) : {ffun E1 -> E2 | emb_pred} := 
+  Sub [ffun x => f x] (emb_pred_of_emb f).
 
-Definition emb_of_femb (f : {ffun E1 -> E2 | femb_pred}) : (E1 ~≥ E2) :=
+Definition emb_of_femb (f : {ffun E1 -> E2 | emb_pred}) : (E1 ~≥ E2) :=
   let base  := lPoset.Hom.Hom.class (hom_of_fhom (fhom_of_femb f)) in
   let mixin := emb_mixin f in 
   lPoset.Emb.Emb.Pack (lPoset.Emb.Emb.Class base mixin).
@@ -1386,7 +1396,7 @@ Definition oemb f : option (E1 ~≥ E2) :=
   omap emb_of_femb (insub [ffun x => f x]).
 
 Lemma embP :
-  reflect ?|E1 ~≥ E2| ??|{ffun E1 -> E2 | femb_pred}|.
+  reflect ?|E1 ~≥ E2| ??|{ffun E1 -> E2 | emb_pred}|.
 Proof.
   apply/equivP; first exact/fin_inhP.
   apply/(inh_iff emb_of_femb).  
@@ -1395,7 +1405,7 @@ Qed.
 
 End Emb.
 
-Prenex Implicits femb_pred emb_of_femb femb_of_emb oemb.
+Prenex Implicits emb_pred emb_of_femb femb_of_emb oemb.
 
 End Emb.
 
@@ -1403,32 +1413,32 @@ Module Export Iso.
 Section Iso.
 Context {L : eqType} (E1 E2 : eventType L).
 
-Definition fiso_pred (f : {ffun E1 -> E2}) := 
-  bfhom_pred f && [forall e1, forall e2, (f e1 <= f e2) ==> (e1 <= e2)].
+Definition iso_pred (f : {ffun E1 -> E2}) := 
+  bhom_pred f && [forall e1, forall e2, (f e1 <= f e2) ==> (e1 <= e2)].
 
-Lemma fiso_pred_of_iso (f : E1 ~= E2) : 
-  fiso_pred [ffun x => f x].
+Lemma iso_pred_of_iso (f : E1 ~= E2) : 
+  iso_pred [ffun x => f x].
 Proof. 
-  apply/andP; split; first exact/bfhom_pred_of_bhom. 
+  apply/andP; split; first exact/bhom_pred_of_bhom. 
   apply/forall2P=> e1 e2; rewrite !ffunE. 
   rewrite (ca_reflecting f); exact/implyP.
 Qed.
 
-Lemma femb_pred_of_fiso f : fiso_pred f -> femb_pred f. 
+Lemma emb_pred_of_fiso f : iso_pred f -> emb_pred f. 
 Proof. by move=> /andP[] /andP[] /andP[] Hf _ _ Hm; apply/andP. Qed. 
 
-Definition bfhom_of_fiso (f : {ffun E1 -> E2 | fiso_pred}) : 
-  {ffun E1 -> E2 | bfhom_pred} := Sub _ (proj1 (andP (valP f))).
+Definition fbhom_of_fiso (f : {ffun E1 -> E2 | iso_pred}) : 
+  {ffun E1 -> E2 | bhom_pred} := Sub _ (proj1 (andP (valP f))).
 
-Definition femb_of_fiso (f : {ffun E1 -> E2 | fiso_pred}) : 
-  {ffun E1 -> E2 | femb_pred} := Sub _ (femb_pred_of_fiso (valP f)).
+Definition femb_of_fiso (f : {ffun E1 -> E2 | iso_pred}) : 
+  {ffun E1 -> E2 | emb_pred} := Sub _ (emb_pred_of_fiso (valP f)).
 
-Definition fiso_of_iso (f : E1 ~= E2) : {ffun E1 -> E2 | fiso_pred} := 
-  Sub [ffun x => f x] (fiso_pred_of_iso f).
+Definition fiso_of_iso (f : E1 ~= E2) : {ffun E1 -> E2 | iso_pred} := 
+  Sub [ffun x => f x] (iso_pred_of_iso f).
 
-Definition iso_of_fiso (f : {ffun E1 -> E2 | fiso_pred}) : (E1 ~= E2) :=
-  let bfhom := bfhom_of_fiso f in
-  let base  := lPoset.bHom.bHom.class (bhom_of_bfhom bfhom) in
+Definition iso_of_fiso (f : {ffun E1 -> E2 | iso_pred}) : (E1 ~= E2) :=
+  let fbhom := fbhom_of_fiso f in
+  let base  := lPoset.bHom.bHom.class (bhom_of_fbhom fbhom) in
   let mixin := emb_mixin (femb_of_fiso f) in 
   lPoset.Iso.Iso.Pack (lPoset.Iso.Iso.Class base mixin).
 
@@ -1436,7 +1446,7 @@ Definition oiso f : option (E1 ~= E2) :=
   omap iso_of_fiso (insub [ffun x => f x]).
 
 Lemma isoP :
-  reflect ?|E1 ~= E2| ??|{ffun E1 -> E2 | fiso_pred}|.
+  reflect ?|E1 ~= E2| ??|{ffun E1 -> E2 | iso_pred}|.
 Proof.
   apply/equivP; first exact/fin_inhP.
   apply/(inh_iff iso_of_fiso).  
@@ -1445,165 +1455,9 @@ Qed.
 
 End Iso.
 
-Prenex Implicits fiso_pred iso_of_fiso fiso_of_iso oiso.
+Prenex Implicits iso_pred iso_of_fiso fiso_of_iso oiso.
 
 End Iso.
-
-(* Checks whether given function forms certain morphism *)
-Section MorphismsDef.
-Context {L : eqType} (E1 E2 : eventType L).
-Implicit Types (f : E1 -> E2).
-
-Definition ohom_class f : option (lPoset.Hom.Hom.class_of f).
-(* --- *)
-  case: [forall e, lab (f e) == lab e]/fin_lab_preserveP; 
-    move=> ?; last exact/None. 
-  case: [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]/fin_ca_monotoneP; 
-    move=> ?; last exact/None.
-  by apply/Some. 
-Defined.
-
-Definition ohom f : option (E1 ~> E2) := 
-  omap (fun c => lPoset.Hom.Hom.Pack c) (ohom_class f).
-
-Lemma hom_ohom (f : E1 ~> E2) : ohom f.
-Proof. 
-  rewrite /ohom; case H: (ohom_class f)=> //=.
-  move: H; rewrite /ohom_class.
-  move: (lab_preserv f) (ca_monotone f).
-  case: (fin_lab_preserveP f)=> //. 
-  case: (fin_ca_monotoneP f)=> //.
-Qed.
-
-(* TODO: generalize proofs of morphism reflect lemmas, get rid of copy-paste *)
-Lemma homP :
-  reflect ?|E1 ~> E2| [exists f : {ffun E1 -> E2}, ohom f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (ohom f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Hom.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/hom_ohom.
-Qed.
-
-Definition obij_class f : option (lPoset.bHom.bHom.class_of f).
-(* --- *)
-  case Hc: (ohom_class f)=> [c|]; last exact/None.
-  case: (injectiveb f)/injectiveP=> Hi; last exact/None.
-  case: (#|E2| == #|E1|)%N/eqP; last by (move=> ?; exact/None).
-  move=> /eq_leq Hn.
-  pose g := (fun y => iinv (inj_card_onto Hi Hn y)).
-  apply/Some; constructor; first exact/c.
-  by exists g=> y; rewrite /g ?iinv_f ?f_iinv.
-Defined.
-
-Definition obij f : option (E1 ≃> E2) := 
-  omap (fun c => lPoset.bHom.bHom.Pack c) (obij_class f).
-
-Lemma bij_obij (f : E1 ≃> E2) : obij f.
-Proof. 
-  move: (hom_ohom f); case Hh: (ohom f)=> [c|] //=> _.
-  rewrite /obij; case Hb: (obij_class f)=> //=.
-  move: Hb; rewrite /obij_class.
-  move: Hh; rewrite /ohom /omap /obind /oapp. 
-  case: (ohom_class f)=> // ? [] ?.
-  move: (bhom_bij f)=> /[dup] /bij_inj ? /bij_eq_card /esym.
-  case: (injectiveP f)=> // ?. 
-  by case: eqP.
-Qed.
-
-Lemma bijP :
-  reflect ?|E1 ≃> E2| [exists f : {ffun E1 -> E2}, obij f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (obij f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.bHom.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/bij_obij.
-Qed.
-
-Definition oemb_mixin f : option (lPoset.Emb.Emb.mixin_of f).
-(* --- *)
-  case: [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)]/fin_ca_reflectingP;
-    move=> He; last exact/None. 
-  by apply/Some; constructor=> ??; rewrite He.
-Defined.
-
-Definition oemb_class f : option (lPoset.Emb.Emb.class_of f).
-(* --- *)
-  case Hc: (ohom_class f)=> [c|]; last exact/None.
-  case Hm: (oemb_mixin f)=> [m|]; last exact/None.
-  by apply/Some.
-Defined.
-
-Definition oemb f : option (E1 ~≥ E2) := 
-  omap (fun c => lPoset.Emb.Emb.Pack c) (oemb_class f).
-
-Lemma emb_oemb (f : E1 ~≥ E2) : oemb f.
-Proof. 
-  move: (hom_ohom f); case Hh: (ohom f)=> [c|] //=> _.
-  rewrite /oemb; case Hm: (oemb_class f)=> //=.
-  move: Hm; rewrite /oemb_class /oemb_mixin.
-  move: Hh; rewrite /ohom /omap /obind /oapp. 
-  case: (ohom_class f)=> // ? [] ?.
-  move: (ca_reflecting f).
-  case: (fin_ca_reflectingP f)=> //. 
-Qed.
-
-Lemma embP :
-  reflect ?|E1 ~≥ E2| [exists f : {ffun E1 -> E2}, oemb f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (oemb f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Emb.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/emb_oemb.
-Qed.
-
-Lemma oiso_class f : option (lPoset.Iso.Iso.class_of f).
-(* --- *)
-  case Hc: (obij_class f)=> [c|]; last exact/None.
-  case He: (oemb_mixin f)=> [m|]; last exact/None.
-  by apply/Some.
-Defined.
-
-Definition oiso f : option (E1 ~= E2) := 
-  omap (fun c => lPoset.Iso.Iso.Pack c) (oiso_class f).
-
-Lemma iso_oiso (f : E1 ~= E2) : oiso f.
-Proof. 
-  move: (bij_obij f); case Hb: (obij f)=> [cb|] //=> _.
-  move: (emb_oemb f); case He: (oemb f)=> [ce|] //=> _.
-  rewrite /oiso; case Hm: (oiso_class f)=> //=.
-  move: Hm; rewrite /oiso_class.  
-  move: Hb; rewrite /obij /omap /obind /oapp. 
-  move: He; rewrite /oemb /oemb_class /omap /obind /oapp. 
-  case: (ohom_class f)=> // [] ?. 
-  case: (obij_class f)=> // [] ?. 
-  case: (oemb_mixin f)=> // [] ?. 
-Qed.
-
-Lemma isoP :
-  reflect ?|E1 ~= E2| [exists f : {ffun E1 -> E2}, oiso f].
-Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (oiso f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Iso.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/iso_oiso.
-Qed.
-
-Global Opaque ohom_class obij_class oemb_mixin oemb_class oiso_class.
-
-End MorphismsDef.
 
 End lFinPoset.
 
