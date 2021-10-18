@@ -412,7 +412,7 @@ Proof.
   pose k' := (lPoset.bHom.invF k).
   exists (h' \o k').
   repeat constructor.
-  - by move=> x /=; rewrite (lab_preserv h) -(inv_lab k).
+  - by move=> x /=; rewrite (lab_preserving h) -(inv_lab k).
   move=> e1 e2=> /= /(ca_img_inv k) /orP[].
   - by move=> /(ca_monotone h').
   move=> /ext_incomp /orP[]. 

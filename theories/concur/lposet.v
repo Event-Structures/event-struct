@@ -212,7 +212,7 @@ Section Theory.
 Context {L : Type} {E1 E2 : eventType L} (f : E1 ~> E2).
 
 (* TODO: rename `lab_preserving`  *)
-Lemma lab_preserv :
+Lemma lab_preserving :
   { mono f : e / lab e }.
 Proof. by case: f => ? [[]]. Qed.
 
@@ -247,7 +247,7 @@ Lemma comp_class {E1 E2 E3} (f : E1 ~> E2) (g : E2 ~> E3) :
   Hom.class_of (g \o f).
 Proof. 
   repeat constructor=> /=.
-  - by move=> e; rewrite !lab_preserv.
+  - by move=> e; rewrite !lab_preserving.
   by move=> e1 e2 /(ca_monotone f) /(ca_monotone g).
 Qed.
 
@@ -258,7 +258,7 @@ Lemma of_eqfun_class {E1 E2} (f : E1 ~> E2) g :
   g =1 f -> Hom.class_of g.
 Proof. 
   move=> H; repeat constructor.
-  - move=> ?; rewrite !H; exact/lab_preserv.
+  - move=> ?; rewrite !H; exact/lab_preserving.
   move=> ??; rewrite !H; exact/ca_monotone.
 Qed.
 
@@ -479,7 +479,7 @@ Proof. by case: f => ? [[? []]] g ? ?; exists g. Qed.
 
 Lemma inv_lab : 
   { mono (invF f) : e / lab e }.
-Proof. by move=> e /=; rewrite -{2}[e]can_inv (lab_preserv f). Qed.
+Proof. by move=> e /=; rewrite -{2}[e]can_inv (lab_preserving f). Qed.
 
 Lemma ca_img_inv e1 e2 : 
   (e1 <= e2) -> (invF f e1 <= invF f e2) || (invF f e1 >< invF f e2).
@@ -755,7 +755,7 @@ Lemma of_homs_class {E1 E2} (f : E1 ~> E2) (g : E2 ~> E1) :
   cancel f g -> cancel g f -> Iso.class_of f.
 Proof.
   move=> HK HK'; repeat constructor. 
-  - exact/(lab_preserv f).
+  - exact/(lab_preserving f).
   - exact/(ca_monotone f).
   - by exists g.
   move=> e1 e2. 
@@ -960,7 +960,7 @@ Definition bhom f : E1 ≃> ext f :=
 Lemma hom_class f : Hom.class_of (f : ext f -> E2).
 Proof. 
   repeat constructor.
-  - exact/(lab_preserv f).
+  - exact/(lab_preserving f).
   move=> e1 e2; exact/Order.le_mono.
 Qed.  
 
@@ -1159,7 +1159,7 @@ Section Theory.
 Context {L : eqType} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Lemma fin_lab_preservP f : 
+Lemma fin_lab_preservingP f : 
   reflect { mono f : e / lab e } [forall e, lab (f e) == lab e].
 Proof. apply/forallPP=> ?; exact/eqP. Qed.
 
@@ -1195,7 +1195,7 @@ Definition hom_pred (f : {ffun E1 -> E2}) :=
  *   {fhom E1 -> E2} for finite homomorphism
  *)
 
-Lemma fhom_lab_preserv (f : {ffun E1 -> E2 | hom_pred}) :
+Lemma fhom_lab_preserving (f : {ffun E1 -> E2 | hom_pred}) :
   [forall e, lab (f e) == lab e].
 Proof. by case: f=> [{}f] /= /andP[]. Qed.
 
@@ -1208,7 +1208,7 @@ Lemma hom_pred_of_hom (f : E1 ~> E2) :
 Proof. 
   apply/andP; split.
   - apply/forallP=> e; rewrite ffunE /=. 
-    by apply/eqP/(lab_preserv f).
+    by apply/eqP/(lab_preserving f).
   apply/forallP=> e1; apply/forallP=> e2.
   apply/implyP; rewrite !ffunE /=.
   by apply/(ca_monotone f).
@@ -1221,7 +1221,7 @@ Lemma hom_mixin (f : {ffun E1 -> E2 | hom_pred}) :
   lPoset.Hom.Hom.mixin_of f.
 Proof.
   constructor.
-  - apply/fin_lab_preservP/fhom_lab_preserv.
+  - apply/fin_lab_preservingP/fhom_lab_preserving.
   apply/fin_ca_monotoneP/fhom_ca_monotone.
 Qed.
 
@@ -1595,7 +1595,7 @@ Proof.
     rewrite (@mkmask_mask L _ _ t)=> //.
     + by move=> ???; apply (sca_monotone f).
     + exact/ihom_inj.
-    by move=> ?; rewrite -tlabE -tlabE lab_preserv.
+    by move=> ?; rewrite -tlabE -tlabE lab_preserving.
   move: m u; clear m u.
   case=> [u|m u].
   - move: (tuple0 u)=> /= -> /=.
