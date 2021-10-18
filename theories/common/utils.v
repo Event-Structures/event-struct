@@ -351,6 +351,7 @@ Implicit Types (r : rel T) (f : T -> T').
 Lemma bij_eq_card f : bijective f -> #|T| = #|T'|.
 Proof. by move=> [g /can_inj/leq_card + /can_inj/leq_card]; case: ltngtP. Qed.
 
+(* TODO: use `forallPP` instead? *)
 Lemma forall2P r : 
   reflect (forall x y, r x y) [forall x, forall y, r x y].
 Proof. 
