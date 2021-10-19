@@ -101,7 +101,10 @@ Section ClassDef.
 Record mixin_of (S0 : Type) (L : Type)
                 (sb : Countable.class_of S0)
                 (S := Countable.Pack sb) := Mixin {
-  trans : L -> rel S;
+  trans     : L -> rel S;
+  has_trans : L -> S -> bool;
+
+  _ : forall l s, reflect (exists s', trans l s s') (has_trans l s);
 }.
 
 Set Primitive Projections.
@@ -153,8 +156,23 @@ Notation LTSType S L m := (@LTS.pack S L _ _ id m).
 
 Section Def.
 Context {L : Type} (S : ltsType L).
+Implicit Types (l : L) (s : S).
 
 Definition trans : L -> rel S := LTS.trans (LTS.class S).
+
+Definition has_trans : L -> S -> bool := LTS.has_trans (LTS.class S).
+
+Lemma has_transP l s : 
+  reflect (exists s', trans l s s') (has_trans l s).
+Proof. by rewrite /trans /has_trans; move: s; by case: S=> ? [? []]. Qed. 
+
+Definition pick_trans l s : option S := 
+  match @idP (has_trans l s) with 
+  | ReflectT pf => 
+     let exP := elimT (has_transP l s) pf in 
+     Some (xchoose exP)
+  | ReflectF pf => None 
+  end.
 
 End Def.
 
@@ -163,6 +181,20 @@ Notation "s1 '-->' s2"  := (exlab trans)   : lts_scope.
 Notation "s1 '-->?' s2" := (exlab trans)^? : lts_scope.
 Notation "s1 '-->+' s2" := (exlab trans)^+ : lts_scope. 
 Notation "s1 '-->*' s2" := (exlab trans)^* : lts_scope.
+
+Section Theory.
+Context {L : Type} (S : ltsType L).
+Implicit Types (l : L) (s : S).
+
+Lemma pick_transT l s : 
+  has_trans l s -> pick_trans l s.
+Proof. by rewrite /pick_trans=> b; destruct idP. Qed.
+
+Lemma trans_pick_trans l s s' :
+  pick_trans l s = Some s' -> s --[l]--> s'.
+Proof. rewrite /pick_trans; destruct idP=> // [[<-]]; exact/xchooseP. Qed.
+
+End Theory.
 
 End LTS.
 
