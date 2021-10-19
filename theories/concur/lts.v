@@ -203,8 +203,8 @@ Context {L : Type} (S : ltsType L).
 Definition prod_of_step : stepTuple S -> L * S * S := 
   fun s => (lbl s, src s, dst s).
 
-Definition step_of_prod : L * S * S -> option (step S) := 
-  fun '(lbl, src, dst) => insub (mk_step lbl src dst).
+Definition step_of_prod : L * S * S -> stepTuple S := 
+  fun '(lbl, src, dst) => mk_step lbl src dst.
 
 Lemma prod_of_step_inj : injective prod_of_step.
 Proof. 
@@ -213,13 +213,8 @@ Proof.
 Qed.
 
 Lemma prod_of_stepK : 
-  pcancel (prod_of_step : step S -> L * S * S) step_of_prod.
-Proof. 
-  move=> st /=; rewrite insubT=> /=.
-  - by move: (valP st); rewrite /is_step.
-  move=> H /=; congr Some; apply/val_inj=> /=. 
-  by move: H=> _; case: st=> [[]] /=.  
-Qed.
+  cancel prod_of_step step_of_prod.
+Proof. by case. Qed.
 
 End Prod.
 
@@ -238,16 +233,32 @@ End EQ.
 Section Choice.
 Context {L : choiceType} (S : ltsType L).
 
-Definition step_choiceMixin := PcanChoiceMixin (@prod_of_stepK L S).
-Canonical step_choiceType := Eval hnf in ChoiceType (step S) step_choiceMixin.
+Definition stepTuple_choiceMixin := 
+  CanChoiceMixin (@prod_of_stepK L S).
+Canonical stepTuple_choiceType := 
+  Eval hnf in ChoiceType (stepTuple S) stepTuple_choiceMixin.
+
+Definition step_choiceMixin := 
+  Eval hnf in [choiceMixin of step S by <:].
+Canonical step_choiceType := 
+  Eval hnf in ChoiceType (step S) step_choiceMixin.
 
 End Choice.
 
 Section Countable.
 Context {L : countType} (S : ltsType L).
 
-Definition step_countMixin := PcanCountMixin (@prod_of_stepK L S).
-Canonical step_countType := Eval hnf in CountType (step S) step_countMixin.
+Definition stepTuple_countMixin := 
+  CanCountMixin (@prod_of_stepK L S).
+Canonical stepTuple_countType := 
+  Eval hnf in CountType (stepTuple S) stepTuple_countMixin.
+
+Definition step_countMixin := 
+  Eval hnf in [countMixin of step S by <:].
+Canonical step_countType := 
+  Eval hnf in CountType (step S) step_countMixin.
+
+Canonical step_subCountType := [subCountType of (step S)].
 
 End Countable.
 
