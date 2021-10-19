@@ -1,5 +1,5 @@
 From RelationAlgebra Require Import lattice monoid rel.
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype choice.
 From mathcomp Require Import seq tuple path.
 From eventstruct Require Import utils relalg.
 
@@ -99,19 +99,19 @@ Module LTS.
 Section ClassDef. 
 
 Record mixin_of (S0 : Type) (L : Type)
-                (sb : Equality.class_of S0)
-                (S := Equality.Pack sb) := Mixin {
+                (sb : Countable.class_of S0)
+                (S := Countable.Pack sb) := Mixin {
   trans : L -> rel S;
 }.
 
 Set Primitive Projections.
 Record class_of (S : Type) (L : Type) := Class {
-  base  : Equality.class_of S;
+  base  : Countable.class_of S;
   mixin : mixin_of L base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Equality.class_of.
+Local Coercion base : class_of >-> Countable.class_of.
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -123,18 +123,25 @@ Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c
 Definition clone c of phant_id class c := @Pack S c.
 
 Definition pack :=
-  fun bS b & phant_id (@Equality.class bS) b =>
+  fun bS b & phant_id (@Countable.class bS) b =>
   fun m => Pack (@Class S L b m).
 
 Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition countType := @Countable.Pack cT class.
+
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Equality.class_of.
+Coercion base : class_of >-> Countable.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion countType : type >-> Countable.type.
 Canonical eqType.
+Canonical choiceType.
+Canonical countType.
 End Exports.
 
 End LTS.
