@@ -164,7 +164,7 @@ Definition has_trans : L -> S -> bool := LTS.has_trans (LTS.class S).
 
 Lemma has_transP l s : 
   reflect (exists s', trans l s s') (has_trans l s).
-Proof. by rewrite /trans /has_trans; move: s; by case: S=> ? [? []]. Qed. 
+Proof. by rewrite /trans /has_trans; move: s; case: S=> ? [? []]. Qed. 
 
 Definition pick_trans l s : option S := 
   match @idP (has_trans l s) with 
@@ -186,17 +186,104 @@ Section Theory.
 Context {L : Type} (S : ltsType L).
 Implicit Types (l : L) (s : S).
 
-Lemma pick_transT l s : 
-  has_trans l s -> pick_trans l s.
-Proof. by rewrite /pick_trans=> b; destruct idP. Qed.
+Lemma has_transE l s : 
+  has_trans l s = pick_trans l s.
+Proof. by rewrite /pick_trans; destruct idP. Qed.
 
-Lemma trans_pick_trans l s s' :
+Lemma pick_trans_some l s s' :
   pick_trans l s = Some s' -> s --[l]--> s'.
 Proof. rewrite /pick_trans; destruct idP=> // [[<-]]; exact/xchooseP. Qed.
 
 End Theory.
 
 End LTS.
+
+
+Module Export dLTS.
+
+Module dLTS.
+Section ClassDef. 
+
+Record mixin_of (S0 : Type) (L : Type)
+                (sb : LTS.class_of S0 L)
+                (S := LTS.Pack sb) := Mixin {
+  _ : forall (l : L) (s1 s2 s3 : S), 
+        (s1 --[l]--> s2) -> (s1 --[l]--> s3) -> s2 = s3
+}.
+
+Set Primitive Projections.
+Record class_of (S : Type) (L : Type) := Class {
+  base  : LTS.class_of S L;
+  mixin : mixin_of base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> LTS.class_of.
+
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (S : Type) (L : Type) (cT : type L).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack S c.
+
+Definition pack :=
+  fun bS b & phant_id (@LTS.class bS) b =>
+  fun m => Pack (@Class S L b m).
+
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition countType := @Countable.Pack cT class.
+Definition ltsType := @LTS.Pack L cT class.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> LTS.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion countType : type >-> Countable.type.
+Coercion ltsType : type >-> LTS.type.
+Canonical eqType.
+Canonical choiceType.
+Canonical countType.
+Canonical ltsType.
+End Exports.
+
+End dLTS.
+
+Export dLTS.Exports.
+
+Notation dltsType := dLTS.type.
+Notation dLTSType S L m := (@dLTS.pack S L _ _ id m).
+
+Section Theory.
+Context {L : Type} {S : dltsType L}.
+Implicit Types (l : L) (s : S).
+
+Lemma trans_det l s1 s2 s3 : 
+  (s1 --[l]--> s2) -> (s1 --[l]--> s3) -> s2 = s3.
+Proof. rewrite /trans; move: s1 s2 s3; case: S=> ? [? [H]]; exact/H. Qed.
+
+Lemma transE l s s' : 
+  (pick_trans l s == Some s') = (s --[l]--> s').
+Proof. 
+  apply/idP/idP=> [/eqP|]; first exact/pick_trans_some.
+  rewrite /pick_trans=> Htr; apply/eqP. 
+  destruct idP; last first; [|congr Some].
+  - by exfalso; apply/n/has_transP; exists s'. 
+  move: (xchooseP (has_transP l s i))=> Htr'.
+  by apply/(trans_det Htr').
+Qed.
+
+End Theory.
+
+End dLTS.
+
 
 (* Context {L : Type} {S : ltsType L}. *)
 (* Variable (l : L) (s1 s2 : S). *)
