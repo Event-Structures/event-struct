@@ -309,7 +309,7 @@ Canonical step_subType := Eval hnf in [subType for step_val].
 Definition step_of l s s' : (s --[l]--> s') -> step := 
   fun p => @Step (mk_step l s s') p.
 
-Definition adj : rel step := 
+Definition adj : rel stepTuple := 
   fun st st' => dst st == src st'. 
 
 End Def.
@@ -396,13 +396,13 @@ End Step.
 
 Module Export Trace. 
 
-Notation traceSeq S := (seq (step S)).
+Notation traceSeq S := (seq (stepTuple S)).
 
 Section Def. 
 Context {L : Type} (S : ltsType L).
 
 Definition is_trace : pred (traceSeq S) := 
-  fun ts => sorted adj ts.
+  fun ts => all is_step ts && sorted adj ts.
 
 Structure trace : Type := Trace { 
   trace_val :> traceSeq S; 
@@ -413,13 +413,13 @@ Canonical trace_subType := Eval hnf in [subType for trace_val].
 
 Implicit Types (ts : traceSeq S) (tr : trace).
 
-Definition labels : traceSeq S -> seq L := map (lbl : step S -> L). 
+Definition labels : traceSeq S -> seq L := map lbl. 
 
 Definition states : S -> traceSeq S -> seq S := 
   fun s ts => 
     match ts with 
     | [::]    => [:: s] 
-    | st :: _ => src st :: map (dst : step S -> S) ts
+    | st :: _ => src st :: map dst ts
     end. 
 
 (* TODO: try `starts_with` and `ends_with` predicates instead? *)
@@ -456,29 +456,31 @@ Arguments adjoint : simpl never.
 Notation "[ 'trace' 'of' tr ]" := (mk_trace (fun trP => @Trace _ _ tr trP))
   (at level 0, format "[ 'trace'  'of'  tr ]") : form_scope.
 
+Notation "[ 'trace' '::' st ]" := [trace of [:: val st]]
+  (at level 0, format "[ 'trace'  '::'  st ]") : form_scope.
+
 Notation "[ 'trace' ]" := [trace of [::]]
   (at level 0, format "[ 'trace' ]") : form_scope.
 
 Notation "tr1 '<+>' tr2" := [trace of adjoin tr1 tr2]
   (at level 51, left associativity) : lts_scope.
 
-Notation "st '<+' tr" := [trace of adjoin [:: st] tr]
+Notation "st '<+' tr" := [trace of adjoin [:: val st] tr]
   (at level 49, right associativity) : lts_scope.
 
-Notation "tr '+>' st" := [trace of adjoin tr [:: st]]
+Notation "tr '+>' st" := [trace of adjoin tr [:: val st]]
   (at level 48, left associativity) : lts_scope.
-
 
 Section Build.
 Context {L : Type} (S : ltsType L).
 Implicit Types (st : step S) (ts : traceSeq S) (tr : trace S).
 
-Lemma nil_traceP : is_trace ([::] : seq (step S)).
+Lemma nil_traceP : is_trace ([::] : traceSeq S).
 Proof. done. Qed.
 Canonical nil_trace := Trace nil_traceP.
 
-Lemma singl_traceP st : is_trace [:: st].
-Proof. done. Qed.
+Lemma singl_traceP st : is_trace [:: val st].
+Proof. apply/andP; split=> //=; rewrite andbT; exact/(valP st). Qed.
 Canonical singl_trace st := Trace (singl_traceP st).
 
 Lemma adjoin_traceP tr1 tr2 : is_trace (adjoin tr1 tr2).
@@ -486,8 +488,12 @@ Proof.
   case: tr1=> [ts1]; case: tr2=> [ts2] /=.
   rewrite /adjoin /is_trace. 
   case: ifP=> [|?] //.
+  move=> Hadj /andP[Hs1 Ha1] /andP[Hs2 Ha2].
+  apply/andP; split.
+  - by rewrite all_cat; apply/andP. 
+  move: Hadj Hs1 Ha1 Hs2 Ha2.
   case: ts1=> [|st1 {}ts1] //=; rewrite cat_path.
-  case: ts2=> [|st2 {}ts2] //= ???; [exact/andP | exact/and3P].
+  case: ts2=> [|st2 {}ts2] //= ?????; [exact/andP | exact/and3P].
 Qed.
 Canonical adjoin_trace tr1 tr2 := Trace (adjoin_traceP tr1 tr2).
 
@@ -496,11 +502,11 @@ Lemma adjoin_val tr1 tr2 :
 Proof. by rewrite /adjoin /=; case: ifP. Qed.
 
 Lemma adjoin_cons_val st tr : 
-  adjoint [:: st] tr -> st <+ tr = st :: tr :> traceSeq S.
+  adjoint [trace :: st] tr -> st <+ tr = val st :: tr :> traceSeq S.
 Proof. by rewrite /adjoin /=; case: ifP. Qed.
 
 Lemma adjoin_rcons_val st tr : 
-  adjoint tr [:: st] -> tr +> st = rcons tr st :> traceSeq S.
+  adjoint tr [trace :: st] -> tr +> st = rcons tr (val st) :> traceSeq S.
 Proof. by rewrite /adjoin -cats1 /=; case: ifP. Qed.
 
 End Build.
@@ -535,10 +541,13 @@ End Countable.
 
 Section Theory. 
 Context {L : Type} (S : ltsType L).
-Implicit Types (st : step S) (ts : traceSeq S) (tr : trace S).
+Implicit Types (st : stepTuple S) (ts : traceSeq S) (tr : trace S).
 
 Lemma trace_adj tr : sorted adj tr.
-Proof. by case: tr. Qed.
+Proof. by move: (valP tr)=> /andP[]. Qed.
+
+Lemma trace_steps tr : all is_step tr.
+Proof. by move: (valP tr)=> /andP[]. Qed.
 
 Lemma fst_state_src st ts : 
   fst_state (src st) ts = src (head st ts).
@@ -599,21 +608,21 @@ Lemma adjoint_lastE ts st :
 Proof. done. Qed.
 
 Lemma is_trace_cons st ts : 
-  is_trace (st :: ts) = [&& is_trace ts & adjoint [:: st] ts].
+  is_trace (st :: ts) = [&& is_step st, is_trace ts & adjoint [:: st] ts].
 Proof. 
   rewrite /is_trace /adjoint /=.
-  case: ts=> [|st' {}ts] //=.
-  by rewrite andbC; apply/andb_id2l=> _.
+  case: ts=> [|st' {}ts]; rewrite ?andbT //=.
+  by rewrite [adj st st' && _]andbC !andbA /adj.
 Qed.
 
 Lemma is_trace_rcons ts st : 
-  is_trace (rcons ts st) = [&& is_trace ts & adjoint ts [:: st]].
+  is_trace (rcons ts st) = [&& is_step st, is_trace ts & adjoint ts [:: st]].
 Proof.
-  rewrite /is_trace /adjoint. 
+  rewrite /is_trace /adjoint all_rcons. 
   case: (lastP ts)=> [|{}ts st'] //=.
-  - by rewrite eq_refl.
-  rewrite lst_state_rcons (sorted_rcons st). 
-  by rewrite /nilp /adj size_rcons last_rcons /=.
+  - by rewrite eq_refl andbT.
+  rewrite lst_state_rcons (sorted_rcons st).
+  by rewrite /nilp /adj size_rcons last_rcons !andbA /=. 
 Qed.
 
 Lemma size_labels ts : 
@@ -726,20 +735,20 @@ Proof.
   - by move=> [tr' []] ???; exists tr'.
   move: Htr Hh; elim/last_ind: tr=> [|{}tr st IH] /=.
   - by exists [trace] => /=.
-  rewrite is_trace_rcons=> /andP[Htr Hj].
+  rewrite is_trace_rcons=> /and3P[Hst Htr Hj].
   rewrite fst_state_rcons -fst_state_src. 
   case: (nilp tr)/nilP=> [->|Hnil] /=. 
-  - move: (valP st); rewrite /is_step=> /[swap] <- => Hs. 
+  - move: Hst; rewrite /is_step=> /[swap] <- => Hs. 
     move: (sim_step HR Hs)=> [s' HR' Hs'].
     pose st' := step_of Hs'. 
-    by exists [trace of [:: st']]. 
+    by exists [trace :: st']. 
   rewrite (fst_stateNnil t) // => Ht.
   move: (IH Htr Ht); clear IH. 
   move=> [tr' []] /[swap].
   rewrite !labels_rcons.    
   move: Hj; rewrite adjoint_lastE=> /eqP. 
-  rewrite (lst_stateNnil t (src st))=> // ->. 
-  move: (valP st); rewrite /is_step=> Hs Hlbl HRl.
+  rewrite (lst_stateNnil t (src st))=> // ->.
+  move: Hst; rewrite /is_step=> Hs Hlbl HRl.
   move: (sim_step HRl Hs)=> [s'].
   move=> HR' Hs' /eqP Hfst.
   have: ~~ nilp tr'.
@@ -747,9 +756,9 @@ Proof.
     by move: Hnil=> /nilP.
   move=> /nilP Hnil'.
   pose st' := step_of Hs'.
-  exists (tr' +> st')=> /=.
+  exists (tr' +> st'). 
   rewrite !adjoin_rcons_val; last first; [|split].
-  - by rewrite /adjoint step_of_val (lst_stateNnil s) /=. 
+  - by rewrite /adjoint /= (lst_stateNnil s) /=.  
   - by rewrite !lst_state_rcons /=.
   - by rewrite labels_rcons Hlbl.
   rewrite fst_state_rcons Hfst -fst_state_src. 
