@@ -383,6 +383,26 @@ Canonical trace_eqType := Eval hnf in EqType (trace S) trace_eqMixin.
 
 End EQ.
 
+Section Choice.
+Context {L : choiceType} (S : ltsType L).
+
+Definition trace_choiceMixin := 
+  Eval hnf in [choiceMixin of trace S by <:].
+Canonical trace_choiceType := 
+  Eval hnf in ChoiceType (trace S) trace_choiceMixin.
+
+End Choice.
+
+Section Countable.
+Context {L : countType} (S : ltsType L).
+
+Definition trace_countMixin := 
+  Eval hnf in [countMixin of trace S by <:].
+Canonical trace_countType := 
+  Eval hnf in CountType (trace S) trace_countMixin.
+
+End Countable.
+
 Section Theory. 
 Context {L : Type} (S : ltsType L).
 Implicit Types (st : step S) (ts : traceSeq S) (tr : trace S).
