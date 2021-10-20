@@ -443,18 +443,13 @@ Definition states : S -> traceSeq S -> seq S :=
     | st :: _ => src st :: map dst ts
     end. 
 
-Definition trace_from : S -> seq L -> traceSeq S :=
-  fun s ls => 
-    let fix aux s ls :=
-      match ls with
-      | [::]    => [::]
-      | l :: ls =>
-        match pick_trans l s with
-        | None    => [::]
-        | Some s' => mk_step l s s' :: (aux s' ls) 
-        end
-      end
-    in aux s ls.
+Fixpoint trace_from (s : S) (ls : seq L) : traceSeq S :=
+  match ls with
+  | [::]    => [::]
+  | l :: ls => 
+    let s' := ftrans l s in
+    mk_step l s s' :: (trace_from s' ls) 
+  end.
 
 (* Definition trace_from : S -> seq L -> trace := *)
 (*   fun s ls =>  *)
@@ -513,8 +508,8 @@ Notation "[ 'trace' ]" := [trace of [::]]
 Notation "[ 'trace?' 'of' ts ]" := [trace of insubd [trace] ts]
   (at level 0, format "[ 'trace?'  'of'  ts ]") : form_scope.
 
-Notation "[ 'trace' 'from' s ls ]" := [trace? of trace_from s ls]
-  (at level 0, format "[ 'trace'  'from' s ls ]") : form_scope.
+Notation "[ 'trace' 'from' s 'by' ls ]" := [trace? of trace_from s ls]
+  (at level 0, format "[ 'trace'  'from' s  'by' ls ]") : form_scope.
 
 Notation "tr1 '<+>' tr2" := [trace of adjoin tr1 tr2]
   (at level 51, left associativity) : lts_scope.
@@ -541,6 +536,10 @@ Lemma insub_traceP ts : is_trace (insubd [trace] ts).
 Proof. by rewrite val_insubd; case: ifP. Qed.
 Canonical insub_trace ts := Trace (insub_traceP ts).
 
+Lemma val_insub_trace ts : 
+  is_trace ts -> [trace? of ts] = ts :> traceSeq S.
+Proof. by rewrite /= val_insubd=> ->. Qed.
+
 Lemma adjoin_traceP tr1 tr2 : is_trace (adjoin tr1 tr2).
 Proof. 
   case: tr1=> [ts1]; case: tr2=> [ts2] /=.
@@ -555,6 +554,7 @@ Proof.
 Qed.
 Canonical adjoin_trace tr1 tr2 := Trace (adjoin_traceP tr1 tr2).
 
+(* TODO: rename to `val_adjoin` *)
 Lemma adjoin_val tr1 tr2 : 
   adjoint tr1 tr2 -> tr1 <+> tr2 = tr1 ++ tr2 :> traceSeq S.
 Proof. by rewrite /adjoin /=; case: ifP. Qed.
@@ -597,8 +597,8 @@ Canonical trace_countType :=
 
 End Countable.
 
-Section Theory. 
-Context {L : Type} (S : ltsType L).
+Section LTSTheory. 
+Context {L : Type} {S : ltsType L}.
 Implicit Types (l : L) (ls : seq L) (s : S).
 Implicit Types (st : stepTuple S) (ts : traceSeq S) (tr : trace S).
 
@@ -716,43 +716,51 @@ Lemma adjoins0 tr :
   tr <+> [trace] = tr.
 Proof. by apply/val_inj=> /=; rewrite adjoin_val ?adjoints0 ?cats0 //=. Qed.
 
-Lemma trace_from_cons s l ls : has_trans l s -> 
-  exists s', trace_from s (l :: ls) = (mk_step l s s') :: trace_from s' ls.
-Proof.
-  rewrite has_transE /trace_from /isSome /=.
-  case: (pick_trans l s)=> //= s' _.
-  by exists s'. 
-Qed.
-
 Lemma trace_from_fst_state s ls : 
   lts_lang s ls -> s = fst_state s (trace_from s ls).
 Proof. 
   rewrite /lts_lang /trace_lang=> [[]].
-  case=> /= []; case=> [|st {}ts] /= Htr /eqP Hs -> //.
-  suff: has_trans (lbl st) s.
-  - by move=> /(trace_from_cons (labels ts)) [s'] ->.
-  move: Htr; rewrite /is_trace=> /andP[] /= /andP[].
-  rewrite /is_step Hs=> ? _ _. 
-  by apply/has_transP; exists (dst st).
-Qed.  
+  by case=> /= []; case=> [|??] ?? -> //. 
+Qed.
+
+End LTSTheory.
+
+Section dLTSTheory. 
+Context {L : Type} {S : dltsType L}.
+Implicit Types (l : L) (ls : seq L) (s : S).
+Implicit Types (st : stepTuple S) (ts : traceSeq S) (tr : trace S).
 
 Lemma trace_from_is_trace s ls : 
   lts_lang s ls -> is_trace (trace_from s ls).
 Proof. 
   rewrite /lts_lang /trace_lang=> [[]].
-  case=> /= [] ts; move: ls. 
+  case=> /= [] ts; move: s ls. 
   elim: ts=> [|st {}ts] /=. 
-  - by move=> ??? ->.
-  move=> IH ls Htr /eqP Hs -> //.
-  admit.
-  (* suff: has_trans (lbl st) s. *)
-  (* - by move=> /(trace_from_cons (labels ts)) [s'] ->. *)
-  (* move: Htr; rewrite /is_trace=> /andP[] /= /andP[]. *)
-  (* rewrite /is_step Hs=> ? _ _.  *)
-  (* by apply/has_transP; exists (dst st). *)
-Admitted.  
+  - by move=> ???? ->.
+  move=> IH s ls Htr /eqP Hs -> //=.
+  move: Htr; rewrite !is_trace_cons. 
+  move=> /and3P[Hst Htr Hadj]. 
+  have ->: ftrans (lbl st) s = dst st.
+  - move: Hst; rewrite /is_step Hs ltransE. 
+    by move=> /andP[_] /eqP->.
+  apply/and3P; split.
+  - rewrite /is_step Hs=> /=; exact/Hst. 
+  - by apply/IH=> //; rewrite -adjoint_firstE.
+  rewrite adjoint_firstE=> //=.
+  apply/eqP/trace_from_fst_state.
+  exists [trace? of ts]; rewrite ?/trace_lang ?val_insub_trace //.
+  by rewrite -adjoint_firstE.
+Qed.
 
-End Theory.
+Lemma trace_from_lang s ls : 
+  lts_lang s ls -> trace_lang s [trace from s by ls].
+Proof. 
+  move=> ?; rewrite /trace_lang /= val_insub_trace. 
+  - by apply/eqP/trace_from_fst_state.
+  exact/trace_from_is_trace.
+Qed.
+
+End dLTSTheory.
 
 End Trace.
 
