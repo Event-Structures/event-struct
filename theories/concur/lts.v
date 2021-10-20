@@ -170,19 +170,21 @@ Lemma has_transP l s :
   reflect (exists s', ltrans l s s') (has_trans l s).
 Proof. by rewrite /ltrans /has_trans; move: s; case: S=> ? [? []]. Qed. 
 
-Definition pick_trans l s : option S := 
-  match @idP (has_trans l s) with 
+Definition ftrans : L -> S -> S := 
+  fun l s => match @idP (has_trans l s) with 
   | ReflectT pf => 
      let exP := elimT (has_transP l s) pf in 
-     Some (xchoose exP)
-  | ReflectF pf => None 
+     xchoose exP
+  | ReflectF pf => s 
   end.
 
 End Def.
 
+Prenex Implicits ltrans trans has_trans ftrans.
+
 Notation "s1 '--[' l ']-->' s2" := (ltrans l s1 s2) : lts_scope.
-Notation "s1 '-->' s2"  := (trans s1 s2) : lts_scope.
-Notation "s1 '-->?' s2" := (trans^? s1 s2) : lts_scope.
+Notation "s1 '-->' s2" := (trans s1 s2) : lts_scope.
+Notation "s1 '-->?' s2" := ((trans : {dhrel _ & _})^? s1 s2) : lts_scope.
 Notation "s1 '-->+' s2" := ((trans : hrel _ _)^+ s1 s2) : lts_scope. 
 Notation "s1 '-->*' s2" := ((trans : hrel _ _)^* s1 s2) : lts_scope.
 
@@ -194,13 +196,25 @@ Lemma transP s s' :
   reflect (exists l, ltrans l s s') (trans s s').
 Proof. by move: s s'; case: S=> ? [? []]. Qed.   
 
-Lemma has_transE l s : 
-  has_trans l s = pick_trans l s.
-Proof. by rewrite /pick_trans; destruct idP. Qed.
+Lemma ftrans_ltrans l s :
+  (s == ftrans l s) || (s --[l]--> ftrans l s).
+Proof. 
+  rewrite /ftrans; destruct idP; rewrite ?eq_refl //.
+  apply/orP; right; apply/xchooseP.
+Qed.
 
-Lemma pick_trans_some l s s' :
-  pick_trans l s = Some s' -> s --[l]--> s'.
-Proof. rewrite /pick_trans; destruct idP=> // [[<-]]; exact/xchooseP. Qed.
+Lemma ftrans_trans l s :
+  s -->? (ftrans l s).
+Proof. 
+  rewrite /= /dhrel_one. 
+  move: (ftrans_ltrans l s)=> /orP[].
+  - by move=> /eqP {1}->; rewrite eq_refl.  
+  by move=> ?; apply/orP; right; apply/transP; exists l. 
+Qed.
+
+Lemma has_ftrans l s : 
+  has_trans l s -> (s --[l]--> ftrans l s).
+Proof. rewrite /ftrans; destruct idP=> // _; apply/xchooseP. Qed. 
 
 End Theory.
 
@@ -278,15 +292,14 @@ Lemma ltrans_det l s1 s2 s3 :
 Proof. rewrite /ltrans; move: s1 s2 s3; case: S=> ? [? [H]]; exact/H. Qed.
 
 Lemma ltransE l s s' : 
-  (pick_trans l s == Some s') = (s --[l]--> s').
+  (s --[l]--> s') = (has_trans l s) && (s' == ftrans l s).
 Proof. 
-  apply/idP/idP=> [/eqP|]; first exact/pick_trans_some.
-  rewrite /pick_trans=> Htr; apply/eqP. 
-  destruct idP; last first; [|congr Some].
-  - by exfalso; apply/n/has_transP; exists s'. 
-  move: (xchooseP (has_transP l s i))=> Htr'.
-  by apply/(ltrans_det Htr').
-Qed.
+  apply/idP/idP; last first.
+  - move=> /andP[] /[swap] /eqP {1}->; exact/has_ftrans.
+  move=> Htr; rewrite andb_idr=> [|?].
+  - by apply/has_transP; exists s'.
+  by apply/eqP/(ltrans_det Htr)/has_ftrans.
+Qed. 
 
 End Theory.
 
