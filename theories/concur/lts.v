@@ -451,20 +451,6 @@ Fixpoint trace_from (s : S) (ls : seq L) : traceSeq S :=
     mk_step l s s' :: (trace_from s' ls) 
   end.
 
-(* Definition trace_from : S -> seq L -> trace := *)
-(*   fun s ls =>  *)
-(*     let fix aux acc s ls := *)
-(*       match ls with *)
-(*       | [::]    => [::] *)
-(*       | l :: ls => *)
-(*         match pick_trans l s with *)
-(*         | None    => acc *)
-(*         | Some s' => aux (mk_step l s s' :: acc) s' ls  *)
-(*         end *)
-(*       end *)
-(*     in  *)
-(*     insub_trace (rev (aux [::] s ls)). *)
-
 (* TODO: try `starts_with` and `ends_with` predicates instead? *)
 Definition fst_state : S -> traceSeq S -> S := 
   fun s ts => if ts is st :: ts then src st else s.
