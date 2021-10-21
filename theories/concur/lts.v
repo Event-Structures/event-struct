@@ -771,7 +771,7 @@ Proof.
   exact/trace_from_is_trace.
 Qed.
 
-Lemma det_lts_langP s ls : 
+Lemma dlts_langP s ls : 
   reflect (lts_lang s ls) (is_trace (trace_from s ls)).
 Proof. 
   apply/(equivP idP); split. 
