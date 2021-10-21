@@ -21,6 +21,8 @@ From eventstruct Require Import utils relalg.
 (*                      from s1 to s2.                                        *)
 (*            step S == a type of steps of the LTS.                           *)
 (*                   := { (lbl, src, dst) | src --[lbl]--> dst }.             *)
+(*         step_of H == given a proof of step property H : s --[l]--> s'      *)
+(*                      constructs a step { (l, s, s') | s --[l]--> s' }.     *)
 (*           trace S == a type of traces of the LTS, that is finite sequences *)
 (*                      of steps performed by the transition system.          *)
 (*                   := { tr : seq (step S) | dst tr[i] == src tr[i+1] }.     *)
@@ -28,10 +30,16 @@ From eventstruct Require Import utils relalg.
 (*                      Coq must be able to infer a proof that ts satisfies   *)
 (*                      trace property (i.e the ends of steps should match).  *)
 (*           [trace] == empty trace.                                          *)
-(*         labels tr == a sequence of labels of tr.                           *)
-(*       states s tr == a sequence of states of tr or [:: s] is tr is empty.  *)
-(*    fst_state s tr == the first state of of tr or s is tr is empty.         *)
-(*    lst_state s tr == the last state of of tr or s is tr is empty.          *)
+(*       tr1 <+> tr2 == concatenation of traces tr1 ++ tr2 if tr1 and tr2     *)
+(*                      are adjoint, empty trace otherwise.                   *)
+(*          st <+ tr == cons of step st and trace tr if they are are adjoint, *)
+(*                      empty trace otherwise.                                *)
+(*          tr +> st == rcons of step st and trace tr if they are are adjoint,*)
+(*                      empty trace otherwise.                                *)
+(*         labels tr == a sequence of labels of a trace.                      *)
+(*       states s tr == a sequence of states of tr or [:: s] if tr is empty.  *)
+(*    fst_state s tr == the first state of tr or s is tr is empty.            *)
+(*    lst_state s tr == the last state of tr or s is tr is empty.             *)
 (*   adjoint tr1 tr2 == a relation asserting that two traces are adjoint,     *)
 (*                      meaning that the last state of tr1 is equal to        *)
 (*                      the first state of tr2.                               *)
@@ -159,23 +167,28 @@ Module Export Step.
 
 Section Def.
 Context {L : Type} (S : ltsType L).
+Implicit Types (l : L) (s : S).
 
 Record stepTuple : Type := mk_step {
   lbl : L; src : S; dst : S;  
 }.
 
 Definition is_step : pred stepTuple := 
-  fun s => (src s) --[lbl s]--> (dst s).
+  fun st => (src st) --[lbl st]--> (dst st).
 
 Structure step : Type := Step {step_val :> stepTuple; _ : is_step step_val}.
 
 Canonical step_subType := Eval hnf in [subType for step_val].
 
+Definition step_of l s s' : (s --[l]--> s') -> step := 
+  fun p => @Step (mk_step l s s') p.
+
 Definition adj : rel step := 
-  fun s t => dst s == src t. 
+  fun st st' => dst st == src st'. 
+
 End Def.
 
-Prenex Implicits lbl src dst is_step adj.
+Prenex Implicits lbl src dst is_step step_of adj.
 
 Section EQ. 
 Context {L : eqType} (S : ltsType L).
@@ -201,41 +214,52 @@ Canonical step_eqType := Eval hnf in EqType (step S) step_eqMixin.
 
 End EQ.
 
+Section Theory.
+Context {L : eqType} (S : ltsType L).
+Implicit Types (l : L) (s : S).
+
+Lemma step_of_val l s s' (Hst : s --[l]--> s') : 
+  step_of Hst = mk_step l s s' :> stepTuple S.
+Proof. done. Qed.
+
+End Theory.
+
 End Step.
 
 
 Module Export Trace. 
 
-Notation trace_seq S := (seq (step S)).
+Notation traceSeq S := (seq (step S)).
 
 Section Def. 
 Context {L : Type} (S : ltsType L).
 
-Definition is_trace : pred (trace_seq S) := 
+Definition is_trace : pred (traceSeq S) := 
   fun ts => sorted adj ts.
 
 Structure trace : Type := Trace { 
-  trace_val :> trace_seq S; 
+  trace_val :> traceSeq S; 
   _         :  is_trace trace_val;
 }.
 
 Canonical trace_subType := Eval hnf in [subType for trace_val].
 
-Implicit Types (ts : trace_seq S) (tr : trace).
+Implicit Types (ts : traceSeq S) (tr : trace).
 
-Definition labels : trace_seq S -> seq L := map (lbl : step S -> L). 
+Definition labels : traceSeq S -> seq L := map (lbl : step S -> L). 
 
-Definition states : S -> trace_seq S -> seq S := 
+Definition states : S -> traceSeq S -> seq S := 
   fun s ts => 
     match ts with 
     | [::]    => [:: s] 
     | st :: _ => src st :: map (dst : step S -> S) ts
     end. 
 
-Definition fst_state : S -> trace_seq S -> S := 
+(* TODO: try `starts_with` and `ends_with` predicates instead? *)
+Definition fst_state : S -> traceSeq S -> S := 
   fun s ts => if ts is st :: ts then src st else s.
 
-Definition lst_state : S -> trace_seq S -> S := 
+Definition lst_state : S -> traceSeq S -> S := 
   fun s ts => if ts is st :: ts then dst (last st ts) else s. 
 
 Definition trace_lang : S -> pred trace := 
@@ -245,12 +269,15 @@ Definition trace_lang : S -> pred trace :=
 Definition lts_lang : S -> lang L := 
   fun s w => exists2 tr, trace_lang s tr & w = labels tr.
 
-Definition adjoint : rel (trace_seq S) := 
+Definition adjoint : rel (traceSeq S) := 
   fun ts1 ts2 => 
     match ts2 with 
     | [::]    => true
     | st :: _ => lst_state (src st) ts1 == src st
     end.
+
+Definition adjoin : traceSeq S -> traceSeq S -> traceSeq S :=
+  fun ts1 ts2 => if adjoint ts1 ts2 then ts1 ++ ts2 else [::].
 
 Definition mk_trace tr mkTr : trace :=
   mkTr (let: Trace _ trP := tr return is_trace tr in trP).
@@ -259,21 +286,57 @@ End Def.
 
 Arguments adjoint : simpl never.
 
-Section Seq.
-Context {L : Type} (S : ltsType L).
-Implicit Types (st : step S) (s : trace_seq S) (tr : trace S).
-
-Lemma nil_traceP : is_trace ([::] : seq (step S)).
-Proof. done. Qed.
-Canonical nil_trace := Trace nil_traceP.
-
-End Seq.
-
 Notation "[ 'trace' 'of' tr ]" := (mk_trace (fun trP => @Trace _ _ tr trP))
   (at level 0, format "[ 'trace'  'of'  tr ]") : form_scope.
 
 Notation "[ 'trace' ]" := [trace of [::]]
   (at level 0, format "[ 'trace' ]") : form_scope.
+
+Notation "tr1 '<+>' tr2" := [trace of adjoin tr1 tr2]
+  (at level 51, left associativity) : lts_scope.
+
+Notation "st '<+' tr" := [trace of adjoin [:: st] tr]
+  (at level 49, right associativity) : lts_scope.
+
+Notation "tr '+>' st" := [trace of adjoin tr [:: st]]
+  (at level 48, left associativity) : lts_scope.
+
+
+Section Build.
+Context {L : Type} (S : ltsType L).
+Implicit Types (st : step S) (ts : traceSeq S) (tr : trace S).
+
+Lemma nil_traceP : is_trace ([::] : seq (step S)).
+Proof. done. Qed.
+Canonical nil_trace := Trace nil_traceP.
+
+Lemma singl_traceP st : is_trace [:: st].
+Proof. done. Qed.
+Canonical singl_trace st := Trace (singl_traceP st).
+
+Lemma adjoin_traceP tr1 tr2 : is_trace (adjoin tr1 tr2).
+Proof. 
+  case: tr1=> [ts1]; case: tr2=> [ts2] /=.
+  rewrite /adjoin /is_trace. 
+  case: ifP=> [|?] //.
+  case: ts1=> [|st1 {}ts1] //=; rewrite cat_path.
+  case: ts2=> [|st2 {}ts2] //= ???; [exact/andP | exact/and3P].
+Qed.
+Canonical adjoin_trace tr1 tr2 := Trace (adjoin_traceP tr1 tr2).
+
+Lemma adjoin_val tr1 tr2 : 
+  adjoint tr1 tr2 -> tr1 <+> tr2 = tr1 ++ tr2 :> traceSeq S.
+Proof. by rewrite /adjoin /=; case: ifP. Qed.
+
+Lemma adjoin_cons_val st tr : 
+  adjoint [:: st] tr -> st <+ tr = st :: tr :> traceSeq S.
+Proof. by rewrite /adjoin /=; case: ifP. Qed.
+
+Lemma adjoin_rcons_val st tr : 
+  adjoint tr [:: st] -> tr +> st = rcons tr st :> traceSeq S.
+Proof. by rewrite /adjoin -cats1 /=; case: ifP. Qed.
+
+End Build.
 
 Section EQ.
 Context {L : eqType} (S : ltsType L).
@@ -285,7 +348,7 @@ End EQ.
 
 Section Theory. 
 Context {L : Type} (S : ltsType L).
-Implicit Types (st : step S) (ts : trace_seq S) (tr : trace S).
+Implicit Types (st : step S) (ts : traceSeq S) (tr : trace S).
 
 Lemma trace_adj tr : sorted adj tr.
 Proof. by case: tr. Qed.
@@ -378,7 +441,8 @@ Lemma labels_cat ts1 ts2 :
   labels (ts1 ++ ts2) = labels ts1 ++ labels ts2.
 Proof. by rewrite /labels map_cat. Qed.
 
-Lemma size_states s ts : size (states s ts) == (size ts).+1.
+Lemma size_states s ts : 
+  size (states s ts) == (size ts).+1.
 Proof. by rewrite /states; case: ts=> [|??] //=; rewrite size_map. Qed.
                          
 Lemma states_rcons s ts st : s = fst_state (src st) ts -> 
@@ -388,6 +452,14 @@ Proof. by case: ts=> [->|??] //=; rewrite map_rcons. Qed.
 Lemma states_cat s ts1 ts2 : s = fst_state s ts2 -> 
   states s (ts1 ++ ts2) = states s ts1 ++ behead (states s ts2).
 Proof. by rewrite /states map_cat; case: ts1; case: ts2=> //= ?? ->. Qed.
+
+Lemma adjoin0s tr : 
+  [trace] <+> tr = tr.
+Proof. by apply/val_inj=> /=; rewrite adjoin_val ?adjoint0s //=. Qed.  
+
+Lemma adjoins0 tr : 
+  tr <+> [trace] = tr.
+Proof. by apply/val_inj=> /=; rewrite adjoin_val ?adjoints0 ?cats0 //=. Qed.
 
 End Theory.
 
@@ -472,15 +544,8 @@ Proof.
   case: (nilp tr)/nilP=> [->|Hnil] /=. 
   - move: (valP st); rewrite /is_step=> /[swap] <- => Hs. 
     move: (sim_step HR Hs)=> [s' HR' Hs'].
-    (* TODO: introduce a nicer way to construct steps 
-     *   (using canonical structures and phantom types?) 
-     *)
-    pose st_' := mk_step (lbl st) s s'. 
-    have Hst' : is_step st_' by done. 
-    pose st'  := Step Hst'.     
-    have Htr' : is_trace [:: st']. 
-    - by rewrite is_trace_cons //=; apply/andP.
-    by exists (Trace Htr')=> //=. 
+    pose st' := step_of Hs'. 
+    by exists [trace of [:: st']]. 
   rewrite (fst_stateNnil t) // => Ht.
   move: (IH Htr Ht); clear IH. 
   move=> [tr' []] /[swap].
@@ -494,15 +559,10 @@ Proof.
   - rewrite /nilp -size_labels -Hlbl size_labels. 
     by move: Hnil=> /nilP.
   move=> /nilP Hnil'.
-  pose st_' := mk_step (lbl st) (lst_state s tr') s'.
-  have Hst' : is_step st_' by done.
-  pose st'  := Step Hst'.
-  have Htr' : is_trace (rcons tr' st'). 
-  - rewrite is_trace_rcons; apply /andP; split=> //.
-    - exact/(valP tr').
-    rewrite adjoint_lastE /=.
-    by apply/eqP/lst_stateNnil.
-  exists (Trace Htr')=> /=; split.
+  pose st' := step_of Hs'.
+  exists (tr' +> st')=> /=.
+  rewrite !adjoin_rcons_val; last first; [|split].
+  - by rewrite /adjoint step_of_val (lst_stateNnil s) /=. 
   - by rewrite !lst_state_rcons /=.
   - by rewrite labels_rcons Hlbl.
   rewrite fst_state_rcons Hfst -fst_state_src. 
