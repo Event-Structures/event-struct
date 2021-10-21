@@ -510,8 +510,8 @@ Arguments adjoint : simpl never.
 Notation "[ 'trace' 'of' tr ]" := (mk_trace (fun trP => @Trace _ _ tr trP))
   (at level 0, format "[ 'trace'  'of'  tr ]") : form_scope.
 
-Notation "[ 'trace' '::' st ]" := [trace of [:: val st]]
-  (at level 0, format "[ 'trace'  '::'  st ]") : form_scope.
+Notation "[ 'trace::' st ]" := [trace of [:: val st]]
+  (at level 0, format "[ 'trace::'  st ]") : form_scope.
 
 Notation "[ 'trace' ]" := [trace of [::]]
   (at level 0, format "[ 'trace' ]") : form_scope.
@@ -571,11 +571,11 @@ Lemma adjoin_val tr1 tr2 :
 Proof. by rewrite /adjoin /=; case: ifP. Qed.
 
 Lemma adjoin_cons_val st tr : 
-  adjoint [trace :: st] tr -> st <+ tr = val st :: tr :> traceSeq S.
+  adjoint [trace:: st] tr -> st <+ tr = val st :: tr :> traceSeq S.
 Proof. by rewrite /adjoin /=; case: ifP. Qed.
 
 Lemma adjoin_rcons_val st tr : 
-  adjoint tr [trace :: st] -> tr +> st = rcons tr (val st) :> traceSeq S.
+  adjoint tr [trace:: st] -> tr +> st = rcons tr (val st) :> traceSeq S.
 Proof. by rewrite /adjoin -cats1 /=; case: ifP. Qed.
 
 End Build.
@@ -872,7 +872,7 @@ Proof.
   - move: Hst; rewrite /is_step=> /[swap] <- => Hs. 
     move: (sim_step HR Hs)=> [s' HR' Hs'].
     pose st' := step_of Hs'. 
-    by exists [trace :: st']. 
+    by exists [trace:: st']. 
   rewrite (fst_stateNnil t) // => Ht.
   move: (IH Htr Ht); clear IH. 
   move=> [tr' []] /[swap].
