@@ -717,10 +717,21 @@ Lemma adjoins0 tr :
 Proof. by apply/val_inj=> /=; rewrite adjoin_val ?adjoints0 ?cats0 //=. Qed.
 
 Lemma trace_from_fst_state s ls : 
-  lts_lang s ls -> s = fst_state s (trace_from s ls).
+  s = fst_state s (trace_from s ls).
+Proof. by case: ls. Qed.
+
+Lemma trace_from_labels s ls : 
+  labels (trace_from s ls) = ls.
+Proof. by move: s; elim ls=> [|?? IH] ? //=; rewrite IH. Qed.
+
+Lemma trace_from_lts_lang s ls : 
+  is_trace (trace_from s ls) -> lts_lang s ls.
 Proof. 
-  rewrite /lts_lang /trace_lang=> [[]].
-  by case=> /= []; case=> [|??] ?? -> //. 
+  move=> Htr; rewrite /lts_lang.
+  exists (Trace Htr)=> /=.
+  - rewrite /trace_lang /=.
+    exact/eqP/trace_from_fst_state.
+  by rewrite trace_from_labels.  
 Qed.
 
 End LTSTheory.
@@ -747,16 +758,22 @@ Proof.
   - rewrite /is_step Hs=> /=; exact/Hst. 
   - by apply/IH=> //; rewrite -adjoint_firstE.
   rewrite adjoint_firstE=> //=.
-  apply/eqP/trace_from_fst_state.
-  exists [trace? of ts]; rewrite ?/trace_lang ?val_insub_trace //.
-  by rewrite -adjoint_firstE.
+  exact/eqP/trace_from_fst_state.
 Qed.
 
-Lemma trace_from_lang s ls : 
+Lemma trace_from_trace_lang s ls : 
   lts_lang s ls -> trace_lang s [trace from s by ls].
 Proof. 
   move=> ?; rewrite /trace_lang /= val_insub_trace. 
   - by apply/eqP/trace_from_fst_state.
+  exact/trace_from_is_trace.
+Qed.
+
+Lemma det_lts_langP s ls : 
+  reflect (lts_lang s ls) (is_trace (trace_from s ls)).
+Proof. 
+  apply/(equivP idP); split. 
+  - exact/trace_from_lts_lang. 
   exact/trace_from_is_trace.
 Qed.
 
