@@ -1,7 +1,7 @@
 From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple path.
 From mathcomp Require Import eqtype choice order fintype finfun finmap. 
-From eventstruct Require Import utils.
+From eventstruct Require Import utils inhtype.
 
 (******************************************************************************)
 (* This file provides a theory of labelled partially ordered sets             *)
@@ -26,23 +26,25 @@ From eventstruct Require Import utils.
 (* We also provide a hierarchy of morphisms between labelled posets.          *)
 (*      lPoset.hom E1 E2 == homomorphism between lposets E1 and E2, that is   *)
 (*                          label preserving monotone function.               *)
-(*      lPoset.bij E1 E2 == bijective homomorphism between lposets E1 and E2. *)
+(*     lPoset.ihom E1 E2 == injective homomorphism between lposets E1 and E2. *)
+(*     lPoset.bhom E1 E2 == bijective homomorphism between lposets E1 and E2. *)
 (*      lPoset.emb E1 E2 == embedding between lposets E1 and E2, that is      *)
 (*                          order-reflecting homomorphism.                    *)
 (*      lPoset.iso E1 E2 == isomorphism between lposets E1 and E2, that is    *)
 (*                          bijective order-reflecting homomorphism.          *)
 (* The following notations for morphisms can be used by importing             *)
 (* corresponding module: Import lPoset.Mod.Syntax for Mod                     *)
-(* in {Hom, Bij, Emb, Iso}.                                                   *)
+(* in {Hom, iHom, bHom, Emb, Iso}.                                            *)
 (*                   E1 ~> E2 == homomorphism.                                *)
+(*                   E1 ≈> E2 == injective homomorphism.                      *)
 (*                   E1 ≃> E2 == bijective homomorphism.                      *)
-(*                   E1 ≈> E2 == embedding.                                   *)
+(*                   E1 ~≥ E2 == embedding.                                   *)
 (*                   E1 ~= E2 == isomorphism.                                 *)
-(* Each module Mod in {Hom, Bij, Emb, Iso} also defines combinators which     *)
-(* can be used to build morphisms compositonally.                             *)
+(* Each module Mod in {Hom, iHom, bHom, Emb, Iso} also defines combinators    *)
+(* which can be used to build morphisms compositonally.                       *)
 (*          lPoset.Mod.id     == identity morphism.                           *)
-(*          lPoset.Mod.sy f   == inverse morphisms (for Iso only).            *)
-(*          lPoset.Mod.tr f g == composition of morphisms (g \o f).           *)
+(*         lPoset.Mod.inv f   == inverse morphisms (for Iso only).            *)
+(*        lPoset.Mod.comp f g == composition of morphisms (g \o f).           *)
 (*                                                                            *)
 (* In case of finite lposets it is possible to check whether given function   *)
 (* has properties of certain morphism and also to check if there exists       *)
@@ -52,13 +54,20 @@ From eventstruct Require Import utils.
 (*                           has type of homomorphism                         *)
 (*     lFinPoset.homP p q == reflection lemma to check for existence of       *)
 (*                           a homomorphism between p and q.                  *)
-(* Similar lemmas are available for bij, emb, iso.                            *)
+(* Similar lemmas are available for ihom, bhom, emb, iso.                     *)
 (* Additionally, for a tuple lposet the following lemmas are available.       *)
 (*     tPoset.homP p q == there exists injective homomorphism between p and q *)
 (*                        iff p is a subsequence of q.                        *)
 (*     tPoset.isoP p q == there exists isomorphism between p and q            *)
 (*                        iff p is equal to q.                                *)
 (*                        Note that for tuple lposet bij/emb/iso collapse.    *)
+(*                                                                            *)
+(* The following constructions are defined on lposets.                        *)
+(*        lPoset.ext f == an extension of labelled poset along the            *)
+(*                        homomorphism f : E1 -> E2 with events               *)
+(*                        of type E1 and the strict causality order defined   *)
+(*                        as follows:                                         *)
+(*            e1 < e2 <-> e1 < e2 or f e1 < f e2.                             *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -79,7 +88,7 @@ Local Open Scope lposet_scope.
 
 Module lPoset.
 
-Module Export lPoset.
+Module lPoset.
 Section ClassDef. 
 
 Record mixin_of (E0 : Type) (L : Type)
@@ -129,6 +138,8 @@ Notation lPosetType E L m := (@pack E L _ _ id m).
 End Exports.
 
 End lPoset.
+
+Export lPoset.Exports.
 
 Notation eventType := lPoset.type.
 Notation eventStruct := lPoset.class_of.
@@ -210,17 +221,13 @@ Section Theory.
 Context {L : Type} {E1 E2 : eventType L} (f : E1 ~> E2).
 
 (* TODO: rename `lab_preserving`  *)
-Lemma lab_preserv :
+Lemma lab_preserving :
   { mono f : e / lab e }.
 Proof. by case: f => ? [[]]. Qed.
 
 Lemma ca_monotone :
   { homo f : e1 e2 / e1 <= e2 }.
 Proof. by case: f => ? [[]]. Qed.
-
-Lemma sca_monotone :
-  injective f -> { homo f : e1 e2 / e1 < e2 }.
-Proof. move=> ?; apply/inj_homo_lt=> //; exact/ca_monotone. Qed.
 
 Lemma sca_img e1 e2 : (f e1 < f e2) -> (e1 < e2) || (e1 >< e2).
 Proof.
@@ -236,62 +243,52 @@ Qed.
 End Theory.
 End Theory.
 
-Section Cat.
+Section Build.
 Context {L : Type}.
+Implicit Types (E : eventType L).
 
-(* TODO: refactor in similar style as lFinPoset.Morphisms, 
- *   i.e. make `class_of` opaque, but `type` transparent.
- *   This would allow to get rid of `E` lemmas, but at the same time
- *   keep large proof terms opaque. 
- *)
-
-Definition id {E : eventType L} : E ~> E.
-  by exists id; do 2 constructor=> //. 
-Defined.
-
-Lemma idE {E : eventType L} : 
-  Hom.apply (id : E ~> E) = ssrfun.id.
+Lemma id_class {E} : Hom.class_of (id : E -> E).
 Proof. done. Qed.
 
-Definition tr {E1 E2 E3 : eventType L} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3).
-  move=> f g; exists (g \o f); do 2 constructor=> /=.
-  - by move=> e; rewrite !lab_preserv.
+Definition id {E} : E ~> E := Hom.Pack id_class.
+
+Lemma comp_class {E1 E2 E3} (f : E1 ~> E2) (g : E2 ~> E3) : 
+  Hom.class_of (g \o f).
+Proof. 
+  repeat constructor=> /=.
+  - by move=> e; rewrite !lab_preserving.
   by move=> e1 e2 /(ca_monotone f) /(ca_monotone g).
-Defined.
+Qed.
 
-Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~> E2) (g : E2 ~> E3) : 
-   Hom.apply (tr f g) = g \o f.
-Proof. done. Qed.
+Definition comp {E1 E2 E3} : (E1 ~> E2) -> (E2 ~> E3) -> (E1 ~> E3) :=
+  fun f g => Hom.Pack (comp_class f g).
 
-Lemma of_eqfun_class {E1 E2 : eventType L} (f : E1 ~> E2) g : 
+Lemma of_eqfun_class {E1 E2} (f : E1 ~> E2) g : 
   g =1 f -> Hom.class_of g.
 Proof. 
   move=> H; repeat constructor.
-  - move=> ?; rewrite !H; exact/lab_preserv.
+  - move=> ?; rewrite !H; exact/lab_preserving.
   move=> ??; rewrite !H; exact/ca_monotone.
 Qed.
 
-Definition of_eqfun {E1 E2 : eventType L} (f : E1 ~> E2) g : 
-  g =1 f -> E1 ~> E2 := fun eqf => Hom.Pack (of_eqfun_class eqf).
+Definition of_eqfun {E1 E2} (f : E1 ~> E2) g : g =1 f -> E1 ~> E2 := 
+  fun eqf => Hom.Pack (of_eqfun_class eqf).
 
-End Cat.
-
-Global Opaque id tr.
+End Build.
 
 End Hom.
 
-Module Export Bij.
 
-Module Bij.
+Module Export iHom.
+
+Module iHom.
 Section ClassDef. 
 
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
 Record mixin_of f := Mixin {
-  g : E2 -> E1;
-  _ : cancel f g;
-  _ : cancel g f;
+  _ : injective f;
 }.
 
 Set Primitive Projections.
@@ -328,20 +325,149 @@ Coercion homType : type >-> Hom.type.
 Canonical homType.
 End Exports.
 
-End Bij.
+End iHom.
 
-Export Bij.Exports.
+Export iHom.Exports.
+
+Module Export Syntax. 
+Notation ihom := iHom.type.
+Notation "E1 ≈> E2" := (ihom E1 E2) (at level 50) : lposet_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
+
+Lemma ihom_inj : 
+  injective f.
+Proof. by case: f => ? [[? []]]. Qed.
+
+Lemma sca_monotone :
+  { homo f : e1 e2 / e1 < e2 }.
+Proof. 
+  move=> ?; apply/inj_homo_lt=> //. 
+  - exact/ihom_inj. 
+  exact/ca_monotone.
+Qed.
+
+Lemma ca_img e1 e2 : 
+  (f e1 <= f e2) -> (e1 <= e2) || (e1 >< e2).
+Proof.
+  rewrite le_eqVlt=> /orP[].
+  - by move=> /eqP /ihom_inj <-; rewrite lexx.
+  move=> /sca_img /orP[|->] //.
+  by move=> /ltW ->.
+Qed.
+
+End Theory.
+End Theory.
+
+Section Build.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Lemma id_class {E} : iHom.class_of (id : E -> E).
+Proof. by repeat constructor=> //. Qed.
+
+Definition id {E} : E ≈> E := iHom.Pack id_class.
+
+Lemma comp_class {E1 E2 E3} (f : E1 ≈> E2) (g : E2 ≈> E3) :
+  iHom.class_of (g \o f).
+Proof. 
+  constructor; first exact/(Hom.comp_class f g).
+  by constructor=> x y /= /ihom_inj/ihom_inj.
+Qed.
+
+Definition comp {E1 E2 E3} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3) := 
+  fun f g => iHom.Pack (comp_class f g).
+
+Lemma of_eqfun_class {E1 E2} (f : E1 ≈> E2) g : 
+  g =1 f -> iHom.class_of g.
+Proof.
+  move=> H; constructor; first exact/(Hom.of_eqfun_class H).
+  constructor=> /=; apply/eq_inj; first exact/ihom_inj.
+  exact/fsym.
+Qed.
+
+Definition of_eqfun {E1 E2} (f : E1 ≈> E2) g : g =1 f -> E1 ≈> E2 := 
+  fun eqf => iHom.Pack (of_eqfun_class eqf).
+
+End Build.
+
+End iHom.
+
+
+Module Export bHom.
+
+Module bHom.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  g : E2 -> E1;
+  _ : cancel f g;
+  _ : cancel g f;
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Hom.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Hom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := Hom.Pack class.
+
+Lemma ihomMixin : iHom.mixin_of cT.
+Proof. 
+  constructor; apply/bij_inj.
+  by case cT=> [? [? [g]]]; exists g.
+Qed.
+Definition ihomType := iHom.Pack (iHom.Class class ihomMixin).
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Hom.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+Coercion ihomType : type >-> iHom.type.
+Canonical homType.
+Canonical ihomType.
+End Exports.
+
+End bHom.
+
+Export bHom.Exports.
 
 Section Def.
-Context {L : Type} {E1 E2 : eventType L} (f : Bij.type E1 E2).
+Context {L : Type} {E1 E2 : eventType L} (f : bHom.type E1 E2).
 
-Definition inv : E2 -> E1 := Bij.g (Bij.class f).
+Definition invF : E2 -> E1 := bHom.g (bHom.class f).
 
 End Def.
 
 Module Export Syntax. 
-Notation bij := Bij.type.
-Notation "E1 ≃> E2" := (bij E1 E2) (at level 50) : lposet_scope.
+Notation bhom := bHom.type.
+Notation "E1 ≃> E2" := (bhom E1 E2) (at level 50) : lposet_scope.
 End Syntax. 
 
 Module Export Theory.
@@ -349,44 +475,35 @@ Section Theory.
 Context {L : Type} {E1 E2 : eventType L} (f : E1 ≃> E2).
 
 Lemma inv_can : 
-  cancel f (inv f).
+  cancel f (invF f).
 Proof. by case: f => ? [[? []]] ???. Qed.
 
 Lemma can_inv : 
-  cancel (inv f) f.
+  cancel (invF f) f.
 Proof. by case: f => ? [[? []]] ???. Qed.
 
-Lemma event_bij :
+Lemma bhom_bij :
   bijective f.
 Proof. by case: f => ? [[? []]] g ? ?; exists g. Qed.
 
 Lemma inv_lab : 
-  { mono (inv f) : e / lab e }.
-Proof. by move=> e /=; rewrite -{2}[e]can_inv (lab_preserv f). Qed.
-
-Lemma ca_img e1 e2 : 
-  (f e1 <= f e2) -> (e1 <= e2) || (e1 >< e2).
-Proof.
-  rewrite le_eqVlt=> /orP[].
-  - by move=> /eqP /(bij_inj event_bij)<-; rewrite lexx.
-  move=> /sca_img /orP[]; last by move=> ->.
-  by move=> /ltW ->.
-Qed.
+  { mono (invF f) : e / lab e }.
+Proof. by move=> e /=; rewrite -{2}[e]can_inv (lab_preserving f). Qed.
 
 Lemma ca_img_inv e1 e2 : 
-  (e1 <= e2) -> (inv f e1 <= inv f e2) || (inv f e1 >< inv f e2).
+  (e1 <= e2) -> (invF f e1 <= invF f e2) || (invF f e1 >< invF f e2).
 Proof. by rewrite -{1}[e1]can_inv -{1}[e2]can_inv=> /ca_img. Qed.
 
-Lemma bij_total : 
+Lemma bhom_total : 
   total (<=%O : rel E1) -> total (<=%O : rel E2).
 Proof. 
   move=> Ht e1 e2.
   rewrite -[e1]can_inv -[e2]can_inv.
-  move: (Ht (inv f e1) (inv f e2)). 
+  move: (Ht (invF f e1) (invF f e2)). 
   by move=> /orP[] /(ca_monotone f) ->.
 Qed.  
 
-Lemma bij_ca_reflecting : total (<=%O : rel E1) ->
+Lemma bhom_ca_reflecting : total (<=%O : rel E1) ->
   { mono f : e1 e2 / e1 <= e2 }.
 Proof.
   move=> Ht e1 e2; apply/idP/idP; last exact/(ca_monotone f).
@@ -397,43 +514,39 @@ Qed.
 End Theory.
 End Theory.
 
-Section Cat.
+Section Build.
 Context {L : Type}.
+Implicit Types (E : eventType L).
 
-Definition id {E : eventType L} : E ≃> E.
-  by exists id; do 1 constructor=> //; exists id. 
-Defined.
+Lemma id_class {E} : bHom.class_of (id : E -> E).
+Proof. by constructor=> //; exists id. Qed.
 
-Lemma idE {E : eventType L} : 
-  Bij.apply (id : E ≃> E) = ssrfun.id.
-Proof. done. Qed.
+Definition id {E} : E ≃> E := bHom.Pack id_class.
 
-Definition tr {E1 E2 E3 : eventType L} : (E1 ≃> E2) -> (E2 ≃> E3) -> (E1 ≃> E3).
-  move=> f g; exists (Hom.tr f g); constructor. 
-  - by case: (Hom.tr f g). 
-  case: f=> [? [? []]]; case: g=> [? [? []]].
-  by move=> g ?? h ??; exists (h \o g)=> /=; apply /can_comp.
-Defined.
-
-Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≃> E2) (g : E2 ≃> E3) : 
-   Bij.apply (tr f g) = g \o f.
-Proof. done. Qed.
-
-Lemma of_eqfun_class {E1 E2 : eventType L} (f : E1 ≃> E2) g : 
-  g =1 f -> Bij.class_of g.
-Proof.
-  move=> H; constructor; first exact/(Hom.of_eqfun_class H).
-  exists (inv f)=> ? /=; rewrite !H; [exact/inv_can | exact/can_inv]. 
+Lemma comp_class {E1 E2 E3} (f : E1 ≃> E2) (g : E2 ≃> E3) :
+  bHom.class_of (g \o f).
+Proof. 
+  constructor; first exact/(Hom.comp_class f g).
+  by exists ((invF f) \o (invF g))=> /=; apply/can_comp; 
+    try exact/inv_can; try exact/can_inv.
 Qed.
 
-Definition of_eqfun {E1 E2 : eventType L} (f : E1 ≃> E2) g : 
-  g =1 f -> E1 ≃> E2 := fun eqf => Bij.Pack (of_eqfun_class eqf).
+Definition comp {E1 E2 E3} : (E1 ≃> E2) -> (E2 ≃> E3) -> (E1 ≃> E3) := 
+  fun f g => bHom.Pack (comp_class f g).
 
-End Cat.
+Lemma of_eqfun_class {E1 E2} (f : E1 ≃> E2) g : 
+  g =1 f -> bHom.class_of g.
+Proof.
+  move=> H; constructor; first exact/(Hom.of_eqfun_class H).
+  exists (invF f)=> ? /=; rewrite !H; [exact/inv_can | exact/can_inv]. 
+Qed.
 
-Global Opaque id tr.
+Definition of_eqfun {E1 E2} (f : E1 ≃> E2) g : g =1 f -> E1 ≃> E2 := 
+  fun eqf => bHom.Pack (of_eqfun_class eqf).
 
-End Bij.
+End Build.
+
+End bHom.
 
 
 Module Export Emb.
@@ -488,12 +601,12 @@ Export Emb.Exports.
 
 Module Export Syntax. 
 Notation emb := Emb.type.
-Notation "E1 ≈> E2" := (emb E1 E2) (at level 50) : lposet_scope.
+Notation "E1 ~≥ E2" := (emb E1 E2) (at level 50) : lposet_scope.
 End Syntax. 
 
 Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : E1 ≈> E2).
+Context {L : Type} {E1 E2 : eventType L} (f : E1 ~≥ E2).
 
 Lemma ca_reflecting :
   { mono f : e1 e2 / e1 <= e2 }.
@@ -505,41 +618,40 @@ Qed.
 End Theory.
 End Theory.
 
-Section Cat.
+Section Build.
 Context {L : Type}.
+Implicit Types (E : eventType L).
 
-Definition id {E : eventType L} : E ≈> E.
-  by exists id; do 1 constructor=> //; exists id. 
-Defined.
+Lemma id_class {E} : Emb.class_of (id : E -> E).
+Proof. by constructor=> //; exists id. Qed.
 
-Lemma idE {E : eventType L} : 
-  Emb.apply (id : E ≈> E) = ssrfun.id.
-Proof. done. Qed.
+Definition id {E} : E ~≥ E := Emb.Pack id_class.
 
-Definition tr {E1 E2 E3 : eventType L} : (E1 ≈> E2) -> (E2 ≈> E3) -> (E1 ≈> E3).
-  move=> f g; exists (Hom.tr f g). 
-  constructor; first by case: (Hom.tr f g). 
-  constructor=> e1 e2 /=. 
-  by rewrite -(ca_reflecting f) -(ca_reflecting g).
-Defined.
+Lemma comp_mixin {E1 E2 E3} (f : E1 ~≥ E2) (g : E2 ~≥ E3) : 
+  Emb.mixin_of (g \o f).
+Proof. by constructor=> ??; rewrite -(ca_reflecting f) -(ca_reflecting g). Qed.
 
-Lemma trE {E1 E2 E3 : eventType L} (f : E1 ≈> E2) (g : E2 ≈> E3) : 
-   Emb.apply (tr f g) = g \o f.
-Proof. done. Qed.
+Lemma comp_class {E1 E2 E3} (f : E1 ~≥ E2) (g : E2 ~≥ E3) : 
+  Emb.class_of (g \o f).
+Proof. 
+  constructor; first exact/(Hom.comp_class f g). 
+  exact/(comp_mixin f g).
+Qed.
+  
+Definition comp {E1 E2 E3} : (E1 ~≥ E2) -> (E2 ~≥ E3) -> (E1 ~≥ E3) :=
+  fun f g => Emb.Pack (comp_class f g).
 
-Lemma of_eqfun_class {E1 E2 : eventType L} (f : E1 ≈> E2) g :
+Lemma of_eqfun_class {E1 E2} (f : E1 ~≥ E2) g :
   g =1 f -> Emb.class_of g.
 Proof.
   move=> H; constructor; first exact/(Hom.of_eqfun_class H).
   by constructor=> ??; rewrite !H (ca_reflecting f).
 Qed.
 
-Definition of_eqfun {E1 E2 : eventType L} (f : E1 ≈> E2) g :
-  g =1 f -> E1 ≈> E2 := fun eqf => Emb.Pack (of_eqfun_class eqf).
+Definition of_eqfun {E1 E2} (f : E1 ~≥ E2) g : g =1 f -> E1 ~≥ E2 := 
+  fun eqf => Emb.Pack (of_eqfun_class eqf).
 
-End Cat.
-
-Global Opaque id tr.
+End Build.
 
 End Emb.
 
@@ -553,12 +665,12 @@ Implicit Types (f : E1 -> E2).
 
 Set Primitive Projections.
 Record class_of f := Class {
-  base  : Bij.class_of f; 
+  base  : bHom.class_of f; 
   mixin : Emb.mixin_of f;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Bij.class_of.
+Local Coercion base : class_of >-> bHom.class_of.
 
 Structure type := Pack { apply ; _ : class_of apply }.
 
@@ -573,21 +685,21 @@ Definition clone f c of phant_id class c := @Pack f c.
 (*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
 (*   fun m => Pack (@Class E L b m). *)
 
-Definition homType := Hom.Pack class.
-Definition bijType := Bij.Pack class.
-Definition embType := Emb.Pack (Emb.Class class (mixin class)).
+Definition homType  := Hom.Pack class.
+Definition bhomType := bHom.Pack class.
+Definition embType  := Emb.Pack (Emb.Class class (mixin class)).
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Bij.class_of.
+Coercion base : class_of >-> bHom.class_of.
 Coercion mixin : class_of >-> Emb.mixin_of.
 Coercion apply : type >-> Funclass.
-Coercion homType : type >-> Hom.type.
-Coercion bijType : type >-> Bij.type.
-Coercion embType : type >-> Emb.type.
+Coercion homType  : type >-> Hom.type.
+Coercion bhomType : type >-> bHom.type.
+Coercion embType  : type >-> Emb.type.
 Canonical homType.
-Canonical bijType.
+Canonical bhomType.
 Canonical embType.
 End Exports.
 
@@ -600,97 +712,105 @@ Notation iso := Iso.type.
 Notation "E1 ~= E2" := (iso E1 E2) (at level 50) : lposet_scope.
 End Syntax. 
 
-Section Cat.
+Section Build.
 Context {L : Type}.
+Implicit Types (E : eventType L).
 
-Definition id {E : eventType L} : E ~= E.
-  by exists Bij.id; constructor=> //; case: Bij.id. 
-Defined.
+Lemma id_class {E} : Iso.class_of (id : E -> E).
+Proof. constructor=> //; exact/bHom.id_class. Qed.
 
-Lemma idE {E : eventType L} : 
-  Iso.apply (id : E ~= E) = ssrfun.id.
-Proof. done. Qed.
+Definition id {E} : E ~= E := Iso.Pack id_class.
 
-Definition sy {E1 E2 : eventType L} : (E1 ~= E2) -> (E2 ~= E1).
-  move=> [] f [[]] [] [] HL HM [] g HK HK' [] HR.
-  exists g; repeat constructor.
-  - by move=> e; rewrite -{2}[e]HK' !HL.
-  - by move=> e1 e2; rewrite -{1}[e1]HK' -{1}[e2]HK'; exact/HR.
-  - by exists f.
-  move=> e1 e2; rewrite -{2}[e1]HK' -{2}[e2]HK'; exact/HM.
-Defined.
+Lemma inv_class {E1 E2} (f : E1 ~= E2) :
+  Iso.class_of (invF f).
+Proof. 
+  repeat constructor.
+  - by move=> ?; rewrite inv_lab. 
+  - move=> e1 e2. 
+    rewrite -[e1 in e1 <= e2](can_inv f). 
+    rewrite -[e2 in _  <= e2](can_inv f).
+    by rewrite (ca_reflecting f).
+  - exists f; [exact/can_inv|exact/inv_can].
+  move=> e1 e2. 
+  rewrite -[e1 in e1 <= e2](can_inv f). 
+  rewrite -[e2 in f (invF f e1) <= e2](can_inv f).
+  exact/ca_monotone.
+Qed.  
 
-Lemma syE {E1 E2 : eventType L} (f : E1 ~= E2) : 
-  Iso.apply (sy f) = Bij.inv f.
-Proof. by move: f=> [] f [[]] [[]] ?? [] g ?? [] ?; rewrite /inv=> //=. Qed.
+Definition inv {E1 E2} : E1 ~= E2 -> E2 ~= E1 := 
+  fun f => Iso.Pack (inv_class f).
 
-Definition tr {E1 E2 E3 : eventType L} : (E1 ~= E2) -> (E2 ~= E3) -> (E1 ~= E3).
-  move=> f g; exists (Bij.tr f g); constructor.
-  - by case: (Bij.tr f g).
-  rewrite Hom.trE.
-  have ->: (g \o f = Emb.tr f g) by done.
-  by case: (Emb.tr f g)=> ? []. 
-Defined.
+Lemma comp_class {E1 E2 E3} (f : E1 ~= E2) (g : E2 ~= E3) : 
+  Iso.class_of (g \o f).
+Proof. 
+  constructor; first exact/(bHom.comp_class f g).
+  exact/(Emb.comp_mixin f g).
+Qed.
 
-Lemma trE {E1 E2 E3 : eventType L} (f : E1 ~= E2) (g : E2 ~= E3) : 
-   Iso.apply (tr f g) = g \o f.
-Proof. done. Qed.
+Definition comp {E1 E2 E3} : E1 ~= E2 -> E2 ~= E3 -> E1 ~= E3 := 
+  fun f g => Iso.Pack (comp_class f g).
 
-Lemma of_eqfun_class {E1 E2 : eventType L} (f : E1 ~= E2) g :
+Lemma of_eqfun_class {E1 E2} (f : E1 ~= E2) g :
   g =1 f -> Iso.class_of g.
 Proof.
-  move=> H; constructor; first exact/(Bij.of_eqfun_class H).
+  move=> H; constructor; first exact/(bHom.of_eqfun_class H).
   by constructor=> ??; rewrite !H (ca_reflecting f).
 Qed.
 
-Definition of_eqfun {E1 E2 : eventType L} (f : E1 ~= E2) g :
-  g =1 f -> E1 ~= E2 := fun eqf => Iso.Pack (of_eqfun_class eqf).
+Definition of_eqfun {E1 E2} (f : E1 ~= E2) g : g =1 f -> E1 ~= E2 := 
+  fun eqf => Iso.Pack (of_eqfun_class eqf).
 
-Definition of_homs {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~> E1) : 
-  cancel f g -> cancel g f -> (E1 ~= E2).
-(* --- *)
-  move=> HK HK'; exists f.
-  repeat constructor; try by move: HK HK'; case: f=> ? [[]]. 
+Lemma of_homs_class {E1 E2} (f : E1 ~> E2) (g : E2 ~> E1) : 
+  cancel f g -> cancel g f -> Iso.class_of f.
+Proof.
+  move=> HK HK'; repeat constructor. 
+  - exact/(lab_preserving f).
+  - exact/(ca_monotone f).
   - by exists g.
-  move=> e1 e2; rewrite -{2}[e1]HK -{2}[e2]HK.
-  by move: HK HK'; case: g=> ? [[? H]] ?? /= => /H. 
+  move=> e1 e2. 
+  rewrite -[e1 in e1 <= e2]HK.
+  rewrite -[e2 in g (f e1) <= e2]HK.
+  exact/(ca_monotone g).
+  (* We need of_homs_class to be transparent temporarily to prove some lemmas *)
 Defined.
 
-Lemma of_homsE {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~= E1) 
-               (K : cancel f g) (K' : cancel g f) : 
-   Iso.apply (of_homs K K') = f.
-Proof. done. Qed.
+Definition of_homs {E1 E2} (f : E1 ~> E2) (g : E2 ~> E1) : 
+  cancel f g -> cancel g f -> (E1 ~= E2) := 
+    fun HK HK' => Iso.Pack (of_homs_class HK HK').
 
-Lemma of_homs_invE {E1 E2 : eventType L} (f : E1 ~> E2) (g : E2 ~= E1) 
+Lemma of_homs_invE {E1 E2} (f : E1 ~> E2) (g : E2 ~= E1) 
                    (K : cancel f g) (K' : cancel g f) : 
-   Bij.inv (of_homs K K') = g.
+   bHom.invF (of_homs K K') = g.
 Proof. done. Qed.
 
-Lemma of_tot_bij_class {E1 E2 : eventType L} (f : E1 ≃> E2) : 
+(* Now we can make of_homs_class opaque *)
+Global Opaque of_homs_class.
+
+Lemma of_tot_bij_class {E1 E2} (f : E1 ≃> E2) : 
   total (<=%O : rel E1) -> Iso.class_of f.
 Proof. 
-  move=> Ht; constructor; first exact/(Bij.class f).
-  by constructor=> ??; rewrite bij_ca_reflecting.
+  move=> Ht; constructor; first exact/(bHom.class f).
+  by constructor=> ??; rewrite bhom_ca_reflecting.
 Qed.
 
 Definition of_tot_bij {E1 E2 : eventType L} (f : E1 ≃> E2) : 
   total (<=%O : rel E1) -> E1 ~= E2 := 
     fun Ht => Iso.Pack (of_tot_bij_class f Ht).
 
-End Cat.
-
-Global Opaque id sy tr of_homs.
+End Build.
 
 End Iso.
 
 Notation hom := Hom.type.
-Notation bij := Bij.type.
+Notation ihom := iHom.type.
+Notation bhom := bHom.type.
 Notation emb := Emb.type.
 Notation iso := Iso.type.
 
-(* TODO: refactor module structure *)
-Module HomExtOrder.
-Section HomExtOrder.
+Module Ext.
+
+Module Order.
+Section Order.
 Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
 Implicit Types (x y : E1).
 
@@ -718,7 +838,7 @@ Lemma le_refl :
   reflexive le.
 Proof. by move=> x /=; rewrite /le eq_refl. Qed.
 
-Lemma le_antisym :
+Lemma le_anti :
   antisymmetric le.
 Proof. 
   rewrite /le=> x y /=.
@@ -771,55 +891,52 @@ Lemma lt_rmono x y :
   f x < f y -> lt x y.
 Proof. by rewrite /lt /= => ->. Qed.
 
-End HomExtOrder.
-End HomExtOrder.
+Definition porderMixin := 
+  @LePOrderMixin E1 le lt lt_def le_refl le_anti le_trans.
 
-Section HomExtDef. 
+Definition porderType := 
+  POrderType tt E1 porderMixin.
+
+Definition lposetMixin := 
+  lPoset.Mixin (lab : porderType -> L). 
+
+Definition lposetType := 
+  lPoset.Pack (@lPoset.Class E1 L (POrder.class porderType) lposetMixin).
+
+End Order.
+End Order.
+
+Module Export Def.
+Section Def. 
 Context {L : Type} {E1 E2 : lPoset.eventType L} (f : E1 ~> E2).
 
-Definition Ext : lPoset.eventType L.
-  exists E1; unshelve (econstructor).
-  - exists (class E1), (HomExtOrder.le f) (HomExtOrder.lt f).
-    + exact/HomExtOrder.lt_def.
-    + exact/HomExtOrder.le_refl.
-    + exact/HomExtOrder.le_antisym.
-    + exact/HomExtOrder.le_trans. 
-  constructor; exact/(@lab L E1). 
-Defined.
+(* TODO: try alternative design with lPoset instance for ext
+ *   being parametrized by `f` and give rise to type `E1^f`,
+ *   and also define corresponding notations `e1 <=[f] e2`.
+ *)
+Definition ext : lPoset.eventType L := Order.lposetType f.
 
-End HomExtDef.
+End Def.
+End Def.
 
-Section HomExtTheory.
+Module Export Theory.
+Section Theory.
 Context {L : Type} {E1 E2 : lPoset.eventType L}.
 Implicit Types (f : E1 ~> E2).
 
-Definition bij_ext f : E1 ≃> Ext f.
-  exists (id : E1 -> Ext f).
-  repeat constructor. 
-  - exact/HomExtOrder.le_id_mono.
-  by exists (id : Ext f -> E1).
-Defined.
-
-Definition ext_hom f : Ext f ~> E2.
-  exists (f : Ext f -> E2).
-  repeat constructor.
-  - exact/(lab_preserv f).
-  move=> e1 e2; exact/HomExtOrder.le_mono.
-Defined.  
-
-Lemma ext_lt_rmono f (e1 e2 : Ext f) :
+Lemma ext_lt_rmono f (e1 e2 : ext f) :
   f e1 < f e2 -> e1 < e2.
-Proof. rewrite {2}/Order.lt /=; exact/HomExtOrder.lt_rmono. Qed.
+Proof. exact/Order.lt_rmono. Qed.
 
-Lemma ext_le_rmono (f : E1 ≃> E2) (e1 e2 : Ext f) :
+Lemma ext_le_rmono (f : E1 ≃> E2) (e1 e2 : ext f) :
   f e1 <= f e2 -> e1 <= e2.
 Proof. 
   rewrite !le_eqVlt=> /orP[]. 
-  - by move=> /eqP /(bij_inj (event_bij f)) /eqP->. 
+  - by move=> /eqP /(bij_inj (bhom_bij f)) /eqP->. 
   by move=> /ext_lt_rmono ->.
 Qed.
 
-Lemma ext_incomp f (e1 e2 : Ext f) :
+Lemma ext_incomp f (e1 e2 : ext f) :
   e1 >< e2 -> (f e1 == f e2) || (f e1 >< f e2).
 Proof. 
   case H: (f e1 <= f e2); move: H.
@@ -831,19 +948,59 @@ Proof.
   by rewrite {2}/comparable=> -> ->.
 Qed.
 
-Definition ext_bij (f : E1 ≃> E2) : Ext f ~= E2.
-  pose g := ext_hom f.
-  exists g; constructor=> //; first constructor.
-  - by case: g.
-  - pose f' := (Bij.inv f).
-    pose h := (bij_ext f).
-    exists (h \o f').
-    + move=> ? /=; rewrite Bij.idE; exact/inv_can. 
-    move=> ? /=; rewrite Bij.idE; exact/can_inv. 
-  constructor; exact/ext_le_rmono.
-Defined.
+End Theory.
+End Theory.
 
-End HomExtTheory.
+Section Build.
+Context {L : Type} {E1 E2 : lPoset.eventType L}.
+Implicit Types (f : E1 ~> E2).
+Implicit Types (g : E1 ≃> E2).
+
+Lemma bhom_class f : bHom.class_of (id : E1 -> ext f).
+Proof. 
+  repeat constructor. 
+  - exact/Order.le_id_mono.
+  by exists (id : ext f -> E1).
+Qed.
+
+Definition bhom f : E1 ≃> ext f := 
+  bHom.Pack (bhom_class f).
+
+Lemma hom_class f : Hom.class_of (f : ext f -> E2).
+Proof. 
+  repeat constructor.
+  - exact/(lab_preserving f).
+  move=> e1 e2; exact/Order.le_mono.
+Qed.  
+
+Definition hom f : ext f ~> E2 := 
+  Hom.Pack (hom_class f).
+
+Lemma iso_class g : Iso.class_of (g : ext g -> E2).
+Proof. 
+  constructor; constructor. 
+  - exact/(hom_class g).
+  - exists ((bhom g) \o (bHom.invF g))=> ? /=; 
+      [exact/inv_can | exact/can_inv].
+  exact/ext_le_rmono.
+Qed.
+
+Definition iso (g : E1 ≃> E2) : ext g ~= E2 := 
+  Iso.Pack (iso_class g).
+
+End Build.
+
+End Ext.
+
+Notation ext := (Ext.Def.ext).
+
+Module Syntax. 
+Export Hom.Syntax.
+Export iHom.Syntax.
+Export bHom.Syntax.
+Export Emb.Syntax.
+Export Iso.Syntax.
+End Syntax.
 
 End lPoset.
 
@@ -851,12 +1008,17 @@ Export lPoset.lPoset.Exports.
 Export lPoset.Def.
 
 Export lPoset.Hom.Hom.Exports.
-Export lPoset.Bij.Bij.Exports.
+Export lPoset.iHom.iHom.Exports.
+Export lPoset.bHom.bHom.Exports.
 Export lPoset.Emb.Emb.Exports.
 Export lPoset.Iso.Iso.Exports.
+
 Export lPoset.Hom.Theory.
-Export lPoset.Bij.Theory.
+Export lPoset.iHom.Theory.
+Export lPoset.bHom.Theory.
 Export lPoset.Emb.Theory.
+
+Export lPoset.Ext.Theory.
 
 Notation lposet := (lPoset.eventStruct).
 
@@ -925,7 +1087,7 @@ Notation eventType := lLoset.type.
 Notation eventStruct := lLoset.class_of.
 
 Import lPoset.Hom.Syntax.
-Import lPoset.Bij.Syntax.
+Import lPoset.bHom.Syntax.
 Import lPoset.Emb.Syntax.
 Import lPoset.Iso.Syntax.
 
@@ -999,17 +1161,14 @@ Export lFinPoset.Exports.
 Notation eventType := lFinPoset.type.
 Notation eventStruct := lFinPoset.class_of.
 
-Import lPoset.Hom.Syntax.
-Import lPoset.Bij.Syntax.
-Import lPoset.Emb.Syntax.
-Import lPoset.Iso.Syntax.
+Import lPoset.Syntax.
 
-Module Export MorphismsProps.
-Section MorphismsProps.
+Module Export Theory.
+Section Theory.
 Context {L : eqType} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Lemma fin_lab_preserveP f : 
+Lemma fin_lab_preservingP f : 
   reflect { mono f : e / lab e } [forall e, lab (f e) == lab e].
 Proof. apply/forallPP=> ?; exact/eqP. Qed.
 
@@ -1023,169 +1182,301 @@ Lemma fin_ca_reflectingP f :
           [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)].
 Proof. repeat apply/forallPP=> ?; rewrite eq_sym; exact/eqP. Qed.
 
-End MorphismsProps.
-End MorphismsProps.
+End Theory.
+End Theory.
 
-(* Checks whether given function forms certain morphism *)
-Section MorphismsDef.
+Module Export Hom.
+Section Hom.
 Context {L : eqType} (E1 E2 : eventType L).
-Implicit Types (f : E1 -> E2).
 
-Definition ohom_class f : option (lPoset.Hom.Hom.class_of f).
-(* --- *)
-  case: [forall e, lab (f e) == lab e]/fin_lab_preserveP; 
-    move=> ?; last exact/None. 
-  case: [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]/fin_ca_monotoneP; 
-    move=> ?; last exact/None.
-  by apply/Some. 
-Defined.
+Definition hom_pred (f : {ffun E1 -> E2}) := 
+  [&& [forall e, lab (f e) == lab e]  
+    & [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)]
+  ].
+
+(* TODO: try to shorten copy-paste in hom definitions, 
+ *   try to generalize to arbitary pair of P and p, 
+ *   s.t. reflect P p  
+ *)
+
+(* TODO: try alternative notations: 
+ *   {hom E1 -> E2} for homomorphism
+ *   {fhom E1 -> E2} for finite homomorphism
+ *)
+
+Lemma fhom_lab_preserving (f : {ffun E1 -> E2 | hom_pred}) :
+  [forall e, lab (f e) == lab e].
+Proof. by case: f=> [{}f] /= /andP[]. Qed.
+
+Lemma fhom_ca_monotone (f : {ffun E1 -> E2 | hom_pred}) :
+  [forall e1, forall e2, (e1 <= e2) ==> (f e1 <= f e2)].
+Proof. by case: f=> [{}f] /= /andP[]. Qed.
+
+Lemma hom_pred_of_hom (f : E1 ~> E2) : 
+  hom_pred [ffun x => f x].
+Proof. 
+  apply/andP; split.
+  - apply/forallP=> e; rewrite ffunE /=. 
+    by apply/eqP/(lab_preserving f).
+  apply/forallP=> e1; apply/forallP=> e2.
+  apply/implyP; rewrite !ffunE /=.
+  by apply/(ca_monotone f).
+Qed.
+
+Definition fhom_of_hom : (E1 ~> E2) -> {ffun E1 -> E2 | hom_pred} := 
+  fun (f : E1 ~> E2) => Sub [ffun x => f x] (hom_pred_of_hom f).
+
+Lemma hom_mixin (f : {ffun E1 -> E2 | hom_pred}) : 
+  lPoset.Hom.Hom.mixin_of f.
+Proof.
+  constructor.
+  - apply/fin_lab_preservingP/fhom_lab_preserving.
+  apply/fin_ca_monotoneP/fhom_ca_monotone.
+Qed.
+
+Definition hom_of_fhom : {ffun E1 -> E2 | hom_pred} -> (E1 ~> E2) :=
+  fun f => lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin f)).
 
 Definition ohom f : option (E1 ~> E2) := 
-  omap (fun c => lPoset.Hom.Hom.Pack c) (ohom_class f).
+  omap hom_of_fhom (insub [ffun x => f x]).
 
-Lemma hom_ohom (f : E1 ~> E2) : ohom f.
-Proof. 
-  rewrite /ohom; case H: (ohom_class f)=> //=.
-  move: H; rewrite /ohom_class.
-  move: (lab_preserv f) (ca_monotone f).
-  case: (fin_lab_preserveP f)=> //. 
-  case: (fin_ca_monotoneP f)=> //.
-Qed.
-
-(* TODO: generalize proofs of morphism reflect lemmas, get rid of copy-paste *)
 Lemma homP :
-  reflect ?|E1 ~> E2| [exists f : {ffun E1 -> E2}, ohom f].
+  reflect ?|E1 ~> E2| ??|{ffun E1 -> E2 | hom_pred}|.
 Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (ohom f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Hom.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/hom_ohom.
+  apply/equivP; first exact/fin_inhP.
+  apply/(inh_iff hom_of_fhom).  
+  exact/fhom_of_hom.
 Qed.
 
-Definition obij_class f : option (lPoset.Bij.Bij.class_of f).
-(* --- *)
-  case Hc: (ohom_class f)=> [c|]; last exact/None.
-  case: (injectiveb f)/injectiveP=> Hi; last exact/None.
-  case: (#|E2| == #|E1|)%N/eqP; last by (move=> ?; exact/None).
-  move=> /eq_leq Hn.
+End Hom.
+
+Prenex Implicits hom_pred hom_of_fhom fhom_of_hom ohom.
+
+End Hom.
+
+Module Export iHom.
+Section iHom.
+Context {L : eqType} (E1 E2 : eventType L).
+
+Definition ihom_pred (f : {ffun E1 -> E2}) := 
+  hom_pred f && injectiveb f.
+
+Lemma fihom_inj (f : {ffun E1 -> E2 | ihom_pred}) :
+  injective f.
+Proof. by case: f=> [{}f] /= /andP[] ? /injectiveP. Qed.
+
+Lemma ihom_pred_of_ihom (f : E1 ≈> E2) : 
+  ihom_pred [ffun x => f x].
+Proof. 
+  apply/andP; split; first exact/hom_pred_of_hom.
+  apply/injectiveP=> x y; rewrite !ffunE; exact/ihom_inj.
+Qed.
+
+Definition fhom_of_fihom (f : {ffun E1 -> E2 | ihom_pred}) : 
+  {ffun E1 -> E2 | hom_pred} := Sub _ (proj1 (andP (valP f))).
+
+Definition fihom_of_ihom (f : E1 ≈> E2) : {ffun E1 -> E2 | ihom_pred} := 
+  Sub [ffun x => f x] (ihom_pred_of_ihom f).
+
+Lemma ihom_mixin (f : {ffun E1 -> E2 | ihom_pred}) : 
+  lPoset.iHom.iHom.mixin_of f.
+Proof. constructor; exact/fihom_inj. Qed.
+
+Definition ihom_of_fihom (f : {ffun E1 -> E2 | ihom_pred}) : (E1 ≈> E2) :=
+  let base  := lPoset.Hom.Hom.class (hom_of_fhom (fhom_of_fihom f)) in
+  let mixin := ihom_mixin f in 
+  lPoset.iHom.iHom.Pack (lPoset.iHom.iHom.Class base mixin).
+
+Definition oihom f : option (E1 ≈> E2) := 
+  omap ihom_of_fihom (insub [ffun x => f x]).
+
+Lemma ihomP :
+  reflect ?|E1 ≈> E2| ??|{ffun E1 -> E2 | ihom_pred}|.
+Proof.
+  apply/equivP; first exact/fin_inhP.
+  apply/(inh_iff ihom_of_fihom).  
+  exact/fihom_of_ihom.
+Qed.
+
+End iHom.
+
+Prenex Implicits ihom_pred ihom_of_fihom fihom_of_ihom oihom.
+
+End iHom.
+
+Module Export bHom.
+Section bHom.
+Context {L : eqType} (E1 E2 : eventType L).
+
+Definition bhom_pred (f : {ffun E1 -> E2}) := 
+  ihom_pred f && (#|E2| <= #|E1|).
+
+Lemma fbhom_bij (f : {ffun E1 -> E2 | bhom_pred}) :
+  bijective f.
+Proof. 
+  case: f=> [{}f] /= /andP[] /andP[] ?.
+  move=> /injectiveP; exact/inj_card_bij.  
+Qed.
+
+Lemma bhom_pred_of_bhom (f : E1 ≃> E2) : 
+  bhom_pred [ffun x => f x].
+Proof. 
+  apply/andP; split; first exact/ihom_pred_of_ihom.
+  by apply/eq_leq/esym/bij_eq_card/(bhom_bij f).
+Qed.
+
+Definition fihom_of_fbhom (f : {ffun E1 -> E2 | bhom_pred}) : 
+  {ffun E1 -> E2 | ihom_pred} := Sub _ (proj1 (andP (valP f))).
+
+Definition fbhom_of_bhom (f : E1 ≃> E2) : {ffun E1 -> E2 | bhom_pred} := 
+  Sub [ffun x => f x] (bhom_pred_of_bhom f).
+
+Lemma bhom_mixin (f : {ffun E1 -> E2 | bhom_pred}) : 
+  lPoset.bHom.bHom.mixin_of f.
+Proof. 
+  move: (valP f)=> /andP[] /andP[] ? /injectiveP Hi Hn.
   pose g := (fun y => iinv (inj_card_onto Hi Hn y)).
-  apply/Some; constructor; first exact/c.
   by exists g=> y; rewrite /g ?iinv_f ?f_iinv.
-Defined.
-
-Definition obij f : option (E1 ≃> E2) := 
-  omap (fun c => lPoset.Bij.Bij.Pack c) (obij_class f).
-
-Lemma bij_obij (f : E1 ≃> E2) : obij f.
-Proof. 
-  move: (hom_ohom f); case Hh: (ohom f)=> [c|] //=> _.
-  rewrite /obij; case Hb: (obij_class f)=> //=.
-  move: Hb; rewrite /obij_class.
-  move: Hh; rewrite /ohom /omap /obind /oapp. 
-  case: (ohom_class f)=> // ? [] ?.
-  move: (event_bij f)=> /[dup] /bij_inj ? /bij_eq_card /esym.
-  case: (injectiveP f)=> // ?. 
-  by case: eqP.
 Qed.
 
-Lemma bijP :
-  reflect ?|E1 ≃> E2| [exists f : {ffun E1 -> E2}, obij f].
+Definition bhom_of_fbhom (f : {ffun E1 -> E2 | bhom_pred}) : (E1 ≃> E2) :=
+  let fihom := fihom_of_fbhom f in
+  let base  := lPoset.Hom.Hom.class (hom_of_fhom (fhom_of_fihom fihom)) in
+  let mixin := bhom_mixin f in 
+  lPoset.bHom.bHom.Pack (lPoset.bHom.bHom.Class base mixin).
+
+Definition obhom f : option (E1 ≃> E2) := 
+  omap bhom_of_fbhom (insub [ffun x => f x]).
+
+Lemma bhomP :
+  reflect ?|E1 ≃> E2| ??|{ffun E1 -> E2 | bhom_pred}|.
 Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (obij f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Bij.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/bij_obij.
+  apply/equivP; first exact/fin_inhP.
+  apply/(inh_iff bhom_of_fbhom).  
+  exact/fbhom_of_bhom.
 Qed.
 
-Definition oemb_mixin f : option (lPoset.Emb.Emb.mixin_of f).
-(* --- *)
-  case: [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)]/fin_ca_reflectingP;
-    move=> He; last exact/None. 
-  by apply/Some; constructor=> ??; rewrite He.
-Defined.
+End bHom.
 
-Definition oemb_class f : option (lPoset.Emb.Emb.class_of f).
-(* --- *)
-  case Hc: (ohom_class f)=> [c|]; last exact/None.
-  case Hm: (oemb_mixin f)=> [m|]; last exact/None.
-  by apply/Some.
-Defined.
+Prenex Implicits bhom_pred bhom_of_fbhom fbhom_of_bhom obhom.
 
-Definition oemb f : option (E1 ≈> E2) := 
-  omap (fun c => lPoset.Emb.Emb.Pack c) (oemb_class f).
+End bHom.
 
-Lemma emb_oemb (f : E1 ≈> E2) : oemb f.
+Module Export Emb.
+Section Emb.
+Context {L : eqType} (E1 E2 : eventType L).
+
+Definition emb_pred (f : {ffun E1 -> E2}) := 
+  hom_pred f && [forall e1, forall e2, (f e1 <= f e2) ==> (e1 <= e2)].
+
+Lemma femb_ca_reflecting (f : {ffun E1 -> E2 | emb_pred}) :
+  [forall e1, forall e2, (e1 <= e2) == (f e1 <= f e2)].
 Proof. 
-  move: (hom_ohom f); case Hh: (ohom f)=> [c|] //=> _.
-  rewrite /oemb; case Hm: (oemb_class f)=> //=.
-  move: Hm; rewrite /oemb_class /oemb_mixin.
-  move: Hh; rewrite /ohom /omap /obind /oapp. 
-  case: (ohom_class f)=> // ? [] ?.
-  move: (ca_reflecting f).
-  case: (fin_ca_reflectingP f)=> //. 
+  case: f=> [{}f] /= /andP[] /andP[] ?.
+  move=> /forall2P H1 /forall2P H2.
+  apply/forall2P=> e1 e2; apply/eqP/eq_bool_iff.
+  split; apply/implyP; [exact/H1 | exact/H2].
 Qed.
+
+Lemma emb_pred_of_emb (f : E1 ~≥ E2) : 
+  emb_pred [ffun x => f x].
+Proof. 
+  apply/andP; split; first exact/hom_pred_of_hom. 
+  apply/forall2P=> e1 e2; rewrite !ffunE.
+  by apply/implyP; rewrite (ca_reflecting f).
+Qed.
+
+Lemma emb_mixin (f : {ffun E1 -> E2 | emb_pred}) : 
+  lPoset.Emb.Emb.mixin_of f.
+Proof. 
+  constructor=> e1 e2.
+  move: (femb_ca_reflecting f).
+  move=> /fin_ca_reflectingP H. 
+  by move: (H e1 e2)=> ->.
+Qed.
+
+Definition fhom_of_femb (f : {ffun E1 -> E2 | emb_pred}) : 
+  {ffun E1 -> E2 | hom_pred} := Sub _ (proj1 (andP (valP f))).
+
+Definition femb_of_emb (f : E1 ~≥ E2) : {ffun E1 -> E2 | emb_pred} := 
+  Sub [ffun x => f x] (emb_pred_of_emb f).
+
+Definition emb_of_femb (f : {ffun E1 -> E2 | emb_pred}) : (E1 ~≥ E2) :=
+  let base  := lPoset.Hom.Hom.class (hom_of_fhom (fhom_of_femb f)) in
+  let mixin := emb_mixin f in 
+  lPoset.Emb.Emb.Pack (lPoset.Emb.Emb.Class base mixin).
+
+Definition oemb f : option (E1 ~≥ E2) := 
+  omap emb_of_femb (insub [ffun x => f x]).
 
 Lemma embP :
-  reflect ?|E1 ≈> E2| [exists f : {ffun E1 -> E2}, oemb f].
+  reflect ?|E1 ~≥ E2| ??|{ffun E1 -> E2 | emb_pred}|.
 Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (oemb f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Emb.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/emb_oemb.
+  apply/equivP; first exact/fin_inhP.
+  apply/(inh_iff emb_of_femb).  
+  exact/femb_of_emb.
 Qed.
 
-Lemma oiso_class f : option (lPoset.Iso.Iso.class_of f).
-(* --- *)
-  case Hc: (obij_class f)=> [c|]; last exact/None.
-  case He: (oemb_mixin f)=> [m|]; last exact/None.
-  by apply/Some.
-Defined.
+End Emb.
+
+Prenex Implicits emb_pred emb_of_femb femb_of_emb oemb.
+
+End Emb.
+
+Module Export Iso.
+Section Iso.
+Context {L : eqType} (E1 E2 : eventType L).
+
+Definition iso_pred (f : {ffun E1 -> E2}) := 
+  bhom_pred f && [forall e1, forall e2, (f e1 <= f e2) ==> (e1 <= e2)].
+
+Lemma iso_pred_of_iso (f : E1 ~= E2) : 
+  iso_pred [ffun x => f x].
+Proof. 
+  apply/andP; split; first exact/bhom_pred_of_bhom. 
+  apply/forall2P=> e1 e2; rewrite !ffunE. 
+  rewrite (ca_reflecting f); exact/implyP.
+Qed.
+
+Lemma emb_pred_of_fiso f : iso_pred f -> emb_pred f. 
+Proof. by move=> /andP[] /andP[] /andP[] Hf _ _ Hm; apply/andP. Qed. 
+
+Definition fbhom_of_fiso (f : {ffun E1 -> E2 | iso_pred}) : 
+  {ffun E1 -> E2 | bhom_pred} := Sub _ (proj1 (andP (valP f))).
+
+Definition femb_of_fiso (f : {ffun E1 -> E2 | iso_pred}) : 
+  {ffun E1 -> E2 | emb_pred} := Sub _ (emb_pred_of_fiso (valP f)).
+
+Definition fiso_of_iso (f : E1 ~= E2) : {ffun E1 -> E2 | iso_pred} := 
+  Sub [ffun x => f x] (iso_pred_of_iso f).
+
+Definition iso_of_fiso (f : {ffun E1 -> E2 | iso_pred}) : (E1 ~= E2) :=
+  let fbhom := fbhom_of_fiso f in
+  let base  := lPoset.bHom.bHom.class (bhom_of_fbhom fbhom) in
+  let mixin := emb_mixin (femb_of_fiso f) in 
+  lPoset.Iso.Iso.Pack (lPoset.Iso.Iso.Class base mixin).
 
 Definition oiso f : option (E1 ~= E2) := 
-  omap (fun c => lPoset.Iso.Iso.Pack c) (oiso_class f).
-
-Lemma iso_oiso (f : E1 ~= E2) : oiso f.
-Proof. 
-  move: (bij_obij f); case Hb: (obij f)=> [cb|] //=> _.
-  move: (emb_oemb f); case He: (oemb f)=> [ce|] //=> _.
-  rewrite /oiso; case Hm: (oiso_class f)=> //=.
-  move: Hm; rewrite /oiso_class.  
-  move: Hb; rewrite /obij /omap /obind /oapp. 
-  move: He; rewrite /oemb /oemb_class /omap /obind /oapp. 
-  case: (ohom_class f)=> // [] ?. 
-  case: (obij_class f)=> // [] ?. 
-  case: (oemb_mixin f)=> // [] ?. 
-Qed.
+  omap iso_of_fiso (insub [ffun x => f x]).
 
 Lemma isoP :
-  reflect ?|E1 ~= E2| [exists f : {ffun E1 -> E2}, oiso f].
+  reflect ?|E1 ~= E2| ??|{ffun E1 -> E2 | iso_pred}|.
 Proof.
-  apply/(iffP idP).
-  - by move=> /existsP [f]; case: (oiso f)=> //.
-  move=> [f]; apply /existsP. 
-  have Heqf: (finfun f =1 f) by apply/ffunE.
-  pose f' := lPoset.Iso.of_eqfun Heqf.
-  exists (finfun f); have->: (finfun f : E1 -> E2) = f' by done. 
-  exact/iso_oiso.
+  apply/equivP; first exact/fin_inhP.
+  apply/(inh_iff iso_of_fiso).  
+  exact/fiso_of_iso.
 Qed.
 
-Global Opaque ohom_class obij_class oemb_mixin oemb_class oiso_class.
+End Iso.
 
-End MorphismsDef.
+Prenex Implicits iso_pred iso_of_fiso fiso_of_iso oiso.
+
+End Iso.
 
 End lFinPoset.
 
 Export lFinPoset.lFinPoset.Exports.
-Export lFinPoset.MorphismsProps.
+Export lFinPoset.Theory.
 
 
 Module tPoset.
@@ -1263,10 +1554,7 @@ Export tPoset.Exports.
 
 Notation eventType := tPoset.lfinposetType.
 
-Import lPoset.Hom.Syntax.
-Import lPoset.Bij.Syntax.
-Import lPoset.Emb.Syntax.
-Import lPoset.Iso.Syntax.
+Import lPoset.Syntax.
 
 Module Export Theory.
 Section Theory. 
@@ -1290,7 +1578,7 @@ Section Def.
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
 Definition of_bij : 
-  (eventType t ≃> eventType u) -> (eventType t ≈> eventType u) := 
+  (eventType t ≃> eventType u) -> (eventType t ~≥ eventType u) := 
     fun f => lPoset.Iso.of_tot_bij f (@tca_total L n t).
 
 End Def.
@@ -1301,10 +1589,10 @@ Section HomP.
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
 Lemma homP : 
-  reflect ?|{f : eventType t ~> eventType u | injective f}| (subseq t u).
+  reflect ?|eventType t ≈> eventType u| (subseq t u).
 Proof. 
   apply/(iffP idP); last first.
-  - move=> [[f Hf]]; apply/subseqP.
+  - move=> [f]; apply/subseqP.
     pose g := sub_lift (fun i => (m + i)%N) (fun i => val (f i)) : nat -> nat.  
     pose s := mkseq g n.
     exists (mkmask s m).
@@ -1314,8 +1602,9 @@ Proof.
       by rewrite sub_liftT.
     apply/esym; subst s. 
     rewrite (@mkmask_mask L _ _ t)=> //.
-    + by move=> ???; apply/(sca_monotone Hf).
-    by move=> ?; rewrite -tlabE -tlabE lab_preserv.
+    + by move=> ???; apply (sca_monotone f).
+    + exact/ihom_inj.
+    by move=> ?; rewrite -tlabE -tlabE lab_preserving.
   move: m u; clear m u.
   case=> [u|m u].
   - move: (tuple0 u)=> /= -> /=.
@@ -1332,7 +1621,8 @@ Proof.
   have He: forall (e : eventType t), (find_nth id b e < m.+1)%N.
   - move=> e; rewrite -[m.+1](size_tuple u) -Hsz.
     by rewrite (mask_size_find_nth Hsz) // -Hb (size_tuple t).
-  constructor; unshelve eexists; [exists f|..]; repeat constructor; move=>/=.
+  constructor; unshelve eexists; [exact/f |]. 
+  repeat constructor; move=>/=.
   - move=> e; rewrite !tlabE. 
     rewrite !(tnth_nth l) Hb (nth_mask l e Hsz).
     by rewrite val_sub_downT //. 
@@ -1351,10 +1641,9 @@ Lemma isoP :
   reflect ?|eventType t ~= eventType u| (t == u :> seq L).
 Proof. 
   apply/(iffP idP); last first.  
-  - move=> [f]; move: (lPoset.Iso.sy f)=> g.
+  - move=> [f]; move: (lPoset.Iso.inv f)=> g.
     apply/eqP/subseq_anti/andP. 
-    split; apply/homP; repeat eexists; apply/bij_inj/event_bij; 
-      [exact f| exact g].
+    split; apply/homP; eexists; [exact/f | exact/g]. 
   move=> /eqP H; have Hn: n = m. 
   - by rewrite -(size_tuple t) -(size_tuple u) H.
   move: u H; clear u; case Hn=> u.

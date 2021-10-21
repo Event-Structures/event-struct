@@ -1,6 +1,6 @@
 From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype choice.
-From mathcomp Require Import order seq tuple path fintype finmap.
+From mathcomp Require Import order seq tuple path fintype finfun finmap.
 From eventstruct Require Import ssrnatlia.
 
 Set Implicit Arguments.
@@ -42,14 +42,6 @@ Lemma orbbbbT a b c d: [|| a, b, c, d | true].
 Proof. by rewrite !orbT. Qed.
 
 Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
-
-(* ************************************************************************** *)
-(*     Additional Notations                                                   *)
-(* ************************************************************************** *)
-
-(* TODO: move to `inhtype.v`? add scope? *)
-Notation "?| T |" := (inhabited T)
-  (at level 0, T at level 99, format "?| T |").
 
 (* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
@@ -360,13 +352,22 @@ End FSetUtils.
 Section FinTypeUtils.
 
 Context {T T' : finType}. 
-Implicit Types (f : T -> T').
+Implicit Types (r : rel T) (f : T -> T').
 
 (* TODO: migrate to `mathcomp` once 
  *   https://github.com/math-comp/math-comp/pull/771 is merged 
  *)
 Lemma bij_eq_card f : bijective f -> #|T| = #|T'|.
 Proof. by move=> [g /can_inj/leq_card + /can_inj/leq_card]; case: ltngtP. Qed.
+
+(* TODO: use `forallPP` instead? *)
+Lemma forall2P r : 
+  reflect (forall x y, r x y) [forall x, forall y, r x y].
+Proof. 
+  apply/(equivP forallP); split.
+  - by move=> H x y; move: (H x)=> /forallP.
+  by move=> H x; apply/forallP.  
+Qed.
 
 End FinTypeUtils.
 
@@ -1042,19 +1043,55 @@ Qed.
 
 End MkMaskMask.
 
-(* TODO: move to `inhtype.v` *)
-Section InhabitedUtils.
+Module Export SubFinFun.
 
-Context {T U : Type}.
+Section Def.
+Context {aT : finType} {rT : Type}.
+Implicit Types (P : pred {ffun aT -> rT}).
 
-(* TODO: use this lemma in lposet.v/thomP proof *)
-Lemma nihn_inh_fun : 
-  ~ inhabited T -> inhabited (T -> U).
-Proof. 
-  move=> H; constructor. 
-  have fT: (forall x : T, False).
-  - move=> x; apply/H; constructor; exact/x. 
-  by refine (fun x => match fT x with end).
-Qed.
+Structure subFinfun P : Type := SubFinfun { 
+  apply :> {ffun aT -> rT};
+  _     : P apply;
+}.
 
-End InhabitedUtils.
+Canonical subFinfun_subType P := Eval hnf in [subType for (@apply P)].
+
+Definition sub_finfun_of (ph : phant (aT -> rT)) P : predArgType :=
+  [subType of (subFinfun P)].
+
+End Def.
+
+Notation "{ 'ffun' fT '|' P }" := (sub_finfun_of (Phant fT) P).
+
+Section Instances.
+Context {aT : finType}.
+
+Definition subFinfun_eqMixin (rT : eqType) (P : pred {ffun aT -> rT}) := 
+  Eval hnf in [eqMixin of {ffun aT -> rT | P} by <:].
+Canonical subFinfun_eqType (rT : eqType) (P : pred {ffun aT -> rT}) := 
+  Eval hnf in EqType {ffun aT -> rT | P} (subFinfun_eqMixin P).
+
+Definition subFinfun_choiceMixin (rT : choiceType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [choiceMixin of {ffun aT -> rT | P} by <:].
+Canonical subFinfun_choiceType (rT : choiceType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in ChoiceType {ffun aT -> rT | P} (subFinfun_choiceMixin P).
+
+Definition subFinfun_countMixin (rT : countType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [countMixin of {ffun aT -> rT | P} by <:].
+Canonical subFinfun_countType (rT : countType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in CountType {ffun aT -> rT | P} (subFinfun_countMixin P).
+
+Canonical subFinfun_subCountType (rT : countType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [subCountType of {ffun aT -> rT | P}].
+
+Definition subFinfun_finMixin (rT : finType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [finMixin of {ffun aT -> rT | P} by <:].
+Canonical subFinfun_finType (rT : finType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in FinType {ffun aT -> rT | P} (subFinfun_finMixin P).
+
+Canonical subFinfun_subFinType (rT : finType) (P : pred {ffun aT -> rT}) :=
+  Eval hnf in [subFinType of {ffun aT -> rT | P}].
+
+End Instances.
+
+End SubFinFun.

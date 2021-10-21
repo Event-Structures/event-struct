@@ -28,10 +28,7 @@ Module Pomset.
 
 Implicit Types (L : Type).
 
-Import lPoset.Hom.Syntax.
-Import lPoset.Bij.Syntax.
-Import lPoset.Emb.Syntax.
-Import lPoset.Iso.Syntax.
+Import lPoset.Syntax.
 
 Definition iso_inv {L} (P : lPoset.eventType L -> Prop) := 
   forall {E1 E2} (f : E1 ~= E2), P E1 -> P E2.
@@ -86,7 +83,7 @@ Proof.
   move: P=> [] P + p q /=.
   rewrite /iso_inv=> HP f.
   apply/contra_not.
-  by move: (HP _ _ (lPoset.Iso.sy f)).
+  by move: (HP _ _ (lPoset.Iso.inv f)).
 Qed.  
 Canonical neg P := Lang (@negP P).
 
@@ -122,7 +119,7 @@ Context {L : Type}.
 Implicit Types (P Q : lang L).
 
 Definition extensible P Q : Prop := 
-  forall p q (f : p ~> q), P p -> Q q -> (P ⊓ Q) (lPoset.Ext f).
+  forall p q (f : p ~> q), P p -> Q q -> (P ⊓ Q) (lPoset.ext f).
 
 Definition stronger P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited (q ~> p).
@@ -177,21 +174,22 @@ Proof.
   move=> H1 H2 p HP. 
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
-  exists r; split=> //; constructor; exact/(lPoset.Hom.tr g f).
+  exists r; split=> //; constructor. 
+  exact/(lPoset.Hom.comp g f).
 Qed.
 
 Lemma unistronger_subset P Q :
   P ≦ Q -> P !⊑ Q. 
 Proof. 
   move=> Hs p Hp; exists p; split; first exact /Hs. 
-  constructor; exact/lPoset.Bij.id. 
+  constructor; exact/lPoset.bHom.id. 
 Qed.
   
 Lemma unistronger_refl P : 
   P !⊑ P.
 Proof. 
   move=> p HP; exists p; split=> //. 
-  constructor; exact/lPoset.Bij.id.
+  constructor; exact/lPoset.bHom.id.
 Qed.
 
 Lemma unistronger_trans P Q R : 
@@ -200,7 +198,8 @@ Proof.
   move=> H1 H2 p HP. 
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
-  exists r; split=> //; constructor; exact/(lPoset.Bij.tr g f).
+  exists r; split=> //; constructor.
+  exact/(lPoset.bHom.comp g f).
 Qed.
 
 Lemma unistronger_stronger P Q : 
@@ -215,14 +214,14 @@ Lemma supported_subset P Q :
   P ≦ Q -> P ↪ Q. 
 Proof. 
   move=> Hs p Hp; exists p; split; first exact /Hs. 
-  constructor; exact/lPoset.Bij.id. 
+  constructor; exact/lPoset.bHom.id. 
 Qed.
 
 Lemma supported_refl P : 
   P ↪ P. 
 Proof. 
   move=> p HP; exists p; split=> //.
-  constructor; exact/lPoset.Bij.id.
+  constructor; exact/lPoset.bHom.id.
 Qed.
 
 Lemma supported_trans P Q R : 
@@ -231,7 +230,8 @@ Proof.
   move=> H1 H2 p HP. 
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
-  exists r; split=> //; constructor; exact/(lPoset.Bij.tr f g).
+  exists r; split=> //; constructor. 
+  exact/(lPoset.bHom.comp f g).
 Qed.
 
 End Theory.
@@ -258,7 +258,7 @@ Definition prop (E : lPoset.eventType L) : Prop :=
 Lemma iso_inv : Pomset.iso_inv prop. 
 Proof. 
   rewrite /prop=> E1 E2 f T e1 e2. 
-  set (g := lPoset.Iso.sy f).
+  set (g := lPoset.Iso.inv f).
   move: (T (g e1) (g e2)).
   case H: (g e1 <= g e2); move: H. 
   - by rewrite (ca_reflecting g)=> ->.
@@ -293,7 +293,7 @@ End LinPomset.
 Module Export Schedule.
 
 Import lPoset.Hom.Syntax.
-Import lPoset.Bij.Syntax.
+Import lPoset.bHom.Syntax.
 Import lPoset.Iso.Syntax.
 
 Module Schedule. 
@@ -307,7 +307,7 @@ Lemma iso_inv : Pomset.iso_inv prop.
 Proof. 
   move=> E1 E2 f [] HT [g]; repeat split.
   - by apply /(LinPomset.Lang.iso_inv f).  
-   by apply /(lPoset.Bij.tr g f).
+   by apply /(lPoset.bHom.comp g f).
 Qed.
 
 Definition lang : Pomset.lang L := 
@@ -331,7 +331,7 @@ Proof.
   exists E1'; repeat split=> //=.
   - by apply /(lang_iso_inv f HP).
   - by apply /(LinPomset.Lang.iso_inv f).
-  by apply /(lPoset.Bij.tr g f).
+  by apply /(lPoset.bHom.comp g f).
 Qed.
 
 Definition lang : Pomset.lang L := 
@@ -368,7 +368,7 @@ Lemma schedule_bij p q :
   (p ≃> q) -> schedule q ≦ schedule p.
 Proof. 
   move=> f p' [Hl [g]]; repeat constructor=> //. 
-  exact /(lPoset.Bij.tr f g). 
+  exact /(lPoset.bHom.comp f g). 
 Qed.
 
 Lemma schedule_hom P Q p q : extensible P Q -> schedulable P -> 
@@ -402,20 +402,21 @@ Proof.
    *  As for (4) it is not obvious how it can be exploited in practice.
    *)
   move=> He Hd Hp Hq f q' [] Hq' [Hl [g]].
-  pose h := lPoset.Hom.tr f g.
-  pose p' := lPoset.Ext h. 
+  pose h := lPoset.Hom.comp f g.
+  pose p' := lPoset.ext h. 
   move: (He _ _ h) Hp Hq'=> /[apply] /[apply] [[]] + _. 
   move: (Hd p')=> /[apply] [[]] p'' [] [] Hp'' HL [] k.
   exists p''; repeat split=> //.
-  - apply/(lPoset.Bij.tr _ k)/lPoset.bij_ext.
-  pose h' := (lPoset.ext_hom h).
-  pose k' := (lPoset.Bij.inv k).
+  - apply/(lPoset.bHom.comp _ k)/lPoset.Ext.bhom.
+  pose h' := (lPoset.Ext.hom h).
+  pose k' := (lPoset.bHom.invF k).
   exists (h' \o k').
   repeat constructor.
-  - by move=> x /=; rewrite (lab_preserv h) -(inv_lab k).
+  - by move=> x /=; rewrite (lab_preserving h) -(inv_lab k).
   move=> e1 e2=> /= /(ca_img_inv k) /orP[].
   - by move=> /(ca_monotone h').
-  move=> /lPoset.ext_incomp /orP [/eqP->|] //. 
+  move=> /ext_incomp /orP[]. 
+  - by subst h k'; move=> /= /eqP->. 
   rewrite /comparable.
   move: Hl=> /=; rewrite /LinPomset.Lang.prop=> Ht.
   by move: (Ht (h (k' e1)) (h (k' e2)))=> ->. 
@@ -437,9 +438,9 @@ Proof.
   move: (Hw p Hp)=> [q [Hq [g]]].
   exists q; split=> //; split; last first. 
   - by apply/(schedule_bij g). 
-  pose h  := lPoset.Bij.tr g f.
-  pose q' := lPoset.Ext h. 
-  pose j  := (lPoset.ext_bij h).
+  pose h  := lPoset.bHom.comp g f.
+  pose q' := lPoset.ext h. 
+  pose j  := (lPoset.Ext.iso h).
   apply /(lang_iso_inv j).
   by apply /(fst (He q p' h Hq Hp')).
 Qed.  
