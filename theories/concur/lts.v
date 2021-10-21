@@ -111,15 +111,6 @@ Reserved Notation "s1 '-->*' s2" (at level 55, right associativity).
 
 Module Export LTS.
 
-Section ExLab.
-Context {S L : Type}.
-
-(* TODO: remove copypaste from `rewriting_system.v` *)
-Definition exlab {S L : Type} (tr : L -> hrel S S) : hrel S S := 
-  fun s1 s2 => exists l, tr l s1 s2.
-
-End ExLab.
-
 Module LTS.
 Section ClassDef. 
 
