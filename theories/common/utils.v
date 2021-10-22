@@ -370,6 +370,14 @@ Proof.
   by move=> H x; apply/forallP.  
 Qed.
 
+Lemma forall3P (p : T -> T -> T -> bool) : 
+  reflect (forall x y z, p x y z) [forall x, forall y, forall z, p x y z].
+Proof. 
+  apply/(equivP forallP); split.
+  - by move=> H x y z; move: (H x)=> /forall2P.
+  by move=> H x; apply/forall2P.  
+Qed.
+
 End FinTypeUtils.
 
 

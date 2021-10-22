@@ -26,27 +26,40 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module Pomset.
+Module lFinposet. 
 
-Section lFinposet. 
+Module Export Def.
+Section Def. 
+Context (E : finType) (L : eqType).
 
-Definition lfinposet_prod (E : finType) (L : eqType) := 
+Definition lfinposet_prod := 
   ({ffun E -> L} * {ffun E * E -> bool} * {ffun E * E -> bool})%type.
 
-Definition lfinposet_pred E L (p : lfinposet_prod E L) := 
-  let lab := p.1.1 in
-  let le  := p.1.2 in
-  let lt  := p.2   in
-  [&& [forall x, forall y, lt (x, y) == (y != x) && le (x, y)],
-      [forall x, le (x, x)], 
-      [forall x, forall y, le (x, y) && le (y, x) ==> (x == y)] 
-    & [forall x, forall y, forall z, le (x, y) && le (y, z) ==> le (x, z)] 
+Definition ffun_lab (p : lfinposet_prod) : {ffun E -> L}        := p.1.1.
+Definition ffun_ca  (p : lfinposet_prod) : {ffun E * E -> bool} := p.1.2.
+Definition ffun_sca (p : lfinposet_prod) : {ffun E * E -> bool} := p.2.
+
+Definition lfinposet_pred (p : lfinposet_prod) := 
+  [&& [forall x, forall y, 
+        ffun_sca p (x, y) == (y != x) && ffun_ca p (x, y)],
+      [forall x, 
+        ffun_ca p (x, x)], 
+      [forall x, forall y, 
+        ffun_ca p (x, y) && ffun_ca p (y, x) ==> (x == y) ] 
+    & [forall x, forall y, forall z, 
+         ffun_ca p (x, y) && ffun_ca p (y, z) ==> ffun_ca p (x, z) ] 
   ].
 
-Structure lfinposet E L := 
-  { lfposet :> lfinposet_prod E L; _ : lfinposet_pred lfposet }.
+Structure lfinposet := 
+  { lfposet :> lfinposet_prod; _ : lfinposet_pred lfposet }.
 
-Canonical lfinposet_subType E L := Eval hnf in [subType for (@lfposet E L)].
+Canonical lfinposet_subType := Eval hnf in [subType for lfposet].
+
+End Def.
+End Def.
+
+Module Export Instances.
+Section Instances. 
 
 Definition lfinposet_eqMixin E L := 
   Eval hnf in [eqMixin of (lfinposet E L) by <:].
@@ -74,8 +87,70 @@ Canonical lfinposet_finType E (L : finType) :=
 Canonical lfinposet_subFinType E (L : finType) :=
   Eval hnf in [subFinType of (lfinposet E L)].
 
+End Instances.
+End Instances.
+
+Module Export POrder.
+Section POrder.
+Context {E : finType} {L : eqType}.
+Variable (p : lfinposet E L).
+
+Local Notation lab := (ffun_lab p : E -> L).
+Local Notation ca  := (fun x y => ffun_ca  p (x, y)).
+Local Notation sca := (fun x y => ffun_sca p (x, y)).
+
+Lemma ffun_sca_def x y : sca x y = (y != x) && (ca x y).
+Proof. 
+  move: (valP p)=> /and4P[+ _ _ _]. 
+  by move=> /forall2P H; move: (H x y)=> /eqP /=.
+Qed.  
+
+Lemma ffun_ca_refl : reflexive ca. 
+Proof. 
+  move: (valP p)=> /and4P[_ + _ _] x. 
+  by move=> /forallP H; move: (H x)=> /eqP /=.
+Qed.  
+
+Lemma ffun_ca_antisym : antisymmetric ca. 
+Proof. 
+  move: (valP p)=> /and4P[_ _ + _] x y. 
+  move=> /forall2P H; move: (H x y)=> /=.
+  by move=> /implyP /[apply] /eqP.
+Qed.  
+
+Lemma ffun_ca_trans : transitive ca. 
+Proof. 
+  move: (valP p)=> /and4P[_ _ _ +] y x z. 
+  move=> /forall3P H; move: (H x y z)=> /=.
+  by move: H=> _ /implyP H ??; apply/H/andP.
+Qed.  
+
+Definition lfinposet_porderMixin := 
+  @LePOrderMixin E ca sca 
+    ffun_sca_def ffun_ca_refl ffun_ca_antisym ffun_ca_trans. 
+
+Canonical lfinposet_porderType := 
+  POrderType tt E lfinposet_porderMixin.
+
+Definition lfinposet_lposetMixin := 
+  @lPoset.lPoset.Mixin E L (POrder.class lfinposet_porderType) lab.
+
+Canonical lfinposet_lposetType := 
+  @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lfinposet_lposetMixin).
+
+End POrder.
+End POrder.
+
+Module Syntax. 
+Notation "[ 'eventType' 'of' p ]" := (lfinposet_lposetType p)
+  (at level 0, format "[ 'eventType'  'of'  p ]") : form_scope.
+End Syntax.
+
 End lFinposet.
 
+Export lFinposet.Def.
+Export lFinposet.Instances.
+Export lFinposet.POrder.
 End Pomset.
 
 Implicit Types (L : Type).
