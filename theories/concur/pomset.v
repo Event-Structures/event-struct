@@ -129,20 +129,29 @@ Definition lfinposet_porderMixin :=
   @LePOrderMixin E ca sca 
     ffun_sca_def ffun_ca_refl ffun_ca_antisym ffun_ca_trans. 
 
-Canonical lfinposet_porderType := 
+Definition lfinposet_porderType := 
   POrderType tt E lfinposet_porderMixin.
 
-Definition lfinposet_lposetMixin := 
-  @lPoset.lPoset.Mixin E L (POrder.class lfinposet_porderType) lab.
+Definition lfinposet_finPOrderType := 
+  [finPOrderType of lfinposet_porderType].
 
-Canonical lfinposet_lposetType := 
+Definition lfinposet_lposetMixin := 
+  @lPoset.lPoset.Mixin E L (POrder.class lfinposet_finPOrderType) lab.
+
+Definition lfinposet_lposetType := 
   @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lfinposet_lposetMixin).
 
+Definition lfinposet_lfinposetType := 
+  let class := lFinPoset.lFinPoset.Class lfinposet_lposetMixin in
+  @lFinPoset.lFinPoset.Pack L E class.
+
 End POrder.
 End POrder.
 
+(* Arguments lfinposet_lfinposetType : simpl never. *)
+
 Module Syntax. 
-Notation "[ 'eventType' 'of' p ]" := (lfinposet_lposetType p)
+Notation "[ 'eventType' 'of' p ]" := (lfinposet_lfinposetType p)
   (at level 0, format "[ 'eventType'  'of'  p ]") : form_scope.
 End Syntax.
 
@@ -151,8 +160,59 @@ End lFinposet.
 Export lFinposet.Def.
 Export lFinposet.Instances.
 Export lFinposet.POrder.
+
+
+Module Pomset.
+
+Import lFinposet.Syntax.
+Import lPoset.Syntax.
+
+Module Export Def.
+Section Def.  
+Context {E : finType} {L : choiceType}.
+Implicit Types (p q : lfinposet E L).
+
+Definition is_iso : rel (lfinposet E L) := 
+  fun p q => 
+    let EP : lFinPoset.eventType L := [eventType of p] in
+    let EQ : lFinPoset.eventType L := [eventType of q] in
+    ??|{ffun EP -> EQ | @lFinPoset.Iso.iso_pred L EP EQ}|.
+
+(* TODO: generalize the proofs to arbitary `T -> T -> Type`? *)
+Lemma is_iso_refl : reflexive is_iso.
+Proof. 
+  rewrite /is_iso=> p.
+  (* TODO: move lemma out of Iso module? *)
+  apply/lFinPoset.Iso.isoP. 
+  exists; exact/lPoset.Iso.id.
+Qed.
+
+Lemma is_iso_sym : symmetric is_iso.
+Proof. 
+  rewrite /is_iso=> p q.
+  apply/idP/idP=> /lFinPoset.Iso.isoP [f]; 
+    apply/lFinPoset.Iso.isoP; 
+    exists; exact/(lPoset.Iso.inv f).
+Qed.
+
+Lemma is_iso_trans : transitive is_iso.
+Proof. 
+  rewrite /is_iso=> p q r.
+  move=> /lFinPoset.Iso.isoP [f] /lFinPoset.Iso.isoP [g]. 
+  apply/lFinPoset.Iso.isoP. 
+  exists; exact/(lPoset.Iso.comp f g).
+Qed.
+
+Canonical is_iso_eqv := EquivRel is_iso is_iso_refl is_iso_sym is_iso_trans.
+
+Definition pomset := {eq_quot is_iso}.
+
+End Def.
+End Def.
+
 End Pomset.
 
+Module Pomset. 
 Implicit Types (L : Type).
 
 Import lPoset.Syntax.
