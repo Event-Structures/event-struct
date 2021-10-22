@@ -1,7 +1,8 @@
 From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice order finmap. 
-From eventstruct Require Import utils lposet.
+From mathcomp Require Import eqtype choice order finfun fintype.
+From mathcomp Require Import generic_quotient.
+From eventstruct Require Import utils inhtype lposet.
 
 (******************************************************************************)
 (* This file provides a theory of pomset languages.                           *)
@@ -16,6 +17,7 @@ Import Order.
 Import Order.LTheory.
 
 Local Open Scope order_scope.
+Local Open Scope quotient_scope.
 Local Open Scope ra_terms.
 Local Open Scope lposet_scope.
 
@@ -24,7 +26,57 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module Pomset. 
+Module Pomset.
+
+Section lFinposet. 
+
+Definition lfinposet_prod (E : finType) (L : eqType) := 
+  ({ffun E -> L} * {ffun E * E -> bool} * {ffun E * E -> bool})%type.
+
+Definition lfinposet_pred E L (p : lfinposet_prod E L) := 
+  let lab := p.1.1 in
+  let le  := p.1.2 in
+  let lt  := p.2   in
+  [&& [forall x, forall y, lt (x, y) == (y != x) && le (x, y)],
+      [forall x, le (x, x)], 
+      [forall x, forall y, le (x, y) && le (y, x) ==> (x == y)] 
+    & [forall x, forall y, forall z, le (x, y) && le (y, z) ==> le (x, z)] 
+  ].
+
+Structure lfinposet E L := 
+  { lfposet :> lfinposet_prod E L; _ : lfinposet_pred lfposet }.
+
+Canonical lfinposet_subType E L := Eval hnf in [subType for (@lfposet E L)].
+
+Definition lfinposet_eqMixin E L := 
+  Eval hnf in [eqMixin of (lfinposet E L) by <:].
+Canonical lfinposet_eqType E L := 
+  Eval hnf in EqType (lfinposet E L) (lfinposet_eqMixin E L).
+
+Definition lfinposet_choiceMixin E (L : choiceType) :=
+  Eval hnf in [choiceMixin of (lfinposet E L) by <:].
+Canonical lfinposet_choiceType E (L : choiceType) :=
+  Eval hnf in ChoiceType (lfinposet E L) (lfinposet_choiceMixin E L).
+
+Definition lfinposet_countMixin E (L : countType) :=
+  Eval hnf in [countMixin of (lfinposet E L) by <:].
+Canonical lfinposet_countType E (L : countType) :=
+  Eval hnf in CountType (lfinposet E L) (lfinposet_countMixin E L).
+
+Canonical subFinfun_subCountType E (L : countType) :=
+  Eval hnf in [subCountType of (lfinposet E L)].
+
+Definition lfinposet_finMixin E (L : finType) :=
+  Eval hnf in [finMixin of (lfinposet E L) by <:].
+Canonical lfinposet_finType E (L : finType) :=
+  Eval hnf in FinType (lfinposet E L) (lfinposet_finMixin E L).
+
+Canonical lfinposet_subFinType E (L : finType) :=
+  Eval hnf in [subFinType of (lfinposet E L)].
+
+End lFinposet.
+
+End Pomset.
 
 Implicit Types (L : Type).
 
