@@ -1664,7 +1664,7 @@ Proof.
   - by rewrite -(size_tuple t) -(size_tuple u) H.
   move: u H; clear u; case Hn=> u.
   move=> /val_inj ->.
-  constructor; exact/lPoset.Iso.id. 
+  constructor; exact/lPoset.Iso.id_iso. 
 Qed.
 
 End IsoP. 
@@ -1674,19 +1674,22 @@ End tPoset.
 Export tPoset.tPoset.Exports.
 Export tPoset.Theory. 
 
-Search "Pack".
 
-Notation "[ 'hom' 'of' f ]" := (mk_hom (fun hCls => @lPoset.Hom.Hom.Pack _ _ _ f hCls))
+Notation "[ 'hom' 'of' f ]" := 
+  (lPoset.Hom.mk_hom (fun hCls => @lPoset.Hom.Hom.Pack _ _ _ f hCls))
   (at level 0, format "[ 'hom'  'of'  f ]") : form_scope.
-Notation "[ 'ihom' 'of' f ]" := (mk_ihom (fun hCls => @lPoset.iHom.iHom.Pack _ _ _ f hCls))
+Notation "[ 'ihom' 'of' f ]" := 
+  (lPoset.iHom.mk_ihom (fun hCls => @lPoset.iHom.iHom.Pack _ _ _ f hCls))
   (at level 0, format "[ 'ihom'  'of'  f ]") : form_scope.
-Notation "[ 'bhom' 'of' f ]" := (mk_bhom (fun hCls => @lPoset.bHom.bHom.Pack _ _ _ f hCls))
+Notation "[ 'bhom' 'of' f ]" := 
+  (lPoset.bHom.mk_bhom (fun hCls => @lPoset.bHom.bHom.Pack _ _ _ f hCls))
   (at level 0, format "[ 'bhom'  'of'  f ]") : form_scope.
-Notation "[ 'emb' 'of' f ]" := (mk_emb (fun hCls => @lPoset.Emb.Emb.Pack _ _ _ f hCls))
+Notation "[ 'emb' 'of' f ]" := 
+  (lPoset.Emb.mk_emb (fun hCls => @lPoset.Emb.Emb.Pack _ _ _ f hCls))
   (at level 0, format "[ 'emb'  'of'  f ]") : form_scope.
-Notation "[ 'iso' 'of' f ]" := (mk_iso (fun hCls => @lPoset.Iso.Iso.Pack _ _ _ f hCls))
+Notation "[ 'iso' 'of' f ]" := 
+  (lPoset.Iso.mk_iso (fun hCls => @lPoset.Iso.Iso.Pack _ _ _ f hCls))
   (at level 0, format "[ 'iso'  'of'  f ]") : form_scope.
-
 
 (* Context (L : Type) (n : nat) (t : n.-tuple L). *)
 (* Context (e e1 e2 : tPoset.eventType t). *)
