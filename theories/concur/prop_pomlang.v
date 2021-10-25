@@ -207,8 +207,58 @@ Canonical is_iso_eqv := EquivRel is_iso is_iso_refl is_iso_sym is_iso_trans.
 
 Definition pomset := {eq_quot is_iso}.
 
+Implicit Types (p : pomset).
+
+Definition pom_lab p : {ffun E -> L} := ffun_lab (repr p).
+Definition pom_ca  p : {ffun E * E -> bool} := ffun_ca (repr p).
+Definition pom_sca p : {ffun E * E -> bool} := ffun_sca (repr p).
+
 End Def.
 End Def.
+
+Module Export POrder.
+Section POrder.
+Context {E : finType} {L : choiceType}.
+Variable (p : pomset E L).
+
+Local Notation lab := (pom_lab p : E -> L).
+Local Notation ca  := (fun x y => pom_ca  p (x, y)).
+Local Notation sca := (fun x y => pom_sca p (x, y)).
+
+Lemma pom_sca_def x y : sca x y = (y != x) && (ca x y).
+Proof. rewrite /pom_sca /pom_ca; exact/ffun_sca_def. Qed.
+
+Lemma pom_ca_refl : reflexive ca. 
+Proof. move=> ? /=; rewrite /pom_ca; exact/ffun_ca_refl. Qed.
+
+Lemma pom_ca_antisym : antisymmetric ca. 
+Proof. move=> ?? /=; rewrite /pom_ca; exact/ffun_ca_antisym. Qed.
+
+Lemma pom_ca_trans : transitive ca. 
+Proof. move=> ??? /=; rewrite /pom_ca; exact/ffun_ca_trans. Qed.
+
+Definition pomset_porderMixin := 
+  @LePOrderMixin E ca sca 
+    pom_sca_def pom_ca_refl pom_ca_antisym pom_ca_trans. 
+
+Definition pomset_porderType := 
+  POrderType tt E pomset_porderMixin.
+
+Definition pomset_finPOrderType := 
+  [finPOrderType of pomset_porderType].
+
+Definition pomset_lposetMixin := 
+  @lPoset.lPoset.Mixin E L (POrder.class pomset_finPOrderType) lab.
+
+Definition pomset_lposetType := 
+  @lPoset.lPoset.Pack L E (lPoset.lPoset.Class pomset_lposetMixin).
+
+Definition pomset_lfinposetType := 
+  let class := lFinPoset.lFinPoset.Class pomset_lposetMixin in
+  @lFinPoset.lFinPoset.Pack L E class.
+
+End POrder.
+End POrder.
 
 End Pomset.
 
