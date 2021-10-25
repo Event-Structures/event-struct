@@ -150,16 +150,29 @@ End POrder.
 
 (* Arguments lfinposet_lfinposetType : simpl never. *)
 
-Module Syntax. 
+Module Export Syntax. 
 Notation "[ 'eventType' 'of' p ]" := (lfinposet_lfinposetType p)
   (at level 0, format "[ 'eventType'  'of'  p ]") : form_scope.
 End Syntax.
+
+Module Export Theory.
+Section Theory.
+Context {E : finType} {L : eqType}.
+Implicit Types (p : lfinposet E L).
+
+Lemma ffun_labE p (e : [eventType of p]) : 
+  lab e = ffun_lab p e.  
+Proof. done. Qed.
+
+End Theory.
+End Theory.
 
 End lFinposet.
 
 Export lFinposet.Def.
 Export lFinposet.Instances.
 Export lFinposet.POrder.
+Export lFinposet.Theory.
 
 
 Module Pomset.
@@ -169,8 +182,7 @@ Import lPoset.Syntax.
 
 Module Export Def.
 Section Def.  
-Context {E : finType} {L : choiceType}.
-Implicit Types (p q : lfinposet E L).
+Context (E : finType) (L : choiceType).
 
 Definition is_iso : rel (lfinposet E L) := 
   fun p q => 
@@ -212,6 +224,29 @@ Implicit Types (p : pomset).
 Definition pom_lab p : {ffun E -> L} := ffun_lab (repr p).
 Definition pom_ca  p : {ffun E * E -> bool} := ffun_ca (repr p).
 Definition pom_sca p : {ffun E * E -> bool} := ffun_sca (repr p).
+
+Section EqQuotTheory.
+
+Variables (T U : Type) (e : rel T) (Q : eqQuotType e).
+
+Lemma eqquot_mono (f : T -> U) : 
+  (forall x y, e x y -> f x = f y) -> {mono \pi_Q : x / f x >-> f (repr x)}.
+Proof. 
+  move=> H x; rewrite -(H x) //.
+  exact/(eqquotP Q)/esym/reprK.
+Qed.
+
+End EqQuotTheory.
+
+Lemma pom_lab_compat : 
+  exists f, {mono \pi_pomset : p / ffun_lab p >-> [ffun x => (pom_lab p) (f x)]}.
+Proof. admit. Admitted.
+Canonical pom_lab_mono := (PiMono1 pom_lab_compat).
+
+Lemma pom_ca_compat : 
+  {mono \pi_pomset : p / ffun_ca p >-> pom_ca p}.
+Proof. admit. Admitted.
+Canonical pom_ca_mono  := (PiMono1 pom_ca_compat).
 
 End Def.
 End Def.
