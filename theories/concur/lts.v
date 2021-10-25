@@ -27,8 +27,9 @@ From eventstruct Require Import utils relalg.
 (*                         a transition from s1 to s2 labelled by l.          *)
 (*            s1 --> s2 == boolean relation asserting that there exists       *)
 (*                         transition from s1 to s2.                          *)
-(*           s1 -->? s2 == boolean relation asserting that s1 is equal to s2  *)
-(*                         or there exists a transition from s1 to s2.        *)
+(*           s1 -->? s2 == propositional relation asserting that              *)
+(*                         s1 is equal to s2 or there exists a transition     *)
+(*                         from s1 to s2.                                     *)
 (*           s1 -->+ s2 == propositional relation asserting that there exists *)
 (*                         a non-empty sequence of steps from s1 to s2.       *)
 (*           s1 -->* s2 == propositional relation asserting that there exists *) 
@@ -109,6 +110,15 @@ Reserved Notation "s1 '-->?' s2" (at level 55, right associativity).
 Reserved Notation "s1 '-->+' s2" (at level 55, right associativity).
 Reserved Notation "s1 '-->*' s2" (at level 55, right associativity).
 
+Section ExLab.
+Context {S L : Type}.
+
+(* TODO: remove copypaste from `rewriting_system.v` *)
+Definition exlab {S L : Type} (ltr : L -> hrel S S) : hrel S S := 
+  fun s1 s2 => exists l, ltr l s1 s2.
+
+End ExLab.
+
 Module Export LTS.
 
 Module LTS.
@@ -118,10 +128,7 @@ Record mixin_of (S0 : Type) (L : Type)
                 (sb : Countable.class_of S0)
                 (S := Countable.Pack sb) := Mixin {
   ltrans    : L -> rel S;
-  trans     : rel S;
   has_trans : L -> S -> bool;
-
-  _ : forall s s', reflect (exists l, ltrans l s s') (trans s s');
   _ : forall l s, reflect (exists s', ltrans l s s') (has_trans l s);
 }.
 
@@ -178,8 +185,6 @@ Implicit Types (l : L) (s : S).
 
 Definition ltrans : L -> rel S := LTS.ltrans (LTS.class S).
 
-Definition trans : rel S := LTS.trans (LTS.class S).
-
 Definition has_trans : L -> S -> bool := LTS.has_trans (LTS.class S).
 
 Lemma has_transP l s : 
@@ -196,21 +201,17 @@ Definition ftrans : L -> S -> S :=
 
 End Def.
 
-Prenex Implicits ltrans trans has_trans ftrans.
+Prenex Implicits ltrans has_trans ftrans.
 
 Notation "s1 '--[' l ']-->' s2" := (ltrans l s1 s2) : lts_scope.
-Notation "s1 '-->' s2" := (trans s1 s2) : lts_scope.
-Notation "s1 '-->?' s2" := ((trans : {dhrel _ & _})^? s1 s2) : lts_scope.
-Notation "s1 '-->+' s2" := ((trans : hrel _ _)^+ s1 s2) : lts_scope. 
-Notation "s1 '-->*' s2" := ((trans : hrel _ _)^* s1 s2) : lts_scope.
+Notation "s1 '-->' s2" := ((exlab ltrans) s1 s2) : lts_scope.
+Notation "s1 '-->?' s2" := ((exlab ltrans)^? s1 s2) : lts_scope.
+Notation "s1 '-->+' s2" := ((exlab ltrans)^+ s1 s2) : lts_scope. 
+Notation "s1 '-->*' s2" := ((exlab ltrans)^* s1 s2) : lts_scope.
 
 Section Theory.
 Context {L : Type} (S : ltsType L).
 Implicit Types (l : L) (s : S).
-
-Lemma transP s s' : 
-  reflect (exists l, ltrans l s s') (trans s s').
-Proof. by move: s s'; case: S=> ? [? []]. Qed.   
 
 Lemma ftrans_ltrans l s :
   (s == ftrans l s) || (s --[l]--> ftrans l s).
@@ -224,8 +225,8 @@ Lemma ftrans_trans l s :
 Proof. 
   rewrite /= /dhrel_one. 
   move: (ftrans_ltrans l s)=> /orP[].
-  - by move=> /eqP {1}->; rewrite eq_refl.  
-  by move=> ?; apply/orP; right; apply/transP; exists l. 
+  - by move=> /eqP {1}->; left. 
+  by move=> ?; right; exists l. 
 Qed.
 
 Lemma has_ftrans l s : 
