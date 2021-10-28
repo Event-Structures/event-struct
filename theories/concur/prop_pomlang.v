@@ -186,36 +186,40 @@ Definition is_iso : rel (lfinposet E L) :=
   fun p q => 
     let EP : lFinPoset.eventType L := [eventType of p] in
     let EQ : lFinPoset.eventType L := [eventType of q] in
-    ??|{ffun EP -> EQ | @lFinPoset.Iso.iso_pred L EP EQ}|.
+    ??|{ffun EP -> EQ | @lFinPoset.iso_pred L EP EQ}|.
 
 (* TODO: generalize the proofs to arbitary `T -> T -> Type`? *)
 Lemma is_iso_refl : reflexive is_iso.
 Proof. 
   rewrite /is_iso=> p.
-  (* TODO: move lemma out of Iso module? *)
-  apply/lFinPoset.Iso.isoP. 
+  apply/lFinPoset.isoP. 
   exists; exact/lPoset.Iso.id.
 Qed.
 
 Lemma is_iso_sym : symmetric is_iso.
 Proof. 
   rewrite /is_iso=> p q.
-  apply/idP/idP=> /lFinPoset.Iso.isoP [f]; 
-    apply/lFinPoset.Iso.isoP; 
+  apply/idP/idP=> /lFinPoset.isoP [f]; 
+    apply/lFinPoset.isoP; 
     exists; exact/(lPoset.Iso.inv f).
 Qed.
 
 Lemma is_iso_trans : transitive is_iso.
 Proof. 
   rewrite /is_iso=> p q r.
-  move=> /lFinPoset.Iso.isoP [f] /lFinPoset.Iso.isoP [g]. 
-  apply/lFinPoset.Iso.isoP. 
+  move=> /lFinPoset.isoP [f] /lFinPoset.isoP [g]. 
+  apply/lFinPoset.isoP. 
   exists; exact/(lPoset.Iso.comp f g).
 Qed.
 
 Canonical is_iso_eqv := EquivRel is_iso is_iso_refl is_iso_sym is_iso_trans.
 
 Definition pomset := {eq_quot is_iso}.
+
+Canonical pomset_quotType := [quotType of pomset].
+Canonical pomset_eqType := [eqType of pomset].
+Canonical pomset_choiceType := [choiceType of pomset].
+Canonical pomset_eqQuotType := [eqQuotType is_iso of pomset].
 
 Implicit Types (p : pomset).
 
@@ -270,97 +274,161 @@ Definition pomset_lfinposetType :=
 End POrder.
 End POrder.
 
+Module Export Syntax. 
+Notation "[ 'Event' 'of' p ]" := (pomset_lfinposetType p)
+  (at level 0, format "[ 'Event'  'of'  p ]") : form_scope.
+End Syntax.
+
+Module Export Hom.
+Module Export POrder.
+Section POrder.
+Context {E : finType} {L : choiceType}.
+Implicit Types (p q : pomset E L).
+
+Local Notation hom_le := (fun p q => 
+  ??|{ffun [Event of q] -> [Event of p] | lFinPoset.hom_pred }|).
+Local Notation hom_lt := (fun p q => (q != p) && (hom_le p q)).
+
+Lemma hom_lt_def p q : hom_lt p q = (q != p) && (hom_le p q).
+Proof. done. Qed.
+
+Lemma hom_le_refl : reflexive hom_le. 
+Proof. move=> ?; exact/lFinPoset.fhom_refl. Qed.
+
+Lemma hom_le_antisym : antisymmetric hom_le. 
+Proof. admit. Admitted.
+
+Lemma hom_le_trans : transitive hom_le. 
+Proof. move=> ??? /[swap]; exact/lFinPoset.fhom_trans. Qed.
+
+Lemma disp : unit. 
+Proof. exact: tt. Qed.
+
+Definition pomset_homPOrderMixin := 
+  @LePOrderMixin _ hom_le hom_lt 
+    hom_lt_def hom_le_refl hom_le_antisym hom_le_trans. 
+
+Canonical pomset_homPOrderType := 
+  POrderType disp (pomset E L) pomset_homPOrderMixin.
+
+Lemma hom_leE p q : le p q = hom_le p q.
+Proof. done. Qed.
+
+End POrder.
+End POrder.
+End Hom.
+
 End Pomset.
 
-Module Pomset. 
-Implicit Types (L : Type).
+Export Pomset.Def.
+Export Pomset.POrder.
 
-Import lPoset.Syntax.
+Module PomLang.
 
-Definition iso_inv {L} (P : lPoset.eventType L -> Prop) := 
-  forall (E1 E2 : lPoset.eventType L) (f : {iso E1 -> E2}), P E1 -> P E2.
+Notation pomlang E L := (pomset E L -> bool).
 
-Record lang L := Lang { 
-  apply : lPoset.eventType L -> Prop;
-  _     : iso_inv apply;
-}.
-
-Module Export Exports.
-Coercion apply : lang >-> Funclass.
-End Exports.
-
-Module Lattice.
-Section Lattice.
-
-Context {L : Type}.
-Implicit Types (P Q : lang L).
-
-Definition leq P Q := lattice.leq (P : lPoset.eventType L -> Prop) Q.
-
-Definition weq P Q := lattice.weq (P : lPoset.eventType L -> Prop) Q.
-
-Lemma botP : iso_inv (lattice.bot : lPoset.eventType L -> Prop).
-Proof. done. Qed.
-Canonical bot := Lang (@botP).
-
-Lemma topP : iso_inv (lattice.top : lPoset.eventType L -> Prop).
-Proof. done. Qed.
-Canonical top := Lang (@topP).
-
-Lemma cupP P Q : iso_inv ((P : lPoset.eventType L -> Prop) ⊔ Q).
-Proof. 
-  move: P Q=> [] P + [] Q + p q /=.
-  rewrite /iso_inv=> HP HQ f []. 
-  - by move: (HP _ _ f)=> /[apply] ?; left. 
-  by move: (HQ _ _ f)=> /[apply] ?; right. 
-Qed.
-Canonical cup P Q := Lang (@cupP P Q).
-
-Lemma capP P Q : iso_inv ((P : lPoset.eventType L -> Prop) ⊓ Q).
-Proof. 
-  move: P Q=> [] P + [] Q + p q /=.
-  rewrite /iso_inv=> HP HQ f []. 
-  move: (HP _ _ f)=> /[apply] /[swap].
-  by move: (HQ _ _ f)=> /[apply] /[swap].
-Qed.
-Canonical cap P Q := Lang (@capP P Q).
-
-Lemma negP P : iso_inv (neg (P : lPoset.eventType L -> Prop)).
-Proof. 
-  move: P=> [] P + p q /=.
-  rewrite /iso_inv=> HP f.
-  apply/contra_not.
-  by move: (HP _ _ (lPoset.Iso.Build.inv f)).
-Qed.  
-Canonical neg P := Lang (@negP P).
-
-End Lattice.
-
-Module Export Exports.
-
-Canonical Structure pomset_lang_lattice_ops L : lattice.ops := 
-  lattice.mk_ops (lang L) leq weq cup cap neg bot top.
-
-Global Instance pomset_lang_lattice_morph L : 
-  lattice.morphism BDL (@apply L).
-Proof. by constructor. Qed.
-
-Global Instance pomset_lang_lattice_laws L : 
-  lattice.laws (BDL+STR+CNV+DIV) (@pomset_lang_lattice_ops L).
-Proof.
-  have H: (lattice.laws BDL (@pomset_lang_lattice_ops L)). 
-  - by apply/(laws_of_injective_morphism (@apply L)).
-  by constructor; apply H. 
-Qed.
-
-End Exports.
-
-End Lattice.
-
-Export Lattice.Exports.
+Import Pomset.Syntax.
 
 Module Export Def.
 Section Def.
+Context {E : finType} {L : choiceType}.
+Implicit Types (P Q : pomlang E L).
+
+(* TODO: shorten `hom_pred` check *)
+Definition stronger P Q := 
+  {subsumes P <= Q : p q / 
+    ??|{ffun [Event of q] -> [Event of p] | lFinPoset.hom_pred }|}.
+
+Definition bistronger P Q := 
+  {subsumes P <= Q : p q / 
+    ??|{ffun [Event of q] -> [Event of p] | lFinPoset.bhom_pred }|}.
+
+Definition supported P Q := 
+  {subsumes P <= Q : p q / 
+    ??|{ffun [Event of p] -> [Event of q] | lFinPoset.bhom_pred }|}.
+
+End Def. 
+End Def.
+
+Module Export Syntax.
+Notation "P [<<] Q" := (stronger   P Q) (at level 69) : pomset_scope.
+Notation "P [<=] Q" := (bistronger P Q) (at level 69) : pomset_scope.
+Notation "P [=>] Q" := (supported  P Q) (at level 69) : pomset_scope.
+End Syntax.
+
+Module Export Theory.
+Context {E : finType} {L : choiceType}.
+Implicit Types (P Q : pomlang E L).
+
+(* TODO: shorten proofs, move refl/trans properties to `lposet.v` *)
+
+Lemma stronger_subset P Q :
+  {subset P <= Q} -> {hom P <= Q}.
+Proof. 
+  move=> subs p Pp; exists p; first exact/subs. 
+  apply/sub_fin_inhP/fin_inhP/lFinPoset.homP.
+  by exists; exists lPoset.Hom.id.
+Qed.
+  
+Lemma stronger_refl P : 
+  P [<<] P.
+Proof. 
+  apply/subsumes_refl=> p.
+  apply/sub_fin_inhP/fin_inhP/lFinPoset.homP.
+  by exists; exists lPoset.Hom.id.
+Qed.
+
+Lemma stronger_trans P Q R : 
+  P [<<] Q -> Q [<<] R -> P [<<] R.
+Proof. 
+  apply/subsumes_trans=> p q r hpq hqr.
+  apply/sub_fin_inhP/fin_inhP/lFinPoset.homP.  
+
+  move=> H1 H2 p HP. 
+  move: (H1 p HP)=> [q [HQ [f]]].
+  move: (H2 q HQ)=> [r [HR [g]]].
+  exists r; split=> //; constructor. 
+  exact/(lPoset.Hom.comp g f).
+Qed.
+
+Lemma unistronger_subset P Q :
+  P ≦ Q -> P !⊑ Q. 
+Proof. 
+  move=> Hs p Hp; exists p; split; first exact /Hs. 
+  constructor; exact/lPoset.bHom.id. 
+Qed.
+  
+Lemma unistronger_refl P : 
+  P !⊑ P.
+Proof. 
+  move=> p HP; exists p; split=> //. 
+  constructor; exact/lPoset.bHom.id.
+Qed.
+
+Lemma unistronger_trans P Q R : 
+  P !⊑ Q -> Q !⊑ R -> P !⊑ R.
+Proof. 
+  move=> H1 H2 p HP. 
+  move: (H1 p HP)=> [q [HQ [f]]].
+  move: (H2 q HQ)=> [r [HR [g]]].
+  exists r; split=> //; constructor.
+  exact/(lPoset.bHom.comp g f).
+Qed.
+
+Lemma unistronger_stronger P Q : 
+  P !⊑ Q -> P ⊑ Q.
+Proof. 
+  move=> H p HP. 
+  move: (H p HP)=> [q [HQ [f]]].
+  exists q; split=> //; constructor; exact/f. 
+Qed.
+
+Lemma supported_subset P Q :
+  P ≦ Q -> P ↪ Q. 
+Proof. 
+  move=> Hs p Hp; exists p; split; first exact /Hs. 
+  constructor; exact/lPoset.bHom.id. 
+Qed.
 
 Context {L : Type}.
 Implicit Types (P Q : lang L) (p q : lPoset.eventType L).
@@ -378,13 +446,10 @@ Definition unistronger P Q : Prop :=
 Definition supported P Q : Prop := 
   forall p, P p -> exists q, Q q /\ inhabited {bhom p -> q}.
 
-(* TODO: generalize stronger/supported to arbitary relation on posets 
- *   and introduce notation in the style of `homo` from `ssreflect`:
- *   e.g. {lang P ⊑ Q : p q / p ~> q }
- *)
+Context {E : finType} {L : choiceType}.
+Variables (P Q : pomlang E L).
 
-End Def.
-End Def.
+Check (P [<=] Q).
 
 Module Export Syntax.
 Notation "P ⊑ Q" := (stronger P Q) (at level 69) : pomset_scope.
