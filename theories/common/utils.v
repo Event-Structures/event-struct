@@ -1103,3 +1103,46 @@ Canonical subFinfun_subFinType (rT : finType) (P : pred {ffun aT -> rT}) :=
 End Instances.
 
 End SubFinFun.
+
+
+Module Export Subsumes.
+
+Section Def.
+Context {T : Type}.
+Implicit Types (r : rel T) (mp : mem_pred T).
+
+Definition subsumes_mem r mp1 mp2 := 
+  forall x, in_mem x mp1 -> exists2 y, in_mem y mp2 & r x y.
+
+End Def.
+
+Notation "{ 'subsumes' A <= B 'by' R }" := 
+  (subsumes_mem R (mem A) (mem B)) 
+    (A at level 69, B at level 69) : type_scope.
+
+Notation "{ 'subsumes' A <= B : x y / a }" := 
+  (subsumes_mem (fun x y => a) (mem A) (mem B))
+    (A at level 69, B at level 69, x at level 0, y at level 39) : type_scope.
+
+Section Theory.
+Context {T : Type}.
+Implicit Types (P Q S : pred T) (R : rel T).
+
+Lemma subsumes_refl R P :
+  reflexive R -> { subsumes P <= P by R }.
+Proof. by move=> ? p ?; exists p. Qed.
+
+Lemma subsumes_trans R P Q S : transitive R ->
+  {subsumes P <= Q by R} -> {subsumes Q <= S by R} -> {subsumes P <= S by R}.
+Proof.
+  move=> trans pq_subs qs_subs p.
+  move: pq_subs=> /[apply] [[q]].
+  move: qs_subs=> /[apply] [[s]].
+  move=> ss /[swap].
+  move: trans=> /[apply] /[apply].
+  by exists s.
+Qed.
+
+End Theory.
+
+End Subsumes.
