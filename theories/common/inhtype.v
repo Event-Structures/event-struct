@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
-From mathcomp Require Import eqtype fingraph path. 
+From mathcomp Require Import eqtype choice fingraph path. 
 From eventstruct Require Import utils.
 
 Set Implicit Arguments.
@@ -15,6 +15,7 @@ Notation "??| A |" := (~~ pred0b A)
   (at level 0, A at level 99, format "??| A |").
 
 Section Theory.
+Implicit Types (aT rT : Type) (fT : finType).
 
 Lemma nihn_inh_fun aT rT : 
   ~ ?|aT| -> ?|aT -> rT|.
@@ -33,13 +34,34 @@ Lemma inh_iff aT rT :
   (aT -> rT) -> (rT -> aT) -> ?|aT| <-> ?|rT|.
 Proof. by move=> f g; split; apply/inh_impl. Qed.
 
-Lemma fin_inhP (T : finType) : 
-  reflect ?|T| ??|T|.
+Lemma fin_inhP fT : 
+  reflect ?|fT| ??|fT|.
 Proof. 
   apply/(equivP pred0Pn). 
   split; move=> [] //. 
   by move=> x; exists x.
 Qed.
+
+Lemma sub_fin_inhP fT (P : pred fT) (S : subType P) : 
+  reflect ?|S| ??|P|.
+Proof. 
+  apply/(equivP pred0Pn). 
+  split=> [[x Px] | [x]] //. 
+  - exists; exact/(Sub x Px). 
+  exists (val x); exact/(valP x).
+Qed.
+
+
+Variables (T : Type) (R : T -> T -> Type) (r : rel T).
+Hypothesis (InhP : forall x y, reflect ?|R x y| (r x y)).
+Hypothesis (Refl : forall x, R x x).
+Hypothesis (Trans : forall x y z, R x y -> R y z -> R x z).
+
+Lemma is_inh_refl : reflexive r. 
+Proof. move=> ?; apply/InhP; exists; exact/Refl. Qed.
+  
+Lemma is_inh_trans : transitive r. 
+Proof. move=> ??? /InhP[A] /InhP[B]; apply/InhP; exists; exact/(Trans A B). Qed.
 
 End Theory.
 
