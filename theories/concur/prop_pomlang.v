@@ -1,8 +1,9 @@
+From Coq Require Import Relations.
 From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice order finfun fintype.
+From mathcomp Require Import eqtype choice order fintype fingraph finmap.
 From mathcomp Require Import generic_quotient.
-From eventstruct Require Import utils inhtype lposet.
+From eventstruct Require Import utils relalg inhtype ident lposet.
 
 (******************************************************************************)
 (* This file provides a theory of pomset languages.                           *)
@@ -26,14 +27,124 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module lFinposet. 
+(* TODO: move to appropriate place *)
+Notation fsupp := finsupp.
+
+(* Lemma fsfun  *)
+
+Module lFsupPoset. 
 
 Module Export Def.
-Section Def. 
-Context (E : finType) (L : eqType).
 
-Definition lfinposet_prod := 
-  ({ffun E -> L} * {ffun E * E -> bool} * {ffun E * E -> bool})%type.
+Notation lfspreposet E L eps := ({ fsfun E -> (L * seq E) of e => (eps, [::]) }).
+
+Section Def. 
+Context (E : identType) (L : choiceType).
+Variable (eps : L).
+
+Implicit Types (q : lfspreposet E L eps).
+
+Definition fs_lab q : E -> L := fun e => (q e).1. 
+Definition fs_rcov q : E -> seq E := fun e => (q e).2. 
+Definition fs_ica q : rel E := [rel x y | grel (fs_rcov q) y x]. 
+
+Definition supp_closed q := 
+  [forall e : finsupp q, all (fun e' => e' \in finsupp q) (fs_rcov q (val e))].
+
+Lemma supp_closedP q : 
+  reflect (forall e1 e2, fs_ica q e1 e2 -> (e1 \in fsupp q) && (e2 \in fsupp q))
+          (supp_closed q).
+Proof. 
+  rewrite /supp_closed /fs_ica /fs_rcov. 
+  apply/(equivP forallP); split=> /=; last first.
+  - move=> ica_supp; case=> e2 in_supp /=. 
+    by apply/allP=> e1 /ica_supp /andP[].
+  move=> all_supp e1 e2 /=.
+  case: (in_fsetP (finsupp q) e2)=> [e2'|].
+  - by move: (all_supp e2')=> /allP /[swap] /= <- /[apply] ->.
+  by move=> /fsfun_dflt -> //.
+Qed.
+
+Structure lfsposet : Type := lFsPoset {
+  lfsposet_val :> { fsfun E -> (L * seq E) of e => (eps, [::]) } ; 
+  _ : let q := lfsposet_val in 
+      supp_closed q (* && irreflexive (fs_ica q) && acyclic (fs_ica q) *)
+}.
+
+Canonical lfsposet_subType := Eval hnf in [subType for lfsposet_val].
+
+Implicit Types (p : lfsposet).
+
+Definition fs_ca p : rel E := 
+  sub_rel_lift (connect (sub_rel_down (fs_ica p) : rel (fsupp p))).
+
+Lemma fs_caP p e1 e2 : 
+  reflect ((fs_ica p : hrel E E)^* e1 e2) 
+          ((fs_ca p : {dhrel E & E})^? e1 e2).
+Proof. 
+  (* TODO: try to simplify proof *)
+  apply/equivP.  
+  - apply/(equivP idP); apply: iff_trans.
+    - by apply/rel_qmk_m.
+    rewrite qmk_weq; last first.
+    - move=> /= x y; rewrite /fs_ca.
+      apply: iff_sym; apply: rwP.
+      apply/sub_rel_liftP. 
+    by apply: iff_refl. 
+  apply: iff_trans=> /=. 
+  - rewrite /qmk /=.
+    apply: or_iff_compat_l.
+    apply/exists_equiv=> e1'.
+    apply/exists_equiv=> e2'.
+    (* TODO: make lemma? *)
+    have H: forall A1 A2 B C, A1 <-> A2 -> [/\ A1, B & C] <-> [/\ A2, B & C].
+    - by move=> ???? ->.  
+    apply/H; apply: iff_sym. 
+    apply: iff_trans; last first. 
+    - apply: rwP; exact/(connect_strP).
+    by apply/clos_refl_trans_hrel_str.
+  apply: iff_trans; last first.
+  - by apply/clos_refl_trans_hrel_str.
+  move=> /=; split=> [[|[e1' [] e2' []]] |].
+  - move=> ->; exact/rt_refl.
+  - move=> + <- <-; elim=> //.
+    + move=> ??; exact/rt_step.
+    move=> ??? ? + ?; exact/rt_trans.
+  elim=> //=.
+  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ (valP p)) /andP[].
+    move=> Pe1 Pe2 ica; right; exists (Sub e1 Pe1), (Sub e2 Pe2).
+    by split=> //; apply/rt_step.
+  - by move=> ?; left.
+  move=> ??? ? [-> ? [->|] | + ? [|]]. 
+  - by left.
+  - move=> [e1' [] e2' []] ???.
+    by right; exists e1', e2'.
+  - move=> [e1' [] e2' []] ??? <-.
+    by right; exists e1', e2'.
+  move=> [e1' [] e2' []] rt12 ??.
+  move=> [e3' [] e4' []] rt34 ??.
+  right; exists e1', e4'; split=> //=.
+  apply/rt_trans; first exact/rt12. 
+  suff: e2' = e3'=> [->|] //.
+  apply/val_inj=> /=; congruence.
+Qed.  
+  
+Definition fsupp_ica p : rel (fsupp p) := 
+  [rel e1 e2 | fs_ica p (val e1) (val e2)].
+
+Definition fsupp_ca p : rel (fsupp p) := 
+
+Arguments fin_ica : clear implicits.
+
+Lemma fin_icaE p : (sub_rel_lift (fin_ica p)) =2 (fs_ica p).
+Proof. by apply/sub_rel_lift_id=> ?? /(supp_closedP _ (valP p)). Qed.
+
+
+Definition fSupp p : Type := fsupp p.
+
+Variable (p : lfsposet).
+Variable (A B : pred (fSupp p)).
+Check (A \subset B).
 
 Definition ffun_lab (p : lfinposet_prod) : {ffun E -> L}        := p.1.1.
 Definition ffun_ca  (p : lfinposet_prod) : {ffun E * E -> bool} := p.1.2.
