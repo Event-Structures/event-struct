@@ -44,11 +44,23 @@ Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
 (*     Reflexive closure                                                      *)
 (* ************************************************************************** *)
 
-Notation "r ^?" := (1 ⊔ r) (left associativity, at level 5, format "r ^?"): ra_terms.
+Definition qmk {X : ops} n (x : X n n) := (1 ⊔ x).
 
-Lemma itr_qmk `{laws} `{BKA ≪ l} n (x: X n n) :
+Notation "r ^?" := (qmk r) (left associativity, at level 5, format "r ^?"): ra_terms.
+
+Lemma qmkE `{laws} n (x : X n n) :
+  x^? ≡ 1 ⊔ x.
+Proof. by rewrite /qmk; apply: weq_Reflexive. Qed.
+
+Lemma itr_qmk `{laws} `{BKA ≪ l} n (x : X n n) :
   x^+^? ≡ x^?^+.
-Proof. ka. Qed.
+Proof. rewrite /qmk; ka. Qed.
+
+(* TODO: make lemma instance of Proper for rewriting? *)
+Lemma qmk_weq `{laws} `{BKA ≪ l} n (x y : X n n): 
+  x ≡ y -> x^? ≡ y^?.
+Proof. by rewrite /qmk=> ->. Qed.
+
 
 (* ************************************************************************** *)
 (*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
@@ -68,7 +80,7 @@ Lemma qmk_sub_one `{CUP+CAP+TOP ≪ l} x :
   (x \ 1)^? ≡ x^?.
 Proof. 
   apply/weq_spec; split; first by lattice.
-  by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
+  by rewrite /qmk -[x in _ + x]capxt -eq_dec capcup; lattice.
 Qed.
 
 End SubtractionTheory. 
@@ -377,6 +389,12 @@ End PwEqvReflect.
 
 Hint Resolve r_refl rt_refl : core.
 
+Arguments clos_refl [A] R x y.
+Arguments clos_trans [A] R x y.
+Arguments clos_trans_1n [A] R x y.
+Arguments clos_trans_n1 [A] R x y.
+Arguments clos_refl_trans [A] R x y.
+
 Section RelClos.
 
 Context {T : Type}.
@@ -386,14 +404,14 @@ Implicit Types (R : hrel T T) (r : rel T).
  * (or try to just use kat tactics inplace) 
  *)
 Lemma clos_t_clos_rt R x y :
-  clos_trans T R x y -> clos_refl_trans T R x y.
+  clos_trans R x y -> clos_refl_trans R x y.
 Proof.
   elim=> [|???? H ??]; first by constructor.
   by apply: rt_trans H _.
 Qed.
 
 Lemma clos_refl_transE R :
-  clos_refl_trans T R ≡ clos_refl T (clos_trans T R).
+  clos_refl_trans R ≡ clos_refl (clos_trans R).
 Proof.
   move=> x y; split.
   - elim=> [{}x {}y xy | {}x | {}x {}y z _ xy _ yz] //.
@@ -405,14 +423,14 @@ Proof.
 Qed.
 
 Lemma clos_refl_hrel_qmk R :
-  clos_refl T R ≡ R^?.
+  clos_refl R ≡ R^?.
 Proof.
   split; first by case; [right | left].
   case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
 
 Lemma clos_trans_1n_hrel_itr R :
-  clos_trans_1n _ R ≡ R^+.
+  clos_trans_1n R ≡ R^+.
 Proof.
   move=> x y; split.
   - elim=> {x y} [x y | x z y] Rxy; first by exists y=> //; exists O.
@@ -424,21 +442,34 @@ Proof.
 Qed.
 
 Lemma clos_trans_hrel_itr R :
-  clos_trans _ R ≡ R^+.
+  clos_trans R ≡ R^+.
 Proof.
   move=> x y; rewrite clos_trans_t1n_iff.
   by apply: clos_trans_1n_hrel_itr.
 Qed.
 
 Lemma clos_refl_trans_hrel_str R : 
-  clos_refl_trans _ R ≡ R^*. 
-Proof. by rewrite str_itr clos_refl_transE clos_refl_hrel_qmk clos_trans_hrel_itr. Qed.
+  clos_refl_trans R ≡ R^*. 
+Proof. 
+  rewrite str_itr clos_refl_transE clos_refl_hrel_qmk.
+  by rewrite /qmk clos_trans_hrel_itr. 
+Qed.
 
 End RelClos.
 
 
+Section FinRel.
+Context {T : finType}.
+Implicit Types (R : hrel T T) (r : rel T).
+
+Lemma connect_strP r x y : 
+  reflect ((r : hrel T T)^* x y) (connect r x y).
+Proof. by move=> /=; apply/(equivP idP)/connect_iter. Qed.
+
+End FinRel.
+
 (* ************************************************************************** *)
-(*     Auxiliary definitions and lemmas about binary relations               *)
+(*     Auxiliary definitions and lemmas about binary relations                *)
 (* ************************************************************************** *)
 
 Section RelAux.

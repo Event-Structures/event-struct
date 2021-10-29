@@ -109,7 +109,7 @@ Definition rt_closure : {dhrel T & T} :=
 (* ************************************************************************** *)
 
 Lemma t_closure_1nP x y : 
-  reflect (clos_trans_1n T (sfrel f) x y) (t_closure x y).
+  reflect (clos_trans_1n (sfrel f) x y) (t_closure x y).
 Proof.
   rewrite /t_closure; funelim (suffix x)=> /=. 
   apply /(iffP idP); rewrite mem_cat /sfrel /=.
@@ -123,14 +123,14 @@ Proof.
 Qed.
 
 Lemma t_closureP x y :
-  reflect (clos_trans T (sfrel f) x y) (t_closure x y).
+  reflect (clos_trans (sfrel f) x y) (t_closure x y).
 Proof.
   apply /(equivP (t_closure_1nP x y)).
   symmetry; exact: clos_trans_t1n_iff.
 Qed.
 
 Lemma clos_trans_gt : 
-  clos_trans T (sfrel f) ≦ (>%O : rel T).
+  clos_trans (sfrel f) ≦ (>%O : rel T).
 Proof. 
   move=> ??; rewrite/sfrel /=.
   elim=> [y z /descend | x y z _ ] //=.
@@ -153,7 +153,7 @@ Proof.
 Qed.
 
 Lemma rt_closureP x y :
-  reflect (clos_refl_trans T (sfrel f) x y) (rt_closure x y).
+  reflect (clos_refl_trans (sfrel f) x y) (rt_closure x y).
 Proof.
   apply /equivP; last first.
   { rewrite clos_refl_transE clos_refl_hrel_qmk. 
@@ -346,7 +346,7 @@ Arguments clos_t1n_trans {_ _ _ _}.
 Arguments t1n_trans _ {_ _ _ _}.
 
 Lemma t_closure_n1P x y: 
-  reflect (clos_trans_1n T (sfrel f) x y) (t_closure x y).
+  reflect (clos_trans_1n (sfrel f) x y) (t_closure x y).
 Proof.
   apply: (iffP flatten_mapP)=> [[z]|]. 
   - move=> /rt_closure_1nP H ?. apply/clos_trans_t1n/clos_rt_t.
