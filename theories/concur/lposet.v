@@ -392,9 +392,6 @@ Section Build.
 Context {L : Type}.
 Implicit Types (E : eventType L).
 
-Definition mk_ihom {E1 E2 : eventType L} h mkH : {ihom  E1 -> E2} :=
-  mkH (let: iHom.Pack _ c := h return @iHom.class_of L E1 E2 h in c).
-
 Lemma id_class {E} : iHom.class_of (@idfun E).
 Proof. by repeat constructor=> //. Qed.
 
@@ -558,9 +555,6 @@ Section Build.
 Context {L : Type}.
 Implicit Types (E : eventType L).
 
-Definition mk_bhom {E1 E2 : eventType L} h mkH : {bhom  E1 -> E2} :=
-  mkH (let: bHom.Pack _ c := h return @Hom.class_of L E1 E2 h in c).
-
 Lemma id_class {E} : bHom.class_of (@idfun E).
 Proof. by constructor=> //; exists id. Qed.
 
@@ -574,8 +568,8 @@ Proof.
     try exact/inv_can; try exact/can_inv.
 Qed.
 
-Canonical comp_ {E1 E2 E3} : 
-  {bhom  E1 -> E2} -> {bhom E2 -> E3} -> {bhom E1 -> E3} := 
+Canonical comp {E1 E2 E3} : 
+  {bhom E1 -> E2} -> {bhom E2 -> E3} -> {bhom E1 -> E3} := 
   fun f g => bHom.Pack (comp_class f g).
 
 Lemma of_eqfun_class {E1 E2} (f : {bhom  E1 -> E2}) g : 
@@ -676,9 +670,6 @@ End Theory.
 Section Build.
 Context {L : Type}.
 Implicit Types (E : eventType L).
-
-Definition mk_emb {E1 E2 : eventType L} h mkH : {emb  E1 -> E2} :=
-  mkH (let: Emb.Pack _ c := h return @Emb.class_of L E1 E2 h in c).
 
 Lemma id_class {E} : Emb.class_of (@idfun E).
 Proof. by constructor=> //; exists id. Qed.
@@ -784,9 +775,6 @@ End Syntax.
 Section Build.
 Context {L : Type}.
 Implicit Types (E : eventType L).
-
-Definition mk_iso {E1 E2 : eventType L} h mkH : {iso  E1 -> E2} :=
-  mkH (let: Emb.Pack _ c := h return @Emb.class_of L E1 E2 h in c).
 
 Lemma id_class {E} : Iso.class_of (@idfun E).
 Proof. constructor=> //; exact/bHom.id_class. Qed.
