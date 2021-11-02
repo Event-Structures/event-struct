@@ -784,10 +784,10 @@ Qed.
 Definition ca : rel E := (rt_closure fca_gt)°.
 
 Lemma closureP e1 e2 :
-  reflect (clos_refl_trans _ ica e1 e2) (ca e1 e2).
+  reflect (clos_refl_trans ica e1 e2) (ca e1 e2).
 Proof. 
   rewrite /ca /ica. apply weq_reflect.
-  rewrite !clos_refl_trans_hrel_str.
+  rewrite !clos_rt_str.
   rewrite rel_cnv_m -kleene.cnvstr.
   apply cnv_weq_iff.
   rewrite cnv_invol str_itr itr_qmk.
@@ -800,7 +800,7 @@ Proof.
     by apply /rel_weq_m; rewrite -strictify_weq.
   rewrite rel_qmk_m.
   rewrite -itr_qmk -str_itr.
-  rewrite -clos_refl_trans_hrel_str.
+  rewrite -clos_rt_str.
   apply /reflect_weq/rt_closureP.
 Qed.
 
