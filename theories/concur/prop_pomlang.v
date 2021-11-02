@@ -3,6 +3,7 @@ From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice order fintype fingraph finmap.
 From mathcomp Require Import generic_quotient.
+From mathcomp.tarjan Require Import extra acyclic. 
 From eventstruct Require Import utils relalg inhtype ident lposet.
 
 (******************************************************************************)
@@ -39,14 +40,26 @@ Module Export Def.
 Notation lfspreposet E L eps := ({ fsfun E -> (L * seq E) of e => (eps, [::]) }).
 
 Section Def. 
-Context (E : identType) (L : choiceType).
+Context (E : identType) (L : eqType).
 Variable (eps : L).
 
-Implicit Types (q : lfspreposet E L eps).
+Implicit Types (p : lfspreposet E L eps).
 
-Definition fs_lab q : E -> L := fun e => (q e).1. 
-Definition fs_rcov q : E -> seq E := fun e => (q e).2. 
-Definition fs_ica q : rel E := [rel x y | grel (fs_rcov q) y x]. 
+Definition fs_lab p : E -> L := fun e => (p e).1. 
+
+Definition fs_rcov p : E -> seq E := fun e => (p e).2. 
+
+Definition fs_ica p : rel E := 
+  [rel x y | grel (fs_rcov p) y x]. 
+
+Definition fin_ica p : rel (fsupp p) := 
+  sub_rel_down (fs_ica p).
+
+Definition fs_ca p : rel E := 
+  (sub_rel_lift (connect (@fin_ica p)) : {dhrel E & E})^?.
+
+Definition fs_sca p : rel E := 
+  fun e1 e2 => (e2 != e1) && (fs_ca p e1 e2).
 
 Definition supp_closed q := 
   [forall e : finsupp q, all (fun e' => e' \in finsupp q) (fs_rcov q (val e))].
@@ -67,20 +80,62 @@ Qed.
 
 Structure lfsposet : Type := lFsPoset {
   lfsposet_val :> { fsfun E -> (L * seq E) of e => (eps, [::]) } ; 
-  _ : let q := lfsposet_val in 
-      supp_closed q (* && irreflexive (fs_ica q) && acyclic (fs_ica q) *)
+  _ : let p := lfsposet_val in 
+      supp_closed p && acyclic (@fin_ica p)
 }.
 
 Canonical lfsposet_subType := Eval hnf in [subType for lfsposet_val].
 
-Implicit Types (p : lfsposet).
+Lemma lfsposet_supp (p : lfsposet) : supp_closed p.
+Proof. by move: (valP p)=> /andP[]. Qed.
 
-Definition fs_ca p : rel E := 
-  sub_rel_lift (connect (sub_rel_down (fs_ica p) : rel (fsupp p))).
+Lemma lfsposet_acyclic (p : lfsposet) : acyclic (@fin_ica p).
+Proof. by move: (valP p)=> /andP[]. Qed.
 
-Lemma fs_caP p e1 e2 : 
-  reflect ((fs_ica p : hrel E E)^* e1 e2) 
-          ((fs_ca p : {dhrel E & E})^? e1 e2).
+End Def.
+End Def.
+
+Module Export Instances.
+Section Instances. 
+
+Definition lfsposet_eqMixin E L eps := 
+  Eval hnf in [eqMixin of (@lfsposet E L eps) by <:].
+Canonical lfinposet_eqType E L eps := 
+  Eval hnf in EqType (@lfsposet E L eps) (@lfsposet_eqMixin E L eps).
+
+Definition lfsposet_choiceMixin E (L : choiceType) eps :=
+  Eval hnf in [choiceMixin of (@lfsposet E L eps) by <:].
+Canonical lfsposet_choiceType E (L : choiceType) eps :=
+  Eval hnf in ChoiceType (@lfsposet E L eps) (@lfsposet_choiceMixin E L eps).
+
+(* TODO: define missing count mixin and canonical instances for fsfun? *)
+
+(* Definition lfsposet_countMixin E (L : countType) eps := *)
+(*   Eval hnf in [countMixin of (@lfsposet E L eps) by <:]. *)
+(* Canonical lfinposet_countType E (L : countType) := *)
+(*   Eval hnf in CountType (lfinposet E L) (lfinposet_countMixin E L). *)
+
+(* Canonical subFinfun_subCountType E (L : countType) := *)
+(*   Eval hnf in [subCountType of (lfinposet E L)]. *)
+
+(* Definition lfinposet_finMixin E (L : finType) := *)
+(*   Eval hnf in [finMixin of (lfinposet E L) by <:]. *)
+(* Canonical lfinposet_finType E (L : finType) := *)
+(*   Eval hnf in FinType (lfinposet E L) (lfinposet_finMixin E L). *)
+
+(* Canonical lfinposet_subFinType E (L : finType) := *)
+(*   Eval hnf in [subFinType of (lfinposet E L)]. *)
+
+End Instances.
+End Instances.
+
+Module Export POrder.
+Section POrder.
+Context {E : identType} {L : eqType}.
+Variable (eps : L) (p : @lfsposet E L eps).
+
+Lemma fs_caP e1 e2 : 
+  reflect ((fs_ica p : hrel E E)^* e1 e2) (fs_ca p e1 e2).
 Proof. 
   (* TODO: try to simplify proof *)
   apply/equivP.  
@@ -102,16 +157,16 @@ Proof.
     apply/H; apply: iff_sym. 
     apply: iff_trans; last first. 
     - apply: rwP; exact/(connect_strP).
-    by apply/clos_refl_trans_hrel_str.
+    by apply/clos_rt_str.
   apply: iff_trans; last first.
-  - by apply/clos_refl_trans_hrel_str.
+  - by apply/clos_rt_str.
   move=> /=; split=> [[|[e1' [] e2' []]] |].
   - move=> ->; exact/rt_refl.
   - move=> + <- <-; elim=> //.
     + move=> ??; exact/rt_step.
     move=> ??? ? + ?; exact/rt_trans.
   elim=> //=.
-  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ (valP p)) /andP[].
+  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ (lfsposet_supp p)) /andP[].
     move=> Pe1 Pe2 ica; right; exists (Sub e1 Pe1), (Sub e2 Pe2).
     by split=> //; apply/rt_step.
   - by move=> ?; left.
@@ -129,111 +184,34 @@ Proof.
   apply/val_inj=> /=; congruence.
 Qed.  
   
-Definition fsupp_ica p : rel (fsupp p) := 
-  [rel e1 e2 | fs_ica p (val e1) (val e2)].
+Lemma fs_sca_def e1 e2 : 
+  fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
+Proof. done. Qed.
 
-Definition fsupp_ca p : rel (fsupp p) := 
+Lemma fs_ca_refl : 
+  reflexive (fs_ca p). 
+Proof. by move=> ?; apply/fs_caP/clos_rt_str/rt_refl. Qed. 
 
-Arguments fin_ica : clear implicits.
-
-Lemma fin_icaE p : (sub_rel_lift (fin_ica p)) =2 (fs_ica p).
-Proof. by apply/sub_rel_lift_id=> ?? /(supp_closedP _ (valP p)). Qed.
-
-
-Definition fSupp p : Type := fsupp p.
-
-Variable (p : lfsposet).
-Variable (A B : pred (fSupp p)).
-Check (A \subset B).
-
-Definition ffun_lab (p : lfinposet_prod) : {ffun E -> L}        := p.1.1.
-Definition ffun_ca  (p : lfinposet_prod) : {ffun E * E -> bool} := p.1.2.
-Definition ffun_sca (p : lfinposet_prod) : {ffun E * E -> bool} := p.2.
-
-Definition lfinposet_pred (p : lfinposet_prod) := 
-  [&& [forall x, forall y, 
-        ffun_sca p (x, y) == (y != x) && ffun_ca p (x, y)],
-      [forall x, 
-        ffun_ca p (x, x)], 
-      [forall x, forall y, 
-        ffun_ca p (x, y) && ffun_ca p (y, x) ==> (x == y) ] 
-    & [forall x, forall y, forall z, 
-         ffun_ca p (x, y) && ffun_ca p (y, z) ==> ffun_ca p (x, z) ] 
-  ].
-
-Structure lfinposet := 
-  { lfposet :> lfinposet_prod; _ : lfinposet_pred lfposet }.
-
-Canonical lfinposet_subType := Eval hnf in [subType for lfposet].
-
-End Def.
-End Def.
-
-Module Export Instances.
-Section Instances. 
-
-Definition lfinposet_eqMixin E L := 
-  Eval hnf in [eqMixin of (lfinposet E L) by <:].
-Canonical lfinposet_eqType E L := 
-  Eval hnf in EqType (lfinposet E L) (lfinposet_eqMixin E L).
-
-Definition lfinposet_choiceMixin E (L : choiceType) :=
-  Eval hnf in [choiceMixin of (lfinposet E L) by <:].
-Canonical lfinposet_choiceType E (L : choiceType) :=
-  Eval hnf in ChoiceType (lfinposet E L) (lfinposet_choiceMixin E L).
-
-Definition lfinposet_countMixin E (L : countType) :=
-  Eval hnf in [countMixin of (lfinposet E L) by <:].
-Canonical lfinposet_countType E (L : countType) :=
-  Eval hnf in CountType (lfinposet E L) (lfinposet_countMixin E L).
-
-Canonical subFinfun_subCountType E (L : countType) :=
-  Eval hnf in [subCountType of (lfinposet E L)].
-
-Definition lfinposet_finMixin E (L : finType) :=
-  Eval hnf in [finMixin of (lfinposet E L) by <:].
-Canonical lfinposet_finType E (L : finType) :=
-  Eval hnf in FinType (lfinposet E L) (lfinposet_finMixin E L).
-
-Canonical lfinposet_subFinType E (L : finType) :=
-  Eval hnf in [subFinType of (lfinposet E L)].
-
-End Instances.
-End Instances.
-
-Module Export POrder.
-Section POrder.
-Context {E : finType} {L : eqType}.
-Variable (p : lfinposet E L).
-
-Local Notation lab := (ffun_lab p : E -> L).
-Local Notation ca  := (fun x y => ffun_ca  p (x, y)).
-Local Notation sca := (fun x y => ffun_sca p (x, y)).
-
-Lemma ffun_sca_def x y : sca x y = (y != x) && (ca x y).
+Lemma fs_ca_trans : 
+  transitive (fs_ca p). 
 Proof. 
-  move: (valP p)=> /and4P[+ _ _ _]. 
-  by move=> /forall2P H; move: (H x y)=> /eqP /=.
-Qed.  
+  move=> y x z /fs_caP /clos_rt_str ca_xy /fs_caP /clos_rt_str ca_yz. 
+  apply/fs_caP/clos_rt_str/rt_trans; [exact/ca_xy | exact/ca_yz].
+Qed. 
 
-Lemma ffun_ca_refl : reflexive ca. 
+Lemma fs_ca_antisym : 
+  antisymmetric (fs_ca p). 
 Proof. 
-  move: (valP p)=> /and4P[_ + _ _] x. 
-  by move=> /forallP H; move: (H x)=> /eqP /=.
-Qed.  
-
-Lemma ffun_ca_antisym : antisymmetric ca. 
-Proof. 
-  move: (valP p)=> /and4P[_ _ + _] x y. 
-  move=> /forall2P H; move: (H x y)=> /=.
-  by move=> /implyP /[apply] /eqP.
-Qed.  
-
-Lemma ffun_ca_trans : transitive ca. 
-Proof. 
-  move: (valP p)=> /and4P[_ _ _ +] y x z. 
-  move=> /forall3P H; move: (H x y z)=> /=.
-  by move: H=> _ /implyP H ??; apply/H/andP.
+  move=> e1 e2 /andP[]; rewrite /fs_ca /qmk /=.
+  rewrite /dhrel_one=> /orP[/eqP->|+ /orP[/eqP<-|]] //. 
+  move=> /sub_rel_liftP + /sub_rel_liftP.
+  move=> [e1' [] e2' [+++]] [e3' [] e4' [+++]].
+  move=> /[swap] <- /[swap] <-.
+  move=> ++ /val_inj H1 /val_inj H2.
+  rewrite H2 H1=> con_e12 con_e21.
+  suff: e1' = e2'=> [->|] //.
+  apply/(acyclic_antisym (lfsposet_acyclic p)).
+  by apply/andP.
 Qed.  
 
 Definition lfinposet_porderMixin := 
