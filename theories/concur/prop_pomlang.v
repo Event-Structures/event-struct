@@ -31,8 +31,6 @@ Local Open Scope pomset_scope.
 (* TODO: move to appropriate place *)
 Notation fsupp := finsupp.
 
-(* Lemma fsfun  *)
-
 Module lFsPoset. 
 
 Module Export Def.
@@ -106,6 +104,8 @@ Proof. by move: (valP p)=> /andP[]. Qed.
 End Def.
 End Def.
 
+Arguments lfsposet E L eps : clear implicits.
+
 Arguments fin_lab {E L eps} p.
 Arguments fin_ica {E L eps} p.
 Arguments fin_ca  {E L eps} p.
@@ -115,14 +115,14 @@ Module Export Instances.
 Section Instances. 
 
 Definition lfsposet_eqMixin E L eps := 
-  Eval hnf in [eqMixin of (@lfsposet E L eps) by <:].
+  Eval hnf in [eqMixin of (lfsposet E L eps) by <:].
 Canonical lfinposet_eqType E L eps := 
-  Eval hnf in EqType (@lfsposet E L eps) (@lfsposet_eqMixin E L eps).
+  Eval hnf in EqType (lfsposet E L eps) (@lfsposet_eqMixin E L eps).
 
 Definition lfsposet_choiceMixin E (L : choiceType) eps :=
-  Eval hnf in [choiceMixin of (@lfsposet E L eps) by <:].
+  Eval hnf in [choiceMixin of (lfsposet E L eps) by <:].
 Canonical lfsposet_choiceType E (L : choiceType) eps :=
-  Eval hnf in ChoiceType (@lfsposet E L eps) (@lfsposet_choiceMixin E L eps).
+  Eval hnf in ChoiceType (lfsposet E L eps) (@lfsposet_choiceMixin E L eps).
 
 (* TODO: define missing count mixin and canonical instances for fsfun? *)
 
@@ -148,7 +148,7 @@ End Instances.
 Module Export POrder.
 Section POrder.
 Context {E : identType} {L : eqType}.
-Variable (eps : L) (p : @lfsposet E L eps).
+Variable (eps : L) (p : lfsposet E L eps).
 
 Lemma fs_sca_def e1 e2 : 
   fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
@@ -377,6 +377,7 @@ Canonical pomset_eqQuotType := [eqQuotType is_iso of pomset].
 
 Implicit Types (p : pomset).
 
+(* TODO: try `simpl_fun` & `simpl_rel` ? *)
 Definition pom_lab p : E -> L := 
   fs_lab (repr p).
 
