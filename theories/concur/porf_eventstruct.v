@@ -3,7 +3,7 @@ From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
 From eventstruct Require Import utils relalg rel wftype ident inhtype.
-From eventstruct Require Import lposet pomset prime_eventstruct.
+From eventstruct Require Import lposet prime_eventstruct.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
