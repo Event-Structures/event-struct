@@ -28,7 +28,7 @@ All files include a more detailed description of their contents.
 
     - `ltr.v` - labelled transition systems and (linear) traces
     - `lposet.v` - labelled partially ordered sets
-    - `pomset.v` - pomsets languages
+    - `prop_pomlang.v` - pomsets languages as isomorphism invariant propositional predicates
     - `prime_eventstruct.v` - prime event structures 
     - `porf_eventstruct.v` - prime event structure built from program-order and reads-from relations
     - `transitionsystem.v` - incremental construction of event structure
