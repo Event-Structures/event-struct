@@ -83,7 +83,7 @@ Proof.
   move: P=> [] P + p q /=.
   rewrite /iso_inv=> HP f.
   apply/contra_not.
-  by move: (HP _ _ (lPoset.Iso.inv f)).
+  by move: (HP _ _ (lPoset.Iso.Build.inv f)).
 Qed.  
 Canonical neg P := Lang (@negP P).
 
@@ -158,14 +158,14 @@ Lemma stronger_subset P Q :
   P ≦ Q -> P ⊑ Q. 
 Proof. 
   move=> Hs p Hp; exists p; split; first exact /Hs.
-  constructor; exact/lPoset.Hom.id. 
+  constructor; exact/[hom of idfun]. 
 Qed.
   
 Lemma stronger_refl P : 
   P ⊑ P.
 Proof. 
   move=> p HP; exists p; split=> //. 
-  constructor; exact/lPoset.Hom.id.
+  constructor; exact/[hom of idfun].
 Qed.
 
 Lemma stronger_trans P Q R : 
@@ -175,21 +175,21 @@ Proof.
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
   exists r; split=> //; constructor. 
-  exact/(lPoset.Hom.comp g f).
+  exact/[hom of f \o g].
 Qed.
 
 Lemma unistronger_subset P Q :
   P ≦ Q -> P !⊑ Q. 
 Proof. 
   move=> Hs p Hp; exists p; split; first exact /Hs. 
-  constructor; exact/lPoset.bHom.id. 
+  constructor; exact/[bhom of idfun]. 
 Qed.
   
 Lemma unistronger_refl P : 
   P !⊑ P.
 Proof. 
   move=> p HP; exists p; split=> //. 
-  constructor; exact/lPoset.bHom.id.
+  constructor; exact/[bhom of idfun].
 Qed.
 
 Lemma unistronger_trans P Q R : 
@@ -199,7 +199,7 @@ Proof.
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
   exists r; split=> //; constructor.
-  exact/(lPoset.bHom.comp g f).
+  exact/[bhom of f \o g].
 Qed.
 
 Lemma unistronger_stronger P Q : 
@@ -213,15 +213,15 @@ Qed.
 Lemma supported_subset P Q :
   P ≦ Q -> P ↪ Q. 
 Proof. 
-  move=> Hs p Hp; exists p; split; first exact /Hs. 
-  constructor; exact/lPoset.bHom.id. 
+  move=> Hs p Hp; exists p; split; first exact /Hs.
+  constructor; exact/[bhom of idfun]. 
 Qed.
 
 Lemma supported_refl P : 
   P ↪ P. 
 Proof. 
   move=> p HP; exists p; split=> //.
-  constructor; exact/lPoset.bHom.id.
+  constructor; exact/[bhom of idfun].
 Qed.
 
 Lemma supported_trans P Q R : 
@@ -231,7 +231,7 @@ Proof.
   move: (H1 p HP)=> [q [HQ [f]]].
   move: (H2 q HQ)=> [r [HR [g]]].
   exists r; split=> //; constructor. 
-  exact/(lPoset.bHom.comp f g).
+  exact/[bhom of g \o f].
 Qed.
 
 End Theory.
@@ -258,7 +258,7 @@ Definition prop (E : lPoset.eventType L) : Prop :=
 Lemma iso_inv : Pomset.iso_inv prop. 
 Proof. 
   rewrite /prop=> E1 E2 f T e1 e2. 
-  set (g := lPoset.Iso.inv f).
+  set (g := lPoset.Iso.Build.inv f).
   move: (T (g e1) (g e2)).
   case H: (g e1 <= g e2); move: H. 
   - by rewrite (ca_reflecting g)=> ->.
@@ -307,7 +307,7 @@ Lemma iso_inv : Pomset.iso_inv prop.
 Proof. 
   move=> E1 E2 f [] HT [g]; repeat split.
   - by apply /(LinPomset.Lang.iso_inv f).  
-   by apply /(lPoset.bHom.comp g f).
+   by apply /[bhom of f \o g].
 Qed.
 
 Definition lang : Pomset.lang L := 
@@ -331,7 +331,7 @@ Proof.
   exists E1'; repeat split=> //=.
   - by apply /(lang_iso_inv f HP).
   - by apply /(LinPomset.Lang.iso_inv f).
-  by apply /(lPoset.bHom.comp g f).
+  by apply /[bhom of f \o g].
 Qed.
 
 Definition lang : Pomset.lang L := 
@@ -368,7 +368,7 @@ Lemma schedule_bij p q :
   {bhom p -> q} -> schedule q ≦ schedule p.
 Proof. 
   move=> f p' [Hl [g]]; repeat constructor=> //. 
-  exact /(lPoset.bHom.comp f g). 
+  exact /[bhom of g \o f]. 
 Qed.
 
 Lemma schedule_hom P Q p q : extensible P Q -> schedulable P -> 
@@ -402,12 +402,12 @@ Proof.
    *  As for (4) it is not obvious how it can be exploited in practice.
    *)
   move=> He Hd Hp Hq f q' [] Hq' [Hl [g]].
-  pose h := lPoset.Hom.comp f g.
+  pose h := [hom of g \o f].
   pose p' := lPoset.ext h. 
   move: (He _ _ h) Hp Hq'=> /[apply] /[apply] [[]] + _. 
   move: (Hd p')=> /[apply] [[]] p'' [] [] Hp'' HL [] k.
   exists p''; repeat split=> //.
-  - apply/(lPoset.bHom.comp _ k)/lPoset.Ext.bhom.
+  - apply/(comp_bhom k _)/lPoset.Ext.bhom.
   pose h' := (lPoset.Ext.hom h).
   pose k' := (lPoset.bHom.invF k).
   exists (h' \o k').
@@ -438,7 +438,7 @@ Proof.
   move: (Hw p Hp)=> [q [Hq [g]]].
   exists q; split=> //; split; last first. 
   - by apply/(schedule_bij g). 
-  pose h  := lPoset.bHom.comp g f.
+  pose h  := [bhom of f \o g].
   pose q' := lPoset.ext h. 
   pose j  := (lPoset.Ext.iso h).
   apply /(lang_iso_inv j).
