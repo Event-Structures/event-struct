@@ -44,22 +44,22 @@ Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
 (*     Reflexive closure                                                      *)
 (* ************************************************************************** *)
 
-Definition qmk {X : ops} n (x : X n n) := (1 ⊔ x).
+(* Definition qmk {X : ops} n (x : X n n) := (1 ⊔ x). *)
 
-Notation "r ^?" := (qmk r) (left associativity, at level 5, format "r ^?"): ra_terms.
+Notation "r ^?" := (1 ⊔ r) (left associativity, at level 5, format "r ^?"): ra_terms.
 
-Lemma qmkE `{laws} n (x : X n n) :
-  x^? ≡ 1 ⊔ x.
-Proof. by rewrite /qmk; apply: weq_Reflexive. Qed.
+(* Lemma qmkE `{laws} n (x : X n n) : *)
+(*   x^? ≡ 1 ⊔ x. *)
+(* Proof. by rewrite /qmk; apply: weq_Reflexive. Qed. *)
 
 Lemma itr_qmk `{laws} `{BKA ≪ l} n (x : X n n) :
   x^+^? ≡ x^?^+.
-Proof. rewrite /qmk; ka. Qed.
+Proof. by ka. Qed.
 
 (* TODO: make lemma instance of Proper for rewriting? *)
 Lemma qmk_weq `{laws} `{BKA ≪ l} n (x y : X n n): 
   x ≡ y -> x^? ≡ y^?.
-Proof. by rewrite /qmk=> ->. Qed.
+Proof. by move => ->. Qed.
 
 
 (* ************************************************************************** *)
@@ -80,7 +80,7 @@ Lemma qmk_sub_one `{CUP+CAP+TOP ≪ l} x :
   (x \ 1)^? ≡ x^?.
 Proof. 
   apply/weq_spec; split; first by lattice.
-  by rewrite /qmk -[x in _ + x]capxt -eq_dec capcup; lattice.
+  by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
 Qed.
 
 End SubtractionTheory. 
@@ -452,7 +452,7 @@ Lemma clos_rt_str R :
   clos_refl_trans R ≡ R^*. 
 Proof. 
   rewrite str_itr clos_rt_crE clos_r_qmk.
-  by rewrite /qmk clos_t_itr. 
+  by rewrite clos_t_itr. 
 Qed.
 
 End RelClos.
