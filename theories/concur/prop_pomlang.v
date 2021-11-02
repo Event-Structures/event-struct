@@ -147,8 +147,7 @@ Proof.
       apply/sub_rel_liftP. 
     by apply: iff_refl. 
   apply: iff_trans=> /=. 
-  - rewrite /qmk /=.
-    apply: or_iff_compat_l.
+  - apply: or_iff_compat_l.
     apply/exists_equiv=> e1'.
     apply/exists_equiv=> e2'.
     (* TODO: make lemma? *)
@@ -202,7 +201,7 @@ Qed.
 Lemma fs_ca_antisym : 
   antisymmetric (fs_ca p). 
 Proof. 
-  move=> e1 e2 /andP[]; rewrite /fs_ca /qmk /=.
+  move=> e1 e2 /andP[]; rewrite /fs_ca /=.
   rewrite /dhrel_one=> /orP[/eqP->|+ /orP[/eqP<-|]] //. 
   move=> /sub_rel_liftP + /sub_rel_liftP.
   move=> [e1' [] e2' [+++]] [e3' [] e4' [+++]].
