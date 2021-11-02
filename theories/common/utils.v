@@ -1,6 +1,8 @@
 From Coq Require Import Relations.
-From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype choice.
-From mathcomp Require Import order seq tuple path fintype finfun finmap zify.
+From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
+From mathcomp Require Import eqtype choice order seq tuple path zify.
+From mathcomp Require Import fintype finfun fingraph finmap.
+From mathcomp.tarjan Require Import extra acyclic. 
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1201,3 +1203,18 @@ Qed.
 End Theory.
 
 End Subsumes.
+
+
+Section Acyclic. 
+Context {T : finType}.
+Implicit Types (g : rel T). 
+
+Lemma acyclic_antisym g : 
+  acyclic g -> antisymmetric (connect g).
+Proof. 
+  move=> /acyclic_symconnect_eq symconE x y.
+  move: (symconE x y); rewrite /symconnect.
+  by move=> -> /eqP.
+Qed.
+
+End Acyclic. 
