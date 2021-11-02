@@ -33,7 +33,7 @@ Notation fsupp := finsupp.
 
 (* Lemma fsfun  *)
 
-Module lFsupPoset. 
+Module lFsPoset. 
 
 Module Export Def.
 
@@ -45,9 +45,14 @@ Variable (eps : L).
 
 Implicit Types (p : lfspreposet E L eps).
 
-Definition fs_lab p : E -> L := fun e => (p e).1. 
+Definition fs_lab p : E -> L := 
+  fun e => (p e).1. 
 
-Definition fs_rcov p : E -> seq E := fun e => (p e).2. 
+Definition fin_lab p : fsupp p -> L := 
+  fun e => fs_lab p (val e).
+
+Definition fs_rcov p : E -> seq E := 
+  fun e => (p e).2. 
 
 Definition fs_ica p : rel E := 
   [rel x y | grel (fs_rcov p) y x]. 
@@ -55,8 +60,14 @@ Definition fs_ica p : rel E :=
 Definition fin_ica p : rel (fsupp p) := 
   sub_rel_down (fs_ica p).
 
+Definition fin_ca p : rel (fsupp p) := 
+  connect (@fin_ica p).
+
+Definition fin_sca p : rel (fsupp p) := 
+  fun e1 e2 => (e2 != e1) && (@fin_ca p e1 e2).
+
 Definition fs_ca p : rel E := 
-  (sub_rel_lift (connect (@fin_ica p)) : {dhrel E & E})^?.
+  (sub_rel_lift (@fin_ca p) : {dhrel E & E})^?.
 
 Definition fs_sca p : rel E := 
   fun e1 e2 => (e2 != e1) && (fs_ca p e1 e2).
@@ -94,6 +105,11 @@ Proof. by move: (valP p)=> /andP[]. Qed.
 
 End Def.
 End Def.
+
+Arguments fin_lab {E L eps} p.
+Arguments fin_ica {E L eps} p.
+Arguments fin_ca  {E L eps} p.
+Arguments fin_sca {E L eps} p.
 
 Module Export Instances.
 Section Instances. 
@@ -133,6 +149,10 @@ Module Export POrder.
 Section POrder.
 Context {E : identType} {L : eqType}.
 Variable (eps : L) (p : @lfsposet E L eps).
+
+Lemma fs_sca_def e1 e2 : 
+  fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
+Proof. done. Qed.
 
 Lemma fs_caP e1 e2 : 
   reflect ((fs_ica p : hrel E E)^* e1 e2) (fs_ca p e1 e2).
@@ -182,11 +202,7 @@ Proof.
   suff: e2' = e3'=> [->|] //.
   apply/val_inj=> /=; congruence.
 Qed.  
-  
-Lemma fs_sca_def e1 e2 : 
-  fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
-Proof. done. Qed.
-
+ 
 Lemma fs_ca_refl : 
   reflexive (fs_ca p). 
 Proof. by move=> ?; apply/fs_caP/clos_rt_str/rt_refl. Qed. 
@@ -209,56 +225,109 @@ Proof.
   move=> ++ /val_inj H1 /val_inj H2.
   rewrite H2 H1=> con_e12 con_e21.
   suff: e1' = e2'=> [->|] //.
-  apply/(acyclic_antisym (lfsposet_acyclic p)).
+  apply/(connect_antisym (lfsposet_acyclic p)).
   by apply/andP.
 Qed.  
 
-Definition lfinposet_porderMixin := 
-  @LePOrderMixin E ca sca 
-    ffun_sca_def ffun_ca_refl ffun_ca_antisym ffun_ca_trans. 
+Definition lfsposet_porderMixin := 
+  @LePOrderMixin E (fs_ca p) (fs_sca p) 
+    fs_sca_def fs_ca_refl fs_ca_antisym fs_ca_trans. 
 
-Definition lfinposet_porderType := 
-  POrderType tt E lfinposet_porderMixin.
+Definition lfsposet_porderType := 
+  POrderType tt E lfsposet_porderMixin.
 
-Definition lfinposet_finPOrderType := 
-  [finPOrderType of lfinposet_porderType].
+Definition lfsposet_lposetMixin := 
+  @lPoset.lPoset.Mixin E L (POrder.class lfsposet_porderType) (fs_lab p).
 
-Definition lfinposet_lposetMixin := 
-  @lPoset.lPoset.Mixin E L (POrder.class lfinposet_finPOrderType) lab.
-
-Definition lfinposet_lposetType := 
-  @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lfinposet_lposetMixin).
-
-Definition lfinposet_lfinposetType := 
-  let class := lFinPoset.lFinPoset.Class lfinposet_lposetMixin in
-  @lFinPoset.lFinPoset.Pack L E class.
+Definition lfsposet_lposetType := 
+  @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lfsposet_lposetMixin).
 
 End POrder.
 End POrder.
+
+Module Export FinPOrder.
+Section FinPOrder.
+Context {E : identType} {L : eqType}.
+Variable (eps : L) (p : @lfsposet E L eps).
+
+Lemma fin_sca_def e1 e2 : 
+  fin_sca p e1 e2 = (e2 != e1) && (fin_ca p e1 e2).
+Proof. done. Qed.
+
+Lemma fin_ca_refl : 
+  reflexive (fin_ca p).
+Proof. exact/connect_refl. Qed.
+
+Lemma fin_ca_antisym : 
+  antisymmetric (fin_ca p).
+Proof. exact/connect_antisym/(lfsposet_acyclic p). Qed.
+
+Lemma fin_ca_trans : 
+  transitive (fin_ca p).
+Proof. exact/connect_trans. Qed.
+
+Lemma fin_disp : unit. 
+Proof. exact: tt. Qed.
+
+Definition lfsposet_fin_porderMixin := 
+  @LePOrderMixin _ (fin_ca p) (fin_sca p) 
+    fin_sca_def fin_ca_refl fin_ca_antisym fin_ca_trans. 
+
+Definition lfsposet_fin_porderType := 
+  POrderType fin_disp _ lfsposet_fin_porderMixin.
+
+Definition lfsposet_FinPOrderType :=
+  [finPOrderType of lfsposet_fin_porderType].
+
+Definition lfsposet_fin_lposetMixin := 
+  @lPoset.lPoset.Mixin _ L (POrder.class lfsposet_fin_porderType) (fin_lab p).
+
+Definition lfsposet_fin_lposetType := 
+  @lPoset.lPoset.Pack L (lfsposet_FinPOrderType) (lPoset.lPoset.Class lfsposet_fin_lposetMixin).
+
+Definition lfsposet_lfinposetType :=
+  let finCls := FinPOrder.class lfsposet_FinPOrderType in
+  let cls := @lFinPoset.lFinPoset.Class _ L finCls lfsposet_fin_lposetMixin in
+  @lFinPoset.lFinPoset.Pack L _ cls.
+
+End FinPOrder.
+End FinPOrder.
 
 Module Export Syntax. 
-Notation "[ 'eventType' 'of' p ]" := (lfinposet_lfinposetType p)
-  (at level 0, format "[ 'eventType'  'of'  p ]") : form_scope.
+Notation "[ 'Event' 'of' p ]" := (lfsposet_lposetType p)
+  (at level 0, format "[ 'Event'  'of'  p ]") : form_scope.
+Notation "[ 'FinEvent' 'of' p ]" := (lfsposet_lfinposetType p)
+  (at level 0, format "[ 'FinEvent'  'of'  p ]") : form_scope.
 End Syntax.
 
 Module Export Theory.
 Section Theory.
-Context {E : finType} {L : eqType}.
-Implicit Types (p : lfinposet E L).
+Context {E : identType} {L : eqType}.
+Variable (eps : L).
+Implicit Types (p : @lfsposet E L eps).
 
-Lemma ffun_labE p (e : [eventType of p]) : 
-  lab e = ffun_lab p e.  
+Lemma fs_labE p (e : [Event of p]) : 
+  lab e = fs_lab p e.  
+Proof. done. Qed.
+
+Lemma fs_caE p (e1 e2 : [Event of p]) : 
+  ca e1 e2 = fs_ca p e1 e2.  
+Proof. done. Qed.
+
+Lemma fs_scaE p (e1 e2 : [Event of p]) : 
+  sca e1 e2 = fs_sca p e1 e2.  
 Proof. done. Qed.
 
 End Theory.
 End Theory.
 
-End lFinposet.
+End lFsPoset.
 
-Export lFinposet.Def.
-Export lFinposet.Instances.
-Export lFinposet.POrder.
-Export lFinposet.Theory.
+Export lFsPoset.Def.
+Export lFsPoset.Instances.
+(* TODO: do not import Syntax by default? *)
+Export lFsPoset.Syntax.
+Export lFsPoset.Theory.
 
 
 Module Pomset.
