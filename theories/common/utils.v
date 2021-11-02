@@ -1213,11 +1213,15 @@ End Theory.
 End Subsumes.
 
 
-Section Acyclic. 
+Section FinGraph. 
 Context {T : finType}.
 Implicit Types (g : rel T). 
 
-Lemma acyclic_antisym g : 
+Lemma connect_refl g : 
+  reflexive (connect g).
+Proof. done. Qed. 
+
+Lemma connect_antisym g : 
   acyclic g -> antisymmetric (connect g).
 Proof. 
   move=> /acyclic_symconnect_eq symconE x y.
@@ -1225,4 +1229,4 @@ Proof.
   by move=> -> /eqP.
 Qed.
 
-End Acyclic. 
+End FinGraph. 
