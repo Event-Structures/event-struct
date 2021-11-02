@@ -417,10 +417,58 @@ End Def.
 
 Arguments pomset E L bot : clear implicits.
 
+Module Export Hom.
+Module Export POrder.
+Section POrder.
+Context {E : identType} {L : choiceType} (eps : L).
+Implicit Types (p q : pomset E L eps).
+
+Definition bhom_le : rel (pomset E L eps) := 
+  fun p q => 
+    let EP := [FinEvent of p] in
+    let EQ := [FinEvent of q] in
+    ??|{ffun EP -> EQ | lFinPoset.bhom_pred}|.
+
+Definition bhom_lt : rel (pomset E L eps) := 
+  fun p q => (q != p) && (bhom_le p q).
+
+Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
+Proof. done. Qed.
+
+Lemma bhom_le_refl : reflexive bhom_le. 
+Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
+
+Lemma bhom_le_antisym : antisymmetric bhom_le. 
+Proof. admit. Admitted.
+
+Lemma bhom_le_trans : transitive bhom_le. 
+Proof. move=> ???; exact/lFinPoset.bhom_trans. Qed.
+
+Lemma disp : unit. 
+Proof. exact: tt. Qed.
+
+Definition pomset_bhomPOrderMixin := 
+  @LePOrderMixin _ bhom_le bhom_lt 
+    bhom_lt_def bhom_le_refl bhom_le_antisym bhom_le_trans. 
+
+Canonical pomset_bhomPOrderType := 
+  POrderType disp (pomset E L eps) pomset_bhomPOrderMixin.
+
+Lemma bhom_leE p q : le p q = bhom_le p q.
+Proof. done. Qed.
+
+Lemma bhom_ltE p q : lt p q = bhom_lt p q.
+Proof. done. Qed.
+
+End POrder.
+End POrder.
+End Hom.
+
 End Pomset.
 
 Export Pomset.Def.
-
+Export Pomset.Theory.
+Export Pomset.Hom.POrder.
 
 (* Context (E : identType) (L : choiceType). *)
 (* Variable (bot : L). *)
