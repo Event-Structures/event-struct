@@ -403,14 +403,14 @@ Implicit Types (R : hrel T T) (r : rel T).
 (* TODO: consider to reformulate it in terms of relation-algebra 
  * (or try to just use kat tactics inplace) 
  *)
-Lemma clos_t_clos_rt R x y :
+Lemma clos_t_rt R x y :
   clos_trans R x y -> clos_refl_trans R x y.
 Proof.
   elim=> [|???? H ??]; first by constructor.
   by apply: rt_trans H _.
 Qed.
 
-Lemma clos_refl_transE R :
+Lemma clos_rt_crE R :
   clos_refl_trans R ≡ clos_refl (clos_trans R).
 Proof.
   move=> x y; split.
@@ -422,14 +422,14 @@ Proof.
   by apply: rt_trans H _.
 Qed.
 
-Lemma clos_refl_hrel_qmk R :
+Lemma clos_r_qmk R :
   clos_refl R ≡ R^?.
 Proof.
   split; first by case; [right | left].
   case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
 
-Lemma clos_trans_1n_hrel_itr R :
+Lemma clos_t1n_itr R :
   clos_trans_1n R ≡ R^+.
 Proof.
   move=> x y; split.
@@ -441,18 +441,18 @@ Proof.
   by apply: Relation_Operators.t1n_trans xz ct_zy.
 Qed.
 
-Lemma clos_trans_hrel_itr R :
+Lemma clos_t_itr R :
   clos_trans R ≡ R^+.
 Proof.
   move=> x y; rewrite clos_trans_t1n_iff.
-  by apply: clos_trans_1n_hrel_itr.
+  by apply: clos_t1n_itr.
 Qed.
 
-Lemma clos_refl_trans_hrel_str R : 
+Lemma clos_rt_str R : 
   clos_refl_trans R ≡ R^*. 
 Proof. 
-  rewrite str_itr clos_refl_transE clos_refl_hrel_qmk.
-  by rewrite /qmk clos_trans_hrel_itr. 
+  rewrite str_itr clos_rt_crE clos_r_qmk.
+  by rewrite /qmk clos_t_itr. 
 Qed.
 
 End RelClos.

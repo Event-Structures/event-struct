@@ -156,7 +156,7 @@ Lemma rt_closureP x y :
   reflect (clos_refl_trans (sfrel f) x y) (rt_closure x y).
 Proof.
   apply /equivP; last first.
-  { rewrite clos_refl_transE clos_refl_hrel_qmk. 
+  { rewrite clos_rt_crE clos_r_qmk. 
     apply or_iff_compat_l; symmetry.
     apply rwP; exact: t_closureP. }
   rewrite /t_closure /rt_closure /wsuffix in_cons eq_sym /=.
@@ -359,7 +359,7 @@ Proof.
     by apply/rt_closure_1nP/clos_rt1n_step.
   move=> {}y {}z' ??. exists y=> //.
   apply/rt_closure_1nP/rt1n_trans; first exact: H. 
-  by apply/clos_rt_rt1n/clos_t_clos_rt/clos_tn1_trans.
+  by apply/clos_rt_rt1n/clos_t_rt/clos_tn1_trans.
 Qed.
 
 End FinRTClosure.
