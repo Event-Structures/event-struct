@@ -44,13 +44,7 @@ Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
 (*     Reflexive closure                                                      *)
 (* ************************************************************************** *)
 
-(* Definition qmk {X : ops} n (x : X n n) := (1 ⊔ x). *)
-
 Notation "r ^?" := (1 ⊔ r) (left associativity, at level 5, format "r ^?"): ra_terms.
-
-(* Lemma qmkE `{laws} n (x : X n n) : *)
-(*   x^? ≡ 1 ⊔ x. *)
-(* Proof. by rewrite /qmk; apply: weq_Reflexive. Qed. *)
 
 Lemma itr_qmk `{laws} `{BKA ≪ l} n (x : X n n) :
   x^+^? ≡ x^?^+.
