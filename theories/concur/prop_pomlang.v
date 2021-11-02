@@ -325,47 +325,44 @@ End lFsPoset.
 
 Export lFsPoset.Def.
 Export lFsPoset.Instances.
-(* TODO: do not import Syntax by default? *)
-Export lFsPoset.Syntax.
 Export lFsPoset.Theory.
 
 
 Module Pomset.
 
-Import lFinposet.Syntax.
 Import lPoset.Syntax.
+Import lFsPoset.Syntax.
 
 Module Export Def.
 Section Def.  
-Context (E : finType) (L : choiceType).
+Context (E : identType) (L : choiceType).
+Variable (eps : L).
 
-Definition is_iso : rel (lfinposet E L) := 
+Definition is_iso : rel (@lfsposet E L eps) := 
   fun p q => 
-    let EP : lFinPoset.eventType L := [eventType of p] in
-    let EQ : lFinPoset.eventType L := [eventType of q] in
-    ??|{ffun EP -> EQ | @lFinPoset.iso_pred L EP EQ}|.
+    ??|{ffun [FinEvent of p] -> [FinEvent of q] | lFinPoset.iso_pred}|.
 
 (* TODO: generalize the proofs to arbitary `T -> T -> Type`? *)
 Lemma is_iso_refl : reflexive is_iso.
 Proof. 
   rewrite /is_iso=> p.
-  apply/lFinPoset.isoP. 
+  apply/lFinPoset.fisoP. 
   exists; exact/lPoset.Iso.id.
 Qed.
 
 Lemma is_iso_sym : symmetric is_iso.
 Proof. 
   rewrite /is_iso=> p q.
-  apply/idP/idP=> /lFinPoset.isoP [f]; 
-    apply/lFinPoset.isoP; 
+  apply/idP/idP=> /lFinPoset.fisoP [f]; 
+    apply/lFinPoset.fisoP; 
     exists; exact/(lPoset.Iso.inv f).
 Qed.
 
 Lemma is_iso_trans : transitive is_iso.
 Proof. 
   rewrite /is_iso=> p q r.
-  move=> /lFinPoset.isoP [f] /lFinPoset.isoP [g]. 
-  apply/lFinPoset.isoP. 
+  move=> /lFinPoset.fisoP [f] /lFinPoset.fisoP [g]. 
+  apply/lFinPoset.fisoP. 
   exists; exact/(lPoset.Iso.comp f g).
 Qed.
 
@@ -380,61 +377,144 @@ Canonical pomset_eqQuotType := [eqQuotType is_iso of pomset].
 
 Implicit Types (p : pomset).
 
-Definition pom_lab p : {ffun E -> L} := ffun_lab (repr p).
-Definition pom_ca  p : {ffun E * E -> bool} := ffun_ca (repr p).
-Definition pom_sca p : {ffun E * E -> bool} := ffun_sca (repr p).
+Definition pom_lab p : E -> L := 
+  fs_lab (repr p).
+
+Definition pom_ica  p : rel E := 
+  fs_ica (repr p).
+
+Definition pom_ca  p : rel E := 
+  fs_ca (repr p).
+
+Definition pom_sca p : rel E := 
+  fs_sca (repr p).
 
 End Def.
 End Def.
+
+Arguments pomset E L eps : clear implicits.
 
 Module Export POrder.
 Section POrder.
-Context {E : finType} {L : choiceType}.
-Variable (p : pomset E L).
+Context {E : identType} {L : choiceType}.
+Variable (eps : L) (p : pomset E L eps).
 
-Local Notation lab := (pom_lab p : E -> L).
-Local Notation ca  := (fun x y => pom_ca  p (x, y)).
-Local Notation sca := (fun x y => pom_sca p (x, y)).
+Lemma pom_sca_def e1 e2 : pom_sca p e1 e2 = (e2 != e1) && (pom_ca p e1 e2).
+Proof. rewrite /pom_sca /pom_ca; exact/lFsPoset.POrder.fs_sca_def. Qed.
 
-Lemma pom_sca_def x y : sca x y = (y != x) && (ca x y).
-Proof. rewrite /pom_sca /pom_ca; exact/ffun_sca_def. Qed.
+Lemma pom_ca_refl : reflexive (pom_ca p). 
+Proof. move=> ? /=; rewrite /pom_ca; exact/lFsPoset.POrder.fs_ca_refl. Qed.
 
-Lemma pom_ca_refl : reflexive ca. 
-Proof. move=> ? /=; rewrite /pom_ca; exact/ffun_ca_refl. Qed.
+Lemma pom_ca_antisym : antisymmetric (pom_ca p). 
+Proof. move=> ?? /=; rewrite /pom_ca; exact/lFsPoset.POrder.fs_ca_antisym. Qed.
 
-Lemma pom_ca_antisym : antisymmetric ca. 
-Proof. move=> ?? /=; rewrite /pom_ca; exact/ffun_ca_antisym. Qed.
-
-Lemma pom_ca_trans : transitive ca. 
-Proof. move=> ??? /=; rewrite /pom_ca; exact/ffun_ca_trans. Qed.
+Lemma pom_ca_trans : transitive (pom_ca p). 
+Proof. move=> ??? /=; rewrite /pom_ca; exact/lFsPoset.POrder.fs_ca_trans. Qed.
 
 Definition pomset_porderMixin := 
-  @LePOrderMixin E ca sca 
+  @LePOrderMixin E (pom_ca p) (pom_sca p) 
     pom_sca_def pom_ca_refl pom_ca_antisym pom_ca_trans. 
 
 Definition pomset_porderType := 
   POrderType tt E pomset_porderMixin.
 
-Definition pomset_finPOrderType := 
-  [finPOrderType of pomset_porderType].
-
 Definition pomset_lposetMixin := 
-  @lPoset.lPoset.Mixin E L (POrder.class pomset_finPOrderType) lab.
+  @lPoset.lPoset.Mixin E L (POrder.class pomset_porderType) (pom_lab p).
 
 Definition pomset_lposetType := 
   @lPoset.lPoset.Pack L E (lPoset.lPoset.Class pomset_lposetMixin).
 
-Definition pomset_lfinposetType := 
-  let class := lFinPoset.lFinPoset.Class pomset_lposetMixin in
-  @lFinPoset.lFinPoset.Pack L E class.
+End POrder.
+End POrder.
 
-End POrder.
-End POrder.
+Module Export FinPOrder.
+Section FinPOrder.
+Context {E : identType} {L : choiceType}.
+Variable (eps : L) (p : pomset E L eps).
+
+Local Notation fsupp := (fsupp (repr p)).
+
+Definition pom_fin_lab : fsupp -> L := 
+  fin_lab (repr p).
+
+Definition pom_fin_ica : rel fsupp := 
+  fin_ica (repr p).
+
+Definition pom_fin_ca : rel fsupp := 
+  fin_ca (repr p).
+
+Definition pom_fin_sca : rel fsupp := 
+  fin_sca (repr p).
+
+Lemma fin_sca_def e1 e2 : pom_fin_sca e1 e2 = (e2 != e1) && (pom_fin_ca e1 e2).
+Proof. done. Qed.
+
+Lemma fin_ca_refl : reflexive pom_fin_ca.
+Proof. exact/lFsPoset.FinPOrder.fin_ca_refl. Qed.
+
+Lemma fin_ca_antisym : antisymmetric pom_fin_ca.
+Proof. exact/lFsPoset.FinPOrder.fin_ca_antisym. Qed.
+
+Lemma fin_ca_trans : transitive pom_fin_ca.
+Proof. exact/lFsPoset.FinPOrder.fin_ca_trans. Qed.
+
+Lemma fin_disp : unit. 
+Proof. exact: tt. Qed.
+
+Definition pomset_fin_porderMixin := 
+  @LePOrderMixin _ pom_fin_ca pom_fin_sca 
+    fin_sca_def fin_ca_refl fin_ca_antisym fin_ca_trans. 
+
+Definition pomset_fin_porderType := 
+  POrderType fin_disp _ pomset_fin_porderMixin.
+
+Definition pomset_FinPOrderType :=
+  [finPOrderType of pomset_fin_porderType].
+
+Definition pomset_fin_lposetMixin := 
+  @lPoset.lPoset.Mixin _ L (POrder.class pomset_fin_porderType) pom_fin_lab.
+
+Definition pomset_fin_lposetType := 
+  let cls := lPoset.lPoset.Class pomset_fin_lposetMixin in 
+  @lPoset.lPoset.Pack L (pomset_FinPOrderType) cls.
+
+Definition pomset_lfinposetType :=
+  let finCls := FinPOrder.class pomset_FinPOrderType in
+  let cls := @lFinPoset.lFinPoset.Class _ L finCls pomset_fin_lposetMixin in
+  @lFinPoset.lFinPoset.Pack L _ cls.
+
+End FinPOrder.
+End FinPOrder.
 
 Module Export Syntax. 
-Notation "[ 'Event' 'of' p ]" := (pomset_lfinposetType p)
+Notation "[ 'Event' 'of' p ]" := (pomset_lposetType p)
   (at level 0, format "[ 'Event'  'of'  p ]") : form_scope.
+Notation "[ 'FinEvent' 'of' p ]" := (pomset_lfinposetType p)
+  (at level 0, format "[ 'FinEvent'  'of'  p ]") : form_scope.
 End Syntax.
+
+Module Export Theory.
+Section Theory.
+Context {E : identType} {L : choiceType}.
+Variable (eps : L).
+Implicit Types (p : pomset E L eps).
+
+Lemma pom_labE p (e : [Event of p]) : 
+  lab e = fs_lab (repr p) e.  
+Proof. done. Qed.
+
+Lemma pom_caE p (e1 e2 : [Event of p]) : 
+  ca e1 e2 = fs_ca (repr p) e1 e2.  
+Proof. done. Qed.
+
+Lemma pom_scaE p (e1 e2 : [Event of p]) : 
+  sca e1 e2 = fs_sca (repr p) e1 e2.  
+Proof. done. Qed.
+
+End Theory.
+End Theory.
+
+End Pomset.
 
 Module Export Hom.
 Module Export POrder.
