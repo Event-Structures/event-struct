@@ -381,10 +381,10 @@ Definition sub_down (g : U -> S) (f : U -> T) : U -> S :=
 Definition sub_lift (g : T -> U) (f : S -> U) : T -> U := 
   fun x => odflt (g x) (omap f (insub x)).
 
-Definition sub_rel_down (r : rel T) : simpl_rel S := 
+Definition sub_rel_down (r : rel T) : rel S := 
   [rel x y | r (val x) (val y)].
 
-Definition sub_rel_lift (r : rel S) : simpl_rel T := 
+Definition sub_rel_lift (r : rel S) : rel T := 
   [rel x y | match (insub x), (insub y) with
     | Some x, Some y => r x y
     | _, _ => false
@@ -468,12 +468,16 @@ Qed.
 
 Lemma sub_rel_lift_fld r : 
   subrel (sub_rel_lift r) [rel x y | P x && P y].
-Proof. by move=> ?? /=; case: insubP=> [? ->|] //; case: insubP=> //=. Qed.
+Proof. 
+  rewrite /sub_rel_lift=> ?? /=.
+  by repeat case: insubP=> [? ->|] //.
+Qed.
 
 Lemma sub_rel_down_liftK r : 
   sub_rel_down (sub_rel_lift r) =2 r.
 Proof. 
-  move=> x y /=; rewrite !insubT; try exact/valP.
+  rewrite /sub_rel_lift /sub_rel_down=> x y /=. 
+  rewrite !insubT; try exact/valP.
   by move=> ??; rewrite !sub_val. 
 Qed.
 
@@ -484,9 +488,9 @@ Proof.
   have ->: r x y = [&& r x y, P x & P y].
   - apply/idP/idP=> [|/and3P[]] //=. 
     by move=> /[dup] /sub /andP[] -> -> ->. 
+  rewrite /sub_rel_lift /sub_rel_down /=.
   apply/idP/idP.
-  - repeat (case: insubP=> [? -> ->|] //). 
-    by move=> ->.
+  - repeat (case: insubP=> [? -> ->|] //); by move=> ->. 
   move=> /and3P[???].
   repeat (case: insubP=> [?? ->|/negP] //).
 Qed. 
@@ -497,6 +501,7 @@ Lemma sub_rel_liftP (r : rel S) x y :
 Proof.
   pose rl := sub_rel_lift r.
   pose r' := [rel x y | P x && P y].
+  rewrite -/rl.
   have ->: rl x y = [&& rl x y, P x & P y].
   - apply/idP/idP=> [/[dup] + ->|/and3P[]] //. 
     by move=> /sub_rel_lift_fld /andP[-> ->]. 
@@ -504,11 +509,11 @@ Proof.
   - move=> /and3P[rxy px py].
     exists (Sub x px), (Sub y py).
     split; rewrite ?SubK //. 
-    by move: rxy=> /=; rewrite !insubT.
+    by move: rxy=> /=; rewrite /rl /sub_rel_lift /= !insubT.
   move=> [x' [] y' []] /=.
   move=> + <- <-; move: (valP x') (valP y'). 
   move=> /[dup] ? -> /[dup] ? ->.
-  by rewrite !insubT !andbT !sub_val.
+  by rewrite /rl /sub_rel_lift /= !insubT !andbT !sub_val.
 Qed.
 
 End SubTypeUtils.
