@@ -11,7 +11,6 @@
 
 theories/common/utils.v
 theories/common/relalg.v
-theories/common/ssrnatlia.v
 theories/common/wftype.v
 theories/common/inhtype.v
 theories/common/ident.v

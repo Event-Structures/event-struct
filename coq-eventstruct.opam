@@ -22,6 +22,7 @@ depends: [
   "coq-mathcomp-finmap" {(>= "1.5.1") | (= "dev")}
   # "coq-mathcomp-ssreflect" {(>= "1.12" & < "1.13~") | (= "dev")}
   "coq-mathcomp-ssreflect" {(= "dev")}
+  "coq-mathcomp-zify" {(= "dev")}
   "coq-relation-algebra" {(>= "1.7.4")}
   # "coq-relation-algebra" {(= "dev")}
   "coq-equations"

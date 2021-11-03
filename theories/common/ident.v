@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
-From mathcomp Require Import choice eqtype order.
-From eventstruct Require Import utils ssrnatlia wftype.
+From mathcomp Require Import choice eqtype order zify.
+From eventstruct Require Import utils wftype.
 
 (******************************************************************************)
 (* This file contains a theory of types that can be used as identifiers.      *)
@@ -383,7 +383,6 @@ Lemma fresh_lt x :
   x <^i fresh x.
 Proof. 
   rewrite /fresh /ident_lt /= /Def.ident_lt decodeK. 
-  (* ssrnatlia --- should work here, but it doesn't :( *)
   exact /ltnSn.
 Qed.
 
