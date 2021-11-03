@@ -553,7 +553,7 @@ Proof.
   - move: Hj=> /(nthP 0) [k].
     rewrite size_drop nth_drop=> ??.
     exists (i.+1 + k); split=> //. 
-    apply/andP; split=> //; first by lia.
+    apply/andP; split=> //; first lia.
     by rewrite -ltn_subRL.    
   move=> [k [<- /andP[]]].
   rewrite leq_eqVlt=> /orP[/eqP ->|??] //. 
