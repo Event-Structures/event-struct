@@ -1029,7 +1029,7 @@ Proof.
     move: Hinj Hi=> /leq_card /=. 
     by rewrite !card_ord.
   - apply/homo_sorted; last by exact/iota_ltn_sorted.
-    apply/sub_lift_homo=> //=; [by lia| ..]; last first.
+    apply/sub_lift_homo=> //=; [lia| ..]; last first.
     + by move=> ?? /=; rewrite ltn_add2l.
     move=> {}x {}y /= /negP; rewrite -leqNgt=> Hyn.
     rewrite -[val (f x)]addn0 -addnS; apply/leq_add. 
