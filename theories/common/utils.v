@@ -832,7 +832,7 @@ Proof.
   - move=> /negP; rewrite -leqNgt leqn0=> /eqP-> _.
     rewrite subn1 nth_last ltn_subCr subn0.
     move: (mem_last 0 s); rewrite in_cons. 
-    move=> /orP[/eqP->|] //; first by lia.
+    move=> /orP[/eqP->|] //; first lia.
     by move: Ha=> /allP /[apply].
   move=> Hk _; move: (IH (ltnW Hks) Hk)=> Hkn.
   apply/(leq_ltn_trans Hkn). 
