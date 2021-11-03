@@ -1034,7 +1034,7 @@ Proof.
     move=> {}x {}y /= /negP; rewrite -leqNgt=> Hyn.
     rewrite -[val (f x)]addn0 -addnS; apply/leq_add. 
     - by apply/ltnW; move: (valP (f x)). 
-    by apply/(leq_trans _ Hyn); lia.
+   apply/(leq_trans _ Hyn); lia.
   rewrite -tnth_nth tcastE esymK Hnth. 
   have ->: cast_ord (size_tuple t) i = Ordinal Hi by exact/val_inj.
   by subst s; rewrite nth_mkseq // sub_liftT // -tnth_nth.
