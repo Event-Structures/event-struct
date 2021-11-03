@@ -251,7 +251,6 @@ Lemma cons_ca_contr (X Y : {fset E}) (df : E):
 Proof.
   move=> C Cy; have [n leMn] := ubnP (#|` (X `\` Y)|).
   elim: n => // n IHn in X leMn C *.
-  Search (_ \in _ `\` _).
   case: n IHn leMn=> [*|n IHn leMn].
   - by have /cons_contr/(_ Cy): X `<=` Y by rewrite -fsetD_eq0 -cardfs_eq0; lia.
   case (fset_0Vmem (X `\` Y))=> [/eqP| [x]].
