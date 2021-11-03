@@ -16,7 +16,6 @@ All files include a more detailed description of their contents.
 
     - `utils.v` - miscellaneous 
     - `relalg.v` - variuos additions to relation-algebra package
-    - `lia.v` - lia analogue for ssreflect
     - `wftype.v` - interface for types with well-founded partial order
     - `inhtype.v` - interface for inhabited type, that is a type with one distinguished inhabitant
     - `ident.v` - interface for types that can be used as identifiers
