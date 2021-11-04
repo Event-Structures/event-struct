@@ -1,7 +1,7 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice order finmap fintype zify. 
 From RelationAlgebra Require Import lattice boolean.
-From eventstruct Require Import utils relalg lposet pomset.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
+From mathcomp Require Import eqtype choice order finmap fintype. 
+From eventstruct Require Import utils relalg lposet.
 
 (******************************************************************************)
 (* This file provides a theory of prime event structures.                     *)
@@ -252,7 +252,7 @@ Proof.
   move=> C Cy; have [n leMn] := ubnP (#|` (X `\` Y)|).
   elim: n => // n IHn in X leMn C *.
   case: n IHn leMn=> [*|n IHn leMn].
-  - by have /cons_contr/(_ Cy): X `<=` Y by rewrite -fsetD_eq0 -cardfs_eq0; lia.
+  - by have /cons_contr/(_ Cy): X `<=` Y by rewrite -fsetD_eq0 -cardfs_eq0 -leqn0.
   case (fset_0Vmem (X `\` Y))=> [/eqP| [x]].
   - rewrite fsetD_eq0=> /cons_contr; exact.
   move=> /[dup] iXY.
@@ -261,7 +261,8 @@ Proof.
   - rewrite fsetDUl.
     have/eqP->: ([fset y] `\` Y == fset0) by rewrite fsetD_eq0 fsub1set.
     rewrite fset0U fsetDDl fsetUC -fsetDDl.
-    rewrite (cardfsD1 x) iXY /= in leMn; move: #|`_| leMn; lia.
+    rewrite (cardfsD1 x) iXY /= in leMn; move: #|`_| leMn=> sz. 
+    by rewrite add1n=> /=.
   rewrite ?inE=> /orP[/eqP->|/andP[_ /C //]].
   by exists y.
 Qed.
