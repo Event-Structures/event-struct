@@ -51,8 +51,6 @@ Declare Scope prime_eventstruct_scope.
 Delimit Scope prime_eventstruct_scope with prime_es.
 Local Open Scope prime_eventstruct_scope.
 
-Definition id_hack {E} := @id E.
-
 Reserved Notation "x \# y" (at level 75, no associativity).
 
 Definition fin_cause {T : eqType} (ca : rel T) :=
@@ -230,36 +228,42 @@ Module Export Syntax.
 Notation cons := cons (only parsing).
 End Syntax.
 
-Module Import Theory.
+Module Export Theory.
 Section Theory.
 
 Context {L : Type} {E : eventType L}.
 
-Lemma cons_self : forall (e : E), cons [fset e].
-Proof. by case: E => ? [? []]. Qed.
+Lemma cons_self (e : E) : cons [fset e].
+Proof. by move: e; case: E => ? [? []]. Qed.
 
-Lemma cons_contr : forall (X Y : {fset E}), X `<=` Y -> cons Y -> cons X.
-Proof. by case: E => ? [? []]. Qed.
+Lemma cons_contr (X Y : {fset E}) : X `<=` Y -> cons Y -> cons X.
+Proof. by move: X Y; case: E => ? [? []]. Qed.
 
-Lemma cons_prop :
-  forall X (e e' : E), e <= e' -> cons (e' |` X) -> cons (e |` X).
-Proof. by case: E => ? [? []]. Qed.
+Lemma cons_prop X (e1 e2 : E) : 
+  e1 <= e2 -> cons (e2 |` X) -> cons (e1 |` X).
+Proof. by move: X e1 e2; case: E => ? [? []]. Qed.
 
-Lemma cons_ca_contr (X Y : {fset E}) (df : E):
+(* TODO: use notation for precondition 
+ *   {subset X <= (<= Y)}, or
+ *   {subsumes X <= Y : x y / x <= y}
+ *)
+Lemma cons_ca_contr (X Y : {fset E}) :
   (forall x, x \in X -> exists2 y, y \in Y & x <= y) ->
   cons Y -> cons X.
 Proof.
   move=> C Cy; have [n leMn] := ubnP (#|` (X `\` Y)|).
   elim: n => // n IHn in X leMn C *.
-  case: n IHn leMn=> [*|n IHn leMn].
-  - by have /cons_contr/(_ Cy): X `<=` Y by rewrite -fsetD_eq0 -cardfs_eq0 -leqn0.
+  case: n IHn leMn=> [|n] IHn leMn. 
+  - move: leMn; rewrite ltnS leqn0 cardfs_eq0 fsetD_eq0. 
+    by move: Cy=> /[swap] /cons_contr /[apply].
   case (fset_0Vmem (X `\` Y))=> [/eqP| [x]].
   - rewrite fsetD_eq0=> /cons_contr; exact.
   move=> /[dup] iXY.
   rewrite inE=> /andP[? /[dup] /C[y iy xLy] /fsetD1K<-].
   apply/(cons_prop xLy)/IHn=> [|z].
   - rewrite fsetDUl.
-    have/eqP->: ([fset y] `\` Y == fset0) by rewrite fsetD_eq0 fsub1set.
+    have/eqP->: ([fset y] `\` Y == fset0). 
+    + by rewrite fsetD_eq0 fsub1set.
     rewrite fset0U fsetDDl fsetUC -fsetDDl.
     rewrite (cardfsD1 x) iXY /= in leMn; move: #|`_| leMn=> sz. 
     by rewrite add1n=> /=.
@@ -269,14 +273,12 @@ Qed.
 
 Lemma prefix_cf_free (e : E) : cf_free (<= e).
 Proof. 
-  move=> X S; apply/(@cons_ca_contr _ [fset e] e)/cons_self.
+  move=> X S; apply/(@cons_ca_contr _ [fset e])/cons_self.
   move=> x i; exists e; rewrite ?inE //; exact/S.
 Qed.
 
 Lemma prefix_cfg (e : E) : cfg (<= e).
-Proof.
-  split; [exact/prefix_ca_closed | exact/prefix_cf_free].
-Qed.
+Proof. split; [exact/prefix_ca_closed | exact/prefix_cf_free]. Qed.
 
 End Theory.
 End Theory.
