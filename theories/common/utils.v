@@ -534,6 +534,8 @@ Section SeqUtils.
 Context {T : Type}. 
 Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
 
+Definition copy n s := flatten (nseq n s).
+
 Lemma headNnil x y s : 
   ~~ nilp s -> head y s = head x s.
 Proof. by case: s. Qed.
@@ -647,6 +649,25 @@ Qed.
 End SeqUtils.
 
 Arguments sorted_rcons {T} x.
+
+
+Section PathUtils.
+Context {T : Type}. 
+Implicit Types (p : pred T) (e : rel T) (s : seq T) (n : nat).
+
+Lemma copy_cycle e s n : 
+  cycle e s -> cycle e (copy n s).
+Proof. 
+  rewrite /copy=> cyc; elim n=> [|{}n IHn] => //=.
+  move: cyc IHn; case: s=> [|x {}s] => //=.
+  rewrite rcons_cat cat_path !rcons_path.  
+  move=> /andP[sp ex] cy; apply/andP; split=> //.
+  move: cy; case: n=> [|{}n] //=. 
+  by rewrite ex rcons_path=> /andP[-> ->]. 
+Qed.
+
+End PathUtils.
+
 
 Section FindNth.
 
@@ -1120,7 +1141,7 @@ Module Export SubFinFun.
 
 Section Def.
 Context {aT : finType} {rT : Type}.
-Implicit Types (P : pred {ffun aT -> rT}).
+Implicit Types (f : {ffun aT -> rT}) (P : pred {ffun aT -> rT}).
 
 Structure subFinfun P : Type := SubFinfun { 
   apply :> {ffun aT -> rT};
@@ -1131,6 +1152,10 @@ Canonical subFinfun_subType P := Eval hnf in [subType for (@apply P)].
 
 Definition sub_finfun_of (ph : phant (aT -> rT)) P : predArgType :=
   [subType of (subFinfun P)].
+
+(* TODO: invent better rename or notation? *)
+Definition SubFinfunOf f P : P f -> sub_finfun_of (Phant (aT -> rT)) P := 
+  fun pf => SubFinfun pf.
 
 End Def.
 
@@ -1230,3 +1255,30 @@ Proof.
 Qed.
 
 End FinGraph. 
+
+
+Section IterUtils.
+Context {T : Type}.
+Implicit Types (f : T -> T).
+Implicit Types (r : rel T).
+
+(* TODO: r could be T -> T -> Prop ? *)
+Lemma homo_iter r f n :
+  { homo f : x y / r x y } -> { homo (iter n f) : x y / r x y }.
+Proof. 
+  elim n=> [|{}n IH] //=.
+  - by move=> ? x y /=. 
+  move=> homo x y /= ?.
+  by apply/homo/IH. 
+Qed.
+
+Lemma iter_mul_eq n m f x : 
+  iter m f x = x -> iter (n * m) f x = x.
+Proof. 
+  move=> fmx; elim: n=> [|{}n IH] => //=.
+  by rewrite mulSnr iterD fmx IH. 
+Qed.
+
+End IterUtils.
+
+Arguments homo_iter {T} [r] f n.
