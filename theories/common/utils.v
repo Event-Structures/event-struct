@@ -40,7 +40,7 @@ Proof. by rewrite !orbT. Qed.
 Lemma orbbbbT a b c d: [|| a, b, c, d | true].
 Proof. by rewrite !orbT. Qed.
 
-Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
+#[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
 (* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
@@ -749,7 +749,7 @@ Section MkMask.
 Context {T : Type}.
 Implicit Types (s : seq nat) (m : bitseq) (n : nat).
 
-Fixpoint mkmask s n : bitseq :=
+Definition mkmask s n : bitseq :=
   (fix mkmask (s : seq nat) m := match s with
     | [::]    => m
     | i :: s' => set_nth false (mkmask s' m) i true

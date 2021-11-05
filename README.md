@@ -25,7 +25,7 @@ All files include a more detailed description of their contents.
 
 - `concur` - semantic domains for concurrency
 
-    - `ltr.v` - labelled transition systems and (linear) traces
+    - `lts.v` - labelled transition systems and (linear) traces
     - `lposet.v` - labelled partially ordered sets
     - `prop_pomlang.v` - pomsets languages as isomorphism invariant propositional predicates
     - `prime_eventstruct.v` - prime event structures 
