@@ -419,14 +419,17 @@ Arguments pomset E L bot : clear implicits.
 
 Module Export Hom.
 Module Export POrder.
+
+Import lFsPoset.Syntax.
+
 Section POrder.
 Context {E : identType} {L : choiceType} (eps : L).
 Implicit Types (p q : pomset E L eps).
 
 Definition bhom_le : rel (pomset E L eps) := 
   fun p q => 
-    let EP := [FinEvent of p] in
-    let EQ := [FinEvent of q] in
+    let EP := [FinEvent of (repr p)] in
+    let EQ := [FinEvent of (repr q)] in
     ??|{ffun EP -> EQ | lFinPoset.bhom_pred}|.
 
 Definition bhom_lt : rel (pomset E L eps) := 
@@ -438,11 +441,19 @@ Proof. done. Qed.
 Lemma bhom_le_refl : reflexive bhom_le. 
 Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
 
-Lemma bhom_le_antisym : antisymmetric bhom_le. 
-Proof. admit. Admitted.
-
 Lemma bhom_le_trans : transitive bhom_le. 
 Proof. move=> ???; exact/lFinPoset.bhom_trans. Qed.
+
+(* TODO: make part of the proof to lposet.v ? *)
+Lemma bhom_le_antisym : antisymmetric bhom_le. 
+Proof. 
+  move=> p q /andP[] /lFinPoset.fbhomP[f] /lFinPoset.fbhomP[g].
+  (* TODO: make lemma: reflect (x = y) (e (repr x) (repr y)) ? *)
+  rewrite -(reprK p) -(reprK q).
+  apply/eqP=> /=; rewrite /pomset eqmodE /=.
+  apply/lFinPoset.fisoP=> /=.
+  exists; exact/(lFinPoset.of_ihoms f g).   
+Qed.
 
 Lemma disp : unit. 
 Proof. exact: tt. Qed.
@@ -467,7 +478,7 @@ End Hom.
 End Pomset.
 
 Export Pomset.Def.
-Export Pomset.Theory.
+(* Export Pomset.Theory. *)
 Export Pomset.Hom.POrder.
 
 (* Context (E : identType) (L : choiceType). *)

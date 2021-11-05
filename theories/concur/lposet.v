@@ -1844,6 +1844,9 @@ Proof.
   by move=> ??; rewrite !ffunE fihom_ca_reflecting.
 Qed.
 
+Definition of_ihoms {E1 E2} : E1 ≈> E2 -> E2 ≈> E1 -> E1 ~= E2 := 
+  fun f g => lPoset.Iso.Iso.Pack (of_ihoms_class f g).
+
 End Build.
 
 End Iso.
