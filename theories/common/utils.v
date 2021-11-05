@@ -1,7 +1,6 @@
 From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype choice.
-From mathcomp Require Import order seq tuple path fintype finfun finmap.
-From eventstruct Require Import ssrnatlia.
+From mathcomp Require Import order seq tuple path fintype finfun finmap zify.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -291,7 +290,7 @@ Proof.
   - by move=> /negP /(contra_not_leq id) /IH.
   move=> + /negP /(contra_not_leq id).
   move=> + /leq_trans /[apply]. 
-  by ssrnatlia.
+  lia.
 Qed.
 
 Lemma foldl_maxn_leq_init n s : 
@@ -488,7 +487,7 @@ Proof.
   - by rewrite set_nth_nil addn0 /= => _; elim i.
   elim i=> [|{}i IHi] => /=.
   - by move=> /negbTE ->. 
-  move=> /IH ->; ssrnatlia. 
+  move=> /IH ->; lia. 
 Qed.
 
 Lemma mkseqS (f : nat -> T) n : 
@@ -554,7 +553,7 @@ Proof.
   - move: Hj=> /(nthP 0) [k].
     rewrite size_drop nth_drop=> ??.
     exists (i.+1 + k); split=> //. 
-    apply/andP; split=> //; first by ssrnatlia.
+    apply/andP; split=> //; first lia.
     by rewrite -ltn_subRL.    
   move=> [k [<- /andP[]]].
   rewrite leq_eqVlt=> /orP[/eqP ->|??] //. 
@@ -629,7 +628,7 @@ Proof.
   - by rewrite -nth_drop Hs2 nth_find // has_count -Hs2 //. 
   - by rewrite size_take Hszf.
   rewrite takeD take_drop addnC takeD drop_cat size_takel; last first.
-  - rewrite Hs size_cat size_rcons Hsz; ssrnatlia.
+  - rewrite Hs size_cat size_rcons Hsz; lia.
   rewrite ltnn subnn drop0 count_cat -Hs1' Hs2.  
   by rewrite -cats1 count_cat Hcs1 count_take_find /= Hp !addn0 addn1. 
 Qed.  
@@ -646,8 +645,8 @@ Proof.
     move=> x m i s1 s2 Hp Hsz Hc Hc'.
     rewrite size_cat size_rcons Hsz.
     rewrite leq_add2l leqNgt -has_find has_count -leqNgt.
-    move: Hc'; rewrite count_cat -cats1 count_cat /= Hp /= Hc; ssrnatlia.
-  by move=> /ltnSE H; apply/(leq_trans (IH s H)); ssrnatlia.
+    move: Hc'; rewrite count_cat -cats1 count_cat /= Hp /= Hc; lia.
+  by move=> /ltnSE H; apply/(leq_trans (IH s H)); lia.
 Qed.
 
 Lemma count_find_nth (x0 : T) p s n : 
@@ -656,7 +655,7 @@ Proof.
   symmetry; case H: (n < count p s).
   - case: (split_count_find_nth x0 H).
     move=> x m i s1 s2 ? <- ?.
-    rewrite size_cat size_rcons; ssrnatlia.
+    rewrite size_cat size_rcons; lia.
   apply/negP/negP; rewrite -leqNgt; apply/(count_Nfind_nth x0).
   by move: H=> /negP/negP; rewrite -leqNgt.
 Qed.
@@ -681,7 +680,7 @@ Lemma find_nth_inj p s :
   injective (find_nth p s).
 Proof. 
   move=> i j; move: (ltn_total i j). 
-  by move=> /orP[/eqP|/orP[]] // /(find_nth_ltn p s); ssrnatlia.
+  by move=> /orP[/eqP|/orP[]] // /(find_nth_ltn p s); lia.
 Qed.  
   
 Lemma find_nth_consT p x xs n :
@@ -833,7 +832,7 @@ Proof.
   - move=> /negP; rewrite -leqNgt leqn0=> /eqP-> _.
     rewrite subn1 nth_last ltn_subCr subn0.
     move: (mem_last 0 s); rewrite in_cons. 
-    move=> /orP[/eqP->|] //; first by ssrnatlia.
+    move=> /orP[/eqP->|] //; first lia.
     by move: Ha=> /allP /[apply].
   move=> Hk _; move: (IH (ltnW Hks) Hk)=> Hkn.
   apply/(leq_ltn_trans Hkn). 
@@ -841,7 +840,7 @@ Proof.
   - apply/sorted_ltn_nth=> //.
     apply/andP; split=> //.
     apply/ltn_sub2l=> //.
-    ssrnatlia. 
+    lia. 
   apply/(ltn_sub2l _ Hnth)/(ltn_trans Hnth). 
   by rewrite -subn_gt0; apply/(leq_trans Hk). 
 Qed.    
@@ -907,7 +906,7 @@ Proof.
   - move: Hi; case i=> [|{}k] //=. 
     rewrite ltnS=> /(mem_nth 0) Hi. 
     move: Hjs=> /allP=> H; move: (H (nth 0 s k) Hi)=> //; exact/ltnW. 
-  case: ifP=> [|_]; first ssrnatlia.
+  case: ifP=> [|_]; first lia.
   move: Hi; case i=> [|{}k] /=.
   - move=> Hsz _; rewrite subnn !drop0.
     apply/drop_mkmask_lt=> //; last exact/ltnW. 
@@ -949,7 +948,7 @@ Proof.
   - apply/andP; split=> //; exact/ltnW.
   move: Ha Hs Hs0 Hil Hl; case: s=> [|j {}s'] //.  
   move=> /= ??? /andP[] + ??. 
-  rewrite /Order.lt /=; ssrnatlia.
+  rewrite /Order.lt /=; lia.
 Qed.
 
 End FindMkMask.
@@ -1015,7 +1014,7 @@ Proof.
   have Hsz: size (mask (mkmask s m) u) = size t.
   - rewrite size_mask ?size_mkmask ?count_mkmask ?size_tuple //.
     apply/mkseq_uniq/sub_lift_inj.
-    + by move=> {}x {}y; move: (valP (f y))=> /[swap] /= <-; ssrnatlia.
+    + by move=> {}x {}y; move: (valP (f y))=> /[swap] /= <-; lia.
     + by move=> ??; apply/addnI. 
     by move=> ???; apply/Hinj/val_inj. 
   have Hsz': size (mask (mkmask s m) u) = n.
@@ -1030,12 +1029,12 @@ Proof.
     move: Hinj Hi=> /leq_card /=. 
     by rewrite !card_ord.
   - apply/homo_sorted; last by exact/iota_ltn_sorted.
-    apply/sub_lift_homo=> //=; [by ssrnatlia| ..]; last first.
+    apply/sub_lift_homo=> //=; [lia| ..]; last first.
     + by move=> ?? /=; rewrite ltn_add2l.
     move=> {}x {}y /= /negP; rewrite -leqNgt=> Hyn.
     rewrite -[val (f x)]addn0 -addnS; apply/leq_add. 
     - by apply/ltnW; move: (valP (f x)). 
-    by apply/(leq_trans _ Hyn); ssrnatlia.
+   apply/(leq_trans _ Hyn); lia.
   rewrite -tnth_nth tcastE esymK Hnth. 
   have ->: cast_ord (size_tuple t) i = Ordinal Hi by exact/val_inj.
   by subst s; rewrite nth_mkseq // sub_liftT // -tnth_nth.
