@@ -749,7 +749,7 @@ Section MkMask.
 Context {T : Type}.
 Implicit Types (s : seq nat) (m : bitseq) (n : nat).
 
-Fixpoint mkmask s n : bitseq :=
+Definition mkmask s n : bitseq :=
   (fix mkmask (s : seq nat) m := match s with
     | [::]    => m
     | i :: s' => set_nth false (mkmask s' m) i true
