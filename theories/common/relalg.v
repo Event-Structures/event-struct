@@ -46,9 +46,15 @@ Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
 
 Notation "r ^?" := (1 ⊔ r) (left associativity, at level 5, format "r ^?"): ra_terms.
 
-Lemma itr_qmk `{laws} `{BKA ≪ l} n (x: X n n) :
+Lemma itr_qmk `{laws} `{BKA ≪ l} n (x : X n n) :
   x^+^? ≡ x^?^+.
-Proof. ka. Qed.
+Proof. by ka. Qed.
+
+(* TODO: make lemma instance of Proper for rewriting? *)
+Lemma qmk_weq `{laws} `{BKA ≪ l} n (x y : X n n): 
+  x ≡ y -> x^? ≡ y^?.
+Proof. by move => ->. Qed.
+
 
 (* ************************************************************************** *)
 (*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
@@ -377,6 +383,12 @@ End PwEqvReflect.
 
 #[export] Hint Resolve r_refl rt_refl : core.
 
+Arguments clos_refl [A] R x y.
+Arguments clos_trans [A] R x y.
+Arguments clos_trans_1n [A] R x y.
+Arguments clos_trans_n1 [A] R x y.
+Arguments clos_refl_trans [A] R x y.
+
 Section RelClos.
 
 Context {T : Type}.
@@ -385,15 +397,15 @@ Implicit Types (R : hrel T T) (r : rel T).
 (* TODO: consider to reformulate it in terms of relation-algebra 
  * (or try to just use kat tactics inplace) 
  *)
-Lemma clos_t_clos_rt R x y :
-  clos_trans T R x y -> clos_refl_trans T R x y.
+Lemma clos_t_rt R x y :
+  clos_trans R x y -> clos_refl_trans R x y.
 Proof.
   elim=> [|???? H ??]; first by constructor.
   by apply: rt_trans H _.
 Qed.
 
-Lemma clos_refl_transE R :
-  clos_refl_trans T R ≡ clos_refl T (clos_trans T R).
+Lemma clos_rt_crE R :
+  clos_refl_trans R ≡ clos_refl (clos_trans R).
 Proof.
   move=> x y; split.
   - elim=> [{}x {}y xy | {}x | {}x {}y z _ xy _ yz] //.
@@ -404,15 +416,15 @@ Proof.
   by apply: rt_trans H _.
 Qed.
 
-Lemma clos_refl_hrel_qmk R :
-  clos_refl T R ≡ R^?.
+Lemma clos_r_qmk R :
+  clos_refl R ≡ R^?.
 Proof.
   split; first by case; [right | left].
   case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
 
-Lemma clos_trans_1n_hrel_itr R :
-  clos_trans_1n _ R ≡ R^+.
+Lemma clos_t1n_itr R :
+  clos_trans_1n R ≡ R^+.
 Proof.
   move=> x y; split.
   - elim=> {x y} [x y | x z y] Rxy; first by exists y=> //; exists O.
@@ -423,22 +435,35 @@ Proof.
   by apply: Relation_Operators.t1n_trans xz ct_zy.
 Qed.
 
-Lemma clos_trans_hrel_itr R :
-  clos_trans _ R ≡ R^+.
+Lemma clos_t_itr R :
+  clos_trans R ≡ R^+.
 Proof.
   move=> x y; rewrite clos_trans_t1n_iff.
-  by apply: clos_trans_1n_hrel_itr.
+  by apply: clos_t1n_itr.
 Qed.
 
-Lemma clos_refl_trans_hrel_str R : 
-  clos_refl_trans _ R ≡ R^*. 
-Proof. by rewrite str_itr clos_refl_transE clos_refl_hrel_qmk clos_trans_hrel_itr. Qed.
+Lemma clos_rt_str R : 
+  clos_refl_trans R ≡ R^*. 
+Proof. 
+  rewrite str_itr clos_rt_crE clos_r_qmk.
+  by rewrite clos_t_itr. 
+Qed.
 
 End RelClos.
 
 
+Section FinRel.
+Context {T : finType}.
+Implicit Types (R : hrel T T) (r : rel T).
+
+Lemma connect_strP r x y : 
+  reflect ((r : hrel T T)^* x y) (connect r x y).
+Proof. by move=> /=; apply/(equivP idP)/connect_iter. Qed.
+
+End FinRel.
+
 (* ************************************************************************** *)
-(*     Auxiliary definitions and lemmas about binary relations               *)
+(*     Auxiliary definitions and lemmas about binary relations                *)
 (* ************************************************************************** *)
 
 Section RelAux.

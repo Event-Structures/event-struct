@@ -230,9 +230,9 @@ Hypothesis edcomm : diamond_commute e r.
 Theorem rconfl_eqv : eqv_rconfluent.
 Proof.
   suff: eqv_confluent (r^?) e.
-  - move=> C ???; rewrite ?(str_itr r _ _) ?(itr_qmk r _ _).
+  - move=> C ???; rewrite !(str_itr r _ _) !(itr_qmk r _ _).
     move=>/C/[apply][[s4 [s4' [*]]]]; exists s4, s4'.
-    by split=> //; rewrite ?(str_itr r _ _) ?(itr_qmk r _ _).
+    by split=> //; rewrite !(str_itr r _ _) !(itr_qmk r _ _).
   apply/confl_eqv=> //.
   - move=> s1 s2 s3 [-> [->| ?]|R [<-|/(edconfl _ _ _ R)]] //.
     - exists s3, s3; split; by [left|left|apply/eqv_refl].
