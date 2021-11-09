@@ -74,13 +74,13 @@ Module lFsPoset.
 
 Module Export Def.
 
-Notation lfspreposet E L eps := ({ fsfun E -> (L * seq E) of e => (eps, [::]) }).
+Notation lfspreposet E L bot := ({ fsfun E -> (L * seq E) of e => (bot, [::]) }).
 
 Section Def. 
 Context (E : identType) (L : eqType).
-Variable (eps : L).
+Variable (bot : L).
 
-Implicit Types (p : lfspreposet E L eps).
+Implicit Types (p : lfspreposet E L bot).
 
 Definition fs_lab p : E -> L := 
   fun e => (p e).1. 
@@ -127,7 +127,7 @@ Proof.
 Qed.
 
 Structure lfsposet : Type := lFsPoset {
-  lfsposet_val :> { fsfun E -> (L * seq E) of e => (eps, [::]) } ; 
+  lfsposet_val :> { fsfun E -> (L * seq E) of e => (bot, [::]) } ; 
   _ : let p := lfsposet_val in 
       supp_closed p && acyclic (@fin_ica p)
 }.
@@ -143,30 +143,30 @@ Proof. by move: (valP p)=> /andP[]. Qed.
 End Def.
 End Def.
 
-Arguments lfsposet E L eps : clear implicits.
+Arguments lfsposet E L bot : clear implicits.
 
-Arguments fin_lab {E L eps} p.
-Arguments fin_ica {E L eps} p.
-Arguments fin_ca  {E L eps} p.
-Arguments fin_sca {E L eps} p.
+Arguments fin_lab {E L bot} p.
+Arguments fin_ica {E L bot} p.
+Arguments fin_ca  {E L bot} p.
+Arguments fin_sca {E L bot} p.
 
 Module Export Instances.
 Section Instances. 
 
-Definition lfsposet_eqMixin E L eps := 
-  Eval hnf in [eqMixin of (lfsposet E L eps) by <:].
-Canonical lfinposet_eqType E L eps := 
-  Eval hnf in EqType (lfsposet E L eps) (@lfsposet_eqMixin E L eps).
+Definition lfsposet_eqMixin E L bot := 
+  Eval hnf in [eqMixin of (lfsposet E L bot) by <:].
+Canonical lfinposet_eqType E L bot := 
+  Eval hnf in EqType (lfsposet E L bot) (@lfsposet_eqMixin E L bot).
 
-Definition lfsposet_choiceMixin E (L : choiceType) eps :=
-  Eval hnf in [choiceMixin of (lfsposet E L eps) by <:].
-Canonical lfsposet_choiceType E (L : choiceType) eps :=
-  Eval hnf in ChoiceType (lfsposet E L eps) (@lfsposet_choiceMixin E L eps).
+Definition lfsposet_choiceMixin E (L : choiceType) bot :=
+  Eval hnf in [choiceMixin of (lfsposet E L bot) by <:].
+Canonical lfsposet_choiceType E (L : choiceType) bot :=
+  Eval hnf in ChoiceType (lfsposet E L bot) (@lfsposet_choiceMixin E L bot).
 
 (* TODO: define missing Count mixin and canonical instance for fsfun? *)
 
-(* Definition lfsposet_countMixin E (L : countType) eps := *)
-(*   Eval hnf in [countMixin of (@lfsposet E L eps) by <:]. *)
+(* Definition lfsposet_countMixin E (L : countType) bot := *)
+(*   Eval hnf in [countMixin of (@lfsposet E L bot) by <:]. *)
 (* Canonical lfinposet_countType E (L : countType) := *)
 (*   Eval hnf in CountType (lfinposet E L) (lfinposet_countMixin E L). *)
 
@@ -179,7 +179,7 @@ End Instances.
 Module Export POrder.
 Section POrder.
 Context {E : identType} {L : eqType}.
-Variable (eps : L) (p : lfsposet E L eps).
+Variable (bot : L) (p : lfsposet E L bot).
 
 Lemma fs_sca_def e1 e2 : 
   fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
@@ -279,7 +279,7 @@ End POrder.
 Module Export FinPOrder.
 Section FinPOrder.
 Context {E : identType} {L : eqType}.
-Variable (eps : L) (p : @lfsposet E L eps).
+Variable (bot : L) (p : @lfsposet E L bot).
 
 Lemma fin_sca_def e1 e2 : 
   fin_sca p e1 e2 = (e2 != e1) && (fin_ca p e1 e2).
@@ -334,8 +334,8 @@ End Syntax.
 Module Export Theory.
 Section Theory.
 Context {E : identType} {L : eqType}.
-Variable (eps : L).
-Implicit Types (p : @lfsposet E L eps).
+Variable (bot : L).
+Implicit Types (p : @lfsposet E L bot).
 
 Lemma fs_labE p (e : [Event of p]) : 
   lab e = fs_lab p e.  
@@ -368,9 +368,9 @@ Import lFsPoset.Syntax.
 Module Export Def.
 Section Def.  
 Context (E : identType) (L : choiceType).
-Variable (eps : L).
+Variable (bot : L).
 
-Definition is_iso : rel (@lfsposet E L eps) := 
+Definition is_iso : rel (@lfsposet E L bot) := 
   fun p q => 
     ??|{ffun [FinEvent of p] -> [FinEvent of q] | lFinPoset.iso_pred}|.
 
@@ -410,12 +410,12 @@ Canonical pomset_eqQuotType := [eqQuotType is_iso of pomset].
 
 Implicit Types (p : pomset).
 
-Coercion lfsposet_of p : lfsposet E L eps := repr p.
+Coercion lfsposet_of p : lfsposet E L bot := repr p.
 
 End Def.
 End Def.
 
-Arguments pomset E L eps : clear implicits.
+Arguments pomset E L bot : clear implicits.
 
 End Pomset.
 
@@ -423,7 +423,7 @@ Export Pomset.Def.
 
 
 (* Context (E : identType) (L : choiceType). *)
-(* Variable (eps : L). *)
-(* Variable (p : pomset E L eps). *)
+(* Variable (bot : L). *)
+(* Variable (p : pomset E L bot). *)
 (* Variables (e1 e2 : [Event of p]). *)
 (* Check (e1 <= e2). *)
