@@ -356,6 +356,7 @@ End lFsPoset.
 
 Export lFsPoset.Def.
 Export lFsPoset.Instances.
+Export lFsPoset.Syntax.
 Export lFsPoset.Theory.
 
 
@@ -409,142 +410,20 @@ Canonical pomset_eqQuotType := [eqQuotType is_iso of pomset].
 
 Implicit Types (p : pomset).
 
-(* TODO: try `simpl_fun` & `simpl_rel` ? *)
-Definition pom_lab p : E -> L := 
-  fs_lab (repr p).
-
-Definition pom_ica  p : rel E := 
-  fs_ica (repr p).
-
-Definition pom_ca  p : rel E := 
-  fs_ca (repr p).
-
-Definition pom_sca p : rel E := 
-  fs_sca (repr p).
+Coercion lfsposet_of p : lfsposet E L eps := repr p.
 
 End Def.
 End Def.
 
 Arguments pomset E L eps : clear implicits.
 
-Module Export POrder.
-Section POrder.
-Context {E : identType} {L : choiceType}.
-Variable (eps : L) (p : pomset E L eps).
-
-Lemma pom_sca_def e1 e2 : pom_sca p e1 e2 = (e2 != e1) && (pom_ca p e1 e2).
-Proof. rewrite /pom_sca /pom_ca; exact/lFsPoset.POrder.fs_sca_def. Qed.
-
-Lemma pom_ca_refl : reflexive (pom_ca p). 
-Proof. move=> ? /=; rewrite /pom_ca; exact/lFsPoset.POrder.fs_ca_refl. Qed.
-
-Lemma pom_ca_antisym : antisymmetric (pom_ca p). 
-Proof. move=> ?? /=; rewrite /pom_ca; exact/lFsPoset.POrder.fs_ca_antisym. Qed.
-
-Lemma pom_ca_trans : transitive (pom_ca p). 
-Proof. move=> ??? /=; rewrite /pom_ca; exact/lFsPoset.POrder.fs_ca_trans. Qed.
-
-Definition pomset_porderMixin := 
-  @LePOrderMixin E (pom_ca p) (pom_sca p) 
-    pom_sca_def pom_ca_refl pom_ca_antisym pom_ca_trans. 
-
-Definition pomset_porderType := 
-  POrderType tt E pomset_porderMixin.
-
-Definition pomset_lposetMixin := 
-  @lPoset.lPoset.Mixin E L (POrder.class pomset_porderType) (pom_lab p).
-
-Definition pomset_lposetType := 
-  @lPoset.lPoset.Pack L E (lPoset.lPoset.Class pomset_lposetMixin).
-
-End POrder.
-End POrder.
-
-Module Export FinPOrder.
-Section FinPOrder.
-Context {E : identType} {L : choiceType}.
-Variable (eps : L) (p : pomset E L eps).
-
-Local Notation fsupp := (fsupp (repr p)).
-
-Definition pom_fin_lab : fsupp -> L := 
-  fin_lab (repr p).
-
-Definition pom_fin_ica : rel fsupp := 
-  fin_ica (repr p).
-
-Definition pom_fin_ca : rel fsupp := 
-  fin_ca (repr p).
-
-Definition pom_fin_sca : rel fsupp := 
-  fin_sca (repr p).
-
-Lemma fin_sca_def e1 e2 : pom_fin_sca e1 e2 = (e2 != e1) && (pom_fin_ca e1 e2).
-Proof. done. Qed.
-
-Lemma fin_ca_refl : reflexive pom_fin_ca.
-Proof. exact/lFsPoset.FinPOrder.fin_ca_refl. Qed.
-
-Lemma fin_ca_antisym : antisymmetric pom_fin_ca.
-Proof. exact/lFsPoset.FinPOrder.fin_ca_antisym. Qed.
-
-Lemma fin_ca_trans : transitive pom_fin_ca.
-Proof. exact/lFsPoset.FinPOrder.fin_ca_trans. Qed.
-
-Lemma fin_disp : unit. 
-Proof. exact: tt. Qed.
-
-Definition pomset_fin_porderMixin := 
-  @LePOrderMixin _ pom_fin_ca pom_fin_sca 
-    fin_sca_def fin_ca_refl fin_ca_antisym fin_ca_trans. 
-
-Definition pomset_fin_porderType := 
-  POrderType fin_disp _ pomset_fin_porderMixin.
-
-Definition pomset_FinPOrderType :=
-  [finPOrderType of pomset_fin_porderType].
-
-Definition pomset_fin_lposetMixin := 
-  @lPoset.lPoset.Mixin _ L (POrder.class pomset_fin_porderType) pom_fin_lab.
-
-Definition pomset_fin_lposetType := 
-  let cls := lPoset.lPoset.Class pomset_fin_lposetMixin in 
-  @lPoset.lPoset.Pack L (pomset_FinPOrderType) cls.
-
-Definition pomset_lfinposetType :=
-  let finCls := FinPOrder.class pomset_FinPOrderType in
-  let cls := @lFinPoset.lFinPoset.Class _ L finCls pomset_fin_lposetMixin in
-  @lFinPoset.lFinPoset.Pack L _ cls.
-
-End FinPOrder.
-End FinPOrder.
-
-Module Export Syntax. 
-Notation "[ 'Event' 'of' p ]" := (pomset_lposetType p)
-  (at level 0, format "[ 'Event'  'of'  p ]") : form_scope.
-Notation "[ 'FinEvent' 'of' p ]" := (pomset_lfinposetType p)
-  (at level 0, format "[ 'FinEvent'  'of'  p ]") : form_scope.
-End Syntax.
-
-Module Export Theory.
-Section Theory.
-Context {E : identType} {L : choiceType}.
-Variable (eps : L).
-Implicit Types (p : pomset E L eps).
-
-Lemma pom_labE p (e : [Event of p]) : 
-  lab e = fs_lab (repr p) e.  
-Proof. done. Qed.
-
-Lemma pom_caE p (e1 e2 : [Event of p]) : 
-  ca e1 e2 = fs_ca (repr p) e1 e2.  
-Proof. done. Qed.
-
-Lemma pom_scaE p (e1 e2 : [Event of p]) : 
-  sca e1 e2 = fs_sca (repr p) e1 e2.  
-Proof. done. Qed.
-
-End Theory.
-End Theory.
-
 End Pomset.
+
+Export Pomset.Def.
+
+
+(* Context (E : identType) (L : choiceType). *)
+(* Variable (eps : L). *)
+(* Variable (p : pomset E L eps). *)
+(* Variables (e1 e2 : [Event of p]). *)
+(* Check (e1 <= e2). *)
