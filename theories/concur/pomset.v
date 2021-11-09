@@ -31,13 +31,21 @@ From eventstruct Require Import utils relalg inhtype ident lposet.
 (*                             instances of eqType and choiceType.            *)
 (*           pomset E L bot == pomset - a class of isomorphic finitely        *)
 (*                             supported lposets, defined as a quotient type  *)
-(*                             over isomorphism relation.                     *)
-(*                                                                            *)  
+(*                             over finitely supported lposets by             *)
+(*                             isomorphism relation.                          *)
 (*    fs_(lab|ica|ca|sca) p == labelling function, immediate causality,       *)
 (*                             causality and strict causality relations of    *)
-(*                             the preposet p.                                *) 
-(*   fin_(lab|ica|ca|sca) p == same functions/relations but defined over      *)
-(*                             a finite type of support of the p.             *)
+(*                             the preposet/poset/pomset p.                   *) 
+(*   fin_(lab|ica|ca|sca) p == same functions/relations but defined on        *)
+(*                             the finite type of support of the p.           *)
+(*                                                                            *)  
+(* Given a lfsposet (or pomset) one can obtain the induced lPoset structure   *)  
+(* using the following notations.                                             *)  
+(*             [Event of p] == lPoset.eventType structure induced by p.       *)
+(*                             The type of the events are the same as of p.   *) 
+(*          [FinEvent of p] == lFinPoset.eventType structure induced by p.    *)
+(*                             The type of the events are of the finite       *)
+(*                             support of p.                                  *)
 (*                                                                            *)  
 (******************************************************************************)
 
@@ -155,7 +163,7 @@ Definition lfsposet_choiceMixin E (L : choiceType) eps :=
 Canonical lfsposet_choiceType E (L : choiceType) eps :=
   Eval hnf in ChoiceType (lfsposet E L eps) (@lfsposet_choiceMixin E L eps).
 
-(* TODO: define missing count mixin and canonical instances for fsfun? *)
+(* TODO: define missing Count mixin and canonical instance for fsfun? *)
 
 (* Definition lfsposet_countMixin E (L : countType) eps := *)
 (*   Eval hnf in [countMixin of (@lfsposet E L eps) by <:]. *)
@@ -164,14 +172,6 @@ Canonical lfsposet_choiceType E (L : choiceType) eps :=
 
 (* Canonical subFinfun_subCountType E (L : countType) := *)
 (*   Eval hnf in [subCountType of (lfinposet E L)]. *)
-
-(* Definition lfinposet_finMixin E (L : finType) := *)
-(*   Eval hnf in [finMixin of (lfinposet E L) by <:]. *)
-(* Canonical lfinposet_finType E (L : finType) := *)
-(*   Eval hnf in FinType (lfinposet E L) (lfinposet_finMixin E L). *)
-
-(* Canonical lfinposet_subFinType E (L : finType) := *)
-(*   Eval hnf in [subFinType of (lfinposet E L)]. *)
 
 End Instances.
 End Instances.
