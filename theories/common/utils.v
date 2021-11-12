@@ -1,6 +1,8 @@
 From Coq Require Import Relations.
-From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype choice.
-From mathcomp Require Import order seq tuple path fintype finfun finmap zify.
+From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
+From mathcomp Require Import eqtype choice order seq tuple path zify.
+From mathcomp Require Import fintype finfun fingraph finmap.
+From mathcomp.tarjan Require Import extra acyclic. 
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -368,6 +370,14 @@ Proof.
   by move=> H x; apply/forallP.  
 Qed.
 
+Lemma forall3P (p : T -> T -> T -> bool) : 
+  reflect (forall x y z, p x y z) [forall x, forall y, forall z, p x y z].
+Proof. 
+  apply/(equivP forallP); split.
+  - by move=> H x y z; move: (H x)=> /forall2P.
+  by move=> H x; apply/forall2P.  
+Qed.
+
 End FinTypeUtils.
 
 
@@ -381,12 +391,26 @@ Definition sub_down (g : U -> S) (f : U -> T) : U -> S :=
 Definition sub_lift (g : T -> U) (f : S -> U) : T -> U := 
   fun x => odflt (g x) (omap f (insub x)).
 
+Definition sub_rel_down (r : rel T) : rel S := 
+  [rel x y | r (val x) (val y)].
+
+Definition sub_rel_lift (r : rel S) : rel T := 
+  [rel x y | match (insub x), (insub y) with
+    | Some x, Some y => r x y
+    | _, _ => false
+    end
+  ]. 
+
 Definition compatible (g : T -> U) (f : S -> U) : Prop := 
   forall x y, g x = f y -> P x. 
 
 Lemma sub_inj (x y : T) (px : P x) (py : P y) : 
   Sub x px = Sub y py :> S -> x = y.
 Proof. by move=> H; move: (SubK S px) (SubK S py)=> <- <-; rewrite H. Qed.
+
+Lemma sub_val (x : S) px : 
+  Sub (val x) px = x.
+Proof. by apply/val_inj; rewrite SubK. Qed.
 
 Lemma sub_downT y g f x : 
   P (f x) -> sub_down g f x = insubd y (f x). 
@@ -450,6 +474,56 @@ Proof.
   - by rewrite sub_liftT sub_liftF // => ?; apply/HrU. 
   - by move: Hx=> /[swap] /HrT /[apply].
   rewrite !sub_liftF //; exact/Hg.
+Qed.
+
+Lemma sub_rel_lift_fld r : 
+  subrel (sub_rel_lift r) [rel x y | P x && P y].
+Proof. 
+  rewrite /sub_rel_lift=> ?? /=.
+  by repeat case: insubP=> [? ->|] //.
+Qed.
+
+Lemma sub_rel_down_liftK r : 
+  sub_rel_down (sub_rel_lift r) =2 r.
+Proof. 
+  rewrite /sub_rel_lift /sub_rel_down=> x y /=. 
+  rewrite !insubT; try exact/valP.
+  by move=> ??; rewrite !sub_val. 
+Qed.
+
+Lemma sub_rel_lift_downK r : 
+  subrel r [rel x y | P x && P y] -> sub_rel_lift (sub_rel_down r) =2 r.  
+Proof. 
+  move=> sub x y /=.
+  have ->: r x y = [&& r x y, P x & P y].
+  - apply/idP/idP=> [|/and3P[]] //=. 
+    by move=> /[dup] /sub /andP[] -> -> ->. 
+  rewrite /sub_rel_lift /sub_rel_down /=.
+  apply/idP/idP.
+  - repeat (case: insubP=> [? -> ->|] //); by move=> ->. 
+  move=> /and3P[???].
+  repeat (case: insubP=> [?? ->|/negP] //).
+Qed. 
+
+Lemma sub_rel_liftP (r : rel S) x y : 
+  reflect (exists x' y', [/\ r x' y', val x' = x & val y' = y])
+          (sub_rel_lift r x y).
+Proof.
+  pose rl := sub_rel_lift r.
+  pose r' := [rel x y | P x && P y].
+  rewrite -/rl.
+  have ->: rl x y = [&& rl x y, P x & P y].
+  - apply/idP/idP=> [/[dup] + ->|/and3P[]] //. 
+    by move=> /sub_rel_lift_fld /andP[-> ->]. 
+  apply/(equivP idP); split.
+  - move=> /and3P[rxy px py].
+    exists (Sub x px), (Sub y py).
+    split; rewrite ?SubK //. 
+    by move: rxy=> /=; rewrite /rl /sub_rel_lift /= !insubT.
+  move=> [x' [] y' []] /=.
+  move=> + <- <-; move: (valP x') (valP y'). 
+  move=> /[dup] ? -> /[dup] ? ->.
+  by rewrite /rl /sub_rel_lift /= !insubT !andbT !sub_val.
 Qed.
 
 End SubTypeUtils.
@@ -1094,3 +1168,65 @@ Canonical subFinfun_subFinType (rT : finType) (P : pred {ffun aT -> rT}) :=
 End Instances.
 
 End SubFinFun.
+
+
+Module Export Subsumes.
+
+Section Def.
+Context {T : Type}.
+Implicit Types (r : rel T) (mp : mem_pred T).
+
+Definition subsumes_mem r mp1 mp2 := 
+  forall x, in_mem x mp1 -> exists2 y, in_mem y mp2 & r x y.
+
+End Def.
+
+Notation "{ 'subsumes' A <= B 'by' R }" := 
+  (subsumes_mem R (mem A) (mem B)) 
+    (A at level 69, B at level 69) : type_scope.
+
+Notation "{ 'subsumes' A <= B : x y / a }" := 
+  (subsumes_mem (fun x y => a) (mem A) (mem B))
+    (A at level 69, B at level 69, x at level 0, y at level 39) : type_scope.
+
+Section Theory.
+Context {T : Type}.
+Implicit Types (P Q S : pred T) (R : rel T).
+
+Lemma subsumes_refl R P :
+  reflexive R -> { subsumes P <= P by R }.
+Proof. by move=> ? p ?; exists p. Qed.
+
+Lemma subsumes_trans R P Q S : transitive R ->
+  {subsumes P <= Q by R} -> {subsumes Q <= S by R} -> {subsumes P <= S by R}.
+Proof.
+  move=> trans pq_subs qs_subs p.
+  move: pq_subs=> /[apply] [[q]].
+  move: qs_subs=> /[apply] [[s]].
+  move=> ss /[swap].
+  move: trans=> /[apply] /[apply].
+  by exists s.
+Qed.
+
+End Theory.
+
+End Subsumes.
+
+
+Section FinGraph. 
+Context {T : finType}.
+Implicit Types (g : rel T). 
+
+Lemma connect_refl g : 
+  reflexive (connect g).
+Proof. done. Qed. 
+
+Lemma connect_antisym g : 
+  acyclic g -> antisymmetric (connect g).
+Proof. 
+  move=> /acyclic_symconnect_eq symconE x y.
+  move: (symconE x y); rewrite /symconnect.
+  by move=> -> /eqP.
+Qed.
+
+End FinGraph. 
