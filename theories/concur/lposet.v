@@ -231,7 +231,7 @@ End Syntax.
 Module Export Theory.
 Section Theory. 
 Context {L : Type} {E1 E2 : eventType L}. 
-Implicit Types (f : E1 ~> E2).
+Implicit Types (f : {hom E1 -> E2}).
 
 (* TODO: rename `lab_preserving`  *)
 Lemma lab_preserving f :
@@ -1570,12 +1570,12 @@ Proof. apply/(is_inh_refl fihomP)=> E; exact/[ihom of idfun : E -> E]. Qed.
 Lemma ihom_trans : transitive ihom_rel.
 Proof. apply/(is_inh_trans fihomP)=> ??? f g; exact/[ihom of g \o f]. Qed.
 
-Lemma fihom_ca_reflecting {E1 E2} (f : E1 ≈> E2) (g : E2 ≈> E1) : 
+Lemma fihom_ca_reflecting {E1 E2} (f : {ihom E1 -> E2}) (g : {ihom E2 -> E1}) :
   { mono f : e1 e2 / e1 <= e2 }.
 Proof. 
   move=> e1 e2; apply/idP/idP; last first.
   - exact/(ca_monotone f).
-  pose h := lPoset.iHom.comp f g.
+  pose h := [ihom of g \o f]. 
   have: injective h by exact/ihom_inj.
   move=> /cycle_orbit cyc.
   pose o1 := order h e1.
@@ -1826,7 +1826,7 @@ End Theory.
 
 Section Build.
 
-Lemma of_ihoms_class {E1 E2} (f : E1 ≈> E2) (g : E2 ≈> E1) : 
+Lemma of_ihoms_class {E1 E2} (f : {ihom E1 -> E2}) (g : {ihom E2 -> E1}) : 
   lPoset.Iso.Iso.class_of f.
 Proof.
   have bhom_ff : bhom_pred [ffun e => f e].
@@ -1835,17 +1835,18 @@ Proof.
   pose ff := SubFinfunOf bhom_ff.
   suff : lPoset.Iso.Iso.class_of ff.
   - move=> C; pose f' := lPoset.Iso.Iso.Pack C.
-    apply/(@lPoset.Iso.of_eqfun_class _ _ _ f').
+    apply/(@lPoset.Iso.Build.of_eqfun_class _ _ _ f').
     by move=> x; rewrite /f' /= ffunE. 
   do 2 constructor.
-  - apply/(@lPoset.Hom.of_eqfun_class _ _ _ f).
+  - apply/(@lPoset.Hom.Build.of_eqfun_class _ _ _ f).
     by move=> x /=; rewrite ffunE.
   - exact/bhom_mixin.
   by move=> ??; rewrite !ffunE fihom_ca_reflecting.
 Qed.
 
-Definition of_ihoms {E1 E2} : E1 ≈> E2 -> E2 ≈> E1 -> E1 ~= E2 := 
-  fun f g => lPoset.Iso.Iso.Pack (of_ihoms_class f g).
+Definition of_ihoms {E1 E2} : 
+  {ihom E1 -> E2} -> {ihom E2 -> E1} -> {iso E1 -> E2} := 
+    fun f g => lPoset.Iso.Iso.Pack (of_ihoms_class f g).
 
 End Build.
 
