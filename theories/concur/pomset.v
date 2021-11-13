@@ -1,8 +1,8 @@
 From Coq Require Import Relations.
 From RelationAlgebra Require Import lattice monoid rel boolean.
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice order fintype fingraph finmap.
-From mathcomp Require Import generic_quotient.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple.
+From mathcomp Require Import eqtype choice order generic_quotient.
+From mathcomp Require Import fintype finfun finset fingraph finmap.
 From mathcomp.tarjan Require Import extra acyclic. 
 From eventstruct Require Import utils relalg inhtype ident lposet.
 
@@ -58,6 +58,7 @@ Import Order.
 Import Order.LTheory.
 
 Local Open Scope order_scope.
+Local Open Scope fset_scope.
 Local Open Scope quotient_scope.
 Local Open Scope ra_terms.
 Local Open Scope lposet_scope.
@@ -67,14 +68,12 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-(* TODO: move to appropriate place *)
-Notation fsupp := finsupp.
-
 Module lFsPoset. 
 
 Module Export Def.
 
-Notation lfspreposet E L bot := ({ fsfun E -> (L * seq E) of e => (bot, [::]) }).
+Notation lfspreposet E L bot := 
+  ({ fsfun E -> (L * {fset E}) of e => (bot, fset0) }).
 
 Section Def. 
 Context (E : identType) (L : eqType).
@@ -85,22 +84,22 @@ Implicit Types (p : lfspreposet E L bot).
 Definition fs_lab p : E -> L := 
   fun e => (p e).1. 
 
-Definition fin_lab p : fsupp p -> L := 
+Definition fin_lab p : finsupp p -> L := 
   fun e => fs_lab p (val e).
 
-Definition fs_rcov p : E -> seq E := 
+Definition fs_rcov p : E -> {fset E} := 
   fun e => (p e).2. 
 
 Definition fs_ica p : rel E := 
   [rel x y | grel (fs_rcov p) y x]. 
 
-Definition fin_ica p : rel (fsupp p) := 
+Definition fin_ica p : rel (finsupp p) := 
   sub_rel_down (fs_ica p).
 
-Definition fin_ca p : rel (fsupp p) := 
+Definition fin_ca p : rel (finsupp p) := 
   connect (@fin_ica p).
 
-Definition fin_sca p : rel (fsupp p) := 
+Definition fin_sca p : rel (finsupp p) := 
   fun e1 e2 => (e2 != e1) && (@fin_ca p e1 e2).
 
 Definition fs_ca p : rel E := 
@@ -113,7 +112,8 @@ Definition supp_closed q :=
   [forall e : finsupp q, all (fun e' => e' \in finsupp q) (fs_rcov q (val e))].
 
 Lemma supp_closedP q : 
-  reflect (forall e1 e2, fs_ica q e1 e2 -> (e1 \in fsupp q) && (e2 \in fsupp q))
+  reflect (forall e1 e2, fs_ica q e1 e2 -> 
+            (e1 \in finsupp q) && (e2 \in finsupp q))
           (supp_closed q).
 Proof. 
   rewrite /supp_closed /fs_ica /fs_rcov. 
@@ -127,7 +127,7 @@ Proof.
 Qed.
 
 Structure lfsposet : Type := lFsPoset {
-  lfsposet_val :> { fsfun E -> (L * seq E) of e => (bot, [::]) } ; 
+  lfsposet_val :> lfspreposet E L bot ; 
   _ : let p := lfsposet_val in 
       supp_closed p && acyclic (@fin_ica p)
 }.
@@ -163,15 +163,13 @@ Definition lfsposet_choiceMixin E (L : choiceType) bot :=
 Canonical lfsposet_choiceType E (L : choiceType) bot :=
   Eval hnf in ChoiceType (lfsposet E L bot) (@lfsposet_choiceMixin E L bot).
 
-(* TODO: define missing Count mixin and canonical instance for fsfun? *)
+Definition lfsposet_countMixin E (L : countType) bot :=
+  Eval hnf in [countMixin of (@lfsposet E L bot) by <:].
+Canonical lfinposet_countType E (L : countType) bot :=
+  Eval hnf in CountType (lfsposet E L bot) (@lfsposet_countMixin E L bot).
 
-(* Definition lfsposet_countMixin E (L : countType) bot := *)
-(*   Eval hnf in [countMixin of (@lfsposet E L bot) by <:]. *)
-(* Canonical lfinposet_countType E (L : countType) := *)
-(*   Eval hnf in CountType (lfinposet E L) (lfinposet_countMixin E L). *)
-
-(* Canonical subFinfun_subCountType E (L : countType) := *)
-(*   Eval hnf in [subCountType of (lfinposet E L)]. *)
+Canonical subFinfun_subCountType E (L : countType) bot :=
+  Eval hnf in [subCountType of (lfsposet E L bot)].
 
 End Instances.
 End Instances.
