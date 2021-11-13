@@ -333,7 +333,7 @@ Module Export Theory.
 Section Theory.
 Context {E : identType} {L : eqType}.
 Variable (bot : L).
-Implicit Types (p : @lfsposet E L bot).
+Implicit Types (p q : @lfsposet E L bot).
 
 Lemma fs_labE p (e : [Event of p]) : 
   lab e = fs_lab p e.  
@@ -346,6 +346,28 @@ Proof. done. Qed.
 Lemma fs_scaE p (e1 e2 : [Event of p]) : 
   sca e1 e2 = fs_sca p e1 e2.  
 Proof. done. Qed.
+
+Lemma fs_rcov_fsupp p e :
+  fs_rcov p e `<=` finsupp p.
+Proof.
+  apply/fsubsetPn=> [[e']] /=.
+  move: (lfsposet_supp p)=> /supp_closedP. 
+  by move=> /[apply] /andP[??] /negP.
+Qed.
+
+Lemma lfsposet_eqP p q : 
+  reflect (fs_lab p =1 fs_lab q /\ fs_ica p =2 fs_ica q) (p == q).
+Proof. 
+  apply/(equivP idP); split=> [/eqP->|[]] //.
+  rewrite /fs_lab /fs_ica=> eq_lab eq_ica.
+  apply/eqP/val_inj=> /=.
+  apply/fsfunP=> e /=; apply/eqP.
+  rewrite /eq_op=> /=; apply/andP; split.
+  - by rewrite (eq_lab e).
+  apply/fset_eqP=> e'.
+  move: (eq_ica e' e)=> /=.
+  by rewrite /fs_rcov.
+Qed.
 
 End Theory.
 End Theory.
