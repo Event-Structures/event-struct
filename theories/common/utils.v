@@ -1220,6 +1220,7 @@ End Subsumes.
 Section FinGraph. 
 Context {T : finType}.
 Implicit Types (g : rel T). 
+Implicit Types (gf : T -> seq T). 
 
 Lemma connect_refl g : 
   reflexive (connect g).
@@ -1231,6 +1232,25 @@ Proof.
   move=> /acyclic_symconnect_eq symconE x y.
   move: (symconE x y); rewrite /symconnect.
   by move=> -> /eqP.
+Qed.
+
+Lemma mem_tseq gf : 
+  tseq gf =i enum T.
+Proof. 
+  move: (tseq_correct gf)=> [_ in_tseq]. 
+  apply/subset_eqP/andP; split; apply/subsetP; last first.
+  - move=> x ?; exact/in_tseq. 
+  by move=> ?; rewrite mem_enum.
+Qed.
+
+Lemma size_tseq gf : 
+  size (tseq gf) = #|T|.
+Proof. 
+  rewrite cardT; apply/eqP. 
+  rewrite -uniq_size_uniq.
+  - exact/tseq_uniq.
+  - exact/enum_uniq.
+  move=> ?; exact/esym/mem_tseq.
 Qed.
 
 End FinGraph. 

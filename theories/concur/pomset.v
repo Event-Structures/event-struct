@@ -3,7 +3,7 @@ From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap.
-From mathcomp.tarjan Require Import extra acyclic. 
+From mathcomp.tarjan Require Import extra acyclic Kosaraju acyclic_tsorted. 
 From eventstruct Require Import utils relalg inhtype ident lposet.
 
 (******************************************************************************)
@@ -139,6 +139,12 @@ Proof. by move: (valP p)=> /andP[]. Qed.
 
 Lemma lfsposet_acyclic (p : lfsposet) : acyclic (@fin_ica p).
 Proof. by move: (valP p)=> /andP[]. Qed.
+
+Definition lfsp_tseq (p : lfsposet) : seq E := 
+  map val (tseq (rgraph (@fin_ica p))).
+
+Definition fs_idx (p : lfsposet) : E -> nat := 
+  fun e => index e (lfsp_tseq p). 
 
 End Def.
 End Def.
@@ -367,6 +373,39 @@ Proof.
   apply/fset_eqP=> e'.
   move: (eq_ica e' e)=> /=.
   by rewrite /fs_rcov.
+Qed.
+
+Lemma lfsp_tseq_size p : 
+  size (lfsp_tseq p) = #|`finsupp p|. 
+Proof. by rewrite /lfsp_tseq size_map size_tseq cardfE. Qed.
+
+Lemma mem_lfsp_tseq p : 
+  lfsp_tseq p =i finsupp p.
+Proof. 
+  rewrite /lfsp_tseq=> e.
+  apply/idP/idP.
+  - by move=> /mapP [e'] + ->; case: e'.
+  move=> in_supp; apply/mapP.
+  exists (Sub e in_supp)=> //.
+  by rewrite mem_tseq fintype.mem_enum. 
+Qed.
+
+Lemma fs_idx_lt p e :
+  e \in finsupp p -> fs_idx p e < #|`finsupp p|.
+Proof. 
+  rewrite /fs_idx=> in_supp.
+  rewrite -lfsp_tseq_size ltEnat /=. 
+  by rewrite index_mem mem_lfsp_tseq.
+Qed.  
+
+Lemma fs_idx_le p e :
+  fs_idx p e <= #|`finsupp p|.
+Proof. 
+  case: (e \in finsupp p)/idP.
+  - by move=> /fs_idx_lt /ltW.
+  move=> /negP Nin_supp.
+  rewrite /fs_idx memNindex ?lfsp_tseq_size //.
+  by rewrite mem_lfsp_tseq. 
 Qed.
 
 End Theory.
