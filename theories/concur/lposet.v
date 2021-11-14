@@ -30,6 +30,9 @@ From eventstruct Require Import utils inhtype.
 (*     lPoset.bhom E1 E2 == bijective homomorphism between lposets E1 and E2. *)
 (*      lPoset.emb E1 E2 == embedding between lposets E1 and E2, that is      *)
 (*                          order-reflecting homomorphism.                    *)
+(*     lPoset.pref E1 E2 == prefix homomorphism between lposets E1 and E2     *)
+(*                          that is homomorphism that maps E1 into the E2's   *)
+(*                          prefix                                            *)
 (*      lPoset.iso E1 E2 == isomorphism between lposets E1 and E2, that is    *)
 (*                          bijective order-reflecting homomorphism.          *)
 (* By importing module lPoset.Syntax one can use the following notations.     *)
@@ -37,13 +40,14 @@ From eventstruct Require Import utils inhtype.
 (*                   {ihom E1 -> E2} == injective homomorphism.               *)
 (*                   {bhom E1 -> E2} == bijective homomorphism.               *)
 (*                   {emb  E1 -> E2} == embedding.                            *)
+(*                   {pref E1 -> E2} == prefix homomorphism.                  *)
 (*                   {iso  E1 -> E2} == isomorphism.                          *)
 (* A notation [hom of f] can be used to build a homomorphism out of function, *)
 (* provided that there is a canonical instance of homomorphism for f.         *)
 (* In particular:                                                             *)
 (*                   [hom of idfun]  == denotes identity homomorphism.        *)
 (*                   [hom of f \o g] == denotes composition of homomorphisms. *)
-(* Similar notations are available for ihom, bhom, emb, iso.                  *)
+(* Similar notations are available for ihom, bhom, emb, pref, iso.            *)
 (*                                                                            *)
 (* In case of finite lposets it is possible to check whether given function   *)
 (* has properties of certain morphism and also to check if there exists       *)
@@ -723,6 +727,131 @@ End Exports.
 End Build.
 End Emb.
 
+Module Export Pref.
+
+Module Pref.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  _ : forall e1 e2, e1 <= f e2 -> exists e, f e = e1;
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Emb.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Emb.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType  := Hom.Pack class.
+Definition embType  := Emb.Pack class.
+
+Definition mk h mkH : type :=
+  mkH (let: Pack _ c := h return @class_of h in c).
+
+Definition type_of (_ : phant (E1 -> E2)) := type.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Emb.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+Coercion embType : type >-> Emb.type.
+Canonical embType.
+Canonical homType.
+End Exports.
+
+End Pref.
+
+Export Pref.Exports.
+
+Module Export Syntax. 
+Notation pref := Pref.type.
+Notation "{ 'pref' T }" := (@Pref.type_of _ _ _ (Phant T)) : lposet_scope.
+Notation "[ 'pref' 'of' f ]" := 
+  (Pref.mk (fun hCls => @Pref.Pack _ _ _ f hCls))
+  (at level 0, format "[ 'pref'  'of'  f ]") : lposet_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : {pref E1 -> E2}).
+
+Lemma ca_prefix (e1 : E2) (e2 : E1) :
+  e1 <= f e2 -> exists2 e, f e = e1 & e <= e2.
+Proof.
+  move/[dup]; case: f=> /= ? [[? [E]] [/[apply][[e <-]]]].
+  exists e=> //; exact/E.
+Qed.
+
+End Theory.
+End Theory.
+
+Module Build.
+Section Build.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Lemma id_class {E} : Pref.class_of (@idfun E).
+Proof. by (do ? split=> //)=> e; exists e. Qed.
+
+Lemma comp_mixin {E1 E2 E3} (f : {pref  E1 -> E2}) (g : {pref E2 -> E3}) : 
+  Pref.mixin_of (g \o f).
+Proof. (do ? split)=> ?? /ca_prefix[? <-/ca_prefix[e <-]]; by exists e. Qed.
+
+Lemma comp_class {E1 E2 E3} (f : {pref E2 -> E3}) (g : {pref E1 -> E2}) : 
+  Pref.class_of (f \o g).
+Proof. 
+  constructor; first exact (Emb.Build.comp_class f g). 
+  exact/(comp_mixin g f).
+Qed.
+
+Lemma of_eqfun_class {E1 E2} (f : {pref  E1 -> E2}) g :
+  g =1 f -> Pref.class_of g.
+Proof.
+  move=> H; constructor; first exact/(Emb.Build.of_eqfun_class H).
+  constructor=> ??; rewrite !H=> /ca_prefix[e <-]; by exists e.
+Qed.
+
+Definition of_eqfun {E1 E2} (f : {pref  E1 -> E2}) g : g =1 f -> {pref  E1 -> E2} := 
+  fun eqf => Pref.Pack (of_eqfun_class eqf).
+
+End Build.
+Module Export Exports.
+Section Exports.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Canonical id_pref E : {pref E -> E} := Pref.Pack id_class.
+
+Canonical comp_pref E1 E2 E3 : {pref E2 -> E3} -> {pref E1 -> E2} -> {pref E1 -> E3} :=
+  fun f g => Pref.Pack (comp_class f g).
+
+End Exports.
+End Exports.
+End Build.
+End Pref.
+
 Module Export Iso.
 
 Module Iso.
@@ -1097,18 +1226,21 @@ Export lPoset.Hom.Hom.Exports.
 Export lPoset.iHom.iHom.Exports.
 Export lPoset.bHom.bHom.Exports.
 Export lPoset.Emb.Emb.Exports.
+Export lPoset.Pref.Pref.Exports.
 Export lPoset.Iso.Iso.Exports.
 
 Export lPoset.Hom.Build.Exports.
 Export lPoset.iHom.Build.Exports.
 Export lPoset.bHom.Build.Exports.
 Export lPoset.Emb.Build.Exports.
+Export lPoset.Pref.Build.Exports.
 Export lPoset.Iso.Build.Exports.
 
 Export lPoset.Hom.Theory.
 Export lPoset.iHom.Theory.
 Export lPoset.bHom.Theory.
 Export lPoset.Emb.Theory.
+Export lPoset.Pref.Theory.
 
 Export lPoset.Ext.Theory.
 
@@ -1182,6 +1314,7 @@ Import lPoset.Hom.Syntax.
 Import lPoset.bHom.Syntax.
 Import lPoset.Emb.Syntax.
 Import lPoset.Iso.Syntax.
+Import lPoset.Pref.Syntax.
 
 End lLoset.
 
