@@ -276,6 +276,157 @@ Proof. split; [exact/prefix_ca_closed | exact/prefix_cf_free]. Qed.
 End Theory.
 End Theory.
 
+Module Export Hom.
+
+Module Hom.
+Section ClassDef. 
+
+(* TODO: homomorphism between pomsets labelled by different labels? *)
+Context {L : Type} (E1 E2 : PrimeC.eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  _ : forall X : {fset E1}, cons X -> cons (f @` X)
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : lPoset.Hom.Hom.class_of f;
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> lPoset.Hom.Hom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+Definition homType := lPoset.Hom.Hom.Pack class.
+
+Definition mk h mkH : type :=
+  mkH (let: Pack _ c := h return @class_of h in c).
+
+Definition type_of (_ : phant (E1 -> E2)) := type.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+End ClassDef.
+
+Module Export Exports.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> lPoset.Hom.Hom.type.
+Canonical homType.
+End Exports.
+
+End Hom.
+
+Export Hom.Exports.
+
+Module Export Syntax. 
+Notation hom := Hom.type.
+Notation "{ 'hom' T }" := (@Hom.type_of _ _ _ (Phant T)) : prime_eventstruct_scope.
+Notation "[ 'hom' 'of' f ]" := 
+  (Hom.mk (fun hCls => @Hom.Pack _ _ _ f hCls))
+  (at level 0, format "[ 'hom'  'of'  f ]") : lposet_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : {hom E1 -> E2}).
+
+Lemma cons_mon (X : {fset E1}) : 
+  cons X -> cons (f @` X).
+Proof.
+  by case: f => ? [[[??[]]]]; apply.
+Qed.
+
+Lemma hom_cf_free (C1 : pred E1) (C2 : pred E2) : 
+  (forall x, C2 x <-> exists2 y, C1 y & x = f y) ->
+  cf_free C1 -> cf_free C2.
+Proof.
+  move=> CE cf s S.
+  suff[?<-?]: exists2 s' : {fset E1}, f @` s' = s & {subset s' <= C1}.
+  - exact/cons_mon/cf.
+  elim/fset_ind: s S=> [_| x s ni IHs].
+  - exists fset0=> //.
+    apply/fsetP=> ?; apply/imfsetP=> /= [[?]]; by rewrite ?inE.
+  move=> S; case: IHs=> [? /(fsubsetP (fsubsetU1 x _))/S //|].
+  case: (CE x)=> [[]]; first by apply/S; rewrite ?inE eqxx.
+  move=> y ? -> _ s' <- S'; exists (y |` s').
+  - apply/fsetP=> z; apply/imfsetP=> /=; rewrite ?inE.
+    case: (z =P f y)=> /= [->|?]; first by (exists y; rewrite ?inE ?eqxx).
+    case: ifP=> [/imfsetP/= [w I->]|]; first by exists w; rewrite ?inE ?I.
+    move=> /imfsetP/= F [w /[! inE]/orP[/eqP->//|*]]; apply F; by exists w.
+  by move=> ?; rewrite ?inE=> /orP[/eqP->|/S'].
+Qed.
+
+Lemma hom_cf_free_fset (C : {fset E1}) : 
+  cf_free (mem C) -> cf_free (mem (f @` C)).
+Proof. apply/hom_cf_free=> ?; split=> I; exact/imfsetP/I. Qed.
+
+End Theory.
+End Theory.
+
+Module Build.
+Section Build.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Definition mk_hom {E1 E2 : eventType L} h mkH : {hom E1 -> E2} :=
+  mkH (let: Hom.Pack _ c := h return @Hom.class_of L E1 E2 h in c).
+
+Lemma id_class {E} : Hom.class_of (@idfun E).
+Proof.
+  by (do 2 split)=> // ?; rewrite imfset_id.
+Qed.
+
+Lemma comp_class {E1 E2 E3} (f : {hom E2 -> E3}) (g : {hom E1 -> E2}) : 
+  Hom.class_of (comp f g).
+Proof. 
+  (do 2 split); first apply lPoset.Hom.Build.comp_class.
+  move=> ?. by rewrite imfset_comp=> /cons_mon/cons_mon.
+Qed.
+
+Lemma of_eqfun_class {E1 E2} (f : {hom E1 -> E2}) g : 
+  g =1 f -> Hom.class_of g.
+Proof. 
+  move=> H; (repeat constructor); move=> ?.
+  - rewrite !H; exact/lab_preserving.
+  move=> ?; rewrite !H; exact/ca_monotone.
+  move/(cons_mon f); by rewrite -(eq_imfset _ H (fun=> erefl)).
+Qed.
+
+Definition of_eqfun {E1 E2} (f : {hom E1 -> E2}) g : g =1 f -> {hom E1 -> E2} := 
+  fun eqf => Hom.Pack (of_eqfun_class eqf).
+
+End Build.
+
+Module Export Exports.
+Section Exports.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Canonical id_hom E : {hom E -> E} := Hom.Pack id_class.
+
+Canonical comp_hom E1 E2 E3 : {hom E2 -> E3} -> {hom E1 -> E2} -> {hom E1 -> E3} :=
+  fun f g => Hom.Pack (comp_class f g).
+
+End Exports.
+End Exports.
+End Build.
+
+End Hom.
+
+
 End PrimeC.
 
 Export PrimeC.EventStruct.Exports.
