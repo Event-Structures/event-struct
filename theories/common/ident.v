@@ -1,5 +1,5 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
-From mathcomp Require Import choice eqtype order zify.
+From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat.
+From mathcomp Require Import eqtype choice order seq path fintype zify.
 From eventstruct Require Import utils wftype.
 
 (******************************************************************************)
@@ -482,3 +482,96 @@ Definition nat_identMixin :=
 
 Canonical nat_identType :=
   Eval hnf in IdentType nat nat_identMixin.
+
+
+Module bIdent.
+
+Module Export Def. 
+Section Def.
+Context {T : identType}.
+Variable (n : nat).
+
+Structure bIdent : Type := mkBIdent {
+  bident_val :> T; 
+  _ : encode (bident_val) < n;
+}.
+
+Canonical bIdent_subType := Eval hnf in [subType for bident_val].
+
+End Def. 
+End Def.
+
+Module Export Syntax.
+Notation "n .-ident T" := (@bIdent T n)
+  (at level 2, format "n .-ident  T") : type_scope.
+End Syntax.
+
+Module Export Instances.
+Section Instances.
+Context {T : identType}.
+Variable (n : nat).
+
+Definition bIdent_eqMixin := 
+  Eval hnf in [eqMixin of n.-ident T by <:].
+Canonical bIdent_eqType := 
+  Eval hnf in EqType (n.-ident T) bIdent_eqMixin.
+
+Definition bIdent_choiceMixin := 
+  Eval hnf in [choiceMixin of n.-ident T by <:].
+Canonical bIdent_choiceType := 
+  Eval hnf in ChoiceType (n.-ident T) bIdent_choiceMixin.
+
+Definition bIdent_countMixin := 
+  Eval hnf in [countMixin of n.-ident T by <:].
+Canonical bIdent_countType := 
+  Eval hnf in CountType (n.-ident T) bIdent_countMixin.
+
+Canonical bIdent_subCountType :=
+  Eval hnf in [subCountType of n.-ident T].
+
+Definition ord_of_ident : n.-ident T -> 'I_n := 
+  fun x => Ordinal (valP x).
+
+Lemma ident_of_ordP (i : 'I_n) : encode (decode (val i) : T) < n.  
+Proof. rewrite decodeK; exact/(valP i). Qed.
+
+Definition ident_of_ord : 'I_n -> n.-ident T := 
+  fun i => mkBIdent (ident_of_ordP i).
+
+Lemma ident_of_ordK : cancel ident_of_ord ord_of_ident.
+Proof. 
+  rewrite /ident_of_ord /ord_of_ident=> x.
+  apply/val_inj=> /=; exact/decodeK.
+Qed.
+
+Lemma ord_of_identK : cancel ord_of_ident ident_of_ord.
+Proof. 
+  rewrite /ident_of_ord /ord_of_ident=> x.
+  apply/val_inj=> /=; exact/encodeK.
+Qed.
+
+Definition bIdent_finMixin := 
+  CanFinMixin ord_of_identK.
+Canonical bIdent_finType := 
+  Eval hnf in FinType (n.-ident T) bIdent_finMixin.
+
+Canonical bIdent_subFinType :=
+  Eval hnf in [subFinType of n.-ident T].
+
+End Instances.
+End Instances.
+
+End bIdent.
+
+Export bIdent.Def.
+Export bIdent.Syntax.
+Export bIdent.Instances.
+
+(* Context {T : identType}. *)
+(* Variable (n : nat). *)
+(* Variable (x : n.-ident T). *)
+
+(* Definition test {fT : finType} (x : fT) : fT := x. *)
+
+(* Check (pickle x). *)
+(* Check (test x). *)
