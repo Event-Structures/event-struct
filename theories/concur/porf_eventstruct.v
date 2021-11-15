@@ -791,14 +791,13 @@ Proof.
   rewrite rel_cnv_m -kleene.cnvstr.
   apply cnv_weq_iff.
   rewrite cnv_invol str_itr itr_qmk.
-  rewrite -qmk_sub_one; last first.
-  (* TODO: make a lemma? *)
+  rewrite -(kleene.itr_weq (qmk_sub_one _ _)); last first.
   - rewrite -rel_top_m -rel_one_m -rel_neg_m -rel_cup_m.
     apply /rel_weq_m/dhrel_eq_dec.
   rewrite kleene.itr_weq; last first.
   - rewrite -rel_one_m -rel_sub_m -rel_cup_m.
     by apply /rel_weq_m; rewrite -strictify_weq.
-  rewrite rel_qmk_m.
+  rewrite (kleene.itr_weq (rel_qmk_m _)).
   rewrite -itr_qmk -str_itr.
   rewrite -clos_rt_str.
   apply /reflect_weq/rt_closureP.
