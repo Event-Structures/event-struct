@@ -203,7 +203,7 @@ Proof.
     apply/exists_equiv=> e2'.
     (* TODO: make lemma? *)
     have H: forall A1 A2 B C, A1 <-> A2 -> [/\ A1, B & C] <-> [/\ A2, B & C].
-    - by move=> ???? ->.  
+    - move=> ???? [H1 H2]; split; move=> [???]; split=> //; [exact/H1|exact/H2].
     apply/H; apply: iff_sym. 
     apply: iff_trans; last first. 
     - apply: rwP; exact/(connect_strP).
