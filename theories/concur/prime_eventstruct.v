@@ -251,24 +251,17 @@ Lemma cons_ca_contr (X Y : {fset E}) :
   (forall x, x \in X -> exists2 y, y \in Y & x <= y) ->
   cons Y -> cons X.
 Proof.
-  move=> C Cy; have [n leMn] := ubnP (#|` (X `\` Y)|).
-  elim: n => // n IHn in X leMn C *.
-  case: n IHn leMn=> [|n] IHn leMn. 
-  - move: leMn; rewrite ltnS leqn0 cardfs_eq0 fsetD_eq0. 
-    by move: Cy=> /[swap] /cons_contr /[apply].
-  case (fset_0Vmem (X `\` Y))=> [/eqP| [x]].
-  - rewrite fsetD_eq0=> /cons_contr; exact.
-  move=> /[dup] iXY.
-  rewrite inE=> /andP[? /[dup] /C[y iy xLy] /fsetD1K<-].
-  apply/(cons_prop xLy)/IHn=> [|z].
-  - rewrite fsetDUl.
-    have/eqP->: ([fset y] `\` Y == fset0). 
-    + by rewrite fsetD_eq0 fsub1set.
-    rewrite fset0U fsetDDl fsetUC -fsetDDl.
-    rewrite (cardfsD1 x) iXY /= in leMn; move: #|`_| leMn=> sz. 
-    by rewrite add1n=> /=.
-  rewrite ?inE=> /orP[/eqP->|/andP[_ /C //]].
-  by exists y.
+  move: X {2}(X `\` Y) (erefl (X `\` Y))=> /[swap].
+  elim/fset_ind=> [?/eqP/[! fsetD_eq0]/cons_contr//|].
+  move=> x ?? IHxy X XYE /[dup] S + cY; rewrite -(@fsetD1K _ x X).
+  - case/(_ x)=> [/[! (inE, eqxx)]//|y ? /cons_prop]. apply.
+    apply IHxy=> // [|?].
+    - rewrite fsetDUl fsetDDl [x |` _]fsetUC -fsetDDl XYE fsetDUl.
+      have/eqP->: ([fset y] `\` Y == fset0) by rewrite fsetD_eq0 fsub1set.
+      have/eqP->: ([fset x] `\ x == fset0) by rewrite fsetD_eq0 fsubset_refl.
+      rewrite ?fset0U mem_fsetD1 //.
+    rewrite ?inE=> /orP[/eqP->|/andP[_ /S //]]; by exists y.
+  move/fsetP/(_ x): XYE; rewrite ?inE eqxx andbC /=; by case: (x \in X).
 Qed.
 
 Lemma prefix_cf_free (e : E) : cf_free (<= e).
