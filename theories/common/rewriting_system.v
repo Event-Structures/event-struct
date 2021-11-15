@@ -284,28 +284,24 @@ End EqvLabRewriting.
 
 Section EqRewritng.
 
-Context {S : Type} (r r' r2 r2' e e' : hrel S S).
+Context {S : Type}.
 
 Global Instance dcomm_weq: Proper 
   ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
   diamond_commute.
 Proof.
-  move=> ?? E1 ?? E2; split=> D ???.
-  - rewrite -(E1 _ _) -(E2 _ _)=> /D/[apply][[s]].
-    rewrite (E1 _ _) (E2 _ _); by exists s.
-  rewrite (E1 _ _) (E2 _ _)=> /D/[apply][[s]].
-  rewrite -(E1 _ _) -(E2 _ _); by exists s.
+  move=> r1 r2 e12 r3 r4 e34; split=> D x y z /e12 + /e34; 
+    by move=> /D/[apply] [[z']] /e34 ? /e12 ?; exists z'. 
 Qed.
 
 Global Instance eq_rconfl_weq: Proper
   ((weq : relation (hrel S S)) ==> (weq : relation (hrel S S))  ==> iff) 
   eqv_rconfluent.
 Proof.
-  move=> ?? E ?? E'; split=> D ???.
-  - rewrite -?(str_weq E _ _)=> /D/[apply][[s1 [s2]]].
-    rewrite ?(str_weq E _ _) (E' _ _); by exists s1, s2.
-  rewrite ?(str_weq E _ _)=> /D/[apply][[s1 [s2]]].
-  rewrite -?(str_weq E _ _) -(E' _ _); by exists s1, s2.
+  move=> r1 r2 e12 r3 r4 e34; split=> C x y z; 
+    move=> /(str_weq e12) + /(str_weq e12); 
+    move=> /C/[apply] [[y' [z' []]]] ?? /e34 ?;
+    exists y', z'; split=> //; exact/(str_weq e12).
 Qed.
 
 End EqRewritng.
