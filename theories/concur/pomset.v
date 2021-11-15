@@ -293,14 +293,6 @@ Canonical subFinfun_subCountType E (L : countType) bot :=
 End Instances.
 End Instances.
 
-Module Export Build.
-Section Build.
-Context {E : identType} {L : eqType}.
-Variable (bot : L) (p : lfsposet E L bot).
-
-End Build.
-End Build.
-
 Module Export POrder.
 Section POrder.
 Context {E : identType} {L : eqType}.
@@ -541,6 +533,10 @@ Proof.
   by rewrite mem_lfsp_tseq. 
 Qed.
 
+Lemma lfsp_event_inE p e0 n : 
+  (lfsp_event p e0 n \in finsupp p) = (n < #|`finsupp p|).
+Proof. admit. Admitted.
+
 End Theory.
 End Theory.
 
@@ -619,50 +615,85 @@ Implicit Types (p : pomset E L bot).
 End Theory.
 End Theory.
 
-Module Export bPomset.
+Module Export nPomset.
 
 Section Def.
 Context (E : identType) (L : choiceType).
 Variable (bot : L) (n : nat).
 
-Structure bpomset : Type := bPomset { 
-  bpom_val :> pomset E L bot; 
-  _ : size (finsupp bpom_val) <= n;
+Structure npomset : Type := nPomset { 
+  npom_val :> pomset E L bot; 
+  _ : size (finsupp npom_val) == n;
 }.
 
-Canonical bpomset_subType := Eval hnf in [subType for bpom_val].
+Canonical npomset_subType := Eval hnf in [subType for npom_val].
 
-Implicit Type p : bpomset.
+Implicit Type p : npomset.
 
-Definition bpomsupp p : n.-bseq E := Bseq (valP p).
+Definition npomset_supp p : n.-tuple E := Tuple (valP p).
 
-Lemma bpomsuppE p : bpomsupp p = finsupp p :> seq E.
+Lemma npomset_suppE p : npomset_supp p = finsupp p :> seq E.
 Proof. done. Qed.
 
-Lemma bpomset_size p : size (finsupp p) <= n.
-Proof. exact/(valP p). Qed.
+Lemma npomset_size p : size (finsupp p) = n.
+Proof. exact/eqP/(valP p). Qed.
 
 End Def.
 
-Arguments bpomset E L bot n : clear implicits.
+Arguments npomset E L bot n : clear implicits.
 
-Definition bpomset_eqMixin E L bot n := 
-  Eval hnf in [eqMixin of bpomset E L bot n by <:].
-Canonical bpomset_eqType E L bot n := 
-  Eval hnf in EqType _ (@bpomset_eqMixin E L bot n).
+Definition npomset_eqMixin E L bot n := 
+  Eval hnf in [eqMixin of npomset E L bot n by <:].
+Canonical npomset_eqType E L bot n := 
+  Eval hnf in EqType _ (@npomset_eqMixin E L bot n).
 
-Definition bpomset_choiceMixin E L bot n := 
-  Eval hnf in [choiceMixin of bpomset E L bot n by <:].
-Canonical bpomset_choiceType E L bot n := 
-  Eval hnf in ChoiceType _ (@bpomset_choiceMixin E L bot n).
+Definition npomset_choiceMixin E L bot n := 
+  Eval hnf in [choiceMixin of npomset E L bot n by <:].
+Canonical npomset_choiceType E L bot n := 
+  Eval hnf in ChoiceType _ (@npomset_choiceMixin E L bot n).
 
 Section FinType.
 Context (E : identType) (L : finType).
-Variable (bot : L) (n : nat).
-Implicit Types (p : bpomset E L bot n).
+Variable (bot : L) (n : nat) (e0 : E).
+Implicit Types (p : npomset E L bot n).
 
-Local Notation enc_ffun := ({ffun 'I_n -> L * {set 'I_n}}).
+Local Notation enc_ffun := 
+  ({ffun 'I_n -> L} * {ffun 'I_n * 'I_n -> bool})%type.
 
+Definition npomset_enc p : enc_ffun := 
+  let event := lfsp_event p e0 in 
+  let ffun_lab := [ffun i => fs_lab p (event (val i))] in
+  let ffun_ord := [ffun ij => 
+    fs_ica p (event (val ij.1)) (event (val ij.2))
+  ] in
+  (ffun_lab, ffun_ord).
+
+Definition npomset_dec (x : enc_ffun) : option (npomset E L bot n) := 
+  let lab := fun e => x.1 (ord_of_ident e) in
+  let ica := fun e1 e2 => x.2 (ord_of_ident e1, ord_of_ident e2) in 
+  let preposet := lFsPrePoset.build bot lab ica in 
+  let opomset := omap \pi (insub preposet) in
+  obind insub opomset.
+
+Lemma npomset_encK : pcancel npomset_enc npomset_dec. 
+Proof. 
+  rewrite /npomset_dec=> p.
+  rewrite insubT; [apply/and3P; split|].
+  - admit.
+  - apply/supp_closedP=> e1 e2.
+    rewrite lFsPrePoset.build_ica /=.
+    rewrite lFsPrePoset.build_finsupp; last first.
+    + move=> e /=; rewrite ffunE. 
+      rewrite fs_lab_bot lfsp_event_inE npomset_size.
+      exact(valP (ord_of_ident e)).
+    rewrite !in_fsetval=> /sub_rel_lift_fld /=.
+    by move=> /andP[??]; rewrite !insubT.   
+  - apply/acyclicP; split=> /=.
+    + admit.
+    admit.  
+  admit.
+Admitted.
+  
 Lemma finsupp_ltn p (e : finsupp p) : 
   fintype.enum_rank e < n :> nat.
 Proof.
