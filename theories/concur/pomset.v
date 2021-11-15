@@ -427,3 +427,4 @@ Export Pomset.Def.
 (* Variable (p : pomset E L bot). *)
 (* Variables (e1 e2 : [Event of p]). *)
 (* Check (e1 <= e2). *)
+
