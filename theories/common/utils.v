@@ -383,13 +383,16 @@ End FinTypeUtils.
 
 Section SubTypeUtils.
 
-Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
+Section Def.
+Context {T : Type} {U : Type} {P : pred T} {S : subType P}.
+Implicit Types (f : U -> T) (fd : U -> S).
+Implicit Types (g : S -> U) (gd : T -> U).
 
-Definition sub_down (g : U -> S) (f : U -> T) : U -> S := 
-  fun x => insubd (g x) (f x).
+Definition sub_down fd f : U -> S := 
+  fun x => insubd (fd x) (f x).
 
-Definition sub_lift (g : T -> U) (f : S -> U) : T -> U := 
-  fun x => odflt (g x) (omap f (insub x)).
+Definition sub_lift gd g : T -> U := 
+  fun x => odflt (gd x) (omap g (insub x)).
 
 Definition sub_rel_down (r : rel T) : rel S := 
   [rel x y | r (val x) (val y)].
@@ -401,8 +404,15 @@ Definition sub_rel_lift (r : rel S) : rel T :=
     end
   ]. 
 
-Definition compatible (g : T -> U) (f : S -> U) : Prop := 
-  forall x y, g x = f y -> P x. 
+Definition compatible gd g : Prop := 
+  forall x y, gd x = g y -> P x. 
+
+End Def.
+
+Section Theory.
+Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
+Implicit Types (f : U -> T) (fd : U -> S).
+Implicit Types (g : S -> U) (gd : T -> U).
 
 Lemma sub_inj (x y : T) (px : P x) (py : P y) : 
   Sub x px = Sub y py :> S -> x = y.
@@ -412,68 +422,68 @@ Lemma sub_val (x : S) px :
   Sub (val x) px = x.
 Proof. by apply/val_inj; rewrite SubK. Qed.
 
-Lemma sub_downT y g f x : 
-  P (f x) -> sub_down g f x = insubd y (f x). 
+Lemma sub_downT y fd f x : 
+  P (f x) -> sub_down fd f x = insubd y (f x). 
 Proof. by move=> ?; rewrite /sub_down /insubd insubT //. Qed.
 
-Lemma val_sub_downT g f x : 
-  P (f x) -> val (sub_down g f x) = f x. 
+Lemma val_sub_downT fd f x : 
+  P (f x) -> val (sub_down fd f x) = f x. 
 Proof. by rewrite /sub_down val_insubd; case: ifP. Qed.
 
-Lemma sub_downF g f x : 
-  ~ P (f x) -> sub_down g f x = g x. 
+Lemma sub_downF fd f x : 
+  ~ P (f x) -> sub_down fd f x = fd x. 
 Proof. move=> ?; rewrite /sub_down /insubd insubF //; exact/negP. Qed.
 
-Lemma val_sub_downF g f x : 
-  ~ P (f x) -> val (sub_down g f x) = val (g x). 
+Lemma val_sub_downF fd f x : 
+  ~ P (f x) -> val (sub_down fd f x) = val (fd x). 
 Proof. by rewrite /sub_down val_insubd; case: ifP. Qed.
 
-Lemma sub_down_inj_inT (g : U -> S) f (pU := fun x => f x \in P) : 
-  injective f -> { in pU &, injective (sub_down g f) }.
+Lemma sub_down_inj_inT fd f (pU := fun x => f x \in P) : 
+  injective f -> { in pU &, injective (sub_down fd f) }.
 Proof. 
   subst pU; move=> Hf x y; rewrite /in_mem /= => Hx Hy.
   by rewrite /sub_down /insubd !insubT /= => /sub_inj/Hf. 
 Qed.
 
-Lemma sub_down_inj_inF (g : U -> S) f (pU := fun x => f x \notin P) : 
-  injective g -> { in pU &, injective (sub_down g f) }.
+Lemma sub_down_inj_inF fd f (pU := fun x => f x \notin P) : 
+  injective fd -> { in pU &, injective (sub_down fd f) }.
 Proof. 
-  subst pU; move=> Hg x y; rewrite /in_mem /= => /negP Hx /negP Hy.
-  rewrite !sub_downF //; exact/Hg.
+  subst pU; move=> fd_inj x y; rewrite /in_mem /= => /negP Hx /negP Hy.
+  rewrite !sub_downF //; exact/fd_inj.
 Qed.
 
-Lemma sub_liftT g f x Px : 
-  sub_lift g f x = f (Sub x Px).
+Lemma sub_liftT gd g x Px : 
+  sub_lift gd g x = g (Sub x Px).
 Proof. by rewrite /sub_lift /insubd insubT /=. Qed.
 
-Lemma sub_liftF g f x : 
-  ~ P x -> sub_lift g f x = g x.
+Lemma sub_liftF gd g x : 
+  ~ P x -> sub_lift gd g x = gd x.
 Proof. move=> ?; rewrite /sub_lift /insubd insubF //=; exact/negP. Qed.
 
-Lemma sub_lift_inj g f : 
-  compatible g f -> injective g -> injective f -> injective (sub_lift g f).
+Lemma sub_lift_inj gd g : 
+  compatible gd g -> injective gd -> injective g -> injective (sub_lift gd g).
 Proof. 
-  move=> Hc Hg Hf x y. 
+  move=> Hc Hgd Hg x y. 
   case: (P x)/idP; case: (P y)/idP=> Hx Hy.
-  - rewrite !sub_liftT=> /Hf; exact/sub_inj.
+  - rewrite !sub_liftT=> /Hg; exact/sub_inj.
   - by rewrite sub_liftT sub_liftF // => /esym /Hc. 
   - by rewrite sub_liftF // sub_liftT=> /Hc. 
-  rewrite !sub_liftF //; exact/Hg.
+  rewrite !sub_liftF //; exact/Hgd.
 Qed.
 
-Lemma sub_lift_homo g f (rT : rel T) (rU : rel U) : 
+Lemma sub_lift_homo gd g (rT : rel T) (rU : rel U) : 
   (forall x y, rT x y -> P y -> P x) -> 
-  (forall x y, ~ P y -> rU (f x) (g y)) ->
-  { homo g : x y / rT x y >-> rU x y } -> 
-  { homo f : x y / rT (val x) (val y) >-> rU x y } -> 
-  { homo (sub_lift g f) : x y / rT x y >-> rU x y }.
+  (forall x y, ~ P y -> rU (g x) (gd y)) ->
+  { homo gd : x y / rT x y >-> rU x y } -> 
+  { homo g : x y / rT (val x) (val y) >-> rU x y } -> 
+  { homo (sub_lift gd g) : x y / rT x y >-> rU x y }.
 Proof. 
-  move=> HrT HrU Hg Hf x y.
+  move=> HrT HrU Hgd Hg x y.
   case: (P x)/idP; case: (P y)/idP=> Hx Hy.
-  - by rewrite !sub_liftT=> ?; apply/Hf; rewrite !SubK. 
+  - by rewrite !sub_liftT=> ?; apply/Hg; rewrite !SubK. 
   - by rewrite sub_liftT sub_liftF // => ?; apply/HrU. 
   - by move: Hx=> /[swap] /HrT /[apply].
-  rewrite !sub_liftF //; exact/Hg.
+  rewrite !sub_liftF //; exact/Hgd.
 Qed.
 
 Lemma sub_rel_lift_val r (x y : S) : 
@@ -483,14 +493,14 @@ Proof.
   by move=> ??; rewrite !sub_val.
 Qed.
 
-Lemma sub_rel_lift_fld r : 
+Lemma sub_rel_lift_fld (r : rel S) : 
   subrel (sub_rel_lift r) [rel x y | P x && P y].
 Proof. 
   rewrite /sub_rel_lift=> ?? /=.
   by repeat case: insubP=> [? ->|] //.
 Qed.
 
-Lemma sub_rel_down_liftK r : 
+Lemma sub_rel_down_liftK (r : rel S) : 
   sub_rel_down (sub_rel_lift r) =2 r.
 Proof. 
   rewrite /sub_rel_lift /sub_rel_down=> x y /=. 
@@ -498,8 +508,8 @@ Proof.
   by move=> ??; rewrite !sub_val. 
 Qed.
 
-Lemma sub_rel_lift_downK r : 
-  subrel r [rel x y | P x && P y] -> sub_rel_lift (sub_rel_down r) =2 r.  
+Lemma sub_rel_lift_downK (r : rel T) : 
+  subrel r [rel x y | P x && P y] -> sub_rel_lift (sub_rel_down r : rel S) =2 r.
 Proof. 
   move=> sub x y /=.
   have ->: r x y = [&& r x y, P x & P y].
@@ -531,7 +541,9 @@ Proof.
   move=> + <- <-; move: (valP x') (valP y'). 
   move=> /[dup] ? -> /[dup] ? ->.
   by rewrite /rl /sub_rel_lift /= !insubT !andbT !sub_val.
-Qed.
+Qed.  
+
+End Theory.
 
 End SubTypeUtils.
 
@@ -1230,6 +1242,16 @@ Context {T : finType}.
 Implicit Types (g : rel T). 
 Implicit Types (gf : T -> seq T). 
 
+Definition irreflexiveb g :=
+  [forall x, ~~ g x x].
+
+Definition antisymmetricb g :=
+  [forall x, forall y, g x y && g y x ==> (x == y)].
+
+Lemma irreflexiveP g : 
+  reflect (irreflexive g) (irreflexiveb g).
+Proof. apply/forallPP=> ?; exact/negPf. Qed.
+
 Lemma connect_refl g : 
   reflexive (connect g).
 Proof. done. Qed. 
@@ -1241,6 +1263,10 @@ Proof.
   move: (symconE x y); rewrite /symconnect.
   by move=> -> /eqP.
 Qed.
+
+Lemma acyclic_altP g : 
+  reflect (irreflexive g /\ antisymmetric (connect g)) (acyclic g).
+Proof. admit. Admitted.
 
 Lemma mem_tseq gf : 
   tseq gf =i enum T.
@@ -1262,6 +1288,23 @@ Proof.
 Qed.
 
 End FinGraph. 
+
+
+Section FinGraphAux.
+Context {T : choiceType} {P : pred T} {fT : subFinType T}.
+Implicit Types (r : rel fT). 
+
+Lemma sub_rel_lift_irrefl r : 
+  reflect (irreflexive (sub_rel_lift r)) [forall x, ~~ r x x].
+Proof. 
+  apply/equivP; first exact/irreflexiveP. 
+  rewrite /sub_rel_lift; split=> irr x /=. 
+  - by case: insubP.
+  move: (irr (val x))=> <- /=.
+  by rewrite !insubT !sub_val.
+Qed.  
+
+End FinGraphAux.
 
 
 Section IterUtils.
