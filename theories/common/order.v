@@ -113,11 +113,11 @@ Proof.
   by move=> /up_closP[y].
 Qed.
 
-Lemma up_close_ext P : 
+Lemma up_clos_ext P : 
   {subset P <= up_clos P}.
 Proof. by move=> x Px; apply/up_closP; exists x. Qed.
 
-Lemma up_closure_idemp P : 
+Lemma up_clos_idemp P : 
   up_clos (up_clos P) =1 up_clos P.
 Proof. 
   move=> x; apply/idP/idP=> /up_closP[y]. 
@@ -128,7 +128,7 @@ Proof.
   by exists y=> //; apply/up_closP; exists y.
 Qed.
 
-Lemma up_closureU P Q : 
+Lemma up_closU P Q : 
   up_clos ([predU P & Q]) =1 [predU (up_clos P) & (up_clos Q)].
 Proof. 
   move=> x; apply/idP/idP=> /=. 
@@ -140,11 +140,11 @@ Qed.
 
 (* ************************* *)
 
-Lemma up_closure_subs P Q : 
+Lemma up_clos_subs P Q : 
   {subsumes P <= Q : x y / y <= x } <-> {subset (up_clos P) <= (up_clos Q)}. 
 Proof. 
   split=> [subs x | sub x]; last first.
-  - move: up_close_ext=> /[apply] x_in.
+  - move: up_clos_ext=> /[apply] x_in.
     by move: (sub x x_in)=> /up_closP[y] ??; exists y. 
   move=> /up_closP[y] le_yx Py.
   apply/up_closP; move: (subs y Py)=> [z] z_in le_zy.
