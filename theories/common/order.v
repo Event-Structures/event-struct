@@ -153,3 +153,9 @@ Qed.
 
 End Theory.
 End Theory.
+
+End DwFinPOrder.
+
+Export DwFinPOrder.Exports.
+Export DwFinPOrder.Def.
+Export DwFinPOrder.Theory.
