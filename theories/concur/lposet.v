@@ -798,11 +798,23 @@ Section Theory.
 Context {L : Type} {E1 E2 : eventType L} (f : {pref E1 -> E2}).
 
 Lemma ca_prefix (e1 : E2) (e2 : E1) :
-  e1 <= f e2 -> exists2 e, f e = e1 & e <= e2.
+  e1 <= f e2 -> exists2 e, e1 = f e & e <= e2.
 Proof.
   move/[dup]; case: f=> /= ? [[? [E]] [/[apply][[e <-]]]].
   exists e=> //; exact/E.
 Qed.
+
+Lemma pref_ca_closed (C1 : pred E1) (C2 : pred E2) : 
+  (forall e, C2 e <-> exists2 e', C1 e' & e = f e') ->
+  ca_closed C1 -> ca_closed C2.
+Proof.
+  move=> CE ca > /[swap]/CE[? /[swap]->/[swap]/ca_prefix[e ->]] /ca/[apply] ?.
+  apply/CE; by exists e.
+Qed.
+
+Lemma pref_ca_closed_fset (C1 : {fset E1}) : 
+  ca_closed (mem C1) -> ca_closed (mem (f @` C1)%fset).
+Proof. apply/pref_ca_closed=> ?; split=> I; exact/imfsetP/I. Qed.
 
 End Theory.
 End Theory.
@@ -817,7 +829,7 @@ Proof. by (do ? split=> //)=> e; exists e. Qed.
 
 Lemma comp_mixin {E1 E2 E3} (f : {pref  E1 -> E2}) (g : {pref E2 -> E3}) : 
   Pref.mixin_of (g \o f).
-Proof. (do ? split)=> ?? /ca_prefix[? <-/ca_prefix[e <-]]; by exists e. Qed.
+Proof. (do ? split)=> ?? /ca_prefix[? ->/ca_prefix[e ->]]; by exists e. Qed.
 
 Lemma comp_class {E1 E2 E3} (f : {pref E2 -> E3}) (g : {pref E1 -> E2}) : 
   Pref.class_of (f \o g).
@@ -830,7 +842,7 @@ Lemma of_eqfun_class {E1 E2} (f : {pref  E1 -> E2}) g :
   g =1 f -> Pref.class_of g.
 Proof.
   move=> H; constructor; first exact/(Emb.Build.of_eqfun_class H).
-  constructor=> ??; rewrite !H=> /ca_prefix[e <-]; by exists e.
+  constructor=> ??; rewrite !H=> /ca_prefix[e ->]; by exists e.
 Qed.
 
 Definition of_eqfun {E1 E2} (f : {pref  E1 -> E2}) g : g =1 f -> {pref  E1 -> E2} := 
