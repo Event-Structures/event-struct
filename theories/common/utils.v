@@ -1181,13 +1181,13 @@ Definition subsumes_mem r mp1 mp2 :=
 
 End Def.
 
-Notation "{ 'subsumes' A <= B 'by' R }" := 
-  (subsumes_mem R (mem A) (mem B)) 
+Notation "{ 'subsumes' A <= B 'by' R }" :=
+  (subsumes_mem R (mem A) (mem B))
     (A at level 69, B at level 69) : type_scope.
 
 Notation "{ 'subsumes' A <= B : x y / a }" := 
   (subsumes_mem (fun x y => a) (mem A) (mem B))
-    (A at level 69, B at level 69, x at level 0, y at level 39) : type_scope.
+    (A at level 69, B at level 69, x at level 0, y at level 0) : type_scope.
 
 Section Theory.
 Context {T : Type}.
