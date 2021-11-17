@@ -1249,3 +1249,19 @@ Qed.
 
 End FSetInduction.
 
+Section Imfset.
+
+Open Scope fset_scope.
+
+Lemma imfset_comp (K V W : choiceType)
+  (f : K -> V) (g : V -> W) (p : {fset K}) :
+  (g \o f) @` p = g @` (f @` p).
+Proof.
+  apply/fsetP=> a; apply/imfsetP/imfsetP=> [[/= x xA ->]|].
+    by exists (f x); rewrite // in_imfset.
+  by move=> [/= x /imfsetP [/= y yA ->] ->]; exists y.
+Qed.
+
+End Imfset.
+
+
