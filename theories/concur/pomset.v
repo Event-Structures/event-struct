@@ -444,7 +444,7 @@ Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
 Lemma bhom_le_trans : transitive bhom_le. 
 Proof. move=> ???; exact/lFinPoset.bhom_trans. Qed.
 
-(* TODO: make part of the proof to lposet.v ? *)
+(* TODO: move part of the proof to lposet.v ? *)
 Lemma bhom_le_antisym : antisymmetric bhom_le. 
 Proof. 
   move=> p q /andP[] /lFinPoset.fbhomP[f] /lFinPoset.fbhomP[g].
@@ -483,7 +483,8 @@ Export Pomset.Hom.POrder.
 
 (* Context (E : identType) (L : choiceType). *)
 (* Variable (bot : L). *)
-(* Variable (p : pomset E L bot). *)
-(* Variables (e1 e2 : [Event of p]). *)
-(* Check (e1 <= e2). *)
-
+(* Variables (p q : pomset E L bot). *)
+(* Variables (e1 e2 : E). *)
+(* Check (e1 <= e2 :> [Event of p]). *)
+(* Check (e1 <= e2 :> [Event of q]). *)
+(* Check (p <= q). *)

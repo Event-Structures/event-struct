@@ -534,8 +534,6 @@ Section SeqUtils.
 Context {T : Type}. 
 Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
 
-Definition copy n s := flatten (nseq n s).
-
 Lemma headNnil x y s : 
   ~~ nilp s -> head y s = head x s.
 Proof. by case: s. Qed.
@@ -649,25 +647,6 @@ Qed.
 End SeqUtils.
 
 Arguments sorted_rcons {T} x.
-
-
-Section PathUtils.
-Context {T : Type}. 
-Implicit Types (p : pred T) (e : rel T) (s : seq T) (n : nat).
-
-Lemma copy_cycle e s n : 
-  cycle e s -> cycle e (copy n s).
-Proof. 
-  rewrite /copy=> cyc; elim n=> [|{}n IHn] => //=.
-  move: cyc IHn; case: s=> [|x {}s] => //=.
-  rewrite rcons_cat cat_path !rcons_path.  
-  move=> /andP[sp ex] cy; apply/andP; split=> //.
-  move: cy; case: n=> [|{}n] //=. 
-  by rewrite ex rcons_path=> /andP[-> ->]. 
-Qed.
-
-End PathUtils.
-
 
 Section FindNth.
 
