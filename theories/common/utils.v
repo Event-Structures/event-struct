@@ -1236,7 +1236,7 @@ Section FSetInduction.
 Open Scope fset_scope.
 
 Lemma fset_ind (A : choiceType) (P : {fset A} -> Prop) :
-  P (fset0) ->
+  P fset0 ->
   (forall a l, a \notin l -> P l -> P (a |` l)) ->
   forall l, P l.
 Proof.

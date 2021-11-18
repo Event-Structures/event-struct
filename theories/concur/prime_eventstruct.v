@@ -243,25 +243,19 @@ Lemma cons_prop X (e1 e2 : E) :
   e1 <= e2 -> cons (e2 |` X) -> cons (e1 |` X).
 Proof. by move: X e1 e2; case: E => ? [? []]. Qed.
 
-(* TODO: use notation for precondition 
- *   {subset X <= (<= Y)}, or
- *   {subsumes X <= Y : x y / x <= y}
- *)
 Lemma cons_ca_contr (X Y : {fset E}) :
-  (forall x, x \in X -> exists2 y, y \in Y & x <= y) ->
-  cons Y -> cons X.
+  {subsumes X <= Y : x y / x <= y} -> cons Y -> cons X.
 Proof.
   move: X {2}(X `\` Y) (erefl (X `\` Y))=> /[swap].
   elim/fset_ind=> [?/eqP/[! fsetD_eq0]/cons_contr//|].
-  move=> x ?? IHxy X XYE /[dup] S + cY; rewrite -(@fsetD1K _ x X).
-  - case/(_ x)=> [/[! (inE, eqxx)]//|y ? /cons_prop]. apply.
-    apply IHxy=> // [|?].
-    - rewrite fsetDUl fsetDDl [x |` _]fsetUC -fsetDDl XYE fsetDUl.
-      have/eqP->: ([fset y] `\` Y == fset0) by rewrite fsetD_eq0 fsub1set.
-      have/eqP->: ([fset x] `\ x == fset0) by rewrite fsetD_eq0 fsubset_refl.
-      rewrite ?fset0U mem_fsetD1 //.
-    rewrite ?inE=> /orP[/eqP->|/andP[_ /S //]]; by exists y.
-  move/fsetP/(_ x): XYE; rewrite ?inE eqxx andbC /=; by case: (x \in X).
+  move=> x ?? IHxy X XYE /[dup] S + cY; rewrite -(@fsetD1K _ x X); last first.
+  - move/fsetP/(_ x): XYE; rewrite ?inE eqxx andbC /=; by case: (x \in X).
+  case/(_ x)=> [/[! (inE, eqxx)]//|y ? /cons_prop]; apply.
+  apply: IHxy=> // [|?]; last first.
+  - rewrite ?inE=> /orP[/eqP->|/andP[_ /S //]]; by exists y.
+  rewrite fsetDUl fsetDDl [x |` _]fsetUC -fsetDDl XYE fsetDUl.
+  have/eqP->: ([fset y] `\` Y == fset0) by rewrite fsetD_eq0 fsub1set.
+  by rewrite fsetDv ?fset0U mem_fsetD1.
 Qed.
 
 Lemma prefix_cf_free (e : E) : cf_free (<= e).
@@ -336,7 +330,7 @@ Notation hom := Hom.type.
 Notation "{ 'hom' T }" := (@Hom.type_of _ _ _ (Phant T)) : prime_eventstruct_scope.
 Notation "[ 'hom' 'of' f ]" := 
   (Hom.mk (fun hCls => @Hom.Pack _ _ _ f hCls))
-  (at level 0, format "[ 'hom'  'of'  f ]") : lposet_scope.
+  (at level 0, format "[ 'hom'  'of'  f ]") : prime_eventstruct_scope.
 End Syntax. 
 
 Module Export Theory.
@@ -369,7 +363,7 @@ Proof.
   by move=> ?; rewrite ?inE=> /orP[/eqP->|/S'].
 Qed.
 
-Lemma hom_cf_free_fset (C : {fset E1}) : 
+Lemma hom_cf_free_fset (C : {fset E1}) :
   cf_free (mem C) -> cf_free (mem (f @` C)).
 Proof. apply/hom_cf_free=> ?; split=> I; exact/imfsetP/I. Qed.
 
@@ -426,12 +420,15 @@ End Build.
 
 End Hom.
 
-
 End PrimeC.
 
 Export PrimeC.EventStruct.Exports.
 Export PrimeC.Theory.
 Export PrimeC.Syntax.
+Export PrimeC.Hom.Build.Exports.
+Export PrimeC.Hom.Hom.Exports.
+Export PrimeC.Hom.Theory.
+Import PrimeC.Syntax.
 
 Module PrimeG.
 
