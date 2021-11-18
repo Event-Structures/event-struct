@@ -120,12 +120,9 @@ Proof. by move=> x Px; apply/up_closP; exists x. Qed.
 Lemma up_clos_idemp P : 
   up_clos (up_clos P) =1 up_clos P.
 Proof. 
-  move=> x; apply/idP/idP=> /up_closP[y]. 
-  - move=> le_yx /up_closP[z] le_zy zP.
-    apply/up_closP; exists z=> //. 
-    exact/(le_trans le_zy).
-  move=> le_yx yP; apply/up_closP. 
-  by exists y=> //; apply/up_closP; exists y.
+  move=>>; apply/idP/idP; last exact/up_clos_ext. 
+  case/up_closP=>> l /up_closP[x] /le_trans/(_ l) *.
+  apply/up_closP; by exists x. 
 Qed.
 
 Lemma up_closU P Q : 
