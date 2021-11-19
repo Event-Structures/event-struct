@@ -2,6 +2,7 @@ From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order choice.
 From mathcomp Require Import finmap fingraph fintype finfun ssrnat path.
+From mathcomp.tarjan Require Import extra acyclic Kosaraju acyclic_tsorted. 
 From Equations Require Import Equations.
 From eventstruct Require Import utils relalg wftype.
 
@@ -32,12 +33,136 @@ From eventstruct Require Import utils relalg wftype.
 
 
 Set Implicit Arguments.
+Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
 Set Equations Transparent.
 
 Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
+
+
+Section FinGraph. 
+Context {T : finType}.
+Implicit Types (g : rel T). 
+Implicit Types (gf : T -> seq T). 
+
+Definition irreflexiveb g :=
+  [forall x, ~~ g x x].
+
+Definition antisymmetricb g :=
+  [forall x, forall y, g x y && g y x ==> (x == y)].
+
+Lemma irreflexiveP g : 
+  reflect (irreflexive g) (irreflexiveb g).
+Proof. apply/forallPP=> ?; exact/negPf. Qed.
+
+Lemma antisymmetricP g : 
+  reflect (antisymmetric g) (antisymmetricb g).
+Proof. do 2 apply/forallPP=> ?; exact/(implyPP idP)/eqP. Qed.
+
+Lemma connect_refl g : 
+  reflexive (connect g).
+Proof. done. Qed. 
+
+Lemma connect_antisym g : 
+  acyclic g -> antisymmetric (connect g).
+Proof. 
+  move=> /acyclic_symconnect_eq symconE x y.
+  move: (symconE x y); rewrite /symconnect.
+  by move=> -> /eqP.
+Qed.
+
+Lemma preacyclicE g :
+  preacyclic g = antisymmetricb (connect g).
+Proof. done. Qed.
+
+Lemma acyclicE g :
+  acyclic g = irreflexiveb g && antisymmetricb (connect g).
+Proof. done. Qed.
+
+Lemma mem_tseq gf : 
+  tseq gf =i enum T.
+Proof. 
+  move: (tseq_correct gf)=> [_ in_tseq]. 
+  apply/subset_eqP/andP; split; apply/subsetP; last first.
+  - move=> x ?; exact/in_tseq. 
+  by move=> ?; rewrite mem_enum.
+Qed.
+
+Lemma size_tseq gf : 
+  size (tseq gf) = #|T|.
+Proof. 
+  rewrite cardT; apply/eqP. 
+  rewrite -uniq_size_uniq.
+  - exact/tseq_uniq.
+  - exact/enum_uniq.
+  move=> ?; exact/esym/mem_tseq.
+Qed.
+
+End FinGraph. 
+
+Section FinGraphMono. 
+Context {T U : finType}.
+
+Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
+Hypothesis (fbij : bijective f).
+Hypothesis (fmon : {mono f : x y / g1 x y >-> g2 x y}).
+
+Lemma irreflexive_mono : 
+  (irreflexiveb g1) = (irreflexiveb [rel x y | g2 (f x) (f y)]).
+Proof. 
+  apply/idP/idP=> /irreflexiveP=> irr. 
+  all: apply/irreflexiveP=> x /=. 
+  - by rewrite fmon. 
+  rewrite -fmon; exact/irr.
+Qed.
+
+Lemma antisymmetric_mono : 
+  (antisymmetricb g1) = (antisymmetricb [rel x y | g2 (f x) (f y)]).
+Proof. 
+  apply/idP/idP=> /antisymmetricP=> asym. 
+  all: apply/antisymmetricP=> x y /=. 
+  - rewrite !fmon; exact/asym.
+  rewrite -fmon -fmon; exact/asym.
+Qed.
+
+Lemma connect_mono : 
+  {mono f : x y / connect g1 x y >-> connect g2 x y}.
+Proof. 
+  move=> x y; apply/idP/idP; last first.
+  all: move=> /connect_strP/clos_rt_str/=> crt. 
+  all: apply/connect_strP/clos_rt_str. 
+  - elim: crt=> // [|??? _ + _]; last exact/rt_trans.
+    move=> {}x {}y; rewrite -fmon; exact/rt_step.
+  move: fbij=> [g] K K'.
+  rewrite -[x]K -[y]K.
+  elim: crt=> // [|??? _ + _]; last exact/rt_trans.
+  move=> {}x {}y; rewrite -[x]K' -[y]K' fmon=> ?. 
+  by apply/rt_step; rewrite !K.
+Qed.
+
+End FinGraphMono.
+
+Section FinGraphAux.
+Context {T : choiceType} {P : pred T} {fT : subFinType T}.
+Implicit Types (r : rel fT). 
+
+Lemma sub_rel_lift_irrefl r : 
+  reflect (irreflexive (sub_rel_lift r)) [forall x, ~~ r x x].
+Proof. 
+  apply/equivP; first exact/irreflexiveP. 
+  rewrite /sub_rel_lift; split=> irr x /=. 
+  - by case: insubP.
+  move: (irr (val x))=> <- /=.
+  by rewrite !insubT !sub_val.
+Qed.  
+
+End FinGraphAux.
+
+
+Set Strict Implicit.
 
 (* TODO: rename to `mrel` and move to `monad.v` ? *)
 Definition sfrel {T : eqType} (f : T -> seq T) : {dhrel T & T} :=
