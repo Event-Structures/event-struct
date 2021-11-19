@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap.
 From mathcomp.tarjan Require Import extra acyclic Kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils relalg inhtype ident lposet.
+From eventstruct Require Import utils rel relalg inhtype ident lposet.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)
@@ -67,6 +67,10 @@ Declare Scope pomset_scope.
 Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
+
+(* TODO: move to utils? *)
+Definition eqb_cast (x y : bool) :
+  (x = y) -> x -> y := fun e => let: erefl := e in id.
 
 
 Notation lfspreposet E L bot := 
@@ -170,9 +174,6 @@ Proof.
   by case: insubP=> [|/negPf].
 Qed.
 
-Definition eqb_cast (x y : bool) :
-  (x = y) -> x -> y := fun e => let: erefl := e in id.
-
 Definition event_of : finsupp build -> fE := 
   fun e => Sub (val e) (eqb_cast (build_in_finsupp (val e)) (valP e)). 
 
@@ -256,16 +257,11 @@ Proof.
 Qed.
 
 Lemma fs_ica_irreflP p : 
-  reflect (irreflexive (fs_ica p)) [forall x, ~~ fin_ica p x x].
+  reflect (irreflexive (fs_ica p)) (irreflexiveb (fin_ica p)).
 Proof. admit. Admitted.
 
 Lemma fs_ca_antisymP p : 
   reflect (antisymmetric (fs_ca p)) (antisymmetricb (fin_ca p)).
-Proof. admit. Admitted.
-
-Lemma fin_ica_acyclicP p :
-  reflect (irreflexive (fs_ica p) /\ antisymmetric (fs_ca p)) 
-          (acyclic (fin_ica p)).
 Proof. admit. Admitted.
 
 Lemma fs_ica_connectP p e1 e2 : 
@@ -315,115 +311,6 @@ Proof. admit. Admitted.
 End Theory.
 End Theory.
 
-Module Export nlFsPrePoset.
-
-Section Def.
-Context (E : identType) (L : choiceType).
-Variable (bot : L) (n : nat).
-
-Structure nlfspreposet : Type := nlFsPrePoset { 
-  nlfsp_val :> lfspreposet E L bot; 
-  _ : size (finsupp nlfsp_val) == n;
-}.
-
-Canonical nlfspreposet_subType := Eval hnf in [subType for nlfsp_val].
-
-Implicit Type p : nlfspreposet.
-
-Definition nlfsp_supp p : n.-tuple E := Tuple (valP p).
-
-Lemma nlfsp_suppE p : nlfsp_supp p = finsupp p :> seq E.
-Proof. done. Qed.
-
-Lemma nlfsp_size p : size (finsupp p) = n.
-Proof. exact/eqP/(valP p). Qed.
-
-End Def.
-
-Arguments nlfspreposet E L bot n : clear implicits.
-
-Definition nlfspreposet_eqMixin E L bot n := 
-  Eval hnf in [eqMixin of nlfspreposet E L bot n by <:].
-Canonical nlfspreposet_eqType E L bot n := 
-  Eval hnf in EqType _ (@nlfspreposet_eqMixin E L bot n).
-
-Definition nlfspreposet_choiceMixin E L bot n := 
-  Eval hnf in [choiceMixin of nlfspreposet E L bot n by <:].
-Canonical nlfspreposet_choiceType E L bot n := 
-  Eval hnf in ChoiceType _ (@nlfspreposet_choiceMixin E L bot n).
-
-Section FinType.
-Context (E : identType) (L : finType).
-Variable (bot : L) (n : nat) (e0 : E).
-
-Local Notation enc_ffun := 
-  ({ffun 'I_n -> L} * {ffun 'I_n * 'I_n -> bool})%type.
-
-Implicit Types (p : nlfspreposet E L bot n).
-Implicit Types (f : enc_ffun).
-
-Definition dec_event p : 'I_n -> E := 
-  fun i => lfsp_event p e0 (val i).
-
-Definition enc_event : n.-ident E -> 'I_n :=
-  fun e => ord_of_ident e.
-
-Definition enc_iso p : E -> E :=
-  fun e => lfsp_event p e0 (encode e).
-
-Lemma dec_eventK p e : 
-  dec_event p (enc_event e) = enc_iso p e.
-Proof. admit. Admitted.
-
-Definition enc_lab p : {ffun 'I_n -> L} :=
-  [ffun i => fs_lab p (dec_event p i)].
-
-Definition enc_ica p : {ffun 'I_n * 'I_n -> bool} :=
-  [ffun ij => fs_ica p (dec_event p ij.1) (dec_event p ij.2)].
-
-Definition nlfsp_enc p : enc_ffun := 
-  (enc_lab p, enc_ica p).
-
-Lemma enc_labD p e :
-  enc_lab p e != bot. 
-Proof. admit. Admitted.
-
-Lemma enc_icaE p e1 e2 : 
-  (enc_ica p) (ord_of_ident e1, ord_of_ident e2) = fs_ica p e1 e2.
-Proof. admit. Admitted.
-
-Definition dec_lab f : n.-ident E -> L :=
-  fun e => f.1 (enc_event e).
-
-Definition dec_ica f : rel (n.-ident E) :=
-  fun e1 e2 => f.2 (enc_event e1, enc_event e2).
-
-Definition nlfsp_predec f : lfspreposet E L bot := 
-  lFsPrePoset.build bot (dec_lab f) (dec_ica f).
-
-(* Lemma dec_enc_labD p : *)
-(*   lab_defined (nlfsp_predec (nlfsp_enc p)).  *)
-(* Proof. admit. Admitted. *)
-
-Lemma nlfsp_predec_in_finsupp p e : lab_defined p -> 
-  (e \in finsupp (nlfsp_predec (nlfsp_enc p))) = ((enc_iso p e) \in finsupp p).
-Proof. 
-  rewrite /nlfsp_predec /nlfsp_enc /build=> labD.
-  rewrite finsupp_fset !in_fset !inE in_fsetval /=.
-  rewrite /enc_iso lfsp_event_inE nlfsp_size.
-  case: insubP=> [|/negPf->] //.
-  move=> e' -> vale /=. 
-  rewrite xpair_eqE negb_and. 
-  apply/idP/idP=> //; apply/orP; left.
-  rewrite /dec_lab /enc_lab /dec_event /enc_event ffunE.
-  move: labD => /lab_definedP -> //.
-  by rewrite lfsp_event_inE nlfsp_size (valP e').
-Qed.
-
-End FinType.
-
-End nlFsPrePoset.
-
 End lFsPrePoset.
 
 Export lFsPrePoset.Def.
@@ -438,7 +325,7 @@ Section Def.
 Context (E : identType) (L : eqType).
 Variable (bot : L).
 
-Structure lfsposet : Type := lFsPoset {
+Structure lfsposet : Type := mk_lFsPoset {
   lfsposet_val :> lfspreposet E L bot ; 
   _ : let p := lfsposet_val in 
       [&& lab_defined p, supp_closed p & acyclic (fin_ica p)]
@@ -841,12 +728,29 @@ Definition dec_event p : 'I_n -> E :=
 Definition enc_event : n.-ident E -> 'I_n :=
   fun e => ord_of_ident e.
 
-Definition isof p : E -> E := 
+Definition enc_iso p : E -> E := 
   fun e => lfsp_event p e0 (encode e).
 
+Definition dec_iso p : E -> E := 
+  fun e => decode (lfsp_idx p e).
+
 Lemma dec_eventK p e : 
-  dec_event p (enc_event e) = isof p e.
+  dec_event p (enc_event e) = enc_iso p e.
 Proof. admit. Admitted.
+
+Lemma enc_dec_isoK p e :
+  enc_iso p (dec_iso p e) = e.
+Proof. 
+  rewrite /enc_iso /dec_iso.
+  rewrite decodeK. admit.
+Admitted.
+
+Lemma dec_enc_isoK p e :
+  dec_iso p (enc_iso p e) = e.
+Proof. 
+  rewrite /enc_iso /dec_iso.
+  admit.
+Admitted.
 
 Definition enc_lab p : {ffun 'I_n -> L} :=
   [ffun i => fs_lab p (dec_event p i)].
@@ -854,7 +758,7 @@ Definition enc_lab p : {ffun 'I_n -> L} :=
 Definition enc_ica p : {ffun 'I_n * 'I_n -> bool} :=
   [ffun ij => fs_ica p (dec_event p ij.1) (dec_event p ij.2)].
 
-Definition npomset_enc p : enc_ffun := 
+Definition enc p : enc_ffun := 
   (enc_lab p, enc_ica p).
 
 Lemma enc_labD p e :
@@ -871,12 +775,97 @@ Definition dec_lab f : n.-ident E -> L :=
 Definition dec_ica f : rel (n.-ident E) :=
   fun e1 e2 => f.2 (enc_event e1, enc_event e2).
 
-Definition npomset_dec f : option (npomset E L bot n) := 
-  let preposet := lFsPrePoset.build bot (dec_lab f) (dec_ica f) in 
-  let opomset := omap \pi (insub preposet) in
+Definition predec f : lfspreposet E L bot := 
+  lFsPrePoset.build bot (dec_lab f) (dec_ica f).
+
+Let predec_enc p := predec (enc p).
+
+Definition dec f : option (npomset E L bot n) := 
+  let opomset := omap \pi (insub (predec f)) in
   obind insub opomset.
 
-Lemma 
+Lemma predec_enc_in_finsupp p e : 
+  (e \in finsupp (predec_enc p)) = ((enc_iso p e) \in finsupp p).
+Proof. 
+  rewrite /predec /enc /lFsPrePoset.build. 
+  move: (lfsp_lab_defined p)=> labD.
+  rewrite finsupp_fset !in_fset !inE in_fsetval /=.
+  rewrite /enc_iso lfsp_event_inE npomset_size.
+  case: insubP=> [|/negPf->] //.
+  move=> e' -> vale /=. 
+  rewrite xpair_eqE negb_and. 
+  apply/idP/idP=> //; apply/orP; left.
+  rewrite /dec_lab /enc_lab /dec_event /enc_event ffunE.
+  move: labD => /lab_definedP -> //.
+  by rewrite lfsp_event_inE npomset_size (valP e').
+Qed.
+
+Lemma in_finsupp_predec_enc p e : 
+  (e \in finsupp p) = ((dec_iso p e) \in finsupp (predec_enc p)).
+Proof. 
+  have {1}->: e = (dec_iso p (enc_iso p e)). 
+  - admit.
+  rewrite predec_enc_in_finsupp.
+  by rewrite enc_dec_isoK dec_enc_isoK.
+Admitted.
+
+Definition event_of p : finsupp (predec_enc p) -> (finsupp p) := 
+  fun e => 
+    let e' := enc_iso p (val e) in
+    Sub e' (eqb_cast (predec_enc_in_finsupp p (val e)) (valP e)). 
+
+Definition of_event p : (finsupp p) -> finsupp (predec_enc p) := 
+  fun e => 
+    let e' := dec_iso p (val e) in
+    Sub e' (eqb_cast (in_finsupp_predec_enc p (val e)) (valP e)). 
+
+Lemma event_of_bij p :
+  bijective (@event_of p).
+Proof. admit. Admitted.
+
+Lemma fin_ica_mono p :
+  { mono (@event_of p) : e1 e2 /
+    fin_ica (predec_enc p) e1 e2 >-> fin_ica p e1 e2 }.
+Proof.
+  move=> e1 e2 /=.
+  rewrite /predec_enc /predec /enc.
+  rewrite /fin_ica /sub_rel_down=> /=.
+  rewrite lFsPrePoset.build_ica /=.
+  rewrite /sub_rel_lift /= !insubT.
+  - admit.
+  - admit.
+  rewrite /dec_ica /enc_ica /= => ??.
+  by rewrite !ffunE. 
+Admitted.
+
+Lemma predec_enc_supp_closed p : 
+  supp_closed (predec_enc p).
+Proof. 
+  apply/supp_closedP=> e1 e2.
+  rewrite lFsPrePoset.build_ica /=.
+  rewrite lFsPrePoset.build_finsupp; last first.
+  + move=> e /=; rewrite /dec_lab ffunE. 
+    rewrite fs_lab_bot lfsp_event_inE npomset_size.
+    exact(valP (ord_of_ident e)).
+  rewrite !in_fsetval=> /sub_rel_lift_fld /=.
+  by move=> /andP[??]; rewrite !insubT.   
+Qed.
+
+Lemma predec_enc_acyclic p : 
+  acyclic (fin_ica (predec_enc p)).
+Proof.
+  move: (event_of_bij p) (@fin_ica_mono p)=> + /[dup] mon. 
+  move=> /connect_mono /[apply] cmon.
+  rewrite acyclicE; apply/andP; split.
+  - rewrite (irreflexive_mono mon).
+    apply/irreflexiveP=> x /=.
+    rewrite /fin_ica /sub_rel_down /=.
+    exact/fs_ica_irrefl.
+  rewrite (antisymmetric_mono cmon).
+  apply/antisymmetricP=> x y /= ?. 
+  apply/(bij_inj (event_of_bij p)).
+  by apply/lFsPoset.FinPOrder.fin_ca_antisym.
+Qed.    
 
 Lemma dec_icaK p e1 e2 : 
   dec_ica (npomset_enc p) e1 e2 = fs_ica p (isof p e1) (isof p e2).
