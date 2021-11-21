@@ -583,6 +583,160 @@ End Exports.
 End Build.
 End Emb.
 
+Module Export Pref.
+
+Import lPoset.Pref.Syntax.
+
+Module Pref.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : PrimeC.eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  _ : forall e1 e2, e1 <= f e2 -> exists e, f e = e1;
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Emb.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Emb.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType  := Hom.Pack class.
+Definition embType  := Emb.Pack class.
+
+Definition mk h mkH : type :=
+  mkH (let: Pack _ c := h return @class_of h in c).
+
+Definition type_of (_ : phant (E1 -> E2)) := type.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Emb.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+Coercion embType : type >-> Emb.type.
+Canonical embType.
+Canonical homType.
+End Exports.
+
+End Pref.
+
+Export Pref.Exports.
+
+Module Export Syntax. 
+Notation pref := Pref.type.
+Notation "{ 'pref' T }" := (@Pref.type_of _ _ _ (Phant T)) : prime_eventstruct_scope.
+Notation "[ 'pref' 'of' f ]" := 
+  (Pref.mk (fun hCls => @Pref.Pack _ _ _ f hCls))
+  (at level 0, format "[ 'pref'  'of'  f ]") : prime_eventstruct_scope.
+End Syntax.
+
+Module TolPosetPref.
+Section TolPosetPref.
+
+Context {L : Type} {E1 E2 : eventType L} (f : {pref  E1 -> E2}).
+
+Definition class : lPoset.Pref.Pref.class_of f.
+case f=> ? [b []]; split=> //=; exact/(TolPosetEmb.class (Emb.Emb.Pack b)).
+Qed.
+
+End TolPosetPref.
+
+Module Exports.
+
+Canonical lposet_pref_of_prime_es {L : Type} {E1 E2 : eventType L} (f : {pref  E1 -> E2}) 
+  := lPoset.Pref.Pref.Pack (class f).
+
+End Exports.
+
+End TolPosetPref.
+
+Import TolPosetPref.Exports.
+
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : {pref E1 -> E2}).
+
+
+Lemma pref_cfg (C1 : pred E1) (C2 : pred E2) : 
+  (forall e, C2 e <-> exists2 e', C1 e' & e = f e') ->
+  cfg C1 <-> cfg C2.
+Proof.
+  move=> CE; by rewrite /cfg (pref_ca_closed CE) (emb_cf_free CE). 
+Qed.
+
+Lemma pref_ca_closed_fset (C1 : {fset E1}) : 
+  ca_closed (mem C1) <-> ca_closed (mem (f @` C1)%fset).
+Proof. apply/pref_ca_closed=> ?; split=> I; exact/imfsetP/I. Qed.
+
+End Theory.
+End Theory.
+
+Module Build.
+Section Build.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Lemma id_class {E} : Pref.class_of (@idfun E).
+Proof. 
+  split=> //; first exact/Emb.Build.id_class.
+  by case : (@lPoset.Pref.Build.id_class L E)=> ? [].
+Qed.
+
+Lemma comp_class {E1 E2 E3} (f : {pref E2 -> E3}) (g : {pref E1 -> E2}) : 
+  Pref.class_of (f \o g).
+Proof. 
+  split=> //; first exact/Emb.Build.comp_class.
+  by case : (lPoset.Pref.Build.comp_mixin [pref of g]%pomset [pref of f]%pomset).
+Qed.
+
+Lemma of_eqfun_class {E1 E2} (f : {pref  E1 -> E2}) g :
+  g =1 f -> Pref.class_of g.
+Proof.
+  move=> E; split=> //; first exact/Emb.Build.of_eqfun_class.
+  by case : (lPoset.Pref.Build.of_eqfun_class E)=> ? [].
+Qed.
+
+Definition of_eqfun {E1 E2} (f : {pref  E1 -> E2}) g : g =1 f -> {pref  E1 -> E2} := 
+  fun eqf => Pref.Pack (of_eqfun_class eqf).
+
+End Build.
+Module Export Exports.
+Section Exports.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Canonical id_pref E : {pref E -> E} := Pref.Pack id_class.
+
+Canonical comp_pref E1 E2 E3 : {pref E2 -> E3} -> {pref E1 -> E2} -> {pref E1 -> E3} :=
+  fun f g => Pref.Pack (comp_class f g).
+
+End Exports.
+End Exports.
+End Build.
+End Pref.
+
 End PrimeC.
 
 Export PrimeC.EventStruct.Exports.
