@@ -737,6 +737,141 @@ End Exports.
 End Build.
 End Pref.
 
+Module Export bHom.
+
+Import lPoset.bHom.Syntax.
+
+Module bHom.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : PrimeC.eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  g : E2 -> E1;
+  _ : cancel f g;
+  _ : cancel g f;
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : Hom.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> Hom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := Hom.Pack class.
+
+Definition mk h mkH : type :=
+  mkH (let: Pack _ c := h return @class_of h in c).
+
+Definition type_of (_ : phant (E1 -> E2)) := type.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> Hom.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> Hom.type.
+Canonical homType.
+End Exports.
+
+End bHom.
+
+Export bHom.Exports.
+
+Module Export Syntax. 
+Notation bhom := bHom.type.
+Notation "{ 'bhom' T }" := (@bHom.type_of _ _ _ (Phant T)) : prime_eventstruct_scope.
+Notation "[ 'bhom' 'of' f ]" := 
+  (bHom.mk (fun hCls => @bHom.Pack _ _ _ f hCls))
+  (at level 0, format "[ 'bhom'  'of'  f ]") : prime_eventstruct_scope.
+End Syntax.
+
+Module TolPosetbHom.
+Section TolPosetbHom.
+
+Context {L : Type} {E1 E2 : PrimeC.eventType L} (f : {bhom E1 -> E2}).
+
+Definition class : lPoset.bHom.bHom.class_of f.
+case f=> ? [[??] [g *]]; by split=> //; exists g.
+Defined.
+
+
+End TolPosetbHom.
+
+Module Exports.
+
+Canonical lposet_bhom_of_prime_es {L : Type} {E1 E2 : PrimeC.eventType L} (f : {bhom  E1 -> E2}) 
+  := lPoset.bHom.bHom.Pack (class f).
+
+End Exports.
+
+End TolPosetbHom.
+
+Import TolPosetbHom.Exports.
+
+Module Build.
+Section Build.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Lemma id_class {E} : bHom.class_of (@idfun E).
+Proof. 
+  split=> //; first exact/Hom.Build.id_class.
+  by exists id.
+Qed.
+
+Lemma comp_class {E1 E2 E3} (f : {bhom  E2 -> E3}) (g : {bhom E1 -> E2}) :
+  bHom.class_of (f \o g).
+Proof.
+  split=> //; first exact/Hom.Build.comp_class.
+  case: (lPoset.bHom.Build.comp_class [bhom of f]%pomset [bhom of g]%pomset)=> ? [h *].
+  by exists h.
+Qed.
+
+Lemma of_eqfun_class {E1 E2} (f : {bhom  E1 -> E2}) g : 
+  g =1 f -> bHom.class_of g.
+Proof.
+  move=> E; split=> //; first exact/Hom.Build.of_eqfun_class.
+  case : (lPoset.bHom.Build.of_eqfun_class E)=> ? [h *].
+  by exists h.
+Qed.
+
+Definition of_eqfun {E1 E2} (f : {bhom  E1 -> E2}) g : g =1 f -> {bhom  E1 -> E2} := 
+  fun eqf => bHom.Pack (of_eqfun_class eqf).
+
+End Build.
+Module Export Exports.
+Section Exports.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Canonical id_bhom E : {bhom E -> E} := bHom.Pack id_class.
+
+Canonical comp_bhom E1 E2 E3 : {bhom E2 -> E3} -> {bhom E1 -> E2} -> {bhom E1 -> E3} :=
+  fun f g => bHom.Pack (comp_class f g).
+
+End Exports.
+End Exports.
+End Build.
+End bHom.
 End PrimeC.
 
 Export PrimeC.EventStruct.Exports.
