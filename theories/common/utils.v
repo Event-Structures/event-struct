@@ -1230,3 +1230,38 @@ Proof.
 Qed.
 
 End FinGraph. 
+
+Section FSetInduction.
+
+Open Scope fset_scope.
+
+Lemma fset_ind (A : choiceType) (P : {fset A} -> Prop) :
+  P fset0 ->
+  (forall a l, a \notin l -> P l -> P (a |` l)) ->
+  forall l, P l.
+Proof.
+  move=> ? Ps X.
+  have [n leMn] := ubnP #|` X|; elim: n => // n IHn in X leMn *.
+  case (fset_0Vmem X)=> [->//| [x]/[dup] I /fsetD1K<-].
+  apply/Ps/IHn; first by rewrite ?inE eqxx.
+  by rewrite (cardfsD1 x) I /= addnC addn1 in leMn. 
+Qed.
+
+End FSetInduction.
+
+Section Imfset.
+
+Open Scope fset_scope.
+
+Lemma imfset_comp (K V W : choiceType)
+  (f : K -> V) (g : V -> W) (p : {fset K}) :
+  (g \o f) @` p = g @` (f @` p).
+Proof.
+  apply/fsetP=> a; apply/imfsetP/imfsetP=> [[/= x xA ->]|].
+    by exists (f x); rewrite // in_imfset.
+  by move=> [/= x /imfsetP [/= y yA ->] ->]; exists y.
+Qed.
+
+End Imfset.
+
+
