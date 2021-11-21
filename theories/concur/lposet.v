@@ -641,6 +641,15 @@ Definition clone f c of phant_id class c := @Pack f c.
 
 Definition homType := Hom.Pack class.
 
+Lemma ihomMixin : iHom.mixin_of cT.
+Proof. 
+  case: cT=> [f] /= [_ [ca_refl]]. 
+  constructor=> x y /= f_eq.
+  apply/le_anti/andP. 
+  by split; apply/ca_refl; rewrite f_eq. 
+Qed.
+Definition ihomType := iHom.Pack (iHom.Class class ihomMixin).
+
 Definition mk h mkH : type :=
   mkH (let: Pack _ c := h return @class_of h in c).
 
@@ -653,7 +662,9 @@ Coercion base : class_of >-> Hom.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 Coercion homType : type >-> Hom.type.
+Coercion ihomType : type >-> iHom.type.
 Canonical homType.
+Canonical ihomType.
 End Exports.
 
 End Emb.
