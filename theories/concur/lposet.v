@@ -815,16 +815,23 @@ Proof.
   exists e=> //; exact/E.
 Qed.
 
+Import Emb.Exports.
+Import iHom.Theory.
+
 Lemma pref_ca_closed (C1 : pred E1) (C2 : pred E2) : 
   (forall e, C2 e <-> exists2 e', C1 e' & e = f e') ->
-  ca_closed C1 -> ca_closed C2.
+  ca_closed C1 <-> ca_closed C2.
 Proof.
-  move=> CE ca > /[swap]/CE[? /[swap]->/[swap]/ca_prefix[e ->]] /ca/[apply] ?.
-  apply/CE; by exists e.
+  move=> CE; split=> ca e1 e2.
+  - move=> /[swap]/CE[? /[swap]->/[swap]/ca_prefix[e ->]] /ca/[apply] ?.
+    apply/CE; by exists e.
+  move=> /(ca_monotone f)/ca i ?.
+  case: (CE (f e1))=> [[|?? /(@ihom_inj _ _ _ f)->//]].
+  by apply/i/CE; exists e2.
 Qed.
 
 Lemma pref_ca_closed_fset (C1 : {fset E1}) : 
-  ca_closed (mem C1) -> ca_closed (mem (f @` C1)%fset).
+  ca_closed (mem C1) <-> ca_closed (mem (f @` C1)%fset).
 Proof. apply/pref_ca_closed=> ?; split=> I; exact/imfsetP/I. Qed.
 
 End Theory.
