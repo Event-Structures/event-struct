@@ -20,6 +20,7 @@ All files include a more detailed description of their contents.
     - `inhtype.v` - interface for inhabited type, that is a type with one distinguished inhabitant
     - `ident.v` - interface for types that can be used as identifiers
     - `rel.v` - additional facts about decidable binary relations
+    - `order.v` - various additions to porder theory from mathcomp 
     - `monoid.v` - theory of monoids and partial monoids
     - `rewriting_system.v` - some bits of the theory of rewrite systems
 

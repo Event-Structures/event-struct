@@ -16,6 +16,7 @@ theories/common/inhtype.v
 theories/common/ident.v
 theories/common/rewriting_system.v
 theories/common/rel.v
+theories/common/order.v
 theories/common/monoid.v
 
 theories/concur/lts.v
