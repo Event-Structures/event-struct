@@ -1,6 +1,6 @@
 From RelationAlgebra Require Import lattice boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice order finmap fintype. 
+From mathcomp Require Import eqtype choice order finmap fintype.
 From eventstruct Require Import utils relalg lposet.
 
 (******************************************************************************)
@@ -419,6 +419,169 @@ End Exports.
 End Build.
 
 End Hom.
+
+Module Export Emb.
+
+Import lPoset.Emb.Syntax.
+
+Module Emb.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : PrimeC.eventType L).
+Implicit Types (f : E1 -> E2).
+
+Record mixin_of f := Mixin {
+  _ : forall e1 e2, f e1 <= f e2 -> e1 <= e2;
+  _ : forall X : {fset E1}, cons (f @` X) -> cons X
+}.
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : PrimeC.Hom.Hom.class_of f; 
+  mixin : mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> PrimeC.Hom.Hom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType := PrimeC.Hom.Hom.Pack class.
+
+Definition mk h mkH : type :=
+  mkH (let: Pack _ c := h return @class_of h in c).
+
+Definition type_of (_ : phant (E1 -> E2)) := type.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> PrimeC.Hom.Hom.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType : type >-> PrimeC.Hom.Hom.type.
+Canonical homType.
+End Exports.
+
+End Emb.
+
+Export Emb.Exports.
+
+Module Export Syntax. 
+Notation emb := Emb.type.
+Notation "{ 'emb' T }" := (@Emb.type_of _ _ _ (Phant T)) : prime_eventstruct_scope.
+Notation "[ 'emb' 'of' f ]" := 
+  (Emb.mk (fun hCls => @Emb.Pack _ _ _ f hCls))
+  (at level 0, format "[ 'emb'  'of'  f ]") : prime_eventstruct_scope.
+End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : {emb E1 -> E2}).
+
+Lemma cons_antimon (X : {fset E1}) : 
+  cons (f @` X) -> cons X.
+Proof.
+  case: f => ? [?[?]]; exact.
+Qed.
+
+Lemma emb_cf_free (C1 : pred E1) (C2 : pred E2) : 
+  (forall x, C2 x <-> exists2 y, C1 y & x = f y) ->
+  cf_free C1 <-> cf_free C2.
+Proof.
+  move=> CE; split=> [/(hom_cf_free CE) //| cf s S].
+  apply/cons_antimon/cf=> ? /imfsetP[y /S ? ->].
+  by apply/CE; exists y.
+Qed.
+
+End Theory.
+End Theory.
+
+Module TolPosetEmb.
+Section TolPosetEmb.
+
+Context {L : Type} {E1 E2 : eventType L} (f : {emb  E1 -> E2}).
+
+Definition class : lPoset.Emb.Emb.class_of f.
+case f=> ? [[??] [?]]; by do ? split=> //.
+Qed.
+
+End TolPosetEmb.
+
+Module Exports.
+
+Canonical lposet_emb_of_prime_es {L : Type} {E1 E2 : eventType L} (f : {emb  E1 -> E2}) 
+  := lPoset.Emb.Emb.Pack (class f).
+
+End Exports.
+
+
+End TolPosetEmb.
+
+Import TolPosetEmb.Exports.
+
+Module Build.
+Section Build.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Lemma id_class {E} : Emb.class_of (@idfun E).
+Proof. 
+  split=> //; first exact/Hom.Build.id_class.
+  by split=> // ?; rewrite imfset_id.
+Qed.
+
+(* Lemma comp_mixin {E1 E2 E3} (f : {emb  E1 -> E2}) (g : {emb E2 -> E3}) : 
+  Emb.mixin_of (g \o f).
+Proof. 
+  split=> //. apply/Hom.Build.comp_mixin.
+  by constructor=> ??; rewrite -(ca_reflecting f) -(ca_reflecting g). Qed. *)
+
+Lemma comp_class {E1 E2 E3} (f : {emb  E2 -> E3}) (g : {emb E1 -> E2}) : 
+  Emb.class_of (f \o g).
+Proof. 
+  split=> //; first exact/Hom.Build.comp_class; split.
+  - by case: (lPoset.Emb.Build.comp_mixin [emb of g]%pomset [emb of f]%pomset).
+  by move=> ?; rewrite imfset_comp=> /cons_antimon/cons_antimon.
+Qed.
+
+Lemma of_eqfun_class {E1 E2} (f : {emb  E1 -> E2}) g :
+  g =1 f -> Emb.class_of g.
+Proof.
+  move=> E; split=> //; first exact/Hom.Build.of_eqfun_class; split.
+  - by case: (lPoset.Emb.Build.of_eqfun_class E)=> ? [].
+  by move=> X; rewrite (eq_imfset _ E (fun=> erefl))=> /cons_antimon.
+Qed.
+
+Definition of_eqfun {E1 E2} (f : {emb  E1 -> E2}) g : g =1 f -> {emb  E1 -> E2} := 
+  fun eqf => Emb.Pack (of_eqfun_class eqf).
+
+End Build.
+Module Export Exports.
+Section Exports.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Canonical id_emb E : {emb E -> E} := Emb.Pack id_class.
+
+Canonical comp_emb E1 E2 E3 : {emb E2 -> E3} -> {emb E1 -> E2} -> {emb E1 -> E3} :=
+  fun f g => Emb.Pack (comp_class f g).
+
+End Exports.
+End Exports.
+End Build.
+End Emb.
 
 End PrimeC.
 
