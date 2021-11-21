@@ -872,14 +872,236 @@ End Exports.
 End Exports.
 End Build.
 End bHom.
+
+Module Export Iso.
+
+Module Iso.
+Section ClassDef. 
+
+Context {L : Type} (E1 E2 : PrimeC.eventType L).
+Implicit Types (f : E1 -> E2).
+
+Set Primitive Projections.
+Record class_of f := Class {
+  base  : bHom.class_of f; 
+  mixin : Emb.mixin_of f;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> bHom.class_of.
+
+Structure type := Pack { apply ; _ : class_of apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Variables (cT : type).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
+Definition clone f c of phant_id class c := @Pack f c.
+
+(* Definition pack := *)
+(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
+(*   fun m => Pack (@Class E L b m). *)
+
+Definition homType  := Hom.Pack class.
+Definition bhomType := bHom.Pack class.
+Definition embType  := Emb.Pack (Emb.Class class (mixin class)).
+
+Lemma prefMixin : Pref.mixin_of cT.
+Proof.
+  split=> e1*; case: cT=> f [[? [g *]]].
+  by exists (g e1).
+Qed.
+
+Definition prefType := Pref.Pack (Pref.Class (Emb.Class class (mixin class)) prefMixin).
+
+Definition mk h mkH : type :=
+  mkH (let: Pack _ c := h return @class_of h in c).
+
+Definition type_of (_ : phant (E1 -> E2)) := type.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> bHom.class_of.
+Coercion mixin : class_of >-> Emb.mixin_of.
+Coercion apply : type >-> Funclass.
+Coercion homType  : type >-> Hom.type.
+Coercion bhomType : type >-> bHom.type.
+Coercion embType  : type >-> Emb.type.
+Coercion prefType  : type >-> Pref.type.
+Canonical homType.
+Canonical bhomType.
+Canonical embType.
+End Exports.
+
+End Iso.
+
+Export Iso.Exports.
+
+Module Export Syntax. 
+Notation iso := Iso.type.
+Notation "{ 'iso' T }" := (@Iso.type_of _ _ _ (Phant T)) : prime_eventstruct_scope.
+Notation "[ 'iso' 'of' f ]" := 
+  (Iso.mk (fun hCls => @Iso.Pack _ _ _ f hCls))
+  (at level 0, format "[ 'iso'  'of'  f ]") : prime_eventstruct_scope.
+End Syntax.
+
+Module TolPosetIso.
+Section TolPosetIso.
+
+Context {L : Type} {E1 E2 : PrimeC.eventType L} (f : {iso E1 -> E2}).
+
+Definition class : lPoset.Iso.Iso.class_of f.
+split; [apply/bHom.TolPosetbHom.class|apply/Emb.TolPosetEmb.class].
+Defined.
+
+End TolPosetIso.
+
+Module Exports.
+
+Canonical lposet_iso_of_prime_es {L : Type} {E1 E2 : PrimeC.eventType L} (f : {iso  E1 -> E2}) 
+  := lPoset.Iso.Iso.Pack (class f).
+
+End Exports.
+
+End TolPosetIso.
+
+Import TolPosetIso.Exports.
+Import lPoset.Iso.Syntax.
+Import lPoset.bHom.Syntax.
+Import TolPosetbHom.Exports.
+
+Module Export Theory.
+Section Theory.
+
+Context {L : Type} {E1 E2 : PrimeC.eventType L} (f : {iso E1 -> E2}).
+
+Definition invF := lPoset.bHom.invF ([iso of f]%pomset).
+
+Lemma can_inv : cancel invF f.
+Proof. exact/can_inv. Qed.
+
+Lemma inv_can : cancel f invF.
+Proof. exact/inv_can. Qed.
+
+End Theory.
+End Theory.
+
+
+Module Build.
+Section Build.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Lemma id_class {E} : Iso.class_of (@idfun E).
+Proof.
+  split; first exact/bHom.Build.id_class.
+  exact/Emb.Build.id_class.
+Qed.
+
+Lemma inv_class {E1 E2} (f : {iso E1 -> E2}) :
+  Iso.class_of (invF f).
+Proof.
+  case: (lPoset.Iso.Build.inv_class [iso of f]%pomset)=> [[[[??[g ??[?]]]]]].
+  do ? split=> //; [|by exists g|].
+  - move=> ??; apply/(@cons_antimon _ _ _ f); rewrite -imfset_comp.
+    under eq_imfset do [rewrite /= can_inv|by []]; by rewrite /= imfset_id.
+  move=> ? /(@cons_mon _ _ _ f); rewrite -imfset_comp.
+  under eq_imfset do [rewrite /= can_inv|by []]; by rewrite /= imfset_id.
+Qed.
+
+Definition inv {E1 E2} : {iso E1 -> E2} -> {iso E2 -> E1} := 
+  fun f => Iso.Pack (inv_class f).
+
+Lemma comp_class {E1 E2 E3} (f : {iso E2 -> E3}) (g : {iso E1 -> E2}) : 
+  Iso.class_of (f \o g).
+Proof.
+  split; first exact/bHom.Build.comp_class.
+  by case: (Emb.Build.comp_class f g).
+Qed.
+
+Lemma of_eqfun_class {E1 E2} (f : {iso  E1 -> E2}) g :
+  g =1 f -> Iso.class_of g.
+Proof.
+  move=> E; split; first exact/(bHom.Build.of_eqfun_class E).
+  by case: (Emb.Build.of_eqfun_class E).
+Qed.
+
+Definition of_eqfun {E1 E2} (f : {iso  E1 -> E2}) g : g =1 f -> {iso  E1 -> E2} := 
+  fun eqf => Iso.Pack (of_eqfun_class eqf).
+
+Lemma of_homs_class {E1 E2} (f : {hom  E1 -> E2}) (g : {hom E2 -> E1}) : 
+  cancel f g -> cancel g f -> Iso.class_of f.
+Proof.
+  move=> c c'.
+  case: (lPoset.Iso.Build.of_homs_class c c')=> [[[[??[???[?]]]]]].
+  do ? split=> //; [by move=> ? /cons_mon|by exists g|].
+  move=> ? /(cons_mon g); rewrite -imfset_comp.
+  under eq_imfset do [rewrite /= c|by []]; by rewrite imfset_id.
+Defined.
+
+Definition of_homs {E1 E2} (f : {hom  E1 -> E2}) (g : {hom E2 -> E1}) : 
+  cancel f g -> cancel g f -> ({iso  E1 -> E2}) := 
+    fun HK HK' => Iso.Pack (of_homs_class HK HK').
+
+Lemma of_homs_invE {E1 E2} (f : {hom  E1 -> E2}) (g : {hom E2 -> E1}) 
+                   (K : cancel f g) (K' : cancel g f) : 
+   invF (of_homs K K') = g.
+Proof. by []. Qed.
+
+(* Now we can make of_homs_class opaque *)
+Global Opaque of_homs_class TolPosetIso.class TolPosetbHom.class.
+
+End Build.
+Module Export Exports.
+Section Exports.
+Context {L : Type}.
+Implicit Types (E : eventType L).
+
+Canonical id_iso E : {iso E -> E} := Iso.Pack id_class.
+
+Canonical comp_iso E1 E2 E3 : {iso E2 -> E3} -> {iso E1 -> E2} -> {iso E1 -> E3} :=
+  fun f g => Iso.Pack (comp_class f g).
+
+Canonical inv.
+
+End Exports.
+End Exports.
+
+End Build.
+
+End Iso.
+
 End PrimeC.
 
 Export PrimeC.EventStruct.Exports.
 Export PrimeC.Theory.
 Export PrimeC.Syntax.
+
 Export PrimeC.Hom.Build.Exports.
 Export PrimeC.Hom.Hom.Exports.
 Export PrimeC.Hom.Theory.
+Export PrimeC.Emb.Build.Exports.
+Export PrimeC.Emb.Emb.Exports.
+Export PrimeC.Emb.TolPosetEmb.Exports.
+Export PrimeC.Pref.Build.Exports.
+Export PrimeC.Pref.Pref.Exports.
+Export PrimeC.Pref.Theory.
+Export PrimeC.Pref.TolPosetPref.Exports.
+Export PrimeC.bHom.Build.Exports.
+Export PrimeC.bHom.bHom.Exports.
+Export PrimeC.bHom.TolPosetbHom.Exports.
+Export PrimeC.Iso.Build.Exports.
+Export PrimeC.Iso.Iso.Exports.
+Export PrimeC.Iso.Theory.
+Export PrimeC.Iso.TolPosetIso.Exports.
+
+Import PrimeC.Hom.Syntax.
+Import PrimeC.bHom.Syntax.
+Import PrimeC.Emb.Syntax.
+Import PrimeC.Pref.Syntax.
+Import PrimeC.Iso.Syntax.
 Import PrimeC.Syntax.
 
 Module PrimeG.
