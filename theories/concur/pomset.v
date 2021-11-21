@@ -256,18 +256,13 @@ Proof.
   by move=> /fsfun_dflt -> //.
 Qed.
 
-Lemma fs_ica_irreflP p : 
-  reflect (irreflexive (fs_ica p)) (irreflexiveb (fin_ica p)).
-Proof. admit. Admitted.
+Lemma fin_ica_mono p :
+  { mono val : e1 e2 / fin_ica p e1 e2 >-> fs_ica p e1 e2 }.
+Proof. by move=> e1 e2; rewrite /fin_ica /sub_rel_down /=. Qed.
 
-Lemma fs_ca_antisymP p : 
-  reflect (antisymmetric (fs_ca p)) (antisymmetricb (fin_ca p)).
-Proof. admit. Admitted.
-
-Lemma fs_ica_connectP p e1 e2 : 
-  reflect (fs_ca p (val e1) (val e2)) (connect (fin_ica p) e1 e2).
+Lemma fin_ca_mono p : 
+  { mono val : e1 e2 / fin_ca p e1 e2 >-> fs_ica p e1 e2 }.  
 Proof. 
-  rewrite /fs_ca; apply/(equivP idP).
   admit. 
 Admitted.
 
@@ -544,11 +539,23 @@ Lemma fs_labE p (e : [Event of p]) :
 Proof. done. Qed.
 
 Lemma fs_caE p (e1 e2 : [Event of p]) : 
-  ca e1 e2 = fs_ca p e1 e2.  
+  e1 <= e2 = fs_ca p e1 e2.  
 Proof. done. Qed.
 
 Lemma fs_scaE p (e1 e2 : [Event of p]) : 
-  sca e1 e2 = fs_sca p e1 e2.  
+  e1 < e2 = fs_sca p e1 e2.  
+Proof. done. Qed.
+
+Lemma fin_labE p (e : [FinEvent of p]) : 
+  lab e = fin_lab p e.  
+Proof. done. Qed.
+
+Lemma fin_caE p (e1 e2 : [FinEvent of p]) : 
+  e1 <= e2 = fin_ca p e1 e2.  
+Proof. done. Qed.
+
+Lemma fin_scaE p (e1 e2 : [FinEvent of p]) : 
+  e1 < e2 = fin_sca p e1 e2.  
 Proof. done. Qed.
 
 Lemma fs_rcov_fsupp p e :
@@ -559,7 +566,7 @@ Proof.
   by move=> /[apply] /andP[??] /negP.
 Qed.
 
-Lemma fs_lab_bot p e : 
+Lemma fs_lab_Nbot p e : 
   (fs_lab p e != bot) = (e \in finsupp p).
 Proof. 
   rewrite mem_finsupp /fs_lab /=.
@@ -571,16 +578,27 @@ Proof.
   by rewrite xpair_eqE negb_and=> ->.
 Qed.
 
+Lemma fs_lab_bot p e : 
+  (fs_lab p e == bot) = (e \notin finsupp p).
+Proof. by rewrite -fs_lab_Nbot negbK. Qed.
+
+(* Lemma fs_ica_Nsupp p e1 e2 :  *)
+(*   e1 \notin finsupp p -> ~~ (fs_ica p e1 e2). *)
+(* Proof.  *)
+(*   apply/contra. *)
+(*   move=> /negP ?; apply/negP. *)
+(*   by rewrite -fs_lab_Nbot negbK. Qed. *)
+
 Lemma fs_ica_irrefl p : 
   irreflexive (fs_ica p).
 Proof. 
-  apply/fs_ica_irreflP/forallP.
-  by move: (lfsp_acyclic p)=> /acyclicP[].
-  (* case: (x \in finsupp p)/idP => [in_supp|]; last first. *)
-  (* - rewrite /fs_ica /fs_rcov /= => /negP ?. *)
-  (*   by rewrite fsfun_dflt. *)
-  (* move: (irr (Sub x in_supp)). *)
-  (* by rewrite /fin_ica /sub_rel_down /= => /negPf. *)
+  move: (@fin_ica_mono _ _ _ p)=> /irreflexive_mono [mon _]. 
+  move=> x; case: (x \in (finsupp p))/idP; last first.
+  - rewrite /fs_ica /fs_rcov=> ? /=. 
+    rewrite fsfun_dflt=> //=; exact/negP.
+  move=> Px; have ->: x = val (Sub x Px : finsupp p) by done.
+  apply/mon/irreflexiveP; move: (lfsp_acyclic p). 
+  by rewrite acyclicE=> /andP[].
 Qed.
 
 Lemma lfsposet_eqP p q : 
@@ -669,8 +687,55 @@ Module Export Theory.
 Section Theory.
 Context {E : identType} {L : choiceType}.
 Variable (bot : L).
-Implicit Types (p : pomset E L bot).
+Implicit Types (p q : pomset E L bot).
 
+Lemma pomset_iso_eq f p q :
+  fs_lab p =1 (fs_lab q) \o f -> fs_ica p =2 relpre f (fs_ica q) -> p = q.
+Proof. admit. Admitted.
+
+(* Lemma pomset_eqP p q : *)
+(*   reflect *)
+(*     (* (exists f, {mono f : e / fin_lab p e >-> fin_lab q e} /\ {mono f : e1 e2 / fin_ica p e1 e2 >-> fin_ica q e1 e2}) *) *)
+(*     (exists f, fs_lab p =1 (fs_lab q) \o f /\ fs_ica p =2 relpre f (fs_ica q)) *)
+(*     (p == q). *)
+(* Proof. *)
+(*   rewrite eqquot_eqE /= /is_iso. *)
+(*   apply/equivP; first exact/lFinPoset.fisoP. *)
+(*   split=> [[f] | [f [Plab Pica]]]. *)
+(*   - pose efresh := fresh_seq (finsupp q). *)
+(*     have efresh_nIn : efresh \notin (finsupp q). *)
+(*     + exact/fresh_seq_nmem. *)
+(*     pose f' := fun e => odflt efresh (omap (val \o f) (insub e)). *)
+(*     exists f'; split=> [e | e1 e2]; subst f'=> /=. *)
+(*     + case: insubP=> [e' ? <-|] /=; last first. *)
+(*       * rewrite -fs_lab_bot=> /eqP ->. *)
+(*         by apply/esym/eqP; rewrite fs_lab_bot. *)
+(*       have->: fs_lab p (fsval e') = fin_lab p e' by done. *)
+(*       have->: fs_lab q (fsval (f e')) = fin_lab q (f e') by done. *)
+(*       by rewrite -fin_labE -fin_labE (lab_preserving f).  *)
+(*     case: insubP=> [e1' ? | nsupp] /=; last first. *)
+(*     + have->: fs_ica p e1 e2 = false. *)
+(*       * apply/negP; move: nsupp; apply/contraNnot. *)
+(*         by move: (lfsp_supp_closed p)=> /supp_closedP /[apply] /andP[].  *)
+(*       have->: fs_ica q efresh _ = false=> // ?. *)
+(*       apply/negP; move: efresh_nIn; apply/contraNnot. *)
+(*       by move: (lfsp_supp_closed q)=> /supp_closedP /[apply] /andP[].  *)
+(*     case: insubP=> [e2' ? | nsupp] /=; last first. *)
+(*     + have->: fs_ica p e1 e2 = false. *)
+(*       * apply/negP; move: nsupp; apply/contraNnot. *)
+(*         by move: (lfsp_supp_closed p)=> /supp_closedP /[apply] /andP[].  *)
+(*       have->: fs_ica q _ efresh = false=> // ?. *)
+(*       apply/negP; move: efresh_nIn; apply/contraNnot. *)
+(*       by move: (lfsp_supp_closed q)=> /supp_closedP /[apply] /andP[].  *)
+(*     move=> <- <-. *)
+(*     have->: fs_ica p (fsval e1') (fsval e2') = fin_ica p e1' e2' by done. *)
+(*     have->: fs_ica q (fsval (f e1')) (fsval (f e2')) = fin_ica q (f e1') (f e2') by done. *)
+(*     admit.  *)
+(*     (* by rewrite -fin_icaE -fin_icaE (ca_monotone f).  *) *)
+(*   pose f' := fun e => *)
+(*   eexists. exists f. *)
+(*   admit. *)
+(* Admitted. *)
 
 End Theory.
 End Theory.
@@ -823,6 +888,11 @@ Lemma event_of_bij p :
   bijective (@event_of p).
 Proof. admit. Admitted.
 
+Lemma fin_lab_mono p :
+  { mono (@event_of p) : e /
+    fin_lab (predec_enc p) e >-> fin_lab p e }.
+Proof. admit. Admitted.
+
 Lemma fin_ica_mono p :
   { mono (@event_of p) : e1 e2 /
     fin_ica (predec_enc p) e1 e2 >-> fin_ica p e1 e2 }.
@@ -838,6 +908,16 @@ Proof.
   by rewrite !ffunE. 
 Admitted.
 
+Lemma fin_ca_mono p :
+  { mono (@event_of p) : e1 e2 /
+    fin_ca (predec_enc p) e1 e2 >-> fin_ca p e1 e2 }.
+Proof. 
+  rewrite /fin_ca=> e1 e2 /=.
+  apply/connect_mono.
+  - exact/event_of_bij.
+  exact/fin_ica_mono.
+Qed.
+
 Lemma predec_enc_supp_closed p : 
   supp_closed (predec_enc p).
 Proof. 
@@ -845,7 +925,7 @@ Proof.
   rewrite lFsPrePoset.build_ica /=.
   rewrite lFsPrePoset.build_finsupp; last first.
   + move=> e /=; rewrite /dec_lab ffunE. 
-    rewrite fs_lab_bot lfsp_event_inE npomset_size.
+    rewrite fs_lab_Nbot lfsp_event_inE npomset_size.
     exact(valP (ord_of_ident e)).
   rewrite !in_fsetval=> /sub_rel_lift_fld /=.
   by move=> /andP[??]; rewrite !insubT.   
@@ -857,15 +937,36 @@ Proof.
   move: (event_of_bij p) (@fin_ica_mono p)=> + /[dup] mon. 
   move=> /connect_mono /[apply] cmon.
   rewrite acyclicE; apply/andP; split.
-  - rewrite (irreflexive_mono mon).
-    apply/irreflexiveP=> x /=.
+  - apply/irreflexiveP/(irreflexive_mono mon) => x /=.
     rewrite /fin_ica /sub_rel_down /=.
     exact/fs_ica_irrefl.
-  rewrite (antisymmetric_mono cmon).
-  apply/antisymmetricP=> x y /= ?. 
+  apply/antisymmetricP/(antisymmetric_mono cmon) => x y /= ?.
   apply/(bij_inj (event_of_bij p)).
   by apply/lFsPoset.FinPOrder.fin_ca_antisym.
 Qed.    
+
+Lemma npomset_encK : pcancel enc dec. 
+Proof. 
+  move=> p; rewrite /dec.
+  rewrite insubT; [apply/and3P; split|].
+  - admit.
+  - exact/predec_enc_supp_closed.
+  - exact/predec_enc_acyclic.
+  move=> Pp /=; rewrite insubT.
+  - admit.
+  move=> SZp; congr Some.
+  apply/val_inj=> /=.
+  rewrite -(reprK (val p)); apply/eqquotP.
+  apply/lFinPoset.fisoP=> /=.
+  eexists; exists (@event_of p).
+  (* TODO: refactor --- do not expose internals of Iso.class_of !!! *)
+  repeat constructor.
+  - exact/fin_lab_mono.
+  - by move=> ??; rewrite !fin_caE fin_ca_mono.
+  - exists (@of_event p)=> /=. 
+    admit. admit.
+  by move=> ??; rewrite !fin_caE fin_ca_mono.
+Admitted.  
 
 Lemma dec_icaK p e1 e2 : 
   dec_ica (npomset_enc p) e1 e2 = fs_ica p (isof p e1) (isof p e2).
