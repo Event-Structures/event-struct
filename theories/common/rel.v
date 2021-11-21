@@ -103,30 +103,35 @@ Qed.
 
 End FinGraph. 
 
-Section FinGraphMono. 
-Context {T U : finType}.
-
+Section RelMono. 
+Context {T U : Type}.
 Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
 Hypothesis (fbij : bijective f).
 Hypothesis (fmon : {mono f : x y / g1 x y >-> g2 x y}).
 
 Lemma irreflexive_mono : 
-  (irreflexiveb g1) = (irreflexiveb [rel x y | g2 (f x) (f y)]).
+  (irreflexive g1) <-> (irreflexive [rel x y | g2 (f x) (f y)]).
 Proof. 
-  apply/idP/idP=> /irreflexiveP=> irr. 
-  all: apply/irreflexiveP=> x /=. 
+  split=> irr x /=. 
   - by rewrite fmon. 
   rewrite -fmon; exact/irr.
 Qed.
 
 Lemma antisymmetric_mono : 
-  (antisymmetricb g1) = (antisymmetricb [rel x y | g2 (f x) (f y)]).
+  (antisymmetric g1) <-> (antisymmetric [rel x y | g2 (f x) (f y)]).
 Proof. 
-  apply/idP/idP=> /antisymmetricP=> asym. 
-  all: apply/antisymmetricP=> x y /=. 
+  split=> asym x y /=.
   - rewrite !fmon; exact/asym.
   rewrite -fmon -fmon; exact/asym.
 Qed.
+
+End RelMono.
+
+Section FinGraphMono. 
+Context {T U : finType}.
+Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
+Hypothesis (fbij : bijective f).
+Hypothesis (fmon : {mono f : x y / g1 x y >-> g2 x y}).
 
 Lemma connect_mono : 
   {mono f : x y / connect g1 x y >-> connect g2 x y}.
