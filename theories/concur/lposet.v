@@ -919,6 +919,14 @@ Definition homType  := Hom.Pack class.
 Definition bhomType := bHom.Pack class.
 Definition embType  := Emb.Pack (Emb.Class class (mixin class)).
 
+Lemma prefMixin : Pref.mixin_of cT.
+Proof.
+  case: cT=> f [[? [g *]]] /=.
+  by split=> e1 e2; exists (g e1).
+Qed.
+Definition prefType := 
+  Pref.Pack (Pref.Class (Emb.Class class (mixin class)) prefMixin).
+
 Definition mk h mkH : type :=
   mkH (let: Pack _ c := h return @class_of h in c).
 
@@ -933,9 +941,11 @@ Coercion apply : type >-> Funclass.
 Coercion homType  : type >-> Hom.type.
 Coercion bhomType : type >-> bHom.type.
 Coercion embType  : type >-> Emb.type.
+Coercion prefType  : type >-> Pref.type.
 Canonical homType.
 Canonical bhomType.
 Canonical embType.
+Canonical prefType.
 End Exports.
 
 End Iso.
@@ -1053,6 +1063,7 @@ Notation hom := Hom.type.
 Notation ihom := iHom.type.
 Notation bhom := bHom.type.
 Notation emb := Emb.type.
+Notation pref := Pref.type.
 Notation iso := Iso.type.
 
 Module Ext.
