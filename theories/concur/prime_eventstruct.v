@@ -218,7 +218,7 @@ Definition gcf : pred {fset E} :=
   fun C => ~~ cons C.
 
 Definition cf : rel E := 
-  fun e1 e2 => gcf ([fset e1] `|` [fset e2]).
+  fun e1 e2 => gcf ([fset e1; e2]).
 
 Definition cf_free (p : pred E) := 
   forall (s : {fset E}), {subset s <= p} -> cons s.
@@ -230,9 +230,9 @@ End Def.
 
 Prenex Implicits cons gcf cf.
 
-(* Module Export Syntax. *)
-(* Notation cons := cons (only parsing). *)
-(* End Syntax. *)
+Module Export Syntax.
+Notation "x \# y" := (cf x y) : prime_eventstruct_scope.
+End Syntax.
 
 Module Export Theory.
 Section Theory.
@@ -259,6 +259,31 @@ Proof. by rewrite /gcf=> /cons_contr /contra. Qed.
 Lemma gcf_hered X e1 e2 : 
   e1 <= e2 -> gcf (e1 |` X) -> gcf (e2 |` X).
 Proof. by rewrite /gcf=> /cons_prop /contra /[apply]. Qed.
+
+Lemma cf_irrefl : irreflexive (cf : rel E).
+Proof. 
+  move=> e; rewrite /cf fsetUid; apply/eqP.
+  rewrite eqbF_neg; exact/gcf_self.
+Qed.
+
+Lemma cf_sym : symmetric (cf : rel E).
+Proof. by move=> e1 e2; rewrite /cf fsetUC. Qed.
+
+Lemma cf_hered : hereditary (<=%O) (cf : rel E).
+Proof. 
+  move=> e1 e2 e3 /[swap]; rewrite /cf. 
+  rewrite [in [fset e1; e2]]fsetUC [in [fset e1; e3]]fsetUC.
+  exact/gcf_hered.
+Qed.
+
+(* TODO: better name? *)
+Lemma cf_hered2 e1 e1' e2 e2' : 
+  e1 \# e2 -> e1 <= e1' -> e2 <= e2' -> e1' \# e2'.
+Proof. 
+  move=> cf12 ca1 ca2; apply/(cf_hered _ ca2).
+  rewrite cf_sym; apply/(cf_hered _ ca1).
+  by rewrite cf_sym.
+Qed.
 
 Lemma cons_ca_contr (X Y : {fset E}) :
   {subsumes X <= Y : x y / x <= y} -> cons Y -> cons X.
