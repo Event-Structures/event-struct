@@ -199,7 +199,6 @@ Canonical lposetType.
 Canonical elemEventType.
 End Exports.
 
-
 End EventStruct.
 
 Export EventStruct.Exports.
@@ -215,33 +214,51 @@ Variable (L : Type) (E : eventType L).
 Definition cons : pred {fset E} :=
   EventStruct.cons (EventStruct.class E).
 
+Definition gcf : pred {fset E} := 
+  fun C => ~~ cons C.
+
+Definition cf : rel E := 
+  fun e1 e2 => gcf ([fset e1] `|` [fset e2]).
+
 Definition cf_free (p : pred E) := 
   forall (s : {fset E}), {subset s <= p} -> cons s.
 
-Definition cfg (p : pred E) := ca_closed p /\ cf_free p.
+Definition cfg (p : pred E) := 
+  ca_closed p /\ cf_free p.
 
 End Def.
 
-Prenex Implicits cons.
+Prenex Implicits cons gcf cf.
 
-Module Export Syntax.
-Notation cons := cons (only parsing).
-End Syntax.
+(* Module Export Syntax. *)
+(* Notation cons := cons (only parsing). *)
+(* End Syntax. *)
 
 Module Export Theory.
 Section Theory.
-
 Context {L : Type} {E : eventType L}.
+Implicit Types (e : E) (X Y : {fset E}).
 
-Lemma cons_self (e : E) : cons [fset e].
+Lemma cons_self e : cons [fset e].
 Proof. by move: e; case: E => ? [? []]. Qed.
 
-Lemma cons_contr (X Y : {fset E}) : X `<=` Y -> cons Y -> cons X.
+(* TODO: rename `cons_contra`? *)
+Lemma cons_contr X Y : X `<=` Y -> cons Y -> cons X.
 Proof. by move: X Y; case: E => ? [? []]. Qed.
 
-Lemma cons_prop X (e1 e2 : E) : 
+Lemma cons_prop X e1 e2 : 
   e1 <= e2 -> cons (e2 |` X) -> cons (e1 |` X).
 Proof. by move: X e1 e2; case: E => ? [? []]. Qed.
+
+Lemma gcf_self e : ~~ (gcf [fset e]).
+Proof. rewrite /gcf negbK; exact/cons_self. Qed.
+
+Lemma gcf_ext X Y : X `<=` Y -> gcf X -> gcf Y.
+Proof. by rewrite /gcf=> /cons_contr /contra. Qed.
+
+Lemma gcf_hered X e1 e2 : 
+  e1 <= e2 -> gcf (e1 |` X) -> gcf (e2 |` X).
+Proof. by rewrite /gcf=> /cons_prop /contra /[apply]. Qed.
 
 Lemma cons_ca_contr (X Y : {fset E}) :
   {subsumes X <= Y : x y / x <= y} -> cons Y -> cons X.
@@ -258,13 +275,13 @@ Proof.
   by rewrite fsetDv ?fset0U mem_fsetD1.
 Qed.
 
-Lemma prefix_cf_free (e : E) : cf_free (<= e).
+Lemma prefix_cf_free e : cf_free (<= e).
 Proof. 
   move=> X S; apply/(@cons_ca_contr _ [fset e])/cons_self.
   move=> x i; exists e; rewrite ?inE //; exact/S.
 Qed.
 
-Lemma prefix_cfg (e : E) : cfg (<= e).
+Lemma prefix_cfg e : cfg (<= e).
 Proof. split; [exact/prefix_ca_closed | exact/prefix_cf_free]. Qed.
 
 End Theory.
@@ -1024,193 +1041,6 @@ Export PrimeC.Hom.Theory.
 Export PrimeC.Pref.Theory.
 Export PrimeC.Iso.Theory.
 
-
-Module PrimeG.
-
-Module EventStruct.
-Section ClassDef.
-
-Record mixin_of (E0 : Type) (L : Type) (b : Elem.EventStruct.class_of E0 L)
-                (E := lPoset.lPoset.Pack b) := Mixin {
-  gcf : pred {fset E};
-
-  _ : forall (e : E), ~~ (gcf [fset e]);
-  _ : forall (X Y : {fset E}), X `<=` Y -> gcf X -> gcf Y;
-  _ : forall X e e', e <= e' -> gcf (e |` X) -> gcf (e' |` X)
-}.
-
-Set Primitive Projections.
-Record class_of (E : Type) (L : Type) := Class {
-  base  : Elem.EventStruct.class_of E L;
-  mixin : mixin_of base;
-}.
-Unset Primitive Projections.
-
-Local Coercion base : class_of >-> Elem.EventStruct.class_of.
-
-Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
-
-Local Coercion sort : type >-> Sortclass.
-
-Variables (E : Type) (L : Type) (cT : type L).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
-Definition clone c of phant_id class c := @Pack E L c.
-(* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
-
-Definition pack :=
-  fun bE b & phant_id (@Elem.EventStruct.class L bE) b =>
-  fun m => Pack (@Class E L b m).
-
-Definition eqType := @Equality.Pack cT class.
-Definition choiceType := @Choice.Pack cT class.
-Definition porderType := @Order.POrder.Pack tt cT class.
-Definition lposetType := @lPoset.lPoset.Pack L cT class.
-Definition elemEventType := @Elem.EventStruct.Pack L cT class.
-End ClassDef.
-
-Module Export Exports.
-Coercion base : class_of >-> Elem.EventStruct.class_of.
-Coercion mixin : class_of >-> mixin_of.
-Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
-Coercion choiceType : type >-> Choice.type.
-Coercion porderType : type >-> Order.POrder.type.
-Coercion lposetType : type >-> lPoset.eventType.
-Coercion elemEventType : type >-> Elem.eventType.
-Canonical eqType.
-Canonical choiceType.
-Canonical porderType.
-Canonical lposetType.
-Canonical elemEventType.
-End Exports.
-
-End EventStruct.
-
-Export EventStruct.Exports.
-
-Notation eventType := EventStruct.type.
-Notation eventStruct := EventStruct.class_of.
-Notation EventType E L m := (@EventStruct.pack E L _ _ id m).
-
-Section Def.
-
-Variable (L : Type) (E : eventType L).
-
-Definition gcf : pred {fset E} :=
-  EventStruct.gcf (EventStruct.class E).
-
-Definition cf_free (p : pred E) := 
-  forall (s : {fset E}), {subset s <= p} -> ~~ gcf s.
-
-Definition cfg (x : pred E) := 
-  ca_closed x /\ cf_free x.
-
-End Def.
-
-Prenex Implicits gcf.
-
-Module Import Theory.
-Section Theory.
-
-Context {L : Type} {E : eventType L}.
-
-Lemma gcf_self : forall (e : E), ~~ (gcf [fset e]).
-Proof. by case: E => ? [? []]. Qed.
-
-Lemma gcf_ext : forall (X Y : {fset E}), X `<=` Y -> gcf X -> gcf Y.
-Proof. by case: E => ? [? []]. Qed.
-
-Lemma gcf_hered :
-  forall X (e e' : E), e <= e' -> gcf (e |` X) -> gcf (e' |` X).
-Proof. by case: E => ? [? []]. Qed.
-
-End Theory.
-End Theory.
-
-Module OfPrimeC.
-Section OfPrimeC.
-
-Context {L : Type} {E : PrimeC.eventType L}.
-
-Definition gcf : pred {fset E} :=
-  fun X => ~~ (cons X).
-
-Lemma gcf_self (e : E) : ~~ gcf [fset e].
-Proof. by rewrite /gcf cons_self. Qed.
-
-Lemma gcf_ext (X Y : {fset E}) : X `<=` Y -> gcf X -> gcf Y.
-Proof. rewrite /gcf=> H. apply: contraNN. exact: cons_contr. Qed.
-
-Lemma gcf_hered (X : {fset E}) (e e' : E) :
-  e <= e' -> gcf (e |` X) -> gcf (e' |` X).
-Proof. rewrite /gcf=> H. apply: contraNN. exact: cons_prop. Qed.
-
-Definition cons_gcfMixin := 
-  @PrimeG.EventStruct.Mixin E L _ gcf gcf_self gcf_ext gcf_hered.
-
-Definition primeC_primeG := PrimeG.EventType E L cons_gcfMixin.
-
-Lemma cfgE (p : pred E): 
-  PrimeC.cfg p <-> 
-  @ca_closed L primeC_primeG p /\ @PrimeG.cf_free L primeC_primeG p.
-Proof.
-  split; move=> [? CF]; split=> // ?/CF; by rewrite /PrimeG.gcf /= /gcf negbK.
-Qed.
-
-End OfPrimeC.
-
-Module Export Exports.
-Coercion primeC_primeG : PrimeC.eventType >-> PrimeG.eventType.
-Canonical primeC_primeG.
-End Exports.
-
-End OfPrimeC.
-
-
-Module ToPrimeC.
-Section ToPrimeC.
-
-Context {L : Type} {E : PrimeG.eventType L}.
-
-Definition cons : pred {fset E} :=
-  fun X => ~~ (PrimeG.gcf X).
-
-Lemma cons_self (e : E) : cons [fset e].
-Proof. rewrite /cons /=. exact: gcf_self. Qed.
-
-Lemma cons_contr (X Y : {fset E}) : X `<=` Y -> cons Y -> cons X.
-Proof. rewrite /cons=> ?. apply /contraNN. exact: gcf_ext. Qed.
-
-Lemma cons_prop (X : {fset E}) (e e' : E) :
-  e <= e' -> cons (e' |` X) -> cons (e |` X).
-Proof. rewrite /cons=> ?. apply /contraNN. exact: gcf_hered. Qed.
-
-Definition gcf_consMixin := 
-  @PrimeC.EventStruct.Mixin E L _ cons cons_self cons_contr cons_prop.
-
-Definition struct := PrimeC.EventType E L gcf_consMixin.
-
-Lemma cfgE (p : pred E): 
-  @PrimeC.cfg L struct p <-> 
-  ca_closed p /\ cf_free p.
-Proof. by []. Qed.
-
-End ToPrimeC.
-
-Module Export Exports.
-Coercion struct : PrimeG.eventType >-> PrimeC.eventType.
-Canonical struct.
-End Exports.
-
-End ToPrimeC.
-
-End PrimeG.
-
-Export PrimeG.EventStruct.Exports.
-Export PrimeG.ToPrimeC.Exports.
-Export PrimeG.OfPrimeC.Exports.
-Export PrimeG.Theory.
 
 Module Prime.
 
