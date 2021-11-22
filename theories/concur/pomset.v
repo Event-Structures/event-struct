@@ -207,21 +207,6 @@ Proof.
   rewrite -valx -valy sub_rel_lift_val; exact/rgraphK.
 Qed.
 
-Lemma build_fin_ca : 
-  fin_ca build =2 connect [rel x y | ica (event_of x) (event_of y)].
-Proof. admit. Admitted.
-(*   rewrite /build /fs_ica /fs_rcov=> x y /=.  *)
-(*   rewrite fsfun_fun in_fsetval. *)
-(*   case: insubP=> [y' Py valy|/negP ?] /=; last first. *)
-(*   (* TODO: make lemma for `sub_rel_lift r x y` where ~ p x \/ ~ p y *) *)
-(*   - by rewrite inE /sub_rel_lift /=; case: insubP=> //; case: insubP.  *)
-(*   rewrite in_fsetval_seq.  *)
-(*   case: insubP=> [x' Px valx|/negP ?] /=; last first. *)
-(*   - by rewrite /sub_rel_lift /=; case: insubP=> //; case: insubP.  *)
-(*   rewrite -valx -valy sub_rel_lift_val; exact/rgraphK. *)
-(* Qed. *)
-
-
 End Build.
 
 Module Export Theory.
@@ -261,10 +246,13 @@ Lemma fin_ica_mono p :
 Proof. by move=> e1 e2; rewrite /fin_ica /sub_rel_down /=. Qed.
 
 Lemma fin_ca_mono p : 
-  { mono val : e1 e2 / fin_ca p e1 e2 >-> fs_ica p e1 e2 }.  
+  { mono val : e1 e2 / fin_ca p e1 e2 >-> fs_ca p e1 e2 }.  
 Proof. 
-  admit. 
-Admitted.
+  rewrite /fs_ca=> e1 e2 /=.  
+  rewrite /dhrel_one sub_rel_lift_val. 
+  apply/orb_idl=> /eqP /val_inj ->.
+  exact/connect_refl. 
+Qed.
 
 Lemma lfsp_tseq_size p : 
   size (lfsp_tseq p) = #|`finsupp p|. 
@@ -303,13 +291,14 @@ Proof.
   by rewrite mem_lfsp_tseq. 
 Qed.
 
-Lemma lfsp_event_inE p e0 n : 
+Lemma lfsp_event_inE p e0 n : e0 \notin finsupp p ->
   (lfsp_event p e0 n \in finsupp p) = (n < #|`finsupp p|).
 Proof. 
-  rewrite /lfsp_event -mem_lfsp_tseq -lfsp_tseq_size. 
-  apply/idP/idP; last exact/mem_nth. 
-  admit. 
-Admitted.
+  move=> nIn; rewrite /lfsp_event. 
+  rewrite -mem_lfsp_tseq -lfsp_tseq_size. 
+  rewrite mem_nthE ?ltEnat //=.
+  by rewrite mem_lfsp_tseq.
+Qed.
 
 Lemma lfsp_idxK p e0 :
   {in finsupp p, cancel (lfsp_idx p) (lfsp_event p e0)}. 
@@ -713,61 +702,16 @@ Context {E : identType} {L : choiceType}.
 Variable (bot : L).
 Implicit Types (p q : pomset E L bot).
 
+Lemma finsupp_size_iso (p q : lfsposet E L bot) :
+  is_iso p q -> #|` finsupp p| = #|` finsupp q|.
+Proof. 
+  rewrite !cardfE=> /lFinPoset.fisoP [f].   
+  exact/bij_eq_card/(bhom_bij f).
+Qed.
+
 Lemma finsupp_size_pi (p : lfsposet E L bot) : 
   #|` finsupp (\pi p : pomset E L bot)| = #|` finsupp p|.
-Proof. admit. Admitted.
-
-(* Lemma finsupp_size_iso (p q : lfsposet E L bot) :  *)
-(*   is_iso p q -> #|` finsupp p| = #|` finsupp p|. *)
-(* Proof. admit. Admitted. *)
-
-(* Lemma pomset_iso_eq f p q : *)
-(*   fs_lab p =1 (fs_lab q) \o f -> fs_ica p =2 relpre f (fs_ica q) -> p = q. *)
-(* Proof. admit. Admitted. *)
-
-(* Lemma pomset_eqP p q : *)
-(*   reflect *)
-(*     (* (exists f, {mono f : e / fin_lab p e >-> fin_lab q e} /\ {mono f : e1 e2 / fin_ica p e1 e2 >-> fin_ica q e1 e2}) *) *)
-(*     (exists f, fs_lab p =1 (fs_lab q) \o f /\ fs_ica p =2 relpre f (fs_ica q)) *)
-(*     (p == q). *)
-(* Proof. *)
-(*   rewrite eqquot_eqE /= /is_iso. *)
-(*   apply/equivP; first exact/lFinPoset.fisoP. *)
-(*   split=> [[f] | [f [Plab Pica]]]. *)
-(*   - pose efresh := fresh_seq (finsupp q). *)
-(*     have efresh_nIn : efresh \notin (finsupp q). *)
-(*     + exact/fresh_seq_nmem. *)
-(*     pose f' := fun e => odflt efresh (omap (val \o f) (insub e)). *)
-(*     exists f'; split=> [e | e1 e2]; subst f'=> /=. *)
-(*     + case: insubP=> [e' ? <-|] /=; last first. *)
-(*       * rewrite -fs_lab_bot=> /eqP ->. *)
-(*         by apply/esym/eqP; rewrite fs_lab_bot. *)
-(*       have->: fs_lab p (fsval e') = fin_lab p e' by done. *)
-(*       have->: fs_lab q (fsval (f e')) = fin_lab q (f e') by done. *)
-(*       by rewrite -fin_labE -fin_labE (lab_preserving f).  *)
-(*     case: insubP=> [e1' ? | nsupp] /=; last first. *)
-(*     + have->: fs_ica p e1 e2 = false. *)
-(*       * apply/negP; move: nsupp; apply/contraNnot. *)
-(*         by move: (lfsp_supp_closed p)=> /supp_closedP /[apply] /andP[].  *)
-(*       have->: fs_ica q efresh _ = false=> // ?. *)
-(*       apply/negP; move: efresh_nIn; apply/contraNnot. *)
-(*       by move: (lfsp_supp_closed q)=> /supp_closedP /[apply] /andP[].  *)
-(*     case: insubP=> [e2' ? | nsupp] /=; last first. *)
-(*     + have->: fs_ica p e1 e2 = false. *)
-(*       * apply/negP; move: nsupp; apply/contraNnot. *)
-(*         by move: (lfsp_supp_closed p)=> /supp_closedP /[apply] /andP[].  *)
-(*       have->: fs_ica q _ efresh = false=> // ?. *)
-(*       apply/negP; move: efresh_nIn; apply/contraNnot. *)
-(*       by move: (lfsp_supp_closed q)=> /supp_closedP /[apply] /andP[].  *)
-(*     move=> <- <-. *)
-(*     have->: fs_ica p (fsval e1') (fsval e2') = fin_ica p e1' e2' by done. *)
-(*     have->: fs_ica q (fsval (f e1')) (fsval (f e2')) = fin_ica q (f e1') (f e2') by done. *)
-(*     admit.  *)
-(*     (* by rewrite -fin_icaE -fin_icaE (ca_monotone f).  *) *)
-(*   pose f' := fun e => *)
-(*   eexists. exists f. *)
-(*   admit. *)
-(* Admitted. *)
+Proof. by apply/finsupp_size_iso/equiv_repr_pi. Qed.
 
 End Theory.
 End Theory.
@@ -811,7 +755,7 @@ Canonical npomset_choiceType E L bot n :=
 
 Section FinType.
 Context (E : identType) (L : finType).
-Variable (bot : L) (n : nat) (e0 : E).
+Variable (bot : L) (n : nat).
 
 Local Notation enc_ffun := 
   ({ffun 'I_n -> L} * {ffun 'I_n * 'I_n -> bool})%type.
@@ -819,14 +763,16 @@ Local Notation enc_ffun :=
 Implicit Types (p : npomset E L bot n).
 Implicit Types (f : enc_ffun).
 
+Let e0 p := fresh_seq (finsupp p).
+
 Definition dec_event p : 'I_n -> E := 
-  fun i => lfsp_event p e0 (val i).
+  fun i => lfsp_event p (e0 p) (val i).
 
 Definition enc_event : n.-ident E -> 'I_n :=
   fun e => ord_of_ident e.
 
 Definition enc_iso p : E -> E := 
-  fun e => lfsp_event p e0 (encode e).
+  fun e => lfsp_event p (e0 p) (encode e).
 
 Definition dec_iso p : E -> E := 
   fun e => decode (lfsp_idx p e).
@@ -864,8 +810,9 @@ Proof.
   rewrite /enc_lab /dec_event ffunE.
   apply/lab_definedP.
   - exact/lfsp_lab_defined.
-  rewrite lfsp_event_inE npomset_size.
-  exact/(valP i).
+  rewrite lfsp_event_inE ?npomset_size.
+  - exact/(valP i).
+  exact/fresh_seq_nmem.
 Qed.
 
 (* Lemma enc_icaE p e1 e2 :  *)
@@ -893,14 +840,17 @@ Proof.
   rewrite /predec /enc /lFsPrePoset.build. 
   move: (lfsp_lab_defined p)=> labD.
   rewrite finsupp_fset !in_fset !inE in_fsetval /=.
-  rewrite /enc_iso lfsp_event_inE npomset_size.
+  rewrite /enc_iso lfsp_event_inE ?npomset_size; last first.
+  - exact/fresh_seq_nmem.
   case: insubP=> [|/negPf->] //.
   move=> e' -> vale /=. 
   rewrite xpair_eqE negb_and. 
   apply/idP/idP=> //; apply/orP; left.
   rewrite /dec_lab /enc_lab /dec_event /enc_event ffunE.
   move: labD => /lab_definedP -> //.
-  by rewrite lfsp_event_inE npomset_size (valP e').
+  rewrite lfsp_event_inE ?npomset_size. 
+  - exact/(valP e').
+  exact/fresh_seq_nmem.
 Qed.
 
 Lemma in_finsupp_predec_enc p e :
@@ -911,7 +861,8 @@ Lemma encode_finsupp p e :
   e \in finsupp (predec_enc p) -> encode e < n.
 Proof. 
   rewrite predec_enc_in_finsupp /enc_iso.
-  by rewrite lfsp_event_inE npomset_size. 
+  rewrite lfsp_event_inE ?npomset_size //. 
+  exact/fresh_seq_nmem.
 Qed.
 
 Definition event_of p : finsupp (predec_enc p) -> (finsupp p) := 
@@ -990,9 +941,10 @@ Proof.
   apply/lab_definedP=> e.
   rewrite lFsPrePoset.build_lab /=.
   rewrite lFsPrePoset.build_finsupp; last first.
-  + move=> e' /=; rewrite /dec_lab ffunE. 
-    rewrite fs_lab_Nbot lfsp_event_inE npomset_size.
-    exact(valP (ord_of_ident e')).
+  - move=> e' /=; rewrite /dec_lab ffunE. 
+    rewrite fs_lab_Nbot lfsp_event_inE ?npomset_size.
+    + exact/(valP (ord_of_ident e')).
+    exact/fresh_seq_nmem.
   rewrite !in_fsetval=> eIn. 
   rewrite sub_liftT=> /=.
   - move: eIn; case: insubP=> //.
@@ -1003,11 +955,13 @@ Lemma predec_enc_supp_closed p :
   supp_closed (predec_enc p).
 Proof. 
   apply/supp_closedP=> e1 e2.
+  (* TODO: remove copy-paste from `predec_enc_lab_defined` *)
   rewrite lFsPrePoset.build_ica /=.
   rewrite lFsPrePoset.build_finsupp; last first.
-  + move=> e /=; rewrite /dec_lab ffunE. 
-    rewrite fs_lab_Nbot lfsp_event_inE npomset_size.
-    exact(valP (ord_of_ident e)).
+  - move=> e /=; rewrite /dec_lab ffunE. 
+    rewrite fs_lab_Nbot lfsp_event_inE ?npomset_size.
+    + exact/(valP (ord_of_ident e)).
+    exact/fresh_seq_nmem.    
   rewrite !in_fsetval=> /sub_rel_lift_fld /=.
   by move=> /andP[??]; rewrite !insubT.   
 Qed.
@@ -1035,7 +989,7 @@ Proof.
   - exact/predec_enc_acyclic.
   move=> Pp /=; rewrite insubT.
   - rewrite finsupp_size_pi /=.
-    rewrite -(npomset_size p) !cardfE.  
+    rewrite -(npomset_size p) !cardfE. 
     apply/eqP/bij_eq_card.
     exact/event_of_bij.
   move=> SZp; congr Some.
@@ -1053,7 +1007,7 @@ Qed.
 
 End FinType.
 
-End bPomset.
+End nPomset.
 
 Module Export Hom.
 Module Export POrder.
