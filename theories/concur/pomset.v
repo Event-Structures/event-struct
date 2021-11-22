@@ -815,10 +815,6 @@ Proof.
   exact/fresh_seq_nmem.
 Qed.
 
-(* Lemma enc_icaE p e1 e2 :  *)
-(*   (enc_ica p) (ord_of_ident e1, ord_of_ident e2) = fs_ica p e1 e2. *)
-(* Proof. admit. Admitted. *)
-
 Definition dec_lab f : n.-ident E -> L :=
   fun e => f.1 (enc_event e).
 

@@ -2,6 +2,7 @@ From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path zify.
 From mathcomp Require Import fintype finfun fingraph finmap.
+From mathcomp Require Import generic_quotient.
 From mathcomp.tarjan Require Import extra acyclic Kosaraju acyclic_tsorted. 
 
 Set Implicit Arguments.
@@ -583,6 +584,16 @@ Proof.
   move=> /IH ->; lia. 
 Qed.
 
+Lemma mem_nthE {eT : eqType} x (s : seq eT) n : 
+  x \notin s -> (nth x s n \in s) = (n < size s). 
+Proof. 
+  move=> /negP nIn. 
+  apply/idP/idP; last exact/mem_nth.
+  case: (n < size s)/idP=> //.
+  move=> /negP; rewrite leqNgt negbK=> sz.
+  by rewrite nth_default.
+Qed.
+  
 Lemma mkseqS (f : nat -> T) n : 
   mkseq f n.+1 = rcons (mkseq f n) (f n).
 Proof. by rewrite /mkseq -addn1 iotaD add0n map_cat cats1. Qed.
@@ -1348,3 +1359,19 @@ Proof.
 Qed.  
 
 End FinMapUtils.
+
+
+Section QuotTypeUtiles.
+Variables (T : choiceType) (e : equiv_rel T) (Q : eqQuotType e).
+
+Lemma eqquot_eqE x y : (x == y :> Q) = e (repr x) (repr y).
+Proof.
+  apply/idP/idP=> [/eqP->|] //.
+  by rewrite -(eqquotE Q) !reprK. 
+Qed.
+
+Lemma equiv_repr_pi x : e (repr (\pi_Q x))%qT x.
+Proof. by apply/(eqquotP Q); rewrite reprK. Qed.
+
+End QuotTypeUtiles.
+
