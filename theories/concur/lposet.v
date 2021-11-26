@@ -1,6 +1,7 @@
 From RelationAlgebra Require Import lattice monoid rel boolean.
-From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq tuple path.
-From mathcomp Require Import eqtype choice order fintype finfun finmap. 
+From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
+From mathcomp Require Import eqtype choice order seq tuple path div.
+From mathcomp Require Import fintype finfun fingraph finmap.
 From eventstruct Require Import utils inhtype.
 
 (******************************************************************************)
@@ -229,18 +230,19 @@ End Syntax.
 
 Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : {hom E1 -> E2}).
+Context {L : Type} {E1 E2 : eventType L}. 
+Implicit Types (f : {hom E1 -> E2}).
 
 (* TODO: rename `lab_preserving`  *)
-Lemma lab_preserving :
+Lemma lab_preserving f :
   { mono f : e / lab e }.
 Proof. by case: f => ? [[]]. Qed.
 
-Lemma ca_monotone :
+Lemma ca_monotone f :
   { homo f : e1 e2 / e1 <= e2 }.
 Proof. by case: f => ? [[]]. Qed.
 
-Lemma sca_img e1 e2 : (f e1 < f e2) -> (e1 < e2) || (e1 >< e2).
+Lemma sca_img f e1 e2 : (f e1 < f e2) -> (e1 < e2) || (e1 >< e2).
 Proof.
   case H: (e1 < e2)=> //= Hf.
   apply/negP=> /orP [].
@@ -1600,6 +1602,37 @@ Proof. apply/(is_inh_refl fihomP)=> E; exact/[ihom of idfun : E -> E]. Qed.
 Lemma ihom_trans : transitive ihom_rel.
 Proof. apply/(is_inh_trans fihomP)=> ??? f g; exact/[ihom of g \o f]. Qed.
 
+Lemma fihom_ca_reflecting {E1 E2} (f : {ihom E1 -> E2}) (g : {ihom E2 -> E1}) :
+  { mono f : e1 e2 / e1 <= e2 }.
+Proof. 
+  move=> e1 e2; apply/idP/idP; last first.
+  - exact/(ca_monotone f).
+  pose h := [ihom of g \o f]. 
+  have: injective h by exact/ihom_inj.
+  move=> /cycle_orbit cyc.
+  pose o1 := order h e1.
+  pose o2 := order h e2.
+  pose o  := lcmn o1 o2.
+  have {2}<-: iter ((o %/ o1) * o1) h e1 = e1.
+  - rewrite iter_mul_eq /o1 //.
+    apply/(iter_order_cycle (cyc e1)); exact/in_orbit.
+  have {2}<-: iter ((o %/ o2) * o2) h e2 = e2.
+  - rewrite iter_mul_eq /o2 //.
+    apply/(iter_order_cycle (cyc e2)); exact/in_orbit.
+  rewrite !divnK; last first. 
+  - exact/dvdn_lcml.
+  - exact/dvdn_lcmr.
+  have: o = lcmn o1 o2 by done.
+  case o=> [|{}o].
+  - move=> /esym /eqP. 
+    rewrite eqn0Ngt lcmn_gt0 negb_and ?/o1 ?/o2.
+    move: (order_gt0 h e1) (order_gt0 h e2).
+    by move=> ++ /orP[/negP|/negP]. 
+  rewrite !iterSr=> ??; apply/homo_iter.
+  - exact/(ca_monotone h).
+  exact/(ca_monotone g).
+Qed.
+
 End Theory.
 
 End iHom.
@@ -1822,6 +1855,32 @@ Lemma iso_trans : transitive iso_rel.
 Proof. apply/(is_inh_trans fisoP)=> ??? f g; exact/[iso of g \o f]. Qed.
 
 End Theory.
+
+Section Build.
+
+Lemma of_ihoms_class {E1 E2} (f : {ihom E1 -> E2}) (g : {ihom E2 -> E1}) : 
+  lPoset.Iso.Iso.class_of f.
+Proof.
+  have bhom_ff : bhom_pred [ffun e => f e].
+  - apply/andP; split; [exact/ihom_pred_of_ihom|].
+    by apply/leq_card/ihom_inj.
+  pose ff := SubFinfunOf bhom_ff.
+  suff : lPoset.Iso.Iso.class_of ff.
+  - move=> C; pose f' := lPoset.Iso.Iso.Pack C.
+    apply/(@lPoset.Iso.Build.of_eqfun_class _ _ _ f').
+    by move=> x; rewrite /f' /= ffunE. 
+  do 2 constructor.
+  - apply/(@lPoset.Hom.Build.of_eqfun_class _ _ _ f).
+    by move=> x /=; rewrite ffunE.
+  - exact/bhom_mixin.
+  by move=> ??; rewrite !ffunE fihom_ca_reflecting.
+Qed.
+
+Definition of_ihoms {E1 E2} : 
+  {ihom E1 -> E2} -> {ihom E2 -> E1} -> {iso E1 -> E2} := 
+    fun f g => lPoset.Iso.Iso.Pack (of_ihoms_class f g).
+
+End Build.
 
 End Iso.
 

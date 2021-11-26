@@ -1120,7 +1120,7 @@ Module Export SubFinFun.
 
 Section Def.
 Context {aT : finType} {rT : Type}.
-Implicit Types (P : pred {ffun aT -> rT}).
+Implicit Types (f : {ffun aT -> rT}) (P : pred {ffun aT -> rT}).
 
 Structure subFinfun P : Type := SubFinfun { 
   apply :> {ffun aT -> rT};
@@ -1131,6 +1131,10 @@ Canonical subFinfun_subType P := Eval hnf in [subType for (@apply P)].
 
 Definition sub_finfun_of (ph : phant (aT -> rT)) P : predArgType :=
   [subType of (subFinfun P)].
+
+(* TODO: invent better rename or notation? *)
+Definition SubFinfunOf f P : P f -> sub_finfun_of (Phant (aT -> rT)) P := 
+  fun pf => SubFinfun pf.
 
 End Def.
 
@@ -1231,6 +1235,33 @@ Qed.
 
 End FinGraph. 
 
+
+Section IterUtils.
+Context {T : Type}.
+Implicit Types (f : T -> T).
+Implicit Types (r : rel T).
+
+(* TODO: r could be T -> T -> Prop ? *)
+Lemma homo_iter r f n :
+  { homo f : x y / r x y } -> { homo (iter n f) : x y / r x y }.
+Proof. 
+  elim n=> [|{}n IH] //=.
+  - by move=> ? x y /=. 
+  move=> homo x y /= ?.
+  by apply/homo/IH. 
+Qed.
+
+Lemma iter_mul_eq n m f x : 
+  iter m f x = x -> iter (n * m) f x = x.
+Proof. 
+  move=> fmx; elim: n=> [|{}n IH] => //=.
+  by rewrite mulSnr iterD fmx IH. 
+Qed.
+
+End IterUtils.
+
+Arguments homo_iter {T} [r] f n.
+
 Section FSetInduction.
 
 Open Scope fset_scope.
@@ -1263,5 +1294,3 @@ Proof.
 Qed.
 
 End Imfset.
-
-
