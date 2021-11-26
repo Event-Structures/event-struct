@@ -1185,13 +1185,13 @@ Definition subsumes_mem r mp1 mp2 :=
 
 End Def.
 
-Notation "{ 'subsumes' A <= B 'by' R }" := 
-  (subsumes_mem R (mem A) (mem B)) 
+Notation "{ 'subsumes' A <= B 'by' R }" :=
+  (subsumes_mem R (mem A) (mem B))
     (A at level 69, B at level 69) : type_scope.
 
 Notation "{ 'subsumes' A <= B : x y / a }" := 
   (subsumes_mem (fun x y => a) (mem A) (mem B))
-    (A at level 69, B at level 69, x at level 0, y at level 39) : type_scope.
+    (A at level 69, B at level 69, x at level 0, y at level 0) : type_scope.
 
 Section Theory.
 Context {T : Type}.
@@ -1261,3 +1261,36 @@ Qed.
 End IterUtils.
 
 Arguments homo_iter {T} [r] f n.
+
+Section FSetInduction.
+
+Open Scope fset_scope.
+
+Lemma fset_ind (A : choiceType) (P : {fset A} -> Prop) :
+  P fset0 ->
+  (forall a l, a \notin l -> P l -> P (a |` l)) ->
+  forall l, P l.
+Proof.
+  move=> ? Ps X.
+  have [n leMn] := ubnP #|` X|; elim: n => // n IHn in X leMn *.
+  case (fset_0Vmem X)=> [->//| [x]/[dup] I /fsetD1K<-].
+  apply/Ps/IHn; first by rewrite ?inE eqxx.
+  by rewrite (cardfsD1 x) I /= addnC addn1 in leMn. 
+Qed.
+
+End FSetInduction.
+
+Section Imfset.
+
+Open Scope fset_scope.
+
+Lemma imfset_comp (K V W : choiceType)
+  (f : K -> V) (g : V -> W) (p : {fset K}) :
+  (g \o f) @` p = g @` (f @` p).
+Proof.
+  apply/fsetP=> a; apply/imfsetP/imfsetP=> [[/= x xA ->]|].
+    by exists (f x); rewrite // in_imfset.
+  by move=> [/= x /imfsetP [/= y yA ->] ->]; exists y.
+Qed.
+
+End Imfset.

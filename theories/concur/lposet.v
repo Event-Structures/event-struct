@@ -664,7 +664,9 @@ Coercion base : class_of >-> Hom.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 Coercion homType : type >-> Hom.type.
+Coercion ihomType : type >-> iHom.type.
 Canonical homType.
+Canonical ihomType.
 End Exports.
 
 End Emb.
@@ -774,6 +776,7 @@ Definition clone f c of phant_id class c := @Pack f c.
 
 Definition homType  := Hom.Pack class.
 Definition embType  := Emb.Pack class.
+Definition ihomType : iHom.type E1 E2 := embType.
 
 Definition mk h mkH : type :=
   mkH (let: Pack _ c := h return @class_of h in c).
@@ -787,9 +790,11 @@ Coercion base : class_of >-> Emb.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 Coercion homType : type >-> Hom.type.
+Coercion ihomType : type >-> iHom.type.
 Coercion embType : type >-> Emb.type.
-Canonical embType.
 Canonical homType.
+Canonical ihomType.
+Canonical embType.
 End Exports.
 
 End Pref.
@@ -817,14 +822,21 @@ Qed.
 
 Lemma pref_ca_closed (C1 : pred E1) (C2 : pred E2) : 
   (forall e, C2 e <-> exists2 e', C1 e' & e = f e') ->
-  ca_closed C1 -> ca_closed C2.
+  ca_closed C1 <-> ca_closed C2.
 Proof.
-  move=> CE ca > /[swap]/CE[? /[swap]->/[swap]/ca_prefix[e ->]] /ca/[apply] ?.
-  apply/CE; by exists e.
+  move=> CE; split=> ca e1 e2.
+  - move=> /[swap]/CE [e2']. 
+    move=> /[swap]-> /[swap]/ca_prefix[e1' ->].
+    move=> /ca/[apply] ?.
+    by apply/CE; exists e1'.
+  move=> /(ca_monotone f)/ca i ?.
+  case: (CE (f e1))=> [[|e1' ?]]. 
+  - by apply/i/CE; exists e2.
+  by move=> /(@ihom_inj _ _ _ f) -> //.
 Qed.
 
 Lemma pref_ca_closed_fset (C1 : {fset E1}) : 
-  ca_closed (mem C1) -> ca_closed (mem (f @` C1)%fset).
+  ca_closed (mem C1) <-> ca_closed (mem (f @` C1)%fset).
 Proof. apply/pref_ca_closed=> ?; split=> I; exact/imfsetP/I. Qed.
 
 End Theory.
@@ -909,6 +921,14 @@ Definition homType  := Hom.Pack class.
 Definition bhomType := bHom.Pack class.
 Definition embType  := Emb.Pack (Emb.Class class (mixin class)).
 
+Lemma prefMixin : Pref.mixin_of cT.
+Proof.
+  case: cT=> f [[? [g *]]] /=.
+  by split=> e1 e2; exists (g e1).
+Qed.
+Definition prefType := 
+  Pref.Pack (Pref.Class (Emb.Class class (mixin class)) prefMixin).
+
 Definition mk h mkH : type :=
   mkH (let: Pack _ c := h return @class_of h in c).
 
@@ -923,9 +943,11 @@ Coercion apply : type >-> Funclass.
 Coercion homType  : type >-> Hom.type.
 Coercion bhomType : type >-> bHom.type.
 Coercion embType  : type >-> Emb.type.
+Coercion prefType  : type >-> Pref.type.
 Canonical homType.
 Canonical bhomType.
 Canonical embType.
+Canonical prefType.
 End Exports.
 
 End Iso.
@@ -1043,6 +1065,7 @@ Notation hom := Hom.type.
 Notation ihom := iHom.type.
 Notation bhom := bHom.type.
 Notation emb := Emb.type.
+Notation pref := Pref.type.
 Notation iso := Iso.type.
 
 Module Ext.
