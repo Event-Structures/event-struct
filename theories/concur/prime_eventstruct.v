@@ -1,7 +1,7 @@
 From RelationAlgebra Require Import lattice boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice order finmap fintype.
-From eventstruct Require Import utils relalg lposet.
+From eventstruct Require Import utils relalg order lposet.
 
 (******************************************************************************)
 (* This file provides a theory of prime event structures.                     *)
@@ -53,99 +53,16 @@ Local Open Scope prime_eventstruct_scope.
 
 Reserved Notation "x \# y" (at level 75, no associativity).
 
-Definition fin_cause {T : eqType} (ca : rel T) :=
-  forall e, is_finite (ca^~ e).
-
 Definition hereditary {T : Type} (ca cf : rel T) := 
   forall x y z : T, cf x y -> ca y z -> cf x z.
-
-Module Elem. 
-
-Module Export EventStruct.
-Section ClassDef. 
-
-Record mixin_of (E0 : Type) (L : Type) (eb : lPoset.lPoset.class_of E0 L)
-                (E := lPoset.lPoset.Pack eb) := Mixin {
-  _ : fin_cause (ca : rel E)
-}.
-
-Set Primitive Projections.
-Record class_of (E : Type) (L : Type) := Class {
-  base  : lPoset.lPoset.class_of E L;
-  mixin : mixin_of base;
-}.
-Unset Primitive Projections.
-
-Local Coercion base : class_of >-> lPoset.lPoset.class_of.
-
-Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
-
-Local Coercion sort : type >-> Sortclass.
-
-Variables (E : Type) (L : Type) (cT : type L).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
-Definition clone c of phant_id class c := @Pack E c.
-(* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
-
-Definition pack :=
-  fun bE b & phant_id (@lPoset.lPoset.class L bE) b =>
-  fun m => Pack (@Class E L b m).
-
-Definition eqType := @Equality.Pack cT class.
-Definition choiceType := @Choice.Pack cT class.
-Definition porderType := @Order.POrder.Pack tt cT class.
-Definition lposetType := @lPoset.lPoset.Pack L cT class.
-End ClassDef.
-
-Module Export Exports.
-Coercion base : class_of >-> lPoset.lPoset.class_of.
-Coercion mixin : class_of >-> mixin_of.
-Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
-Coercion choiceType : type >-> Choice.type.
-Coercion porderType : type >-> Order.POrder.type.
-Coercion lposetType : type >-> lPoset.eventType.
-Canonical eqType.
-Canonical choiceType.
-Canonical porderType.
-Canonical lposetType.
-End Exports.
-
-End EventStruct.
-
-Notation eventType := EventStruct.type.
-Notation eventStruct := EventStruct.class_of.
-Notation EventType E L m := (@EventStruct.pack E L _ _ id m).
-
-Module Export Theory.
-Section Theory.
-
-Context {L : Type} {E : eventType L}.
-Implicit Types (e : E).
-
-Lemma prefix_fin (e : E) : is_finite (<= e).
-Proof. by move: e; case: E => ? [? []]. Qed.
-
-(* TODO: move to pomset? *)
-Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
-Proof. move=> e1 e2 /=; exact: le_trans. Qed.
-
-End Theory.
-End Theory.
-
-End Elem.
-
-Export Elem.EventStruct.Exports.
-Export Elem.Theory.
 
 Module PrimeC.
 
 Module EventStruct.
 Section ClassDef.
 
-Record mixin_of (E0 : Type) (L : Type) (b : Elem.EventStruct.class_of E0 L)
-                (E := Elem.EventStruct.Pack b) := Mixin {
+Record mixin_of (E0 : Type) (L : Type) (b : lPoset.lPoset.class_of E0 L)
+                (E := lPoset.lPoset.Pack b) := Mixin {
   cons : pred {fset E};
 
   _ : forall (e : E), cons [fset e];
@@ -155,12 +72,18 @@ Record mixin_of (E0 : Type) (L : Type) (b : Elem.EventStruct.class_of E0 L)
 
 Set Primitive Projections.
 Record class_of (E L : Type) := Class {
-  base  : Elem.EventStruct.class_of E L;
-  mixin : mixin_of base;
+  (* TODO: inherit DwFinPOrder in lPoset.class_of ? *)
+  base   : lPoset.lPoset.class_of E L;
+  mixin1 : DwFinPOrder.DwFinPOrder.mixin_of base;
+  mixin2 : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Elem.EventStruct.class_of.
+Local Coercion base : class_of >-> lPoset.lPoset.class_of.
+
+Local Coercion base2 E L (c : class_of E L) : 
+  DwFinPOrder.DwFinPOrder.class_of E := 
+    DwFinPOrder.DwFinPOrder.Class (mixin1 c).
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -173,30 +96,32 @@ Definition clone c of phant_id class c := @Pack E L c.
 (* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
 
 Definition pack :=
-  fun bE b & phant_id (@Elem.EventStruct.class L bE) b =>
-  fun m => Pack (@Class E L b m).
+  fun bE b & phant_id (@lPoset.lPoset.class L bE) b =>
+  fun m1 m2 => Pack (@Class E L b m1 m2).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
+Definition dwFinPOrderType := @DwFinPOrder.DwFinPOrder.Pack cT class.
 Definition lposetType := @lPoset.lPoset.Pack L cT class.
-Definition elemEventType := @Elem.EventStruct.Pack L cT class.
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Elem.EventStruct.class_of.
-Coercion mixin : class_of >-> mixin_of.
+Coercion base : class_of >-> lPoset.lPoset.class_of.
+Coercion base2 : class_of >-> DwFinPOrder.DwFinPOrder.class_of.
+Coercion mixin1 : class_of >-> DwFinPOrder.DwFinPOrder.mixin_of.
+Coercion mixin2 : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
+Coercion dwFinPOrderType : type >-> DwFinPOrder.DwFinPOrder.type.
 Coercion lposetType : type >-> lPoset.eventType.
-Coercion elemEventType : type >-> Elem.eventType.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
+Canonical dwFinPOrderType.
 Canonical lposetType.
-Canonical elemEventType.
 End Exports.
 
 End EventStruct.
@@ -242,15 +167,15 @@ Context {L : Type} {E : eventType L}.
 Implicit Types (e : E) (X Y : {fset E}).
 
 Lemma cons_self e : cons [fset e].
-Proof. by move: e; case: E => ? [? []]. Qed.
+Proof. by move: e; case: E => ? [? []] ?? []. Qed.
 
 (* TODO: rename `cons_contra`? *)
 Lemma cons_contr X Y : X `<=` Y -> cons Y -> cons X.
-Proof. by move: X Y; case: E => ? [? []]. Qed.
+Proof. by move: X Y; case: E => ? [? []] ?? []. Qed.
 
 Lemma cons_prop X e1 e2 : 
   e1 <= e2 -> cons (e2 |` X) -> cons (e1 |` X).
-Proof. by move: X e1 e2; case: E => ? [? []]. Qed.
+Proof. by move: X e1 e2; case: E => ? [? []] ?? []. Qed.
 
 Lemma gcf_self e : ~~ (gcf [fset e]).
 Proof. rewrite /gcf negbK; exact/cons_self. Qed.
@@ -309,6 +234,9 @@ Proof.
   have/eqP->: ([fset y] `\` Y == fset0) by rewrite fsetD_eq0 fsub1set.
   by rewrite fsetDv ?fset0U mem_fsetD1.
 Qed.
+
+Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
+Proof. move=> e1 e2 /=; exact: le_trans. Qed.
 
 Lemma prefix_cf_free e : cf_free (<= e).
 Proof. 
