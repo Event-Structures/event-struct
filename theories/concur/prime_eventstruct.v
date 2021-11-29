@@ -541,7 +541,7 @@ Lemma comp_class {E1 E2 E3} (f : {emb  E2 -> E3}) (g : {emb E1 -> E2}) :
 Proof. 
   split=> //; first exact/Hom.Build.comp_class; split.
   - by case: (lPoset.Emb.Build.comp_mixin [emb of g]%pomset [emb of f]%pomset).
-  by move=> ?; rewrite imfset_comp=> /cons_antimon/cons_antimon.
+  by move=> ?; rewrite imfset_comp !cons_emb. 
 Qed.
 
 Lemma of_eqfun_class {E1 E2} (f : {emb  E1 -> E2}) g :
@@ -549,7 +549,7 @@ Lemma of_eqfun_class {E1 E2} (f : {emb  E1 -> E2}) g :
 Proof.
   move=> E; split=> //; first exact/Hom.Build.of_eqfun_class; split.
   - by case: (lPoset.Emb.Build.of_eqfun_class E)=> ? [].
-  by move=> X; rewrite (eq_imfset _ E (fun=> erefl))=> /cons_antimon.
+  by move=> X; rewrite (eq_imfset _ E (fun=> erefl)) cons_emb.
 Qed.
 
 Definition of_eqfun {E1 E2} (f : {emb  E1 -> E2}) g : g =1 f -> {emb  E1 -> E2} := 
@@ -945,7 +945,7 @@ Lemma inv_class {E1 E2} (f : {iso E1 -> E2}) :
 Proof.
   case: (lPoset.Iso.Build.inv_class [iso of f]%pomset)=> [[[[??[g ??[?]]]]]].
   do ? split=> //; [|by exists g|].
-  - move=> ??; apply/(@cons_antimon _ _ _ f); rewrite -imfset_comp.
+  - move=> ??; rewrite -(cons_emb f) -imfset_comp.
     under eq_imfset do [rewrite /= can_inv|by []]; by rewrite /= imfset_id.
   move=> ? /(@cons_mon _ _ _ f); rewrite -imfset_comp.
   under eq_imfset do [rewrite /= can_inv|by []]; by rewrite /= imfset_id.
