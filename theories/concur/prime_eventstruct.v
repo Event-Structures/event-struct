@@ -324,6 +324,17 @@ Proof.
   by case: f => ? [[[??[]]]]; apply.
 Qed.
 
+Lemma gcf_mon (X : {fset E1}) : 
+  gcf (f @` X) -> gcf X.
+Proof. exact/contra/cons_mon. Qed.
+
+Lemma cf_mon e1 e2 :
+  cf (f e1) (f e2) -> cf e1 e2.
+Proof. 
+  rewrite /cf=> ?; apply/gcf_mon.
+  by rewrite imfsetU !imfset1=> /=.
+Qed.
+
 Lemma hom_cf_free (C1 : pred E1) (C2 : pred E2) : 
   (forall x, C2 x <-> exists2 y, C1 y & x = f y) ->
   cf_free C1 -> cf_free C2.
@@ -480,6 +491,7 @@ Module Export Theory.
 Section Theory. 
 Context {L : Type} {E1 E2 : eventType L} (f : {emb E1 -> E2}).
 
+(* TODO: cons (f @` X) = cons X. *)
 Lemma cons_antimon (X : {fset E1}) : 
   cons (f @` X) -> cons X.
 Proof. case: f => ? [? [? []]]; exact. Qed.

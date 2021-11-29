@@ -323,9 +323,31 @@ Qed.
 End FoldUtils. 
 
 Section FSetUtils.
-
-Context {T : choiceType}.
+Context {T U : choiceType}.
 Implicit Types (s : {fset T}) (p : pred T) (r : rel T).
+Implicit Types (f : T -> U).
+
+Local Open Scope fset_scope.
+
+Lemma imfset1 f x : 
+  f @` ([fset x]) = [fset (f x)].
+Proof. 
+  apply/fsetP=> y /=; rewrite !inE. 
+  apply/idP/idP=> [/imfsetP|].
+  - by move=> [] z /=; rewrite inE=> /eqP-> ->.
+  move=> /eqP->; apply/imfsetP; exists x=> //=; exact/fset11.
+Qed.
+
+Lemma imfsetU f s1 s2 : 
+  f @` (s1 `|` s2) = (f @` s1) `|` (f @` s2).
+Proof. 
+  apply/fsetP=> x /=; rewrite !inE. 
+  apply/idP/idP=> [/imfsetP|].
+  - move=> [] y /=; rewrite !inE=> + ->.
+    by move=> /orP[?|?]; apply/orP; [left|right]; apply/imfsetP; exists y.
+  by move=> /orP[|] /imfsetP[] /= y ? ->; apply/imfsetP; exists y=> //; 
+    rewrite inE; apply/orP; [left|right].
+Qed.
 
 Lemma fset_existsP s p :
   reflect (exists x, x \in s /\ p x) [exists x : s, p (val x)].
