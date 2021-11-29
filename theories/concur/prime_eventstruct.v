@@ -491,17 +491,34 @@ Module Export Theory.
 Section Theory. 
 Context {L : Type} {E1 E2 : eventType L} (f : {emb E1 -> E2}).
 
-(* TODO: cons (f @` X) = cons X. *)
-Lemma cons_antimon (X : {fset E1}) : 
-  cons (f @` X) -> cons X.
-Proof. case: f => ? [? [? []]]; exact. Qed.
+(* TODO: rename? *)
+Lemma cons_emb (X : {fset E1}) : 
+  cons (f @` X) = cons X.
+Proof. 
+  apply/idP/idP; last first.
+  - exact/cons_mon.
+  case: f => ? [? [? []]]; exact. 
+Qed.
+
+Lemma gcf_emb (X : {fset E1}) : 
+  gcf (f @` X) = gcf X.
+Proof. by rewrite /gcf cons_emb. Qed.
+
+Lemma cf_emb : 
+  {mono f : e1 e2 / cf e1 e2}.
+Proof. 
+  rewrite /cf=> e1 e2 /=.
+  rewrite -imfset1 -imfset1 -imfsetU.
+  exact/gcf_emb.
+Qed.
 
 Lemma emb_cf_free (C1 : pred E1) (C2 : pred E2) : 
   (forall x, C2 x <-> exists2 y, C1 y & x = f y) ->
   cf_free C1 <-> cf_free C2.
 Proof.
   move=> CE; split=> [/(hom_cf_free CE) //| cf s S].
-  apply/cons_antimon/cf=> ? /imfsetP[y /S ? ->].
+  rewrite -cons_emb; apply/cf=> ?.
+  move=> /imfsetP[y /S ? ->].
   by apply/CE; exists y.
 Qed.
 
