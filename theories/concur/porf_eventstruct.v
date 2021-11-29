@@ -2,7 +2,7 @@ From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
-From eventstruct Require Import utils relalg rel wftype ident inhtype.
+From eventstruct Require Import utils relalg rel order wftype ident inhtype.
 From eventstruct Require Import lposet prime_eventstruct.
 
 (******************************************************************************)
@@ -909,25 +909,22 @@ Definition causal_orderMixin :=
 
 Canonical porderType := @POrderType tt E causal_orderMixin.
 
-Lemma fin_cause_ca : @fin_cause porderType (<=%O).
-Proof. 
-  rewrite /fin_cause=> e. 
-  exists (undup (wsuffix fca_gt e)).
-  - apply: undup_uniq.
-  by move=> e'; rewrite mem_undup. 
-Qed.
-
 Definition lposetMixin :=
   @lPoset.lPoset.Mixin E L (Order.POrder.class porderType) lab.
 
 Canonical lposetType := 
   @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lposetMixin).
 
-Definition elem_porfMixin := 
-  @Elem.EventStruct.Mixin E L _ fin_cause_ca.
+Definition ca_pideal e : {fset E} := 
+  seq_fset tt (wsuffix fca_gt e).
 
-Canonical elem_porfPrime := 
-  @Elem.EventStruct.Pack L E (Elem.EventStruct.Class elem_porfMixin).
+Lemma ca_pideal_inE e1 e2 : 
+  e1 \in (ca_pideal e2) = (ca e1 e2).
+Proof. by rewrite seq_fsetE. Qed.
+
+Definition dwFinPOrderMixin :=
+  let cls := (Order.POrder.class porderType) in
+  @DwFinPOrder.DwFinPOrder.Mixin E cls ca_pideal ca_pideal_inE.
 
 (* ************************************************************************* *)
 (*     Immediate Conflict                                                    *)
@@ -1116,7 +1113,10 @@ Definition prime_porfMixin :=
     (cf es) (cf_irrelf es (rf_ncf_dom_es es)) (cf_sym es) hered_porfes.
 
 Canonical prime_porfPrime := 
-  @Prime.EventStruct.Pack L E (Prime.EventStruct.Class prime_porfMixin).
+  let base := lPoset.lPoset.class (lposetType es) in 
+  let dw_mix := @dwFinPOrderMixin E L es in
+  @Prime.EventStruct.Pack L E 
+    (@Prime.EventStruct.Class E L base dw_mix prime_porfMixin).
 
 End PrimePORFEventStruct.
 
