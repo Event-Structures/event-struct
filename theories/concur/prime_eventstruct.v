@@ -170,7 +170,7 @@ Lemma cons_self e : cons [fset e].
 Proof. by move: e; case: E => ? [? []] ?? []. Qed.
 
 (* TODO: rename `cons_contra`? *)
-Lemma cons_contr X Y : X `<=` Y -> cons Y -> cons X.
+Lemma cons_contra X Y : X `<=` Y -> cons Y -> cons X.
 Proof. by move: X Y; case: E => ? [? []] ?? []. Qed.
 
 Lemma cons_prop X e1 e2 : 
@@ -181,7 +181,7 @@ Lemma gcf_self e : ~~ (gcf [fset e]).
 Proof. rewrite /gcf negbK; exact/cons_self. Qed.
 
 Lemma gcf_ext X Y : X `<=` Y -> gcf X -> gcf Y.
-Proof. by rewrite /gcf=> /cons_contr /contra. Qed.
+Proof. by rewrite /gcf=> /cons_contra /contra. Qed.
 
 Lemma gcf_hered X e1 e2 : 
   e1 <= e2 -> gcf (e1 |` X) -> gcf (e2 |` X).
@@ -220,11 +220,11 @@ Proof.
   rewrite fsubUset !fsub1set; exact/andP.
 Qed.
 
-Lemma cons_ca_contr (X Y : {fset E}) :
+Lemma cons_ca_contra (X Y : {fset E}) :
   {subsumes X <= Y : x y / x <= y} -> cons Y -> cons X.
 Proof.
   move: X {2}(X `\` Y) (erefl (X `\` Y))=> /[swap].
-  elim/fset_ind=> [?/eqP/[! fsetD_eq0]/cons_contr//|].
+  elim/fset_ind=> [?/eqP/[! fsetD_eq0]/cons_contra//|].
   move=> x ?? IHxy X XYE /[dup] S + cY; rewrite -(@fsetD1K _ x X); last first.
   - move/fsetP/(_ x): XYE; rewrite ?inE eqxx andbC /=; by case: (x \in X).
   case/(_ x)=> [/[! (inE, eqxx)]//|y ? /cons_prop]; apply.
@@ -240,7 +240,7 @@ Proof. move=> e1 e2 /=; exact: le_trans. Qed.
 
 Lemma prefix_cf_free e : cf_free (<= e).
 Proof. 
-  move=> X S; apply/(@cons_ca_contr _ [fset e])/cons_self.
+  move=> X S; apply/(@cons_ca_contra _ [fset e])/cons_self.
   move=> x i; exists e; rewrite ?inE //; exact/S.
 Qed.
 
@@ -1119,7 +1119,7 @@ Proof.
 Qed.  
 
 (* TODO: rename cons_of_contra? *)
-Lemma cons_contr (X Y : {fset E}) : X `<=` Y -> cons Y -> cons X.
+Lemma cons_contra (X Y : {fset E}) : X `<=` Y -> cons Y -> cons X.
 Proof.
   move=> sub /= /fset_exists2P nCF. 
   apply/fset_exists2P=> [[]] x [] y [].
@@ -1150,7 +1150,7 @@ Proof.
 Qed.
 
 Definition primeCMixin := 
-  PrimeC.EventStruct.Mixin cons_self cons_contr cons_prop.
+  PrimeC.EventStruct.Mixin cons_self cons_contra cons_prop.
 
 Definition primeCeventType := 
   PrimeC.EventStruct.Pack (PrimeC.EventStruct.Class (class E) primeCMixin).
