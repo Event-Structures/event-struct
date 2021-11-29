@@ -347,6 +347,26 @@ Proof.
   by apply /fset_existsP; exists y.
 Qed.  
 
+Lemma fset_forallP s p :
+  reflect (forall x, x \in s -> p x) [forall x : s, p (val x)].
+Proof.
+  apply /equivP; first (by apply /forallP); split.
+  - by move=> H x inX; move: (H (Sub x inX)).  
+  move=> H x; exact/H/(valP x).
+Qed.  
+
+(* TODO: use `rst s r` (restriction of relation) ? *)
+Lemma fset_forall2P s r :
+  reflect (forall x y, x \in s -> y \in s -> r x y) 
+          [forall x : s, forall y : s, r (val x) (val y)].
+Proof.
+  apply /equivP; last split. 
+  - by apply/(@fset_forallP _ (fun x => [forall y, r x (val y)])).
+  - move=> H x y inX inY; move: (H x inX). 
+    by move=> /forallP=> Hy; move: (Hy (Sub y inY)).
+  move=> H x Hx /=; apply/forallP=> y; exact/H.
+Qed.    
+
 End FSetUtils.
 
 

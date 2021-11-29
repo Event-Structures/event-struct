@@ -1011,19 +1011,28 @@ Module Prime.
 Module Export EventStruct.
 Section ClassDef. 
 
-Record mixin_of (E0 : Type) (L : Type) (b : PrimeC.EventStruct.class_of E0 L)
-                (E := PrimeC.EventStruct.Pack b) := Mixin {
-  _ : forall X, gcf X -> exists (e1 e2 : E), [/\ e1 \in X, e2 \in X & cf e1 e2]
+Record mixin_of (E0 : Type) (L : Type) (b : lPoset.lPoset.class_of E0 L)
+                (E := lPoset.lPoset.Pack b) := Mixin {
+  (* TODO: better name *)
+  bcf : rel E;
+  _   : irreflexive bcf;
+  _   : symmetric bcf;
+  _   : hereditary ca bcf;
 }.
 
 Set Primitive Projections.
-Record class_of (E : Type) (L : Type) := Class {
-  base  : PrimeC.EventStruct.class_of E L;
-  mixin : mixin_of base;
+Record class_of (E L : Type) := Class {
+  base   : lPoset.lPoset.class_of E L;
+  mixin1 : DwFinPOrder.DwFinPOrder.mixin_of base;
+  mixin2 : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> PrimeC.EventStruct.class_of.
+Local Coercion base : class_of >-> lPoset.lPoset.class_of.
+
+Local Coercion base2 E L (c : class_of E L) : 
+  DwFinPOrder.DwFinPOrder.class_of E := 
+    DwFinPOrder.DwFinPOrder.Class (mixin1 c).
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -1036,50 +1045,153 @@ Definition clone c of phant_id class c := @Pack E L c.
 (* Definition clone_with disp' c of phant_id class c := @Pack disp' T c. *)
 
 Definition pack :=
-  fun bE b & phant_id (@Elem.EventStruct.class L bE) b =>
-  fun m => Pack (@Class E L b m).
+  fun bE b & phant_id (@lPoset.lPoset.class L bE) b =>
+  fun m1 m2 => Pack (@Class E L b m1 m2).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
+Definition dwFinPOrderType := @DwFinPOrder.DwFinPOrder.Pack cT class.
 Definition lposetType := @lPoset.lPoset.Pack L cT class.
-Definition primeCEventType := @PrimeC.EventStruct.Pack L cT class.
+
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> PrimeC.EventStruct.class_of.
-Coercion mixin : class_of >-> mixin_of.
+Coercion base : class_of >-> lPoset.lPoset.class_of.
+Coercion base2 : class_of >-> DwFinPOrder.DwFinPOrder.class_of.
+Coercion mixin1 : class_of >-> DwFinPOrder.DwFinPOrder.mixin_of.
+Coercion mixin2 : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
+Coercion dwFinPOrderType : type >-> DwFinPOrder.DwFinPOrder.type.
 Coercion lposetType : type >-> lPoset.eventType.
-Coercion primeCEventType : type >-> PrimeC.eventType.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
+Canonical dwFinPOrderType.
 Canonical lposetType.
-Canonical primeCEventType.
 End Exports.
 
 End EventStruct.
+
+Export EventStruct.Exports.
 
 Notation eventType := EventStruct.type.
 Notation eventStruct := EventStruct.class_of.
 Notation EventType E L m := (@EventStruct.pack E L _ _ id m).
 
-Module Export Theory.
-Section Theory.
+Module Export Def.
+Section Def.
 
+Variable (L : Type) (E : eventType L).
+
+Definition bcf : rel E :=
+  EventStruct.bcf (EventStruct.class E).
+
+End Def.
+End Def.
+
+Prenex Implicits bcf.
+
+Module Instances.
+Section Instances.
 Context {L : Type} {E : eventType L}.
 Implicit Types (e : E) (X Y : {fset E}).
+
+Definition cons X := 
+  ~~ [exists e1 : X, exists e2 : X, bcf (val e1) (val e2)].
+
+Lemma bcf_irr : irreflexive (bcf : rel E).
+Proof. by case: E=> [? [??]] []. Qed.
+
+Lemma bcf_sym : symmetric (bcf : rel E).
+Proof. by case: E=> [? [??]] []. Qed.
+
+Lemma bcf_hered : hereditary ca (bcf : rel E).
+Proof. by case: E=> [? [??]] []. Qed.
+
+Lemma cons_self e : cons [fset e].
+Proof.
+  apply /fset_exists2P=> [] [] x [] y [].
+  by move=> /fset1P -> /fset1P ->; rewrite bcf_irr.
+Qed.  
+
+(* TODO: rename cons_of_contra? *)
+Lemma cons_contr (X Y : {fset E}) : X `<=` Y -> cons Y -> cons X.
+Proof.
+  move=> sub /= /fset_exists2P nCF. 
+  apply/fset_exists2P=> [[]] x [] y [].
+  move=> /(fsubsetP sub) ? /(fsubsetP sub) ??.
+  by apply /nCF; exists x, y.
+Qed.
+
+Lemma cons_prop (X : {fset E}) (e1 e2 : E) :
+  e1 <= e2 -> cons (e2 |` X) -> cons (e1 |` X).
+Proof.
+  move => ca12 /fset_exists2P ncf.
+  apply/fset_exists2P=> [[]] e3 [] e4 [].
+  rewrite !inE=> /orP [/eqP->|/[swap]]/orP[/eqP->|].
+  - by rewrite bcf_irr.
+  - move=> inX cf14; apply/ncf. 
+    exists e4, e2; rewrite !inE; split.
+    + by apply/orP; right.
+    + by apply/orP; left.
+    by apply/(bcf_hered _ ca12); rewrite bcf_sym.
+  - move=> inX cf31; apply/ncf. 
+    exists e3, e2; rewrite !inE; split.
+    + by apply/orP; right.
+    + by apply/orP; left.
+    by apply/(bcf_hered _ ca12).
+  move=> ???; apply/ncf. 
+  exists e3, e4; rewrite !inE. 
+  by split=> //; apply/orP; right.
+Qed.
+
+Definition primeCMixin := 
+  PrimeC.EventStruct.Mixin cons_self cons_contr cons_prop.
+
+Definition primeCeventType := 
+  PrimeC.EventStruct.Pack (PrimeC.EventStruct.Class (class E) primeCMixin).
+
+End Instances.
+
+Module Export Exports.
+Coercion primeCeventType : type >-> PrimeC.EventStruct.type.
+Canonical primeCeventType.
+End Exports.
+
+End Instances.
+
+Export Instances.Exports.
+
+Module Export Theory.
+Section Theory.
+Context {L : Type} {E : eventType L}.
+Implicit Types (e : E) (X Y : {fset E}).
+
+Lemma bcfE : 
+  (bcf : rel E) =2 cf. 
+Proof. 
+  rewrite /cf /gcf /cons /= => e1 e2 /=.
+  rewrite negbK; apply/idP/idP.
+  - move=> ?; apply/fset_exists2P.
+    by exists e1, e2; rewrite !inE !eq_refl orbT; split=> //.
+  move=> /fset_exists2P[] e [] e' [].
+  rewrite !inE=> /orP[/eqP->|/eqP->] /orP[/eqP->|/eqP->] //; 
+    try by rewrite Instances.bcf_irr.
+  by rewrite Instances.bcf_sym.
+Qed.
 
 Lemma bgcfP X : 
   reflect (exists e1 e2, [/\ e1 \in X, e2 \in X & cf e1 e2]) (gcf X).
 Proof. 
   apply/(equivP idP); split; last first.
   - move=> [e1] [e2] []; exact/cf_gcf.
-  by move: E X; case=> [? [? []]]. 
+  rewrite /gcf /cons /=.
+  rewrite negbK=> /fset_exists2P [] e1 [] e2 [].
+  by rewrite bcfE=> ???; exists e1, e2.
 Qed.
 
 Lemma bgcfE X : 
@@ -1092,6 +1204,7 @@ End Theory.
 End Prime.
 
 Export Prime.EventStruct.Exports.
+Export Prime.Instances.Exports.
 Export Prime.Theory.
 
 (* Section Test. *)
