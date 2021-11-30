@@ -1,7 +1,9 @@
 From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
-From mathcomp Require Import ssreflect ssrbool ssrfun eqtype seq order choice.
-From mathcomp Require Import finmap fingraph fintype finfun ssrnat path.
+From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat zify. 
+From mathcomp Require Import eqtype choice seq order path.
+From mathcomp Require Import fintype finfun fingraph finmap.
+From mathcomp.tarjan Require Import extra acyclic Kosaraju acyclic_tsorted. 
 From Equations Require Import Equations.
 From eventstruct Require Import utils relalg wftype.
 
@@ -38,6 +40,125 @@ Set Equations Transparent.
 Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
+
+Section Slice.
+Context {T : eqType}.
+Implicit Types (s : seq T) (n m : nat).
+
+Definition slice n m s := 
+  take (m - n) (drop n s).
+
+Lemma size_slice n m s : 
+  size (slice n m s) = m - n.
+Proof. admit. Admitted.
+
+Lemma in_slice_index n m s x : 
+  x \in (slice n m s) = (n < index x s < m).
+Proof. admit. Admitted.
+
+End Slice.
+
+
+Section Covering.
+Context {T : finType}.
+Implicit Types (r : rel T).
+
+Definition gfun r := 
+  fun x => filter (r x) (enum T).
+
+Lemma gfun_inE r x y :
+  y \in (gfun r x) = r x y.
+Proof. by rewrite /gfun mem_filter mem_enum inE andbT. Qed.
+
+Definition cov r : rel T := 
+  [rel x y | [&& (x != y) , (r x y) & ~~ [exists z, r x z && r z y]]].
+
+Definition cov_tseq r x y := 
+  let t := tseq (rgraph r) in
+  let p := [pred z | r x z && r z y] in
+  let ix := index x t in 
+  let iy := index y t in 
+  ~~ has p (slice ix iy t). 
+  (* [rel x y | index y t - (index x t).+1 == find (r x) (drop (index x t).+1 t)]. *)
+
+(* TODO: reformulate in terms of relation algebra? *)
+Lemma covP r x y : 
+  reflect [/\ x <> y , r x y & ~ exists z, r x z && r z y] (cov r x y).
+Proof. 
+  rewrite /cov; apply/(equivP and3P). 
+  split; case=> ???; split=> //; try exact/eqP; 
+    exact/(negPP existsP).
+Qed.
+
+Lemma cov_sliceP r x y : 
+  let t := tseq (rgraph r) in
+  let p := [pred z | r x z && r z y] in
+  let ix := index x t in 
+  let iy := index y t in 
+  (*   *)
+  acyclic r -> reflect (exists z, r x z && r z y) 
+                       (has p (slice ix iy t)).
+Proof. 
+  move=> /= acyc; apply/(equivP idP); split. 
+  - by move=> /hasP[z] zIn /= ?; exists z.
+  move=> [z] /andP[rxz rzy].
+  apply/hasP; exists z=> //=; last exact/andP.
+  rewrite in_slice_index; apply/andP; split.
+  - move: rxz=> /[dup] rxz. 
+    move=> /connect1/(tseq_rel_connect_before acyc).
+    rewrite /before leq_eqVlt=> /orP[/eqP|] //.
+    move=> /index_inj eq_xz; exfalso.
+    move: (acyc_irrefl acyc)=> irr; move: (irr x). 
+    by rewrite {2}eq_xz ?rxz ?mem_tseq ?mem_enum.
+  move: rzy=> /[dup] rzy. 
+  move=> /connect1/(tseq_rel_connect_before acyc).
+  rewrite /before leq_eqVlt=> /orP[/eqP|] //.
+  move=> /index_inj eq_zy; exfalso.
+  move: (acyc_irrefl acyc)=> irr; move: (irr z). 
+  by rewrite {2}eq_zy ?rzy ?mem_tseq ?mem_enum.
+Qed.
+
+Lemma cov_connect r x y :
+  acyclic r -> r x y -> connect (cov r) x y.
+Proof.  
+  move=> acyc rxy.
+  pose t  := tseq (rgraph r).
+  pose p  := [pred z | r x z && r z y].
+  pose ix := index x t.
+  pose iy := index y t.
+  pose s  := slice ix iy t.
+  have [n leN] := ubnP (size s).
+  subst t p ix iy s.
+  move: x y rxy leN; elim: n=> // n IH x y rxy.
+  pose t  := tseq (rgraph r).
+  pose p  := [pred z | r x z && r z y].
+  pose ix := index x t.
+  pose iy := index y t.
+  pose s  := slice ix iy t.
+  rewrite -/t -/s -/ix -/iy => sz.
+  case: (x == y)/idP => [/eqP->|/negP/eqP neq_xy] //.
+  case: (has p s)/idP; last first.
+  - move=> hasN; apply/connect1.
+    apply/covP; split=> //.
+    by move=> /(cov_sliceP _ _ _ acyc).
+  move=> /hasP[z] zIn /andP[rxz rzy].  
+  pose iz := index z t.
+  have iz_in : ix < iz < iy.
+  - by rewrite -in_slice_index.
+  apply/(@connect_trans _ _ z); apply/IH=> //.
+  all: rewrite -/ix -/iy -/iz -/t.
+  all: move: sz; rewrite /s !size_slice; lia.
+Qed.  
+
+Lemma connect_covE r x y : 
+  acyclic r -> connect (cov r) x y = connect r x y.
+Proof. 
+  move=> acyc; apply/idP/idP.
+  - by apply/connect_sub=> {}x {}y /covP[? /connect1].
+  apply/connect_sub=> {}x {}y; exact/cov_connect.  
+Qed.
+
+End Covering.
 
 (* TODO: rename to `mrel` and move to `monad.v` ? *)
 Definition sfrel {T : eqType} (f : T -> seq T) : {dhrel T & T} :=

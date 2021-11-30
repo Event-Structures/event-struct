@@ -579,7 +579,6 @@ End SubTypeUtils.
 
 
 Section SeqUtils.
-
 Context {T : Type}. 
 Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
 
@@ -641,6 +640,9 @@ Lemma find_take p s n :
   has p (take n s) -> find p (take n s) = find p s. 
 Proof. by rewrite -[in find p s](@cat_take_drop n _ s) find_cat=> ->. Qed.
 
+(* Lemma nth_find_drop x0 p s n :  *)
+(*   has -> nth x0 s (n + find p (drop n t)) =  *)
+
 Lemma sorted_rcons x r s y : 
   sorted r (rcons s y) = sorted r s && (nilp s || r (last x s) y).
 Proof. case s=> [|??] //=; exact/rcons_path. Qed.
@@ -696,6 +698,23 @@ Qed.
 End SeqUtils.
 
 Arguments sorted_rcons {T} x.
+
+Section SeqEqUtils.
+Context {T : eqType}. 
+Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
+
+Lemma index_inj s : 
+  {in s &, injective (index^~ s)}.
+Proof. 
+  move=> x y; elim s=> [|z {}s] IH //=.
+  rewrite !inE=> /orP[/eqP->|xIn] /orP[/eqP->|yIn] //.
+  - by rewrite eq_refl; case: ifP=> [/eqP->|] //.
+  - by rewrite eq_refl; case: ifP=> [/eqP->|] //.
+  case: ifP=> [/eqP->|]; case: ifP=> [/eqP->|] //.
+  by move=> ?? [] /IH H; apply/H. 
+Qed.
+
+End SeqEqUtils.
 
 Section FindNth.
 
@@ -1282,6 +1301,13 @@ Proof. exact/forall2P. Qed.
 Lemma connect_refl g : 
   reflexive (connect g).
 Proof. done. Qed. 
+
+Lemma acyc_irrefl g :
+  acyclic g -> irreflexive g.
+Proof. 
+  move=> /acyclicP[irr _] x. 
+  move: (irr x)=> /negP ?; exact/negP. 
+Qed.
 
 Lemma connect_antisym g : 
   acyclic g -> antisymmetric (connect g).
