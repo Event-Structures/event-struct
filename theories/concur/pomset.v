@@ -68,17 +68,16 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module lFsPoset. 
-
-Module Export Def.
 
 Notation lfspreposet E L bot := 
   ({ fsfun E -> (L * {fset E}) of e => (bot, fset0) }).
 
+Module lFsPrePoset.
+
+Module Export Def.
 Section Def. 
 Context (E : identType) (L : eqType).
 Variable (bot : L).
-
 Implicit Types (p : lfspreposet E L bot).
 
 Definition fs_lab p : E -> L := 
@@ -210,10 +209,27 @@ Proof.
   - move=> ica_supp; case=> e2 in_supp /=. 
     by apply/allP=> e1 /ica_supp /andP[].
   move=> all_supp e1 e2 /=.
-  case: (in_fsetP (finsupp q) e2)=> [e2'|].
+  case: (in_fsetP (finsupp p) e2)=> [e2'|].
   - by move: (all_supp e2')=> /allP /[swap] /= <- /[apply] ->.
   by move=> /fsfun_dflt -> //.
 Qed.
+
+End Theory.
+End Theory.
+
+End lFsPrePoset.
+
+Export lFsPrePoset.Def.
+Export lFsPrePoset.Theory.
+
+
+Module lFsPoset. 
+
+Module Export Def.
+
+Section Def. 
+Context (E : identType) (L : eqType).
+Variable (bot : L).
 
 Structure lfsposet : Type := lFsPoset {
   lfsposet_val :> lfspreposet E L bot ; 
@@ -234,11 +250,14 @@ Proof. by move: (valP p)=> /and3P[]. Qed.
 Lemma lfsp_acyclic p : acyclic (fin_ica p).
 Proof. by move: (valP p)=> /and3P[]. Qed.
 
-Definition lfsp_tseq (p : lfsposet) : seq E := 
-  map val (tseq (rgraph (@fin_ica p))).
+Definition lfsp_tseq p : seq E := 
+  map val (tseq (rgraph (fin_ica p))).
 
-Definition fs_idx (p : lfsposet) : E -> nat := 
+Definition lfsp_idx p : E -> nat := 
   fun e => index e (lfsp_tseq p). 
+
+Definition lfsp_event p e0 : nat -> E := 
+  fun n => nth e0 (lfsp_tseq p) n.
 
 End Def.
 End Def.
@@ -273,6 +292,14 @@ Canonical subFinfun_subCountType E (L : countType) bot :=
 
 End Instances.
 End Instances.
+
+Module Export Build.
+Section Build.
+Context {E : identType} {L : eqType}.
+Variable (bot : L) (p : lfsposet E L bot).
+
+End Build.
+End Build.
 
 Module Export POrder.
 Section POrder.
@@ -314,7 +341,7 @@ Proof.
     + move=> ??; exact/rt_step.
     move=> ??? ? + ?; exact/rt_trans.
   elim=> //=.
-  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ (lfsposet_supp p)) /andP[].
+  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ (lfsp_supp_closed p)) /andP[].
     move=> Pe1 Pe2 ica; right; exists (Sub e1 Pe1), (Sub e2 Pe2).
     by split=> //; apply/rt_step.
   - by move=> ?; left.
@@ -354,7 +381,7 @@ Proof.
   move=> ++ /val_inj H1 /val_inj H2.
   rewrite H2 H1=> con_e12 con_e21.
   suff: e1' = e2'=> [->|] //.
-  apply/(connect_antisym (lfsposet_acyclic p)).
+  apply/(connect_antisym (lfsp_acyclic p)).
   by apply/andP.
 Qed.  
 
@@ -389,7 +416,7 @@ Proof. exact/connect_refl. Qed.
 
 Lemma fin_ca_antisym : 
   antisymmetric (fin_ca p).
-Proof. exact/connect_antisym/(lfsposet_acyclic p). Qed.
+Proof. exact/connect_antisym/(lfsp_acyclic p). Qed.
 
 Lemma fin_ca_trans : 
   transitive (fin_ca p).
@@ -463,7 +490,7 @@ Lemma fs_rcov_fsupp p e :
   fs_rcov p e `<=` finsupp p.
 Proof.
   apply/fsubsetPn=> [[e']] /=.
-  move: (lfsposet_supp p)=> /supp_closedP. 
+  move: (lfsp_supp_closed p)=> /supp_closedP. 
   by move=> /[apply] /andP[??] /negP.
 Qed.
 
@@ -499,7 +526,7 @@ Qed.
 Lemma lfsp_idx_lt p e :
   e \in finsupp p -> lfsp_idx p e < #|`finsupp p|.
 Proof. 
-  rewrite /fs_idx=> in_supp.
+  rewrite /lfsp_idx=> in_supp.
   rewrite -lfsp_tseq_size ltEnat /=. 
   by rewrite index_mem mem_lfsp_tseq.
 Qed.  
@@ -510,7 +537,7 @@ Proof.
   case: (e \in finsupp p)/idP.
   - by move=> /lfsp_idx_lt /ltW.
   move=> /negP Nin_supp.
-  rewrite /fs_idx memNindex ?lfsp_tseq_size //.
+  rewrite /lfsp_idx memNindex ?lfsp_tseq_size //.
   by rewrite mem_lfsp_tseq. 
 Qed.
 
@@ -581,6 +608,105 @@ End Def.
 End Def.
 
 Arguments pomset E L bot : clear implicits.
+
+Module Export Theory.
+Section Theory.
+Context {E : identType} {L : choiceType}.
+Variable (bot : L).
+Implicit Types (p : pomset E L bot).
+
+
+End Theory.
+End Theory.
+
+Module Export bPomset.
+
+Section Def.
+Context (E : identType) (L : choiceType).
+Variable (bot : L) (n : nat).
+
+Structure bpomset : Type := bPomset { 
+  bpom_val :> pomset E L bot; 
+  _ : size (finsupp bpom_val) <= n;
+}.
+
+Canonical bpomset_subType := Eval hnf in [subType for bpom_val].
+
+Implicit Type p : bpomset.
+
+Definition bpomsupp p : n.-bseq E := Bseq (valP p).
+
+Lemma bpomsuppE p : bpomsupp p = finsupp p :> seq E.
+Proof. done. Qed.
+
+Lemma bpomset_size p : size (finsupp p) <= n.
+Proof. exact/(valP p). Qed.
+
+End Def.
+
+Arguments bpomset E L bot n : clear implicits.
+
+Definition bpomset_eqMixin E L bot n := 
+  Eval hnf in [eqMixin of bpomset E L bot n by <:].
+Canonical bpomset_eqType E L bot n := 
+  Eval hnf in EqType _ (@bpomset_eqMixin E L bot n).
+
+Definition bpomset_choiceMixin E L bot n := 
+  Eval hnf in [choiceMixin of bpomset E L bot n by <:].
+Canonical bpomset_choiceType E L bot n := 
+  Eval hnf in ChoiceType _ (@bpomset_choiceMixin E L bot n).
+
+Section FinType.
+Context (E : identType) (L : finType).
+Variable (bot : L) (n : nat).
+Implicit Types (p : bpomset E L bot n).
+
+Local Notation enc_ffun := ({ffun 'I_n -> L * {set 'I_n}}).
+
+Lemma finsupp_ltn p (e : finsupp p) : 
+  fintype.enum_rank e < n :> nat.
+Proof.
+  case: (fintype.enum_rank e)=> /=; rewrite -cardfE=> m ?. 
+  by apply/leq_trans; last exact/(bpomset_size p).
+Qed.
+
+Definition ord_of_finsupp p : finsupp p -> 'I_n := 
+  fun e => Ordinal (finsupp_ltn e).  
+
+Definition ord_of_event p : E -> option 'I_n := 
+  fun e => omap (@ord_of_finsupp p) (insub e).
+
+Definition fsupp_of_ord (p : pomset E L bot) : 'I_n -> option (finsupp p) := 
+  fun i => omap (@fintype.enum_val _ xpredT) (insub (i : nat)).
+
+Definition event_of_ord (p : pomset E L bot) : 'I_n -> option E := 
+  fun i => omap val (fsupp_of_ord p i).
+
+Definition fs_rcov_ord p : E -> {set 'I_n} := 
+  fun e => [set x in pmap (ord_of_event p) (fs_rcov p e)].
+
+Definition fsfun_ord p : {fsfun E -> L * {set 'I_n} of x => (bot, set0) } :=
+  [fsfun e in (finsupp p) => (fs_lab p e, fs_rcov_ord p e) | (bot, set0)].
+
+Definition enc_ffun_of_bpomset p : enc_ffun :=
+  [ffun i => 
+     let o := omap (fsfun_ord p) (event_of_ord p i) in 
+     odflt (bot, set0) o
+  ].
+
+
+  
+Definition bpomset_of_enc_ffun (f : enc_ffun) : lfspreposet E L bot := 
+  let Supp := [fset decode (val i) | i in ord_enum n] in
+  [fsfun e : Supp => 
+    let oi := insub (encode e) : option 'I_n in
+    omap (fun i => let x := f i in (fst x, @fset0 E)) oi
+  | (bot, fset0)].
+  
+
+End FinType.
+
+End bPomset.
 
 Module Export Hom.
 Module Export POrder.
