@@ -476,6 +476,13 @@ Proof.
   rewrite !sub_liftF //; exact/Hg.
 Qed.
 
+Lemma sub_rel_lift_val r (x y : S) : 
+  sub_rel_lift r (val x) (val y) = r x y.
+Proof. 
+  rewrite /sub_rel_lift /= !insubT; try exact/valP.
+  by move=> ??; rewrite !sub_val.
+Qed.
+
 Lemma sub_rel_lift_fld r : 
   subrel (sub_rel_lift r) [rel x y | P x && P y].
 Proof. 

@@ -68,13 +68,14 @@ Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
 
-Module lFsPoset. 
-
-Module Export Def.
 
 Notation lfspreposet E L bot := 
   ({ fsfun E -> (L * {fset E}) of e => (bot, fset0) }).
 
+
+Module lFsPrePoset. 
+
+Module Export Def.
 Section Def. 
 Context (E : identType) (L : eqType).
 Variable (bot : L).
@@ -114,12 +115,23 @@ Definition lab_defined p :=
 Definition supp_closed p := 
   [forall e : finsupp p, all (fun e' => e' \in finsupp p) (fs_rcov p (val e))].
 
+Definition lfsp_tseq p : seq E := 
+  map val (tseq (rgraph (@fin_ica p))).
+
+Definition lfsp_idx p : E -> nat := 
+  fun e => index e (lfsp_tseq p). 
+
+Definition lfsp_event p e0 : nat -> E := 
+  fun n => nth e0 (lfsp_tseq p) n.
+
 End Def.
 
+Arguments fs_lab {E L bot} p.
 Arguments fs_ica {E L bot} p.
 Arguments fs_sca {E L bot} p.
 Arguments  fs_ca {E L bot} p.
 
+Arguments fin_lab {E L bot} p.
 Arguments fin_ica {E L bot} p.
 Arguments fin_sca {E L bot} p.
 Arguments  fin_ca {E L bot} p.
@@ -210,10 +222,26 @@ Proof.
   - move=> ica_supp; case=> e2 in_supp /=. 
     by apply/allP=> e1 /ica_supp /andP[].
   move=> all_supp e1 e2 /=.
-  case: (in_fsetP (finsupp q) e2)=> [e2'|].
+  case: (in_fsetP (finsupp p) e2)=> [e2'|].
   - by move: (all_supp e2')=> /allP /[swap] /= <- /[apply] ->.
   by move=> /fsfun_dflt -> //.
 Qed.
+
+End Theory.
+End Theory.
+
+End lFsPrePoset.
+
+Export lFsPrePoset.Def.
+Export lFsPrePoset.Theory.
+
+
+Module lFsPoset.
+
+Module Export Def.
+Section Def. 
+Context (E : identType) (L : eqType).
+Variable (bot : L).
 
 Structure lfsposet : Type := lFsPoset {
   lfsposet_val :> lfspreposet E L bot ; 
@@ -234,21 +262,10 @@ Proof. by move: (valP p)=> /and3P[]. Qed.
 Lemma lfsp_acyclic p : acyclic (fin_ica p).
 Proof. by move: (valP p)=> /and3P[]. Qed.
 
-Definition lfsp_tseq (p : lfsposet) : seq E := 
-  map val (tseq (rgraph (@fin_ica p))).
-
-Definition fs_idx (p : lfsposet) : E -> nat := 
-  fun e => index e (lfsp_tseq p). 
-
 End Def.
 End Def.
 
 Arguments lfsposet E L bot : clear implicits.
-
-Arguments fin_lab {E L bot} p.
-Arguments fin_ica {E L bot} p.
-Arguments fin_ca  {E L bot} p.
-Arguments fin_sca {E L bot} p.
 
 Module Export Instances.
 Section Instances. 
@@ -314,7 +331,7 @@ Proof.
     + move=> ??; exact/rt_step.
     move=> ??? ? + ?; exact/rt_trans.
   elim=> //=.
-  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ (lfsposet_supp p)) /andP[].
+  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ (lfsp_supp_closed p)) /andP[].
     move=> Pe1 Pe2 ica; right; exists (Sub e1 Pe1), (Sub e2 Pe2).
     by split=> //; apply/rt_step.
   - by move=> ?; left.
@@ -354,7 +371,7 @@ Proof.
   move=> ++ /val_inj H1 /val_inj H2.
   rewrite H2 H1=> con_e12 con_e21.
   suff: e1' = e2'=> [->|] //.
-  apply/(connect_antisym (lfsposet_acyclic p)).
+  apply/(connect_antisym (lfsp_acyclic p)).
   by apply/andP.
 Qed.  
 
@@ -389,7 +406,7 @@ Proof. exact/connect_refl. Qed.
 
 Lemma fin_ca_antisym : 
   antisymmetric (fin_ca p).
-Proof. exact/connect_antisym/(lfsposet_acyclic p). Qed.
+Proof. exact/connect_antisym/(lfsp_acyclic p). Qed.
 
 Lemma fin_ca_trans : 
   transitive (fin_ca p).
@@ -463,7 +480,7 @@ Lemma fs_rcov_fsupp p e :
   fs_rcov p e `<=` finsupp p.
 Proof.
   apply/fsubsetPn=> [[e']] /=.
-  move: (lfsposet_supp p)=> /supp_closedP. 
+  move: (lfsp_supp_closed p)=> /supp_closedP. 
   by move=> /[apply] /andP[??] /negP.
 Qed.
 
@@ -499,7 +516,7 @@ Qed.
 Lemma lfsp_idx_lt p e :
   e \in finsupp p -> lfsp_idx p e < #|`finsupp p|.
 Proof. 
-  rewrite /fs_idx=> in_supp.
+  rewrite /lfsp_idx=> in_supp.
   rewrite -lfsp_tseq_size ltEnat /=. 
   by rewrite index_mem mem_lfsp_tseq.
 Qed.  
@@ -510,7 +527,7 @@ Proof.
   case: (e \in finsupp p)/idP.
   - by move=> /lfsp_idx_lt /ltW.
   move=> /negP Nin_supp.
-  rewrite /fs_idx memNindex ?lfsp_tseq_size //.
+  rewrite /lfsp_idx memNindex ?lfsp_tseq_size //.
   by rewrite mem_lfsp_tseq. 
 Qed.
 
