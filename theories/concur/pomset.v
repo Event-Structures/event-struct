@@ -465,19 +465,19 @@ Proof.
   by rewrite mem_tseq fintype.mem_enum. 
 Qed.
 
-Lemma fs_idx_lt p e :
-  e \in finsupp p -> fs_idx p e < #|`finsupp p|.
+Lemma lfsp_idx_lt p e :
+  e \in finsupp p -> lfsp_idx p e < #|`finsupp p|.
 Proof. 
   rewrite /fs_idx=> in_supp.
   rewrite -lfsp_tseq_size ltEnat /=. 
   by rewrite index_mem mem_lfsp_tseq.
 Qed.  
 
-Lemma fs_idx_le p e :
-  fs_idx p e <= #|`finsupp p|.
+Lemma lfsp_idx_le p e :
+  lfsp_idx p e <= #|`finsupp p|.
 Proof. 
   case: (e \in finsupp p)/idP.
-  - by move=> /fs_idx_lt /ltW.
+  - by move=> /lfsp_idx_lt /ltW.
   move=> /negP Nin_supp.
   rewrite /fs_idx memNindex ?lfsp_tseq_size //.
   by rewrite mem_lfsp_tseq. 

@@ -2,7 +2,7 @@ From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path zify.
 From mathcomp Require Import fintype finfun fingraph finmap.
-From mathcomp.tarjan Require Import extra acyclic. 
+From mathcomp.tarjan Require Import extra acyclic Kosaraju acyclic_tsorted. 
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1138,7 +1138,8 @@ Definition SubFinfunOf f P : P f -> sub_finfun_of (Phant (aT -> rT)) P :=
 
 End Def.
 
-Notation "{ 'ffun' fT '|' P }" := (sub_finfun_of (Phant fT) P).
+Notation "{ 'ffun' fT '|' P }" := (sub_finfun_of (Phant fT) P)
+  (at level 0, format "{ 'ffun'  fT '|' P }") : type_scope.
 
 Section Instances.
 Context {aT : finType}.
