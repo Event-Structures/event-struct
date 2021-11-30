@@ -1326,3 +1326,44 @@ Canonical fsfun_countType d := CountType (fsfun d) (fsfun_countMixin d).
 
 End FinMapCount.
 
+
+Section FinMapUtils.
+Context {K : choiceType} {V : eqType}.
+Implicit Types (A : {fset K}).
+
+Lemma finsupp_fset (A : {fset K}) (f : K -> V) dflt : 
+  finsupp [fsfun k in A => f k | dflt] = [fset k in A | f k != dflt]%fset. 
+Proof. 
+  apply/fsetP=> x. 
+  rewrite mem_finsupp fsfunE in_fset !inE /=. 
+  by case: (x \in A)=> //; rewrite eq_refl.
+Qed.
+
+Context {P : pred K} {fK : subFinType P}.
+
+Lemma in_fsetval k :
+  (k \in [fsetval k' in fK])%fset = (insub k : option fK).
+Proof. 
+  case: insubP=> /=. 
+  - move=> k' ? <-; apply/idP/idP=> //.
+    by apply/imfsetP; exists k'. 
+  move=> /negP nPe. 
+  apply/idP/idP=> //; apply/negP. 
+  move=> /imfsetP[k''] /= ? H; apply/nPe.
+  by move: (valP k''); rewrite H.
+Qed.
+
+Lemma in_fsetval_seq k (s : seq fK) :
+  (k \in [fsetval k' in s])%fset = 
+    if insub k is Some k' then k' \in s else false.
+Proof. 
+  case: insubP=> /=. 
+  - move=> k' ? <-; apply/idP/idP=> //.
+    + by move=> /imfsetP[k''] /= + /val_inj ->. 
+    by move=> ?; apply/imfsetP; exists k'.
+  move=> /negP nPk; apply/idP/idP=> //.
+  apply/negP=> /imfsetP[k''] /= ? H.
+  by move: (valP k''); rewrite -H.
+Qed.  
+
+End FinMapUtils.

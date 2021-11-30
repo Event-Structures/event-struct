@@ -108,8 +108,83 @@ Definition fs_ca p : rel E :=
 Definition fs_sca p : rel E := 
   fun e1 e2 => (e2 != e1) && (fs_ca p e1 e2).
 
-Definition supp_closed q := 
-  [forall e : finsupp q, all (fun e' => e' \in finsupp q) (fs_rcov q (val e))].
+Definition supp_closed p := 
+  [forall e : finsupp p, all (fun e' => e' \in finsupp p) (fs_rcov p (val e))].
+
+End Def.
+
+Arguments fs_ica {E L bot} p.
+Arguments fs_sca {E L bot} p.
+Arguments  fs_ca {E L bot} p.
+
+Arguments fin_ica {E L bot} p.
+Arguments fin_sca {E L bot} p.
+Arguments  fin_ca {E L bot} p.
+
+End Def.
+
+Section Build.
+Context {E : identType} {L : eqType}.
+Variable (bot : L). 
+Context {P : pred E} {fE : subFinType P}.
+Implicit Types (p : lfspreposet E L bot).
+
+Definition build (lab : fE -> L) (ica : rel fE) : lfspreposet E L bot := 
+  let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
+  [fsfun e in [fset (val e) | e : fE] => 
+    if (insub e) is Some e then 
+      (lab e, rcov e) 
+    else 
+    (bot, fset0)
+  | (bot, fset0)
+  ].
+
+Lemma build_finsupp lab ica : (forall e, lab e != bot) ->
+  finsupp (build lab ica) = [fsetval e in fE].
+Proof.
+  move=> labB; rewrite /build; apply/fsetP=> e.
+  rewrite finsupp_fset !in_fset /=. 
+  rewrite !inE !in_fsetval.
+  case: insubP=> // e' Pe vale.
+  apply/idP/idP/andP; split=> //.
+  rewrite xpair_eqE negb_and. 
+  apply/orP; left; exact/labB.
+Qed. 
+
+Lemma build_lab lab ica : 
+  fs_lab (build lab ica) =1 sub_lift (fun=> bot) lab.
+Proof. 
+  rewrite /build /fs_lab=> x /=. 
+  rewrite fsfun_fun in_fsetval. 
+  case: insubP=> [x' Px valx|/negP ?] /=; last first.
+  - by rewrite sub_liftF.
+  rewrite sub_liftT /=. 
+  have ->: x' = Sub x Px=> //.
+  apply/val_inj=> //=.
+  by rewrite valx SubK. 
+Qed.
+
+Lemma build_ica lab ica : 
+  fs_ica (build lab ica) =2 sub_rel_lift ica.
+Proof. 
+  rewrite /build /fs_ica /fs_rcov=> x y /=. 
+  rewrite fsfun_fun in_fsetval.
+  case: insubP=> [y' Py valy|/negP ?] /=; last first.
+  (* TODO: make lemma for `sub_rel_lift r x y` where ~ p x \/ ~ p y *)
+  - by rewrite inE /sub_rel_lift /=; case: insubP=> //; case: insubP. 
+  rewrite in_fsetval_seq. 
+  case: insubP=> [x' Px valx|/negP ?] /=; last first.
+  - by rewrite /sub_rel_lift /=; case: insubP=> //; case: insubP. 
+  rewrite -valx -valy sub_rel_lift_val; exact/rgraphK.
+Qed.
+
+End Build.
+
+Module Export Theory.
+Section Theory.
+Context (E : identType) (L : eqType).
+Variable (bot : L).
+Implicit Types (p : lfspreposet E L bot).
 
 Lemma supp_closedP q : 
   reflect (forall e1 e2, fs_ica q e1 e2 -> 
