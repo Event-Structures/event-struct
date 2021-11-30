@@ -108,6 +108,9 @@ Definition fs_ca p : rel E :=
 Definition fs_sca p : rel E := 
   fun e1 e2 => (e2 != e1) && (fs_ca p e1 e2).
 
+Definition lab_defined p := 
+  [forall e : finsupp p, fs_lab p (val e) != bot].
+
 Definition supp_closed p := 
   [forall e : finsupp p, all (fun e' => e' \in finsupp p) (fs_rcov p (val e))].
 
@@ -186,10 +189,21 @@ Context (E : identType) (L : eqType).
 Variable (bot : L).
 Implicit Types (p : lfspreposet E L bot).
 
-Lemma supp_closedP q : 
-  reflect (forall e1 e2, fs_ica q e1 e2 -> 
-            (e1 \in finsupp q) && (e2 \in finsupp q))
-          (supp_closed q).
+Lemma lab_definedP p : 
+  reflect (forall e, e \in finsupp p -> fs_lab p e != bot) (lab_defined p).
+Proof. 
+  rewrite /lab_defined /fs_lab. 
+  apply/equivP; first exact/forallP.
+  split=> H e /=.
+  - case: finsuppP=> //= inP _.
+    by rewrite (H (Sub e inP)).
+  by rewrite (H (val e) (valP e)).
+Qed.
+
+Lemma supp_closedP p : 
+  reflect (forall e1 e2, fs_ica p e1 e2 -> 
+            (e1 \in finsupp p) && (e2 \in finsupp p))
+          (supp_closed p).
 Proof. 
   rewrite /supp_closed /fs_ica /fs_rcov. 
   apply/(equivP forallP); split=> /=; last first.
@@ -204,16 +218,21 @@ Qed.
 Structure lfsposet : Type := lFsPoset {
   lfsposet_val :> lfspreposet E L bot ; 
   _ : let p := lfsposet_val in 
-      supp_closed p && acyclic (@fin_ica p)
+      [&& lab_defined p, supp_closed p & acyclic (fin_ica p)]
 }.
 
 Canonical lfsposet_subType := Eval hnf in [subType for lfsposet_val].
 
-Lemma lfsposet_supp (p : lfsposet) : supp_closed p.
-Proof. by move: (valP p)=> /andP[]. Qed.
+Implicit Types (p : lfsposet).
 
-Lemma lfsposet_acyclic (p : lfsposet) : acyclic (@fin_ica p).
-Proof. by move: (valP p)=> /andP[]. Qed.
+Lemma lfsp_lab_defined p : lab_defined p.
+Proof. by move: (valP p)=> /and3P[]. Qed.
+
+Lemma lfsp_supp_closed p : supp_closed p.
+Proof. by move: (valP p)=> /and3P[]. Qed.
+
+Lemma lfsp_acyclic p : acyclic (fin_ica p).
+Proof. by move: (valP p)=> /and3P[]. Qed.
 
 Definition lfsp_tseq (p : lfsposet) : seq E := 
   map val (tseq (rgraph (@fin_ica p))).
@@ -427,6 +446,18 @@ Proof. done. Qed.
 Lemma fs_scaE p (e1 e2 : [Event of p]) : 
   sca e1 e2 = fs_sca p e1 e2.  
 Proof. done. Qed.
+
+Lemma fs_lab_bot p e : 
+  (fs_lab p e != bot) = (e \in finsupp p).
+Proof. 
+  rewrite mem_finsupp /fs_lab /=.
+  move: (lfsp_lab_defined p)=> /lab_definedP labP.
+  case: finsuppP=> //=.  
+  - by rewrite xpair_eqE negb_and eq_refl.
+  move: labP=> /[apply]; rewrite /fs_lab.
+  case: (p e)=> l es //=.
+  by rewrite xpair_eqE negb_and=> ->.
+Qed.
 
 Lemma fs_rcov_fsupp p e :
   fs_rcov p e `<=` finsupp p.
