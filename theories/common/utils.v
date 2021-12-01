@@ -323,9 +323,31 @@ Qed.
 End FoldUtils. 
 
 Section FSetUtils.
-
-Context {T : choiceType}.
+Context {T U : choiceType}.
 Implicit Types (s : {fset T}) (p : pred T) (r : rel T).
+Implicit Types (f : T -> U).
+
+Local Open Scope fset_scope.
+
+Lemma imfset1 f x : 
+  f @` ([fset x]) = [fset (f x)].
+Proof. 
+  apply/fsetP=> y /=; rewrite !inE. 
+  apply/idP/idP=> [/imfsetP|].
+  - by move=> [] z /=; rewrite inE=> /eqP-> ->.
+  move=> /eqP->; apply/imfsetP; exists x=> //=; exact/fset11.
+Qed.
+
+Lemma imfsetU f s1 s2 : 
+  f @` (s1 `|` s2) = (f @` s1) `|` (f @` s2).
+Proof. 
+  apply/fsetP=> x /=; rewrite !inE. 
+  apply/idP/idP=> [/imfsetP|].
+  - move=> [] y /=; rewrite !inE=> + ->.
+    by move=> /orP[?|?]; apply/orP; [left|right]; apply/imfsetP; exists y.
+  by move=> /orP[|] /imfsetP[] /= y ? ->; apply/imfsetP; exists y=> //; 
+    rewrite inE; apply/orP; [left|right].
+Qed.
 
 Lemma fset_existsP s p :
   reflect (exists x, x \in s /\ p x) [exists x : s, p (val x)].
@@ -346,6 +368,26 @@ Proof.
   move=> [] x [] y [] Hx Hy Rxy; exists x; split=> //. 
   by apply /fset_existsP; exists y.
 Qed.  
+
+Lemma fset_forallP s p :
+  reflect {in s, forall x, p x} [forall x : s, p (val x)].
+Proof.
+  apply /equivP; first (by apply /forallP); split.
+  - by move=> H x inX; move: (H (Sub x inX)).  
+  move=> H x; exact/H/(valP x).
+Qed.  
+
+(* TODO: use `rst s r` (restriction of relation) ? *)
+Lemma fset_forall2P s r :
+  reflect {in s & s, forall x y, r x y}
+          [forall x : s, forall y : s, r (val x) (val y)].
+Proof.
+  apply /equivP; last split. 
+  - by apply/(@fset_forallP _ (fun x => [forall y, r x (val y)])).
+  - move=> H x y inX inY; move: (H x inX). 
+    by move=> /forallP=> Hy; move: (Hy (Sub y inY)).
+  move=> H x Hx /=; apply/forallP=> y; exact/H.
+Qed.    
 
 End FSetUtils.
 
