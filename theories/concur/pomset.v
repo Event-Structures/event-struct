@@ -140,56 +140,36 @@ End Def.
 Section Build.
 Context {E : identType} {L : eqType}.
 Variable (bot : L). 
-Context {P : pred E} {fE : subFinType P}.
-Implicit Types (p : lfspreposet E L bot).
+Context {fE : {fset E}}.
+Implicit Type p : lfspreposet E L bot.
 
 Definition build (lab : fE -> L) (ica : rel fE) : lfspreposet E L bot := 
   let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
-  [fsfun e in [fsetval e in fE] =>
-    if (insub e) is Some e then 
-      (lab e, rcov e) 
-    else 
-    (bot, fset0)
-  | (bot, fset0)
-  ].
+  [fsfun e => (lab e, rcov e)].
 
 Lemma build_finsupp lab ica : (forall e, lab e != bot) ->
-  finsupp (build lab ica) = [fsetval e in fE].
+  finsupp (build lab ica) = fE.
 Proof.
-  move=> labB; rewrite /build; apply/fsetP=> e.
-  rewrite finsupp_fset !in_fset /=. 
-  rewrite !inE !in_fsetval.
-  case: insubP=> // e' Pe vale.
-  apply/idP/idP/andP; split=> //.
-  rewrite xpair_eqE negb_and. 
-  apply/orP; left; exact/labB.
+  move=> labB; apply/fsetP=> ?.
+  rewrite mem_finsupp fsfun_ffun.
+  case: insubP=> [*|/negbTE-> /[! eqxx] //].
+  by rewrite xpair_eqE (negbTE (labB _)).
 Qed. 
 
 Lemma build_lab lab ica : 
   fs_lab (build lab ica) =1 sub_lift (fun=> bot) lab.
-Proof. 
-  rewrite /build /fs_lab=> x /=. 
-  rewrite fsfun_fun in_fsetval. 
-  case: insubP=> [x' Px valx|/negP ?] /=; last first.
-  - by rewrite sub_liftF.
-  rewrite sub_liftT /=. 
-  have ->: x' = Sub x Px=> //.
-  apply/val_inj=> //=.
-  by rewrite valx SubK. 
+Proof.
+  rewrite /fs_lab /sub_lift=> ?.
+  rewrite fsfun_ffun; by case: insubP.
 Qed.
 
 Lemma build_ica lab ica : 
   fs_ica (build lab ica) =2 sub_rel_lift ica.
-Proof. 
-  rewrite /build /fs_ica /fs_rcov=> x y /=. 
-  rewrite fsfun_fun in_fsetval.
-  case: insubP=> [y' Py valy|/negP ?] /=; last first.
-  (* TODO: make lemma for `sub_rel_lift r x y` where ~ p x \/ ~ p y *)
-  - by rewrite inE /sub_rel_lift /=; case: insubP=> //; case: insubP. 
-  rewrite in_fsetval_seq. 
-  case: insubP=> [x' Px valx|/negP ?] /=; last first.
-  - by rewrite /sub_rel_lift /=; case: insubP=> //; case: insubP. 
-  rewrite -valx -valy sub_rel_lift_val; exact/rgraphK.
+Proof.
+  rewrite /fs_ica /build /sub_rel_lift /fs_rcov=>> /=.
+  rewrite fsfun_ffun. (do 2 case: insubP=> //=)=> [u ?<- v*|+*].
+  - rewrite ?inE; exact/rgraphK.
+  by rewrite in_fsetval_seq; case: insubP=> // ? ->.
 Qed.
 
 End Build.
