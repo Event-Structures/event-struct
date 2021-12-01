@@ -30,6 +30,7 @@ depends: [
 ]
 pin-depends: [
   [ "coq-mathcomp-tarjan.dev" "--dev-repo"]
+]
 conflicts: [
   "coq-equations" {(= "dev+HoTT")}
 ]
