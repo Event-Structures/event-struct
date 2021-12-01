@@ -2,7 +2,7 @@ From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path zify.
 From mathcomp Require Import fintype finfun fingraph finmap.
-From mathcomp.tarjan Require Import extra acyclic. 
+From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -516,6 +516,13 @@ Proof.
   - by rewrite sub_liftT sub_liftF // => ?; apply/HrU. 
   - by move: Hx=> /[swap] /HrT /[apply].
   rewrite !sub_liftF //; exact/Hg.
+Qed.
+
+Lemma sub_rel_lift_val r (x y : S) : 
+  sub_rel_lift r (val x) (val y) = r x y.
+Proof. 
+  rewrite /sub_rel_lift /= !insubT; try exact/valP.
+  by move=> ??; rewrite !sub_val.
 Qed.
 
 Lemma sub_rel_lift_fld r : 
@@ -1180,7 +1187,8 @@ Definition SubFinfunOf f P : P f -> sub_finfun_of (Phant (aT -> rT)) P :=
 
 End Def.
 
-Notation "{ 'ffun' fT '|' P }" := (sub_finfun_of (Phant fT) P).
+Notation "{ 'ffun' fT '|' P }" := (sub_finfun_of (Phant fT) P)
+  (at level 0, format "{ 'ffun'  fT '|' P }") : type_scope.
 
 Section Instances.
 Context {aT : finType}.
@@ -1262,6 +1270,7 @@ End Subsumes.
 Section FinGraph. 
 Context {T : finType}.
 Implicit Types (g : rel T). 
+Implicit Types (gf : T -> seq T). 
 
 Lemma connect_refl g : 
   reflexive (connect g).
@@ -1273,6 +1282,25 @@ Proof.
   move=> /acyclic_symconnect_eq symconE x y.
   move: (symconE x y); rewrite /symconnect.
   by move=> -> /eqP.
+Qed.
+
+Lemma mem_tseq gf : 
+  tseq gf =i enum T.
+Proof. 
+  move: (tseq_correct gf)=> [_ in_tseq]. 
+  apply/subset_eqP/andP; split; apply/subsetP; last first.
+  - move=> x ?; exact/in_tseq. 
+  by move=> ?; rewrite mem_enum.
+Qed.
+
+Lemma size_tseq gf : 
+  size (tseq gf) = #|T|.
+Proof. 
+  rewrite cardT; apply/eqP. 
+  rewrite -uniq_size_uniq.
+  - exact/tseq_uniq.
+  - exact/enum_uniq.
+  move=> ?; exact/esym/mem_tseq.
 Qed.
 
 End FinGraph. 
@@ -1336,3 +1364,56 @@ Proof.
 Qed.
 
 End Imfset.
+
+Section FinMapCount.
+Variable (K : countType) (V : countType).
+
+Definition finMap_countMixin := CanCountMixin (@finMap_codeK K V).
+Canonical finMap_countType := CountType {fmap K -> V} finMap_countMixin.
+
+Definition fsfun_countMixin d := [countMixin of fsfun d by <:].
+Canonical fsfun_countType d := CountType (fsfun d) (fsfun_countMixin d).
+
+End FinMapCount.
+
+
+Section FinMapUtils.
+Context {K : choiceType} {V : eqType}.
+Implicit Types (A : {fset K}).
+
+Lemma finsupp_fset (A : {fset K}) (f : K -> V) dflt : 
+  finsupp [fsfun k in A => f k | dflt] = [fset k in A | f k != dflt]%fset. 
+Proof. 
+  apply/fsetP=> x. 
+  rewrite mem_finsupp fsfunE in_fset !inE /=. 
+  by case: (x \in A)=> //; rewrite eq_refl.
+Qed.
+
+Context {P : pred K} {fK : subFinType P}.
+
+Lemma in_fsetval k :
+  (k \in [fsetval k' in fK])%fset = (insub k : option fK).
+Proof. 
+  case: insubP=> /=. 
+  - move=> k' ? <-; apply/idP/idP=> //.
+    by apply/imfsetP; exists k'. 
+  move=> /negP nPe. 
+  apply/idP/idP=> //; apply/negP. 
+  move=> /imfsetP[k''] /= ? H; apply/nPe.
+  by move: (valP k''); rewrite H.
+Qed.
+
+Lemma in_fsetval_seq k (s : seq fK) :
+  (k \in [fsetval k' in s])%fset = 
+    if insub k is Some k' then k' \in s else false.
+Proof. 
+  case: insubP=> /=. 
+  - move=> k' ? <-; apply/idP/idP=> //.
+    + by move=> /imfsetP[k''] /= + /val_inj ->. 
+    by move=> ?; apply/imfsetP; exists k'.
+  move=> /negP nPk; apply/idP/idP=> //.
+  apply/negP=> /imfsetP[k''] /= ? H.
+  by move: (valP k''); rewrite -H.
+Qed.  
+
+End FinMapUtils.
