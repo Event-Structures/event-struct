@@ -2,7 +2,7 @@ From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path zify.
 From mathcomp Require Import fintype finfun fingraph finmap.
-From mathcomp.tarjan Require Import extra acyclic Kosaraju acyclic_tsorted. 
+From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 
 Set Implicit Arguments.
 Unset Strict Implicit.
