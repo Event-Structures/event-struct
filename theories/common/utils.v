@@ -370,7 +370,7 @@ Proof.
 Qed.  
 
 Lemma fset_forallP s p :
-  reflect (forall x, x \in s -> p x) [forall x : s, p (val x)].
+  reflect {in s, forall x, p x} [forall x : s, p (val x)].
 Proof.
   apply /equivP; first (by apply /forallP); split.
   - by move=> H x inX; move: (H (Sub x inX)).  
@@ -379,7 +379,7 @@ Qed.
 
 (* TODO: use `rst s r` (restriction of relation) ? *)
 Lemma fset_forall2P s r :
-  reflect (forall x y, x \in s -> y \in s -> r x y) 
+  reflect {in s & s, forall x y, r x y}
           [forall x : s, forall y : s, r (val x) (val y)].
 Proof.
   apply /equivP; last split. 

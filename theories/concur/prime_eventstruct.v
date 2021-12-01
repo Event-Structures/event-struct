@@ -144,7 +144,7 @@ Definition gcf : pred {fset E} :=
   fun C => ~~ cons C.
 
 Definition cf : rel E := 
-  fun e1 e2 => gcf ([fset e1; e2]).
+  fun e1 e2 => gcf [fset e1; e2].
 
 Definition cf_free (p : pred E) := 
   forall (s : {fset E}), {subset s <= p} -> cons s.
