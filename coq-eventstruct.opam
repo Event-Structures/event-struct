@@ -29,7 +29,7 @@ depends: [
   "coq-equations" {(>= "1.2") | (= "dev")}
 ]
 pin-depends: [
-  [ "coq-relation-algebra.dev" "git+https://github.com/math-comp/tarjan/"]
+  [ "coq-mathcomp-tarjan.dev" "git+https://github.com/math-comp/tarjan/"]
 ]
 conflicts: [
   "coq-equations" {(= "dev+HoTT")}
