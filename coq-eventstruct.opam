@@ -28,6 +28,8 @@ depends: [
   "coq-relation-algebra" {(>= "1.7.4") | (= "dev")}
   "coq-equations" {(>= "1.2") | (= "dev")}
 ]
+pin-depends: [
+  [ "coq-mathcomp-tarjan.dev" "--dev-repo"]
 conflicts: [
   "coq-equations" {(= "dev+HoTT")}
 ]
