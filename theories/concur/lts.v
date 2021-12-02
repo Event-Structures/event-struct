@@ -737,6 +737,24 @@ Proof.
   by rewrite trace_from_labels.  
 Qed.
 
+Lemma trace_from_rcons s l ls : 
+  trace_from s (rcons ls l) = 
+  rcons (trace_from s ls) (mk_step l
+    (lst_state s (trace_from s ls))
+    (lst_state s (trace_from s (rcons ls l)))).
+Proof.
+  elim: ls l s=> //= ? l' /[swap] l /[swap] s->.
+  do 2 apply/congr1; apply/congr2; rewrite -lst_state_dst //=.
+  by rewrite lst_state_rcons.
+Qed.
+
+Lemma trace_lang0 s : trace_lang s [trace].
+Proof. exact/eqxx. Qed.
+
+
+Lemma lts_lang0 s : lts_lang s [::].
+Proof. (exists [trace])=> //; exact/trace_lang0. Qed.
+
 End LTSTheory.
 
 Section dLTSTheory. 
@@ -778,6 +796,15 @@ Proof.
   apply/(equivP idP); split. 
   - exact/trace_from_lts_lang. 
   exact/trace_from_is_trace.
+Qed.
+
+Lemma ltrans_lst s l ls: 
+  lts_lang s (rcons ls l) ->
+  lst_state s (trace_from s ls) --[l]-->
+  lst_state s (trace_from s (rcons ls l)).
+Proof.
+  move/dlts_langP; rewrite {1}trace_from_rcons is_trace_rcons.
+  by case/andP.
 Qed.
 
 End dLTSTheory.
