@@ -932,6 +932,45 @@ Proof.
 Qed.
 
 End LTS_Simulation.
+
+Section DLTS_Simulation.
+Context {S T : dltsType L} (s : S) (t : T).
+Implicit Types (R : {sim S -> T}).
+
+Definition det_sim_R : hrel S T := fun s1 t1 =>
+  exists ls, 
+    [/\ lts_lang t ls, 
+        lst_state t (trace_from t ls) = t1 &
+        lst_state s (trace_from s ls) = s1].
+
+Lemma det_sim_class : lts_lang t ≦ lts_lang s -> Simulation.class_of det_sim_R.
+Proof.
+  move=> LS.
+  (do ? split)=> l ??? [ls [/[dup] /dlts_langP tls ? <-<- st]].
+  have ?: lts_lang t (rcons ls l).
+  - have adj: adjoint [trace from t by ls] [trace:: step_of st].
+    rewrite adjoint_lastE (val_insub_trace tls); by case: (ls) (st).
+    exists ([trace from t by ls] +> step_of st);
+    rewrite /trace_lang (adjoin_rcons_val adj) (val_insub_trace tls).
+    + by case: (ls) (st).
+    by rewrite labels_rcons trace_from_labels.
+  exists (lst_state s (trace_from s (rcons ls l))).
+  - exists (rcons ls l); split=> //.
+  exact/esym/(ltrans_det st)/ltrans_lst.
+  exact/ltrans_lst/LS.
+Qed.
+
+Definition det_sim := fun lls => Simulation.Pack (det_sim_class lls).
+
+Lemma sim_lang_det : 
+  lts_lang t ≦ lts_lang s <-> exists R, R s t.
+Proof.
+  split=> [lls|[? /sim_lang //]].
+  exists (det_sim lls), [::]; split=> //; exact/lts_lang0.
+Qed.
+
+End DLTS_Simulation.
+
 End Theory.
 
 End Simulation. 
