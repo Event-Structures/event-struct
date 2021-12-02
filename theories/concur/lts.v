@@ -819,6 +819,8 @@ Definition clone f c of phant_id class c := @Pack f c.
 (*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
 (*   fun m => Pack (@Class E L b m). *)
 
+Definition type_of (_ : phant (S -> T)) := type.
+
 End ClassDef.
 
 Module Export Exports.
@@ -826,8 +828,9 @@ Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 End Exports.
 
-Module Syntax. 
-Notation "S ~>~ T" := (type S T) (at level 50) : lts_scope.
+Module Export Syntax. 
+Notation sim := Simulation.type.
+Notation "{ 'sim' T }" := (@Simulation.type_of _ _ _ (Phant T)) : lts_scope.
 End Syntax. 
 
 End Simulation.
@@ -838,8 +841,7 @@ Import Simulation.Syntax.
 Notation sim := Simulation.type.
 
 Section Theory.
-Context {L : eqType} {S T : ltsType L}.
-Implicit Types (R : S ~>~ T).
+Implicit Types (R : {sim S -> T}).
 
 Lemma sim_step R l s1 t1 t2 :
   R s1 t1 -> (t1 --[l]--> t2) -> exists2 s2, R s2 t2 & (s1 --[l]--> s2).
@@ -926,6 +928,8 @@ Definition clone f c of phant_id class c := @Pack f c.
 
 Definition simType := Simulation.Pack class.
 
+Definition type_of (_ : phant (S -> T)) := type.
+
 End ClassDef.
 
 Module Export Exports.
@@ -936,8 +940,9 @@ Coercion simType : type >-> Simulation.type.
 Canonical simType.
 End Exports.
 
-Module Import Syntax. 
-Notation "S ~=~ T" := (type S T) (at level 50) : lts_scope.
+Module Export Syntax. 
+Notation bisim := Bisimulation.type.
+Notation "{ 'bisim' T }" := (@Bisimulation.type_of _ _ _ (Phant T)) : lts_scope.
 End Syntax. 
 
 End Bisimulation.
@@ -951,17 +956,16 @@ Section Build.
 Context {L : Type}.
 Implicit Types (S T : ltsType L).
 
-Lemma inv_class S T (R : S ~=~ T) : Bisimulation.class_of (R : hrel S T)°.
+Lemma inv_class S T (R : {bisim S -> T}) : Bisimulation.class_of (R : hrel S T)°.
 Proof. by case: R=> [? [[] []]] /=. Qed.
 
-Definition inv S T : (S ~=~ T) -> (T ~=~ S) := 
+Definition inv S T : {bisim S -> T} -> {bisim T -> S} := 
   fun R => Bisimulation.Pack (inv_class R). 
 
 End Build.
 
 Section Theory.
-Context {L : eqType} {S T : ltsType L}.
-Implicit Types (R : S ~=~ T).
+Implicit Types (R : {bisim S -> T}).
 
 Lemma sim_step_cnv R l s1 s2 t1 :
   R s1 t1 -> (s1 --[l]--> s2) -> exists2 t2, R s2 t2 & (t1 --[l]--> t2).
