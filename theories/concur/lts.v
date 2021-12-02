@@ -865,8 +865,6 @@ End Simulation.
 Export Simulation.Exports.
 Import Simulation.Syntax.
 
-Notation sim := Simulation.type.
-
 Section Theory.
 Context {L : eqType}.
 
@@ -888,9 +886,9 @@ Qed.
 Definition of_eqrel (R' : hrel S T) R : R' ≡ R -> {sim S -> T} := 
   fun eqf => Simulation.Pack (of_eqrel_class eqf).
 
-Lemma sim_lang R s t : 
+Lemma sim_lang R s t :
   R s t -> lts_lang t ≦ lts_lang s.
-Proof. 
+Proof.
   move=> HR w [[tr Htr]] + ->; clear w.
   rewrite /lts_lang /trace_lang /= => /eqP Hh. 
   suff: (exists (tr' : trace S), 
@@ -1031,8 +1029,6 @@ End Bisimulation.
 Export Bisimulation.Exports.
 Import Bisimulation.Syntax.
 
-Notation bisim := Bisimulation.type.
-
 Section Build.
 Context {L : Type}.
 Implicit Types (S T : ltsType L).
@@ -1046,6 +1042,11 @@ Definition inv S T : {bisim S -> T} -> {bisim T -> S} :=
 End Build.
 
 Section Theory.
+Context {L : eqType}.
+
+Section LTS_Bisimulation.
+
+Context {S T : ltsType L}.
 Implicit Types (R : {bisim S -> T}).
 
 Lemma sim_step_cnv R l s1 s2 t1 :
@@ -1059,6 +1060,32 @@ Proof.
   - exact/(sim_lang HR).
   by apply/(@sim_lang _ _ _ (inv R))=> /=.
 Qed.
+
+End LTS_Bisimulation.
+
+Section DLTS_Bisimulation.
+
+Context {S T : dltsType L} {s : S} {t : T}.
+Implicit Types (R : {bisim S -> T}).
+
+Lemma det_bisim_class : lts_lang t ≡ lts_lang s -> 
+  Bisimulation.class_of (det_sim_R s t).
+Proof.
+  move=> /[dup] E /weq_spec[? L2]; split; first exact/det_sim_class.
+  case: (@of_eqrel_class _ _ _ (det_sim_R s t)° (det_sim L2))=> ///=>.
+  split=> [][] l [/E]; by exists l.
+Qed.
+
+Definition det_bisim := fun els => Bisimulation.Pack (det_bisim_class els).
+
+Lemma bisim_lang_det : 
+  lts_lang t ≡ lts_lang s <-> exists R, R s t.
+Proof.
+  split=> [lls|[? /bisim_lang //]].
+  exists (det_bisim lls), [::]; split=> //; exact/lts_lang0.
+Qed.
+
+End DLTS_Bisimulation.
 
 End Theory.
 
