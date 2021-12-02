@@ -737,6 +737,23 @@ Proof.
   by rewrite trace_from_labels.  
 Qed.
 
+Lemma trace_from_rcons s l ls : 
+  trace_from s (rcons ls l) = 
+  rcons (trace_from s ls) (mk_step l
+    (lst_state s (trace_from s ls))
+    (lst_state s (trace_from s (rcons ls l)))).
+Proof.
+  elim: ls l s=> //= ? l' /[swap] l /[swap] s->.
+  do 2 apply/congr1; apply/congr2; rewrite -lst_state_dst //=.
+  by rewrite lst_state_rcons.
+Qed.
+
+Lemma trace_lang0 s : trace_lang s [trace].
+Proof. exact/eqxx. Qed.
+
+Lemma lts_lang0 s : lts_lang s [::].
+Proof. (exists [trace])=> //; exact/trace_lang0. Qed.
+
 End LTSTheory.
 
 Section dLTSTheory. 
@@ -780,6 +797,15 @@ Proof.
   exact/trace_from_is_trace.
 Qed.
 
+Lemma ltrans_lst s l ls: 
+  lts_lang s (rcons ls l) ->
+  lst_state s (trace_from s ls) --[l]-->
+  lst_state s (trace_from s (rcons ls l)).
+Proof.
+  move/dlts_langP; rewrite {1}trace_from_rcons is_trace_rcons.
+  by case/andP.
+Qed.
+
 End dLTSTheory.
 
 End Trace.
@@ -819,6 +845,8 @@ Definition clone f c of phant_id class c := @Pack f c.
 (*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
 (*   fun m => Pack (@Class E L b m). *)
 
+Definition type_of (_ : phant (S -> T)) := type.
+
 End ClassDef.
 
 Module Export Exports.
@@ -826,8 +854,9 @@ Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 End Exports.
 
-Module Syntax. 
-Notation "S ~>~ T" := (type S T) (at level 50) : lts_scope.
+Module Export Syntax. 
+Notation sim := Simulation.type.
+Notation "{ 'sim' T }" := (@Simulation.type_of _ _ _ (Phant T)) : lts_scope.
 End Syntax. 
 
 End Simulation.
@@ -835,19 +864,30 @@ End Simulation.
 Export Simulation.Exports.
 Import Simulation.Syntax.
 
-Notation sim := Simulation.type.
-
 Section Theory.
-Context {L : eqType} {S T : ltsType L}.
-Implicit Types (R : S ~>~ T).
+Context {L : eqType}.
+
+Section LTS_Simulation.
+Context {S T : ltsType L}.
+Implicit Types (R : {sim S -> T}).
 
 Lemma sim_step R l s1 t1 t2 :
   R s1 t1 -> (t1 --[l]--> t2) -> exists2 s2, R s2 t2 & (s1 --[l]--> s2).
 Proof. case: R=> ? [[H]] /=; exact/H. Qed.
 
-Lemma sim_lang R s t : 
+Lemma of_eqrel_class (R' : hrel S T) R : 
+  R' ≡ R -> Simulation.class_of R'.
+Proof.
+  move=> E; (do ? split)=>> /E/sim_step/[apply][[s /E]].
+  by exists s.
+Qed.
+
+Definition of_eqrel (R' : hrel S T) R : R' ≡ R -> {sim S -> T} := 
+  fun eqf => Simulation.Pack (of_eqrel_class eqf).
+
+Lemma sim_lang R s t :
   R s t -> lts_lang t ≦ lts_lang s.
-Proof. 
+Proof.
   move=> HR w [[tr Htr]] + ->; clear w.
   rewrite /lts_lang /trace_lang /= => /eqP Hh. 
   suff: (exists (tr' : trace S), 
@@ -888,6 +928,46 @@ Proof.
   by apply/eqP/fst_stateNnil.
 Qed.
 
+End LTS_Simulation.
+
+Section DLTS_Simulation.
+Context {S T : dltsType L} (s : S) (t : T).
+Implicit Types (R : {sim S -> T}).
+
+Definition det_sim_R : hrel S T := fun s1 t1 =>
+  exists ls, 
+    [/\ lts_lang t ls, 
+        lst_state t (trace_from t ls) = t1 &
+        lst_state s (trace_from s ls) = s1].
+
+Lemma det_sim_class : lts_lang t ≦ lts_lang s -> Simulation.class_of det_sim_R.
+Proof.
+  move=> LS.
+  (do ? split)=> l ??? [ls [/[dup] /dlts_langP tls ? <-<- st]].
+  have ?: lts_lang t (rcons ls l).
+  - have adj: adjoint [trace from t by ls] [trace:: step_of st].
+    rewrite adjoint_lastE (val_insub_trace tls); by case: (ls) (st).
+    exists ([trace from t by ls] +> step_of st);
+    rewrite /trace_lang (adjoin_rcons_val adj) (val_insub_trace tls).
+    + by case: (ls) (st).
+    by rewrite labels_rcons trace_from_labels.
+  exists (lst_state s (trace_from s (rcons ls l))).
+  - exists (rcons ls l); split=> //.
+  exact/esym/(ltrans_det st)/ltrans_lst.
+  exact/ltrans_lst/LS.
+Qed.
+
+Definition det_sim := fun lls => Simulation.Pack (det_sim_class lls).
+
+Lemma sim_lang_det : 
+  lts_lang t ≦ lts_lang s <-> exists R, R s t.
+Proof.
+  split=> [lls|[? /sim_lang //]].
+  exists (det_sim lls), [::]; split=> //; exact/lts_lang0.
+Qed.
+
+End DLTS_Simulation.
+
 End Theory.
 
 End Simulation. 
@@ -926,6 +1006,8 @@ Definition clone f c of phant_id class c := @Pack f c.
 
 Definition simType := Simulation.Pack class.
 
+Definition type_of (_ : phant (S -> T)) := type.
+
 End ClassDef.
 
 Module Export Exports.
@@ -936,8 +1018,9 @@ Coercion simType : type >-> Simulation.type.
 Canonical simType.
 End Exports.
 
-Module Import Syntax. 
-Notation "S ~=~ T" := (type S T) (at level 50) : lts_scope.
+Module Export Syntax. 
+Notation bisim := Bisimulation.type.
+Notation "{ 'bisim' T }" := (@Bisimulation.type_of _ _ _ (Phant T)) : lts_scope.
 End Syntax. 
 
 End Bisimulation.
@@ -945,23 +1028,22 @@ End Bisimulation.
 Export Bisimulation.Exports.
 Import Bisimulation.Syntax.
 
-Notation bisim := Bisimulation.type.
-
 Section Build.
 Context {L : Type}.
 Implicit Types (S T : ltsType L).
 
-Lemma inv_class S T (R : S ~=~ T) : Bisimulation.class_of (R : hrel S T)°.
+Lemma inv_class S T (R : {bisim S -> T}) : Bisimulation.class_of (R : hrel S T)°.
 Proof. by case: R=> [? [[] []]] /=. Qed.
 
-Definition inv S T : (S ~=~ T) -> (T ~=~ S) := 
+Definition inv S T : {bisim S -> T} -> {bisim T -> S} := 
   fun R => Bisimulation.Pack (inv_class R). 
 
 End Build.
 
-Section Theory.
-Context {L : eqType} {S T : ltsType L}.
-Implicit Types (R : S ~=~ T).
+Section LTSTheory.
+Context {L : eqType}.
+Context {S T : ltsType L}.
+Implicit Types (R : {bisim S -> T}).
 
 Lemma sim_step_cnv R l s1 s2 t1 :
   R s1 t1 -> (s1 --[l]--> s2) -> exists2 t2, R s2 t2 & (t1 --[l]--> t2).
@@ -975,6 +1057,31 @@ Proof.
   by apply/(@sim_lang _ _ _ (inv R))=> /=.
 Qed.
 
-End Theory.
+End LTSTheory.
+
+Section DLTSTheory.
+Context {L : eqType}.
+Context {S T : dltsType L}.
+Implicit Types (s : S) (t : T) (R : {bisim S -> T}).
+
+Lemma det_bisim_class t s : lts_lang t ≡ lts_lang s -> 
+  Bisimulation.class_of (det_sim_R s t).
+Proof.
+  move=> /[dup] E /weq_spec[? L2]; split; first exact/det_sim_class.
+  case: (@of_eqrel_class _ _ _ (det_sim_R s t)° (det_sim L2))=> ///=>.
+  split=> [][] l [/E]; by exists l.
+Qed.
+
+Definition det_bisim t s := 
+  fun els => Bisimulation.Pack (@det_bisim_class t s els).
+
+Lemma bisim_lang_det t s : 
+  lts_lang t ≡ lts_lang s <-> exists R, R s t.
+Proof.
+  split=> [lls|[? /bisim_lang //]].
+  exists (det_bisim lls), [::]; split=> //; exact/lts_lang0.
+Qed.
+
+End DLTSTheory.
 
 End Bisimulation. 
