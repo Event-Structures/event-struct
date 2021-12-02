@@ -3,7 +3,7 @@ From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap.
-From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted.
+From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 From eventstruct Require Import utils relalg inhtype ident lposet.
 
 (******************************************************************************)
