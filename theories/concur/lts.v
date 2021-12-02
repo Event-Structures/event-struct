@@ -868,11 +868,25 @@ Import Simulation.Syntax.
 Notation sim := Simulation.type.
 
 Section Theory.
+Context {L : eqType}.
+
+Section LTS_Simulation.
+Context {S T : ltsType L}.
 Implicit Types (R : {sim S -> T}).
 
 Lemma sim_step R l s1 t1 t2 :
   R s1 t1 -> (t1 --[l]--> t2) -> exists2 s2, R s2 t2 & (s1 --[l]--> s2).
 Proof. case: R=> ? [[H]] /=; exact/H. Qed.
+
+Lemma of_eqrel_class (R' : hrel S T) R : 
+  R' ≡ R -> Simulation.class_of R'.
+Proof.
+  move=> E; (do ? split)=>> /E/sim_step/[apply][[s /E]].
+  by exists s.
+Qed.
+
+Definition of_eqrel (R' : hrel S T) R : R' ≡ R -> {sim S -> T} := 
+  fun eqf => Simulation.Pack (of_eqrel_class eqf).
 
 Lemma sim_lang R s t : 
   R s t -> lts_lang t ≦ lts_lang s.
@@ -917,6 +931,7 @@ Proof.
   by apply/eqP/fst_stateNnil.
 Qed.
 
+End LTS_Simulation.
 End Theory.
 
 End Simulation. 
