@@ -751,7 +751,6 @@ Qed.
 Lemma trace_lang0 s : trace_lang s [trace].
 Proof. exact/eqxx. Qed.
 
-
 Lemma lts_lang0 s : lts_lang s [::].
 Proof. (exists [trace])=> //; exact/trace_lang0. Qed.
 
@@ -1041,11 +1040,8 @@ Definition inv S T : {bisim S -> T} -> {bisim T -> S} :=
 
 End Build.
 
-Section Theory.
+Section LTSTheory.
 Context {L : eqType}.
-
-Section LTS_Bisimulation.
-
 Context {S T : ltsType L}.
 Implicit Types (R : {bisim S -> T}).
 
@@ -1061,14 +1057,14 @@ Proof.
   by apply/(@sim_lang _ _ _ (inv R))=> /=.
 Qed.
 
-End LTS_Bisimulation.
+End LTSTheory.
 
-Section DLTS_Bisimulation.
+Section DLTSTheory.
+Context {L : eqType}.
+Context {S T : dltsType L}.
+Implicit Types (s : S) (t : T) (R : {bisim S -> T}).
 
-Context {S T : dltsType L} {s : S} {t : T}.
-Implicit Types (R : {bisim S -> T}).
-
-Lemma det_bisim_class : lts_lang t ≡ lts_lang s -> 
+Lemma det_bisim_class t s : lts_lang t ≡ lts_lang s -> 
   Bisimulation.class_of (det_sim_R s t).
 Proof.
   move=> /[dup] E /weq_spec[? L2]; split; first exact/det_sim_class.
@@ -1076,17 +1072,16 @@ Proof.
   split=> [][] l [/E]; by exists l.
 Qed.
 
-Definition det_bisim := fun els => Bisimulation.Pack (det_bisim_class els).
+Definition det_bisim t s := 
+  fun els => Bisimulation.Pack (@det_bisim_class t s els).
 
-Lemma bisim_lang_det : 
+Lemma bisim_lang_det t s : 
   lts_lang t ≡ lts_lang s <-> exists R, R s t.
 Proof.
   split=> [lls|[? /bisim_lang //]].
   exists (det_bisim lls), [::]; split=> //; exact/lts_lang0.
 Qed.
 
-End DLTS_Bisimulation.
-
-End Theory.
+End DLTSTheory.
 
 End Bisimulation. 
