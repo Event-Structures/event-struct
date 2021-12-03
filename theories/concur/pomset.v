@@ -745,9 +745,9 @@ Context {E : identType} {L : choiceType}.
 Variable (bot : L).
 Implicit Types (t : tomset E L bot).
 
-Lemma tomset_labelsK : 
+(* Lemma tomset_labelsK : 
   cancel (@lfsp_labels E L bot) (@lFsPrePoset.of_seq E L bot).
-Proof. admit. Admitted.
+Proof. admit. Admitted. *)
 
 End Theory.
 End Theory.
