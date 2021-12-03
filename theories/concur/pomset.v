@@ -266,6 +266,12 @@ Proof. by move: (valP p)=> /and3P[]. Qed.
 Lemma lfsp_acyclic p : acyclic (fin_ica p).
 Proof. by move: (valP p)=> /and3P[]. Qed.
 
+(* Definition lin p : pred (seq L) (* TODO: {fset (seq L)} *) *)
+(*   fun ls => (of_seq ls : pomset E L bot) <= p. *)
+
+(* Lemma bhom_lin p q : *)
+(*   p <= q -> {subset (lin p) <= (lin q)}. *)
+
 End Def.
 End Def.
 
