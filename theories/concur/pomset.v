@@ -181,9 +181,34 @@ Definition of_seq ls :=
   let ica := fun e1 e2 : fE => (encode (val e1)).+1 == encode (val e2) in
   @build fE lab ica.
 
+End Build.
+
+Module Export Theory.
+Section Theory.
+Context (E : identType) (L : eqType).
+Variable (bot : L).
+Implicit Types (p : lfspreposet E L bot) (ls : seq L).
+
+Open Scope ident_scope.
+
+Lemma of_seq_lab_defined ls :
+  bot \notin ls ->
+  forall (e : [fset e | e in nfresh \i0 (size ls)]),
+  nth bot ls (@encode E (val e)) != bot.
+Proof.
+  move=> /negP nbl [/= ?]; rewrite ?inE /= in_nfresh encode0=> ?.
+  apply/negP; move: nbl=> /[swap]/eqP<-; apply; apply/mem_nth; lia.
+Qed.
+
+Lemma of_seq_finsupp ls :
+  bot \notin ls ->
+  finsupp (of_seq E bot ls) = [fset e | e in nfresh \i0 (size ls)].
+Proof.
+  move/of_seq_lab_defined/build_finsupp; exact.
+Qed.
 
 Lemma of_seq_lab ls e : 
-  fs_lab (of_seq ls) e = nth bot ls (encode e).
+  fs_lab (of_seq E bot ls) e = nth bot ls (encode e).
 Proof.
   rewrite /of_seq build_lab /= /sub_lift.
   case: insubP=> /= [?? ->|] //.
@@ -193,18 +218,26 @@ Proof.
   by move=> ?; rewrite nth_default.
 Qed.
 
-Lemma of_seq_ica ls e1 e2 : 
+Lemma of_seq_fs_ica ls e1 e2 : 
   let n := size ls in
-  fs_ica (of_seq ls) e1 e2 = [&& e1 <=^i e2, e1 <^i (decode n) & e1 <^i (decode n)].
-Proof. admit. Admitted.
+  fs_ica (of_seq E bot ls) e1 e2 = 
+  [&& (encode e1).+1 == encode e2,
+   e1 \in nfresh ident0 (size ls) & 
+   e2 \in nfresh ident0 (size ls)].
+Proof.
+  rewrite /of_seq build_ica /sub_rel_lift /=.
+  do 2 (case: insubP=>[[??]|/negbTE] /[! inE]-> /=; last by case: (_ == _)).
+  move=>->->; by rewrite andbT.
+Qed.
 
-End Build.
-
-Module Export Theory.
-Section Theory.
-Context (E : identType) (L : eqType).
-Variable (bot : L).
-Implicit Types (p : lfspreposet E L bot).
+Lemma of_seq_fin_ica ls : 
+  bot \notin ls ->
+  fin_ica (of_seq E bot ls) =2
+  [rel e1 e2 |(encode (val e1)).+1 == encode (val e2)].
+Proof.
+  move/of_seq_finsupp=> fE; case=> /= ? + [/= ?].
+  rewrite /fin_ica /sub_rel_down /= fE ?inE of_seq_fs_ica=>->->; lattice.
+Qed.
 
 Lemma lab_definedP p : 
   reflect {in finsupp p, forall e, fs_lab p e != bot} (lab_defined p).
