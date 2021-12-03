@@ -2,7 +2,7 @@ From Coq Require Import Relations.
 From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
-From mathcomp Require Import fintype finfun finset fingraph finmap.
+From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 From eventstruct Require Import utils rel relalg inhtype ident lposet.
 
@@ -770,6 +770,19 @@ Proof. done. Qed.
 
 Lemma bhom_ltE p q : p < q = bhom_lt p q.
 Proof. done. Qed.
+
+Definition lin p : pred (seq L) :=
+  [pred ls |
+    if bot \notin ls =P true is ReflectT nbl then
+      \pi (of_seq E nbl) <= p :> pomset _ _ _
+    else false].
+
+Lemma bhom_lin p q :
+  p <= q -> {subset (lin p) <= (lin q)}.
+Proof.
+  move=> pLq ?; rewrite /lin ?/(_ \in _) /=.
+  by case: eqP=> //= nbl /le_trans/(_ pLq).
+Qed.
 
 End POrder.
 End POrder.
