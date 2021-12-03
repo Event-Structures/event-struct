@@ -1272,6 +1272,13 @@ Context {T : finType}.
 Implicit Types (g : rel T). 
 Implicit Types (gf : T -> seq T). 
 
+Definition totalb g :=
+  [forall x, forall y, g x y || g y x].
+
+Lemma totalP g : 
+  reflect (total g) (totalb g).
+Proof. exact/forall2P. Qed.
+
 Lemma connect_refl g : 
   reflexive (connect g).
 Proof. done. Qed. 

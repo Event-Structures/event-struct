@@ -123,6 +123,9 @@ Definition lfsp_idx p : E -> nat :=
 Definition lfsp_event p e0 : nat -> E := 
   fun n => nth e0 (lfsp_tseq p) n.
 
+Definition lfsp_labels p : seq L := 
+  map (fs_lab p) (lfsp_tseq p).
+
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -140,15 +143,15 @@ End Def.
 Section Build.
 Context {E : identType} {L : eqType}.
 Variable (bot : L). 
-Context {fE : {fset E}}.
-Implicit Type p : lfspreposet E L bot.
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (fE : {fset E}) (ls : seq L).
 
-Definition build (lab : fE -> L) (ica : rel fE) : lfspreposet E L bot := 
+Definition build {fE} (lab : fE -> L) (ica : rel fE) : lfspreposet E L bot := 
   let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
   [fsfun e => (lab e, rcov e)].
 
-Lemma build_finsupp lab ica : (forall e, lab e != bot) ->
-  finsupp (build lab ica) = fE.
+Lemma build_finsupp {fE} lab ica : (forall e, lab e != bot) ->
+  finsupp (@build fE lab ica) = fE.
 Proof.
   move=> labB; apply/fsetP=> ?.
   rewrite mem_finsupp fsfun_ffun.
@@ -156,20 +159,37 @@ Proof.
   by rewrite xpair_eqE (negbTE (labB _)).
 Qed. 
 
-Lemma build_lab lab ica : 
-  fs_lab (build lab ica) =1 sub_lift (fun=> bot) lab.
+Lemma build_lab {fE} lab ica : 
+  fs_lab (@build fE lab ica) =1 sub_lift (fun=> bot) lab.
 Proof.
   rewrite /fs_lab /sub_lift=> ?.
   rewrite fsfun_ffun; by case: insubP.
 Qed.
 
-Lemma build_ica lab ica : 
-  fs_ica (build lab ica) =2 sub_rel_lift ica.
+Lemma build_ica {fE} lab ica : 
+  fs_ica (@build fE lab ica) =2 sub_rel_lift ica.
 Proof.
   rewrite /fs_ica /build /sub_rel_lift /fs_rcov=>> /=.
   rewrite fsfun_ffun. (do 2 case: insubP=> //=)=> [u ?<- v*|+*].
   - rewrite ?inE; exact/rgraphK.
   by rewrite in_fsetval_seq; case: insubP=> // ? ->.
+Qed.
+
+Definition of_seq ls := 
+  let fE  := [fset e | e in nfresh ident0 (size ls) : seq E] in 
+  let lab := fun e : fE => (nth bot ls (encode (val e))) in
+  let ica := fun e1 e2 : fE => (encode (val e1)).+1 == (encode (val e2)).+1 in
+  @build fE lab ica. 
+
+Lemma of_seq_lab ls e : 
+  fs_lab (of_seq ls) e = nth bot ls (encode e).
+Proof.
+  rewrite /of_seq build_lab /= /sub_lift.
+  case: insubP=> /= [?? ->|] //.
+  rewrite !in_fset /mem_fin /=.
+  rewrite in_nfresh encode0 addn0. 
+  rewrite negb_and ltnNge negbK -ltnNge ltn0 orFb. 
+  by move=> ?; rewrite nth_default.
 Qed.
 
 End Build.
@@ -436,12 +456,31 @@ Lemma fs_labE p :
 Proof. done. Qed.
 
 Lemma fs_caE p : 
-  ca =2 fs_ca p :> rel [Event of p].  
+  (<=%O) =2 fs_ca p :> rel [Event of p].  
 Proof. done. Qed.
 
 Lemma fs_scaE p : 
-  sca =2 fs_sca p :> rel [Event of p].  
+  (<%O) =2 fs_sca p :> rel [Event of p].  
 Proof. done. Qed.
+
+Lemma fin_labE p : 
+  lab =1 fin_lab p :> ([FinEvent of p] -> L).  
+Proof. done. Qed.
+
+Lemma fin_caE p : 
+  (<=%O) =2 fin_ca p :> rel [FinEvent of p].  
+Proof. done. Qed.
+
+Lemma fin_scaE p : 
+  (<%O) =2 fin_sca p :> rel [FinEvent of p].  
+Proof. done. Qed.
+
+Lemma val_ca_mon p : 
+  { homo (val : [FinEvent of p] -> [Event of p]) : e1 e2 / e1 <= e2 }.
+Proof. 
+  move=> x y; rewrite fin_caE fs_caE /fs_ca /=.
+  by rewrite !sub_rel_lift_val=> ->.
+Qed.
 
 Lemma fs_lab_bot p e : 
   (fs_lab p e != bot) = (e \in finsupp p).
@@ -649,3 +688,58 @@ Export Pomset.Hom.POrder.
 (* Check (e1 <= e2 :> [Event of p]). *)
 (* Check (e1 <= e2 :> [Event of q]). *)
 (* Check (p <= q). *)
+
+Module Tomset.
+
+Import lPoset.Syntax.
+Import lFsPoset.Syntax.
+
+Module Export Def.
+Section Def.  
+Context (E : identType) (L : choiceType).
+Variable (bot : L).
+
+Structure tomset : Type := mkTomset {
+  tomset_val :> pomset E L bot;
+  _ : totalb (fin_ca tomset_val); 
+}.
+
+Canonical tomset_subType := Eval hnf in [subType for tomset_val].
+
+Implicit Types (t : tomset) (ls : seq L).
+
+Lemma tomset_total t : 
+  total (<=%O : rel [FinEvent of t]).
+Proof. by move: (valP t)=> /totalP. Qed.
+
+Lemma tomset_total_in t : 
+  {in (finsupp t) &, total (<=%O : rel [Event of t])}.
+Proof. 
+  move=> x y xIn yIn.
+  pose x' := (Sub x xIn) : [FinEvent of t].
+  pose y' := (Sub y yIn) : [FinEvent of t].
+  move: (tomset_total x' y'). 
+  rewrite /x' /y'.
+  by move=> /orP[|] /val_ca_mon /= ->. 
+Qed.
+
+End Def.
+End Def.
+
+Arguments tomset E L bot : clear implicits.
+
+Module Export Theory.
+Section Theory.
+Context {E : identType} {L : choiceType}.
+Variable (bot : L).
+Implicit Types (t : tomset E L bot).
+
+End Theory.
+End Theory.
+
+End Tomset.
+
+
+Export Tomset.Def.
+Export Tomset.Theory.
+

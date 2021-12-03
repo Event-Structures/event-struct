@@ -418,6 +418,10 @@ Lemma nfreshSr x n :
   nfresh x n.+1 = rcons (nfresh x n) (iter n fresh x).
 Proof. by rewrite /nfresh; exact/trajectSr. Qed.
 
+Lemma in_nfresh x n y : 
+  y \in nfresh x n = (encode x <= encode y < n + encode x)%N.
+Proof. admit. Admitted.
+
 Lemma fresh_seq_nil : 
   fresh_seq [::] = (\i1 : T).
 Proof. by rewrite /fresh_seq /ident1 //=. Qed.
