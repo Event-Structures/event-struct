@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils relalg inhtype ident lposet.
+From eventstruct Require Import utils rel relalg inhtype ident lposet.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)
@@ -178,8 +178,8 @@ Qed.
 Definition of_seq ls := 
   let fE  := [fset e | e in nfresh ident0 (size ls) : seq E] in 
   let lab := fun e : fE => (nth bot ls (encode (val e))) in
-  let ica := fun e1 e2 : fE => (encode (val e1)).+1 == (encode (val e2)).+1 in
-  @build fE lab ica. 
+  let ca := fun e1 e2 : fE => (val e1) <=^i (val e2) in
+  @build fE lab (cov ca). 
 
 Lemma of_seq_lab ls e : 
   fs_lab (of_seq ls) e = nth bot ls (encode e).
@@ -191,6 +191,11 @@ Proof.
   rewrite negb_and ltnNge negbK -ltnNge ltn0 orFb. 
   by move=> ?; rewrite nth_default.
 Qed.
+
+Lemma of_seq_ica ls e1 e2 : 
+  let n := size ls in
+  fs_ica (of_seq ls) e1 e2 = [&& e1 <=^i e2, e1 <^i (decode n) & e1 <^i (decode n)].
+Proof. admit. Admitted.
 
 End Build.
 
@@ -733,6 +738,10 @@ Section Theory.
 Context {E : identType} {L : choiceType}.
 Variable (bot : L).
 Implicit Types (t : tomset E L bot).
+
+Lemma tomset_labelsK : 
+  cancel (@lfsp_labels E L bot) (@lFsPrePoset.of_seq E L bot).
+Proof. admit. Admitted.
 
 End Theory.
 End Theory.
