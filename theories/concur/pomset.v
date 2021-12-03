@@ -318,11 +318,48 @@ Proof. by move: (valP p)=> /and3P[]. Qed.
 Lemma lfsp_acyclic p : acyclic (fin_ica p).
 Proof. by move: (valP p)=> /and3P[]. Qed.
 
-(* Definition lin p : pred (seq L) (* TODO: {fset (seq L)} *) *)
-(*   fun ls => (of_seq ls : pomset E L bot) <= p. *)
+Lemma lfposet_build_mixin (fE : {fset E}) (ica : rel fE) lab : 
+  let p :=  lFsPrePoset.build bot lab ica in
+  (forall e, lab e != bot) ->
+  acyclic (fin_ica p) ->
+  [&& lab_defined p, 
+      supp_closed p &
+      acyclic (fin_ica p)].
+Proof.
+  move=> /= *; apply/and3P; split=> //.
+  - exact/lab_defined_build.
+  exact/supp_closed_build.
+Qed.
 
-(* Lemma bhom_lin p q : *)
-(*   p <= q -> {subset (lin p) <= (lin q)}. *)
+Lemma connect_encode (ls : seq L) : 
+  let p := lFsPrePoset.of_seq E bot ls in
+  forall x y : finsupp p,
+  connect [rel e1 e2 | (encode (val e1)).+1 == encode (val e2)] x y ->
+  (val x) <=^i (val y).
+Proof.
+  move=> /= ?? /connect_strP/clos_rt_str/(@clos_rt_rtn1 _ _ _ _).
+  elim=> // [[/= e1 ? [/= e2 ???]]].
+  rewrite ?/(_ <=^i _) /= /Ident.Def.ident_le; lia.
+Qed.
+
+Lemma lfposet_of_seq_mixin (ls : seq L) : 
+  let p := lFsPrePoset.of_seq E bot ls in
+  bot \notin ls -> 
+  [&& lab_defined p,
+      supp_closed p &
+      acyclic (fin_ica p)].
+Proof.
+  move=> /= nbl; apply/(lfposet_build_mixin (of_seq_lab_defined nbl)).
+  under eq_acyclic do
+    (rewrite -[lFsPrePoset.build _ _ _]/(lFsPrePoset.of_seq _ _ _);
+    rewrite of_seq_fin_ica //).
+  apply/andP; split; first (apply/forallP=> /=; lia).
+  apply/forall2P=> ??; apply/implyP=> /andP[/connect_encode? /connect_encode?].
+  by apply/eqP/val_inj/le_anti/andP.
+Qed.
+
+Definition of_seq ls : bot \notin ls -> lfsposet 
+  := fun nbl => lFsPoset (lfposet_of_seq_mixin nbl).
 
 End Def.
 End Def.
