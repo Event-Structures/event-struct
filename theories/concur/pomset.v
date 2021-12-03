@@ -723,16 +723,16 @@ Module Export POrder.
 Import lFsPoset.Syntax.
 
 Section POrder.
-Context {E : identType} {L : choiceType} (eps : L).
-Implicit Types (p q : pomset E L eps).
+Context {E : identType} {L : choiceType} (bot : L).
+Implicit Types (p q : pomset E L bot).
 
-Definition bhom_le : rel (pomset E L eps) := 
+Definition bhom_le : rel (pomset E L bot) := 
   fun p q => 
     let EP := [FinEvent of (repr p)] in
     let EQ := [FinEvent of (repr q)] in
     ??|{ffun EP -> EQ | lFinPoset.bhom_pred}|.
 
-Definition bhom_lt : rel (pomset E L eps) := 
+Definition bhom_lt : rel (pomset E L bot) := 
   fun p q => (q != p) && (bhom_le p q).
 
 Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
@@ -763,7 +763,7 @@ Definition pomset_bhomPOrderMixin :=
     bhom_lt_def bhom_le_refl bhom_le_antisym bhom_le_trans. 
 
 Canonical pomset_bhomPOrderType := 
-  POrderType disp (pomset E L eps) pomset_bhomPOrderMixin.
+  POrderType disp (pomset E L bot) pomset_bhomPOrderMixin.
 
 Lemma bhom_leE p q : p <= q = bhom_le p q.
 Proof. done. Qed.
