@@ -265,6 +265,24 @@ Proof.
   by move=> /fsfun_dflt -> //.
 Qed.
 
+Section Build_lfposet.
+Context (fE : {fset E}) (lab : fE -> L) (ica : rel fE).
+Hypothesis lab_def : forall e, lab e != bot.
+
+Lemma supp_closed_build : supp_closed (build bot lab ica).
+Proof.
+  apply/supp_closedP=>>.
+  by rewrite build_ica build_finsupp // => /sub_rel_liftP[[>[[>[? /= <-<-]]]]].
+Qed.
+
+Lemma lab_defined_build : lab_defined (build bot lab ica).
+Proof.
+  apply/lab_definedP=>>.
+  by rewrite build_lab build_finsupp // => ? /[! @sub_liftT E].
+Qed.
+
+End Build_lfposet.
+
 End Theory.
 End Theory.
 
