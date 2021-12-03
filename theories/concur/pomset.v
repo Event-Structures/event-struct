@@ -141,7 +141,7 @@ Arguments fin_ca  {E L bot} p.
 End Def.
 
 Section Build.
-Context {E : identType} {L : eqType}.
+Context (E : identType) {L : eqType}.
 Variable (bot : L). 
 Implicit Types (p : lfspreposet E L bot).
 Implicit Types (fE : {fset E}) (ls : seq L).
@@ -176,10 +176,11 @@ Proof.
 Qed.
 
 Definition of_seq ls := 
-  let fE  := [fset e | e in nfresh ident0 (size ls) : seq E] in 
+  let fE  := [fset e | e in nfresh ident0 (size ls)] in 
   let lab := fun e : fE => (nth bot ls (encode (val e))) in
-  let ca := fun e1 e2 : fE => (val e1) <=^i (val e2) in
-  @build fE lab (cov ca). 
+  let ica := fun e1 e2 : fE => (encode (val e1)).+1 == encode (val e2) in
+  @build fE lab ica.
+
 
 Lemma of_seq_lab ls e : 
   fs_lab (of_seq ls) e = nth bot ls (encode e).
