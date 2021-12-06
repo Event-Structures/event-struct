@@ -889,10 +889,18 @@ Proof. done. Qed.
 Lemma bhom_ltE p q : p < q = bhom_lt p q.
 Proof. done. Qed.
 
+End POrder.
+End POrder.
+End Hom.
+
+Module Export Theory.
+Section Theory.
+Context {E : identType} {L : choiceType} (bot : L).
+Implicit Types (p q : pomset E L bot).
+
+(* TODO: move definition from Theory module? *)
 Definition lin p : pred (seq L) :=
-  [pred ls |
-    \pi (lFsPoset.of_seq E L bot ls) <= p :> pomset E L bot 
-  ].
+  [pred ls | \pi (lFsPoset.of_seq E L bot ls) <= p :> pomset E L bot].
 
 Lemma bhom_lin p q :
   p <= q -> {subset (lin p) <= (lin q)}.
@@ -901,15 +909,14 @@ Proof.
   by move=> //= /le_trans/(_ pLq).
 Qed.
 
-End POrder.
-End POrder.
-End Hom.
+End Theory.
+End Theory.
 
 End Pomset.
 
 Export Pomset.Def.
-(* Export Pomset.Theory. *)
 Export Pomset.Hom.POrder.
+Export Pomset.Theory.
 
 (* Context (E : identType) (L : choiceType). *)
 (* Variable (bot : L). *)
