@@ -233,6 +233,26 @@ Qed.
 
 End Build.
 
+Section Empty.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+
+Definition empty : lfspreposet E L bot := [fsfun].
+
+Lemma empty_lab_defined : 
+  lab_defined empty.
+Proof. admit. Admitted.
+
+Lemma empty_supp_closed : 
+  supp_closed empty.
+Proof. admit. Admitted.
+
+Lemma empty_acyclic : 
+  acyclic (fin_ica empty).
+Proof. admit. Admitted.
+
+End Empty.
+
 Section OfSeq.
 Context (E : identType) (L : eqType) (bot : L). 
 Implicit Types (p : lfspreposet E L bot).
@@ -391,6 +411,30 @@ Canonical subFinfun_subCountType E (L : countType) bot :=
 End Instances.
 End Instances.
 
+Section Empty.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+
+(* TODO: rename? *)
+Lemma emptyP : 
+  let p := @lFsPrePoset.empty E L bot in
+  [&& lab_defined p,
+      supp_closed p &
+      acyclic (fin_ica p)].
+Proof.
+  apply/and3P; split.
+  - exact/lFsPrePoset.empty_lab_defined.
+  - exact/lFsPrePoset.empty_supp_closed.
+  exact/lFsPrePoset.empty_acyclic.
+Qed.
+
+Definition empty : lfsposet E L bot := 
+  lFsPoset emptyP.
+
+End Empty.
+
+Arguments empty E L bot : clear implicits.
+
 Section OfSeq.
 Context (E : identType) (L : eqType) (bot : L). 
 Implicit Types (p : lfspreposet E L bot).
@@ -408,10 +452,14 @@ Proof.
   exact/lFsPrePoset.of_seq_fin_ica_acyclic.
 Qed.
 
-Definition of_seq ls : bot \notin ls -> lfsposet E L bot := 
-  fun nbl => lFsPoset (of_seqP nbl).
+Definition of_seq ls : lfsposet E L bot := 
+  if bot \notin ls =P true is ReflectT nbl then
+    lFsPoset (of_seqP nbl)
+  else empty E L bot.
 
 End OfSeq.
+
+Arguments of_seq E L bot : clear implicits.
 
 Module Export POrder.
 Section POrder.
@@ -796,15 +844,14 @@ Proof. done. Qed.
 
 Definition lin p : pred (seq L) :=
   [pred ls |
-    if bot \notin ls =P true is ReflectT nbl then
-      \pi (lFsPoset.of_seq E nbl) <= p :> pomset _ _ _
-    else false].
+    \pi (lFsPoset.of_seq E L bot ls) <= p :> pomset E L bot 
+  ].
 
 Lemma bhom_lin p q :
   p <= q -> {subset (lin p) <= (lin q)}.
 Proof.
   move=> pLq ?; rewrite /lin ?/(_ \in _) /=.
-  by case: eqP=> //= nbl /le_trans/(_ pLq).
+  by move=> //= /le_trans/(_ pLq).
 Qed.
 
 End POrder.
