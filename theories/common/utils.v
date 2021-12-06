@@ -244,15 +244,6 @@ Qed.
 
 End OptionUtils.
 
-Section SeqUtils.
-Context {T : Type}.
-Implicit Types (x : T) (s : seq T).
-
-Lemma behead_rcons x s :
-  behead (rcons s x) = if s is [::] then [::] else rcons (behead s) x.
-Proof. by case: s. Qed.
-
-End SeqUtils. 
 
 Section TupleUtils.
 Context {T : Type}.
@@ -579,9 +570,12 @@ End SubTypeUtils.
 
 
 Section SeqUtils.
-
 Context {T : Type}. 
 Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
+
+Lemma behead_rcons x s :
+  behead (rcons s x) = if s is [::] then [::] else rcons (behead s) x.
+Proof. by case: s. Qed.
 
 Lemma headNnil x y s : 
   ~~ nilp s -> head y s = head x s.
@@ -641,6 +635,9 @@ Lemma find_take p s n :
   has p (take n s) -> find p (take n s) = find p s. 
 Proof. by rewrite -[in find p s](@cat_take_drop n _ s) find_cat=> ->. Qed.
 
+(* Lemma nth_find_drop x0 p s n :  *)
+(*   has -> nth x0 s (n + find p (drop n t)) =  *)
+
 Lemma sorted_rcons x r s y : 
   sorted r (rcons s y) = sorted r s && (nilp s || r (last x s) y).
 Proof. case s=> [|??] //=; exact/rcons_path. Qed.
@@ -683,8 +680,16 @@ Proof.
   by apply/ltnW/sorted_ltn_nth=> //; apply/andP.  
 Qed.  
 
-Lemma subseq_anti {U : eqType} : 
-  antisymmetric (@subseq U).
+End SeqUtils.
+
+Arguments sorted_rcons {T} x.
+
+Section SeqEqUtils.
+Context {T : eqType}. 
+Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
+
+Lemma subseq_anti : 
+  antisymmetric (@subseq T).
 Proof. 
   move=> s1 s2 /andP[].
   move=> /size_subseq_leqif /leqifP. 
@@ -693,9 +698,70 @@ Proof.
   by rewrite leqNgt=> /negP. 
 Qed.
 
-End SeqUtils.
+Lemma index_inj s : 
+  {in s &, injective (index^~ s)}.
+Proof. 
+  move=> x y; elim s=> [|z {}s] IH //=.
+  rewrite !inE=> /orP[/eqP->|xIn] /orP[/eqP->|yIn] //.
+  - by rewrite eq_refl; case: ifP=> [/eqP->|] //.
+  - by rewrite eq_refl; case: ifP=> [/eqP->|] //.
+  case: ifP=> [/eqP->|]; case: ifP=> [/eqP->|] //.
+  by move=> ?? [] /IH H; apply/H. 
+Qed.
 
-Arguments sorted_rcons {T} x.
+End SeqEqUtils.
+
+Section Slice.
+Context {T : eqType}.
+Implicit Types (s : seq T) (n m : nat).
+
+Definition slice n m s := 
+  take (m - n) (drop n s).
+
+Lemma size_slice n m s : 
+  (m <= size s)%N -> size (slice n m s) = m - n.
+Proof. 
+  move=> sz.
+  rewrite /slice size_takel //. 
+  rewrite size_drop; lia.
+Qed.
+  
+Lemma index_drop s x n : 
+  (n <= index x s)%N -> index x (drop n s) = index x s - n.
+Proof.
+  move: s; elim n=> [|{}n IH] s nLe. 
+  - rewrite drop0 subn0 //=.
+  rewrite -addn1 -drop_drop.  
+  move: nLe; case: s=> [|y {}s] //=.
+  case: ifP => // _.
+  rewrite drop0 ltnS addn1 subSS=> nLe.
+  by rewrite IH.
+Qed.
+
+Lemma index_drop_uniq s x n : 
+  uniq s -> (index x s < n <= size s)%N -> index x (drop n s) = size s - n.
+Proof.
+  move=> uq /andP[] ixLe nLe.
+  rewrite memNindex ?size_drop //.
+  case: (x \in s)/idP; last first.
+  - move=> /negP; exact/contra/mem_drop. 
+  move: uq; rewrite -{1 2}[s](cat_take_drop n)=> uq xIn.
+  by rewrite -(uniq_catLR uq) // in_take_leq. 
+Qed.
+
+Lemma in_slice_index n m s x : 
+  (n <= m <= size s)%N -> uniq s -> x \in (slice n m s) = (n <= index x s < m)%N.
+Proof. 
+  rewrite /slice=> sz.
+  rewrite in_take_leq; last first.
+  - rewrite size_drop; lia. 
+  move=> uq; case: (n <= index x s)%N/idP.
+  - move=> nLe; rewrite index_drop //; lia. 
+  move=> /negP; rewrite -ltnNge=> ixLe.
+  rewrite index_drop_uniq //; lia.
+Qed.
+
+End Slice.
 
 Section FindNth.
 
@@ -1272,9 +1338,23 @@ Context {T : finType}.
 Implicit Types (g : rel T). 
 Implicit Types (gf : T -> seq T). 
 
+Definition totalb g :=
+  [forall x, forall y, g x y || g y x].
+
+Lemma totalP g : 
+  reflect (total g) (totalb g).
+Proof. exact/forall2P. Qed.
+
 Lemma connect_refl g : 
   reflexive (connect g).
 Proof. done. Qed. 
+
+Lemma acyc_irrefl g :
+  acyclic g -> irreflexive g.
+Proof. 
+  move=> /acyclicP[irr _] x. 
+  move: (irr x)=> /negP ?; exact/negP. 
+Qed.
 
 Lemma connect_antisym g : 
   acyclic g -> antisymmetric (connect g).

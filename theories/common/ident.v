@@ -209,6 +209,13 @@ Lemma encode1 :
   encode (ident1 : T) = 1%nat.
 Proof. by rewrite /ident1; exact /decodeK. Qed.
 
+Lemma encode_fresh (e : T) : encode (fresh e) = (encode e).+1.
+Proof. rewrite /fresh decodeK; lia. Qed.
+
+Lemma encode_inj : injective (@encode T).
+Proof. exact/pickle_inj. Qed.
+
+
 End Props.
 End Props.
 
@@ -417,6 +424,13 @@ Proof. by rewrite /nfresh; exact/trajectS. Qed.
 Lemma nfreshSr x n : 
   nfresh x n.+1 = rcons (nfresh x n) (iter n fresh x).
 Proof. by rewrite /nfresh; exact/trajectSr. Qed.
+
+Lemma in_nfresh x n y : 
+  y \in nfresh x n = (encode x <= encode y < n + encode x)%N.
+Proof.
+  elim: n x=> //= [?|?/[swap] ?]; rewrite ?(inE, in_nil); first lia.
+  move=>->; rewrite encode_fresh -(inj_eq encode_inj); lia.
+Qed.
 
 Lemma fresh_seq_nil : 
   fresh_seq [::] = (\i1 : T).

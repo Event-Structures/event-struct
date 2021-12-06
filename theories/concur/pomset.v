@@ -2,9 +2,9 @@ From Coq Require Import Relations.
 From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
-From mathcomp Require Import fintype finfun finset fingraph finmap.
-From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted.
-From eventstruct Require Import utils relalg inhtype ident lposet.
+From mathcomp Require Import fintype finfun finset fingraph finmap zify.
+From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
+From eventstruct Require Import utils rel relalg inhtype ident lposet.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)
@@ -60,6 +60,7 @@ Local Open Scope order_scope.
 Local Open Scope fset_scope.
 Local Open Scope quotient_scope.
 Local Open Scope ra_terms.
+Local Open Scope ident_scope.
 Local Open Scope lposet_scope.
 
 Declare Scope pomset_scope.
@@ -123,6 +124,9 @@ Definition lfsp_idx p : E -> nat :=
 Definition lfsp_event p e0 : nat -> E := 
   fun n => nth e0 (lfsp_tseq p) n.
 
+Definition lfsp_labels p : seq L := 
+  map (fs_lab p) (lfsp_tseq p).
+
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -137,48 +141,11 @@ Arguments fin_ca  {E L bot} p.
 
 End Def.
 
-Section Build.
-Context {E : identType} {L : eqType}.
-Variable (bot : L). 
-Context {fE : {fset E}}.
-Implicit Type p : lfspreposet E L bot.
-
-Definition build (lab : fE -> L) (ica : rel fE) : lfspreposet E L bot := 
-  let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
-  [fsfun e => (lab e, rcov e)].
-
-Lemma build_finsupp lab ica : (forall e, lab e != bot) ->
-  finsupp (build lab ica) = fE.
-Proof.
-  move=> labB; apply/fsetP=> ?.
-  rewrite mem_finsupp fsfun_ffun.
-  case: insubP=> [*|/negbTE-> /[! eqxx] //].
-  by rewrite xpair_eqE (negbTE (labB _)).
-Qed. 
-
-Lemma build_lab lab ica : 
-  fs_lab (build lab ica) =1 sub_lift (fun=> bot) lab.
-Proof.
-  rewrite /fs_lab /sub_lift=> ?.
-  rewrite fsfun_ffun; by case: insubP.
-Qed.
-
-Lemma build_ica lab ica : 
-  fs_ica (build lab ica) =2 sub_rel_lift ica.
-Proof.
-  rewrite /fs_ica /build /sub_rel_lift /fs_rcov=>> /=.
-  rewrite fsfun_ffun. (do 2 case: insubP=> //=)=> [u ?<- v*|+*].
-  - rewrite ?inE; exact/rgraphK.
-  by rewrite in_fsetval_seq; case: insubP=> // ? ->.
-Qed.
-
-End Build.
-
 Module Export Theory.
 Section Theory.
 Context (E : identType) (L : eqType).
 Variable (bot : L).
-Implicit Types (p : lfspreposet E L bot).
+Implicit Types (p : lfspreposet E L bot) (ls : seq L).
 
 Lemma lab_definedP p : 
   reflect {in finsupp p, forall e, fs_lab p e != bot} (lab_defined p).
@@ -208,6 +175,227 @@ Qed.
 
 End Theory.
 End Theory.
+
+Section Build.
+Context (E : identType) (L : eqType) (bot : L). 
+Context (fE : {fset E}).
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (lab : fE -> L) (ica : rel fE).
+
+Definition build lab ica : lfspreposet E L bot := 
+  let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
+  [fsfun e => (lab e, rcov e)].
+
+Variables (lab : fE -> L) (ica : rel fE).
+Hypothesis (labD : forall e, lab e != bot).
+
+Lemma build_finsupp : 
+  finsupp (build lab ica) = fE.
+Proof.
+  apply/fsetP=> ?.
+  rewrite mem_finsupp fsfun_ffun.
+  case: insubP=> [*|/negbTE-> /[! eqxx] //].
+  by rewrite xpair_eqE (negbTE (labD _)).
+Qed. 
+
+Lemma build_lab : 
+  fs_lab (build lab ica) =1 sub_lift (fun=> bot) lab.
+Proof.
+  rewrite /fs_lab /sub_lift=> ?.
+  rewrite fsfun_ffun; by case: insubP.
+Qed.
+
+Lemma build_ica : 
+  fs_ica (build lab ica) =2 sub_rel_lift ica.
+Proof.
+  rewrite /fs_ica /build /sub_rel_lift /fs_rcov.
+  move=> x y /=; rewrite fsfun_ffun. 
+  (do 2 case: insubP=> //=) => [u ?<- v*|+*].
+  - rewrite ?inE; exact/rgraphK.
+  by rewrite in_fsetval_seq; case: insubP=> // ? ->.
+Qed.
+
+Lemma lab_defined_build : 
+  lab_defined (build lab ica).
+Proof.
+  apply/lab_definedP=>>.
+  rewrite build_lab build_finsupp //.
+  by move=> ? /[! @sub_liftT E].
+Qed.
+
+Lemma supp_closed_build : 
+  supp_closed (build lab ica).
+Proof.
+  apply/supp_closedP=>>.
+  rewrite build_ica build_finsupp //. 
+  by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
+Qed.
+
+End Build.
+
+Section Empty.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+
+Definition empty : lfspreposet E L bot := [fsfun].
+
+Lemma fs_lab_empty : 
+  fs_lab empty =1 (fun=> bot).
+Proof. by move=> ?; rewrite /fs_lab fsfun_dflt ?inE. Qed.
+
+Lemma fs_ica_empty : 
+  fs_ica empty =2 (fun x y => false).
+Proof. by move=> ??; rewrite /fs_ica /= /fs_rcov !fsfun_dflt ?inE. Qed.
+
+(* TODO: /start/ the following proofs should be simpler :( *)
+
+Lemma fin_ica_empty : 
+  fin_ica empty =2 (fun x y => false). 
+Proof. 
+  rewrite /fin_ica /sub_rel_down /= => ?? /=. 
+  by rewrite fs_ica_empty.
+Qed.
+
+Lemma fin_ca_empty : 
+  fin_ca empty =2 (fun x y => x == y). 
+Proof. 
+  move=> e1 e2; rewrite /fin_ca.
+  apply/idP/idP; last first.
+  - move=> /eqP ->; exact/connect_refl.
+  move=> /connect_strP/clos_rt_str; elim=> //.
+  - by move=> ??; rewrite fin_ica_empty. 
+  by move=> ???? /eqP-> ? /eqP->.
+Qed.
+  
+Lemma fs_ca_empty : 
+  fs_ca empty =2 (fun x y => x == y).
+Proof. 
+  move=> e1 e2; rewrite /fs_ca /= /dhrel_one.
+  apply/orb_idr; rewrite /sub_rel_lift /=.
+  case: insubP=> // e1' in1 <-.
+  case: insubP=> // e2' in2 <-.
+  by rewrite fin_ca_empty=> /eqP ->.
+Qed.
+
+(* TODO: /end/ the following proofs should be simpler :( *)
+
+Lemma empty_lab_defined : 
+  lab_defined empty.
+Proof. by apply/lab_definedP=> ?; rewrite fs_lab_empty inE. Qed.
+
+Lemma empty_supp_closed : 
+  supp_closed empty.
+Proof. by apply/supp_closedP=> ??; rewrite fs_ica_empty. Qed.
+
+Lemma empty_acyclic : 
+  acyclic (fin_ica empty).
+Proof. 
+  apply/acyclicP; split.
+  - by move=> ?; rewrite /fin_ica /sub_rel_down /= fs_ica_empty.
+  apply/forall2P=> e1 e2. 
+  apply/implyP=> /andP[].
+  have->: connect (fin_ica empty) e1 e2 = fin_ca empty e1 e2 by done.
+  by rewrite fin_ca_empty=> /eqP->. 
+Qed.
+
+End Empty.
+
+Section OfSeq.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (ls : seq L).
+
+Definition of_seq ls := 
+  let fE  := [fset e | e in nfresh \i0 (size ls)] in 
+  let lab := fun e : fE => (nth bot ls (encode (val e))) in
+  let ica := fun e1 e2 : fE => (encode (val e1)).+1 == encode (val e2) in
+  @build E L bot fE lab ica.
+
+Variable (ls : seq L).
+Hypothesis (lsD : bot \notin ls).
+
+Lemma of_seq_nth_defined : 
+  forall (e : [fset e | e in nfresh \i0 (size ls)]),
+    nth bot ls (@encode E (val e)) != bot.
+Proof.
+  move: lsD=> /negP nbl [/= ?].
+  rewrite ?inE /= in_nfresh encode0=> ?.
+  apply/negP; move: nbl=> /[swap]/eqP<-.
+  apply; apply/mem_nth; lia.
+Qed.
+
+Lemma of_seq_finsupp : 
+  finsupp (of_seq ls) = [fset e | e in nfresh \i0 (size ls)].
+Proof. rewrite build_finsupp //; exact/of_seq_nth_defined. Qed.
+
+Lemma of_seq_lab e : 
+  fs_lab (of_seq ls) e = nth bot ls (encode e).
+Proof.
+  rewrite /of_seq build_lab /= /sub_lift.
+  case: insubP=> /= [?? ->|] //.
+  rewrite !in_fset /mem_fin /=.
+  rewrite in_nfresh encode0 addn0. 
+  rewrite negb_and ltnNge negbK -ltnNge ltn0 orFb. 
+  by move=> ?; rewrite nth_default.
+Qed.
+
+Lemma of_seq_fs_ica e1 e2 :
+  fs_ica (of_seq ls) e1 e2 = 
+    [&& (encode e1).+1 == encode e2
+      , e1 \in finsupp (of_seq ls)
+      & e2 \in finsupp (of_seq ls)
+    ].
+Proof.
+  rewrite !of_seq_finsupp /of_seq //. 
+  rewrite build_ica /sub_rel_lift /=.
+  (* TODO: make some lemma for `sub_rel_lift` to handle this *)
+  case: insubP=>[[e1' in1]|/negbTE] /[! inE]-> /=; rewrite ?andbF //.
+  case: insubP=>[[e2' in2]|/negbTE] /[! inE]-> /=; rewrite ?andbF //.
+  by move=> -> ->; rewrite andbT.
+Qed.
+
+Lemma of_seq_fin_ica : 
+  fin_ica (of_seq ls) =2 [rel e1 e2 | (encode (val e1)).+1 == encode (val e2)].
+Proof.
+  case=> /= ? + [/= ?].
+  rewrite /fin_ica /sub_rel_down /= ?inE of_seq_fs_ica //. 
+  by move=> -> ->; rewrite !andbT. 
+Qed.
+
+(* TODO: this probably should be proven in the other direction too *)
+Lemma of_seq_fin_ca_sub : 
+  subrel (fin_ca (of_seq ls)) [rel e1 e2 | (val e1) <=^i (val e2)].
+Proof.
+  move=> /= ?? /connect_strP/clos_rt_str/(@clos_rt_rtn1 _ _ _ _) /=.
+  elim=> // [[/= e1 in1 [/= e2 in2]]].
+  rewrite of_seq_fin_ica /= => ??.
+  rewrite ?/(_ <=^i _) /= /Ident.Def.ident_le; lia. 
+Qed.
+
+Lemma of_seq_lab_defined : 
+  lab_defined (of_seq ls).
+Proof. exact/lab_defined_build/of_seq_nth_defined. Qed.
+
+Lemma of_seq_supp_closed : 
+  supp_closed (of_seq ls).
+Proof.
+  apply/supp_closedP=>>.
+  rewrite build_ica build_finsupp //; last first. 
+  - exact/of_seq_nth_defined.
+  by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
+Qed.
+
+Lemma of_seq_fin_ica_acyclic : 
+  acyclic (fin_ica (of_seq ls)).
+Proof.
+  apply/andP; split.
+  - apply/forallP=> ?; rewrite of_seq_fin_ica /=; lia.
+  apply/forall2P=> e1 e2; apply/implyP. 
+  move=> /andP[] /of_seq_fin_ca_sub /= ? /of_seq_fin_ca_sub /= ?.
+  by apply/eqP/val_inj/le_anti/andP.
+Qed.
+
+End OfSeq.
 
 End lFsPrePoset.
 
@@ -269,6 +457,56 @@ Canonical subFinfun_subCountType E (L : countType) bot :=
 
 End Instances.
 End Instances.
+
+Section Empty.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+
+(* TODO: rename? *)
+Lemma emptyP : 
+  let p := @lFsPrePoset.empty E L bot in
+  [&& lab_defined p,
+      supp_closed p &
+      acyclic (fin_ica p)].
+Proof.
+  apply/and3P; split.
+  - exact/lFsPrePoset.empty_lab_defined.
+  - exact/lFsPrePoset.empty_supp_closed.
+  exact/lFsPrePoset.empty_acyclic.
+Qed.
+
+Definition empty : lfsposet E L bot := 
+  lFsPoset emptyP.
+
+End Empty.
+
+Arguments empty E L bot : clear implicits.
+
+Section OfSeq.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (ls : seq L).
+
+Lemma of_seqP ls : bot \notin ls -> 
+  let p := lFsPrePoset.of_seq E bot ls in
+  [&& lab_defined p,
+      supp_closed p &
+      acyclic (fin_ica p)].
+Proof.
+  move=> labD; apply/and3P; split.
+  - exact/lFsPrePoset.of_seq_lab_defined.
+  - exact/lFsPrePoset.of_seq_supp_closed.
+  exact/lFsPrePoset.of_seq_fin_ica_acyclic.
+Qed.
+
+Definition of_seq ls : lfsposet E L bot := 
+  if bot \notin ls =P true is ReflectT nbl then
+    lFsPoset (of_seqP nbl)
+  else empty E L bot.
+
+End OfSeq.
+
+Arguments of_seq E L bot : clear implicits.
 
 Module Export POrder.
 Section POrder.
@@ -436,12 +674,31 @@ Lemma fs_labE p :
 Proof. done. Qed.
 
 Lemma fs_caE p : 
-  ca =2 fs_ca p :> rel [Event of p].  
+  (<=%O) =2 fs_ca p :> rel [Event of p].  
 Proof. done. Qed.
 
 Lemma fs_scaE p : 
-  sca =2 fs_sca p :> rel [Event of p].  
+  (<%O) =2 fs_sca p :> rel [Event of p].  
 Proof. done. Qed.
+
+Lemma fin_labE p : 
+  lab =1 fin_lab p :> ([FinEvent of p] -> L).  
+Proof. done. Qed.
+
+Lemma fin_caE p : 
+  (<=%O) =2 fin_ca p :> rel [FinEvent of p].  
+Proof. done. Qed.
+
+Lemma fin_scaE p : 
+  (<%O) =2 fin_sca p :> rel [FinEvent of p].  
+Proof. done. Qed.
+
+Lemma val_ca_mon p : 
+  { homo (val : [FinEvent of p] -> [Event of p]) : e1 e2 / e1 <= e2 }.
+Proof. 
+  move=> x y; rewrite fin_caE fs_caE /fs_ca /=.
+  by rewrite !sub_rel_lift_val=> ->.
+Qed.
 
 Lemma fs_lab_bot p e : 
   (fs_lab p e != bot) = (e \in finsupp p).
@@ -584,16 +841,16 @@ Module Export POrder.
 Import lFsPoset.Syntax.
 
 Section POrder.
-Context {E : identType} {L : choiceType} (eps : L).
-Implicit Types (p q : pomset E L eps).
+Context {E : identType} {L : choiceType} (bot : L).
+Implicit Types (p q : pomset E L bot).
 
-Definition bhom_le : rel (pomset E L eps) := 
+Definition bhom_le : rel (pomset E L bot) := 
   fun p q => 
     let EP := [FinEvent of (repr p)] in
     let EQ := [FinEvent of (repr q)] in
     ??|{ffun EP -> EQ | lFinPoset.bhom_pred}|.
 
-Definition bhom_lt : rel (pomset E L eps) := 
+Definition bhom_lt : rel (pomset E L bot) := 
   fun p q => (q != p) && (bhom_le p q).
 
 Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
@@ -624,7 +881,7 @@ Definition pomset_bhomPOrderMixin :=
     bhom_lt_def bhom_le_refl bhom_le_antisym bhom_le_trans. 
 
 Canonical pomset_bhomPOrderType := 
-  POrderType disp (pomset E L eps) pomset_bhomPOrderMixin.
+  POrderType disp (pomset E L bot) pomset_bhomPOrderMixin.
 
 Lemma bhom_leE p q : p <= q = bhom_le p q.
 Proof. done. Qed.
@@ -636,11 +893,30 @@ End POrder.
 End POrder.
 End Hom.
 
+Module Export Theory.
+Section Theory.
+Context {E : identType} {L : choiceType} (bot : L).
+Implicit Types (p q : pomset E L bot).
+
+(* TODO: move definition from Theory module? *)
+Definition lin p : pred (seq L) :=
+  [pred ls | \pi (lFsPoset.of_seq E L bot ls) <= p :> pomset E L bot].
+
+Lemma bhom_lin p q :
+  p <= q -> {subset (lin p) <= (lin q)}.
+Proof.
+  move=> pLq ?; rewrite /lin ?/(_ \in _) /=.
+  by move=> //= /le_trans/(_ pLq).
+Qed.
+
+End Theory.
+End Theory.
+
 End Pomset.
 
 Export Pomset.Def.
-(* Export Pomset.Theory. *)
 Export Pomset.Hom.POrder.
+Export Pomset.Theory.
 
 (* Context (E : identType) (L : choiceType). *)
 (* Variable (bot : L). *)
@@ -649,3 +925,62 @@ Export Pomset.Hom.POrder.
 (* Check (e1 <= e2 :> [Event of p]). *)
 (* Check (e1 <= e2 :> [Event of q]). *)
 (* Check (p <= q). *)
+
+Module Tomset.
+
+Import lPoset.Syntax.
+Import lFsPoset.Syntax.
+
+Module Export Def.
+Section Def.  
+Context (E : identType) (L : choiceType).
+Variable (bot : L).
+
+Structure tomset : Type := mkTomset {
+  tomset_val :> pomset E L bot;
+  _ : totalb (fin_ca tomset_val); 
+}.
+
+Canonical tomset_subType := Eval hnf in [subType for tomset_val].
+
+Implicit Types (t : tomset) (ls : seq L).
+
+Lemma tomset_total t : 
+  total (<=%O : rel [FinEvent of t]).
+Proof. by move: (valP t)=> /totalP. Qed.
+
+Lemma tomset_total_in t : 
+  {in (finsupp t) &, total (<=%O : rel [Event of t])}.
+Proof. 
+  move=> x y xIn yIn.
+  pose x' := (Sub x xIn) : [FinEvent of t].
+  pose y' := (Sub y yIn) : [FinEvent of t].
+  move: (tomset_total x' y'). 
+  rewrite /x' /y'.
+  by move=> /orP[|] /val_ca_mon /= ->. 
+Qed.
+
+End Def.
+End Def.
+
+Arguments tomset E L bot : clear implicits.
+
+Module Export Theory.
+Section Theory.
+Context {E : identType} {L : choiceType}.
+Variable (bot : L).
+Implicit Types (t : tomset E L bot).
+
+(* Lemma tomset_labelsK : 
+  cancel (@lfsp_labels E L bot) (@lFsPrePoset.of_seq E L bot).
+Proof. admit. Admitted. *)
+
+End Theory.
+End Theory.
+
+End Tomset.
+
+
+Export Tomset.Def.
+Export Tomset.Theory.
+
