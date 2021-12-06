@@ -215,20 +215,20 @@ Proof.
   by rewrite in_fsetval_seq; case: insubP=> // ? ->.
 Qed.
 
-Lemma supp_closed_build : 
-  supp_closed (build lab ica).
-Proof.
-  apply/supp_closedP=>>.
-  rewrite build_ica build_finsupp //. 
-  by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
-Qed.
-
 Lemma lab_defined_build : 
   lab_defined (build lab ica).
 Proof.
   apply/lab_definedP=>>.
   rewrite build_lab build_finsupp //.
   by move=> ? /[! @sub_liftT E].
+Qed.
+
+Lemma supp_closed_build : 
+  supp_closed (build lab ica).
+Proof.
+  apply/supp_closedP=>>.
+  rewrite build_ica build_finsupp //. 
+  by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
 Qed.
 
 End Build.
@@ -247,19 +247,19 @@ Definition of_seq ls :=
 Variable (ls : seq L).
 Hypothesis (lsD : bot \notin ls).
 
-Lemma of_seq_lab_defined : 
+Lemma of_seq_nth_defined : 
   forall (e : [fset e | e in nfresh \i0 (size ls)]),
     nth bot ls (@encode E (val e)) != bot.
 Proof.
   move: lsD=> /negP nbl [/= ?].
   rewrite ?inE /= in_nfresh encode0=> ?.
-  apply/negP; move: nbl=> /[swap]/eqP<-. 
+  apply/negP; move: nbl=> /[swap]/eqP<-.
   apply; apply/mem_nth; lia.
 Qed.
 
 Lemma of_seq_finsupp : 
   finsupp (of_seq ls) = [fset e | e in nfresh \i0 (size ls)].
-Proof. rewrite build_finsupp //; exact/of_seq_lab_defined. Qed.
+Proof. rewrite build_finsupp //; exact/of_seq_nth_defined. Qed.
 
 Lemma of_seq_lab e : 
   fs_lab (of_seq ls) e = nth bot ls (encode e).
@@ -293,6 +293,39 @@ Proof.
   case=> /= ? + [/= ?].
   rewrite /fin_ica /sub_rel_down /= ?inE of_seq_fs_ica //. 
   by move=> -> ->; rewrite !andbT. 
+Qed.
+
+(* TODO: this probably should be proven in the other direction too *)
+Lemma of_seq_fin_ca_sub : 
+  subrel (fin_ca (of_seq ls)) [rel e1 e2 | (val e1) <=^i (val e2)].
+Proof.
+  move=> /= ?? /connect_strP/clos_rt_str/(@clos_rt_rtn1 _ _ _ _) /=.
+  elim=> // [[/= e1 in1 [/= e2 in2]]].
+  rewrite of_seq_fin_ica /= => ??.
+  rewrite ?/(_ <=^i _) /= /Ident.Def.ident_le; lia. 
+Qed.
+
+Lemma of_seq_lab_defined : 
+  lab_defined (of_seq ls).
+Proof. exact/lab_defined_build/of_seq_nth_defined. Qed.
+
+Lemma of_seq_supp_closed : 
+  supp_closed (of_seq ls).
+Proof.
+  apply/supp_closedP=>>.
+  rewrite build_ica build_finsupp //; last first. 
+  - exact/of_seq_nth_defined.
+  by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
+Qed.
+
+Lemma of_seq_fin_ica_acyclic : 
+  acyclic (fin_ica (of_seq ls)).
+Proof.
+  apply/andP; split.
+  - apply/forallP=> ?; rewrite of_seq_fin_ica /=; lia.
+  apply/forall2P=> e1 e2; apply/implyP. 
+  move=> /andP[] /of_seq_fin_ca_sub /= ? /of_seq_fin_ca_sub /= ?.
+  by apply/eqP/val_inj/le_anti/andP.
 Qed.
 
 End OfSeq.
@@ -329,49 +362,6 @@ Proof. by move: (valP p)=> /and3P[]. Qed.
 Lemma lfsp_acyclic p : acyclic (fin_ica p).
 Proof. by move: (valP p)=> /and3P[]. Qed.
 
-Lemma lfposet_build_mixin (fE : {fset E}) (ica : rel fE) lab : 
-  let p :=  lFsPrePoset.build bot lab ica in
-  (forall e, lab e != bot) ->
-  acyclic (fin_ica p) ->
-  [&& lab_defined p, 
-      supp_closed p &
-      acyclic (fin_ica p)].
-Proof.
-  move=> /= *; apply/and3P; split=> //.
-  - exact/lab_defined_build.
-  exact/supp_closed_build.
-Qed.
-
-Lemma connect_encode (ls : seq L) : 
-  let p := lFsPrePoset.of_seq E bot ls in
-  forall x y : finsupp p,
-  connect [rel e1 e2 | (encode (val e1)).+1 == encode (val e2)] x y ->
-  (val x) <=^i (val y).
-Proof.
-  move=> /= ?? /connect_strP/clos_rt_str/(@clos_rt_rtn1 _ _ _ _).
-  elim=> // [[/= e1 ? [/= e2 ???]]].
-  rewrite ?/(_ <=^i _) /= /Ident.Def.ident_le; lia.
-Qed.
-
-Lemma lfposet_of_seq_mixin (ls : seq L) : 
-  let p := lFsPrePoset.of_seq E bot ls in
-  bot \notin ls -> 
-  [&& lab_defined p,
-      supp_closed p &
-      acyclic (fin_ica p)].
-Proof.
-  move=> /= nbl; apply/(lfposet_build_mixin (of_seq_lab_defined nbl)).
-  under eq_acyclic do
-    (rewrite -[lFsPrePoset.build _ _ _]/(lFsPrePoset.of_seq _ _ _);
-    rewrite of_seq_fin_ica //).
-  apply/andP; split; first (apply/forallP=> /=; lia).
-  apply/forall2P=> ??; apply/implyP=> /andP[/connect_encode? /connect_encode?].
-  by apply/eqP/val_inj/le_anti/andP.
-Qed.
-
-Definition of_seq ls : bot \notin ls -> lfsposet 
-  := fun nbl => lFsPoset (lfposet_of_seq_mixin nbl).
-
 End Def.
 End Def.
 
@@ -400,6 +390,28 @@ Canonical subFinfun_subCountType E (L : countType) bot :=
 
 End Instances.
 End Instances.
+
+Section OfSeq.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (ls : seq L).
+
+Lemma of_seqP ls : bot \notin ls -> 
+  let p := lFsPrePoset.of_seq E bot ls in
+  [&& lab_defined p,
+      supp_closed p &
+      acyclic (fin_ica p)].
+Proof.
+  move=> labD; apply/and3P; split.
+  - exact/lFsPrePoset.of_seq_lab_defined.
+  - exact/lFsPrePoset.of_seq_supp_closed.
+  exact/lFsPrePoset.of_seq_fin_ica_acyclic.
+Qed.
+
+Definition of_seq ls : bot \notin ls -> lfsposet E L bot := 
+  fun nbl => lFsPoset (of_seqP nbl).
+
+End OfSeq.
 
 Module Export POrder.
 Section POrder.
@@ -785,7 +797,7 @@ Proof. done. Qed.
 Definition lin p : pred (seq L) :=
   [pred ls |
     if bot \notin ls =P true is ReflectT nbl then
-      \pi (of_seq E nbl) <= p :> pomset _ _ _
+      \pi (lFsPoset.of_seq E nbl) <= p :> pomset _ _ _
     else false].
 
 Lemma bhom_lin p q :
