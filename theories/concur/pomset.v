@@ -239,17 +239,64 @@ Implicit Types (p : lfspreposet E L bot).
 
 Definition empty : lfspreposet E L bot := [fsfun].
 
+Lemma fs_lab_empty : 
+  fs_lab empty =1 (fun=> bot).
+Proof. by move=> ?; rewrite /fs_lab fsfun_dflt ?inE. Qed.
+
+Lemma fs_ica_empty : 
+  fs_ica empty =2 (fun x y => false).
+Proof. by move=> ??; rewrite /fs_ica /= /fs_rcov !fsfun_dflt ?inE. Qed.
+
+(* TODO: /start/ the following proofs should be simpler :( *)
+
+Lemma fin_ica_empty : 
+  fin_ica empty =2 (fun x y => false). 
+Proof. 
+  rewrite /fin_ica /sub_rel_down /= => ?? /=. 
+  by rewrite fs_ica_empty.
+Qed.
+
+Lemma fin_ca_empty : 
+  fin_ca empty =2 (fun x y => x == y). 
+Proof. 
+  move=> e1 e2; rewrite /fin_ca.
+  apply/idP/idP; last first.
+  - move=> /eqP ->; exact/connect_refl.
+  move=> /connect_strP/clos_rt_str; elim=> //.
+  - by move=> ??; rewrite fin_ica_empty. 
+  by move=> ???? /eqP-> ? /eqP->.
+Qed.
+  
+Lemma fs_ca_empty : 
+  fs_ca empty =2 (fun x y => x == y).
+Proof. 
+  move=> e1 e2; rewrite /fs_ca /= /dhrel_one.
+  apply/orb_idr; rewrite /sub_rel_lift /=.
+  case: insubP=> // e1' in1 <-.
+  case: insubP=> // e2' in2 <-.
+  by rewrite fin_ca_empty=> /eqP ->.
+Qed.
+
+(* TODO: /end/ the following proofs should be simpler :( *)
+
 Lemma empty_lab_defined : 
   lab_defined empty.
-Proof. admit. Admitted.
+Proof. by apply/lab_definedP=> ?; rewrite fs_lab_empty inE. Qed.
 
 Lemma empty_supp_closed : 
   supp_closed empty.
-Proof. admit. Admitted.
+Proof. by apply/supp_closedP=> ??; rewrite fs_ica_empty. Qed.
 
 Lemma empty_acyclic : 
   acyclic (fin_ica empty).
-Proof. admit. Admitted.
+Proof. 
+  apply/acyclicP; split.
+  - by move=> ?; rewrite /fin_ica /sub_rel_down /= fs_ica_empty.
+  apply/forall2P=> e1 e2. 
+  apply/implyP=> /andP[].
+  have->: connect (fin_ica empty) e1 e2 = fin_ca empty e1 e2 by done.
+  by rewrite fin_ca_empty=> /eqP->. 
+Qed.
 
 End Empty.
 
