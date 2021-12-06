@@ -244,15 +244,6 @@ Qed.
 
 End OptionUtils.
 
-Section SeqUtils.
-Context {T : Type}.
-Implicit Types (x : T) (s : seq T).
-
-Lemma behead_rcons x s :
-  behead (rcons s x) = if s is [::] then [::] else rcons (behead s) x.
-Proof. by case: s. Qed.
-
-End SeqUtils. 
 
 Section TupleUtils.
 Context {T : Type}.
@@ -582,6 +573,10 @@ Section SeqUtils.
 Context {T : Type}. 
 Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
 
+Lemma behead_rcons x s :
+  behead (rcons s x) = if s is [::] then [::] else rcons (behead s) x.
+Proof. by case: s. Qed.
+
 Lemma headNnil x y s : 
   ~~ nilp s -> head y s = head x s.
 Proof. by case: s. Qed.
@@ -685,16 +680,6 @@ Proof.
   by apply/ltnW/sorted_ltn_nth=> //; apply/andP.  
 Qed.  
 
-Lemma subseq_anti {U : eqType} : 
-  antisymmetric (@subseq U).
-Proof. 
-  move=> s1 s2 /andP[].
-  move=> /size_subseq_leqif /leqifP. 
-  case: ifP=> [/eqP->|_] //.
-  move=> /[swap] /size_subseq. 
-  by rewrite leqNgt=> /negP. 
-Qed.
-
 End SeqUtils.
 
 Arguments sorted_rcons {T} x.
@@ -702,6 +687,16 @@ Arguments sorted_rcons {T} x.
 Section SeqEqUtils.
 Context {T : eqType}. 
 Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
+
+Lemma subseq_anti : 
+  antisymmetric (@subseq T).
+Proof. 
+  move=> s1 s2 /andP[].
+  move=> /size_subseq_leqif /leqifP. 
+  case: ifP=> [/eqP->|_] //.
+  move=> /[swap] /size_subseq. 
+  by rewrite leqNgt=> /negP. 
+Qed.
 
 Lemma index_inj s : 
   {in s &, injective (index^~ s)}.
@@ -715,6 +710,58 @@ Proof.
 Qed.
 
 End SeqEqUtils.
+
+Section Slice.
+Context {T : eqType}.
+Implicit Types (s : seq T) (n m : nat).
+
+Definition slice n m s := 
+  take (m - n) (drop n s).
+
+Lemma size_slice n m s : 
+  (m <= size s)%N -> size (slice n m s) = m - n.
+Proof. 
+  move=> sz.
+  rewrite /slice size_takel //. 
+  rewrite size_drop; lia.
+Qed.
+  
+Lemma index_drop s x n : 
+  (n <= index x s)%N -> index x (drop n s) = index x s - n.
+Proof.
+  move: s; elim n=> [|{}n IH] s nLe. 
+  - rewrite drop0 subn0 //=.
+  rewrite -addn1 -drop_drop.  
+  move: nLe; case: s=> [|y {}s] //=.
+  case: ifP => // _.
+  rewrite drop0 ltnS addn1 subSS=> nLe.
+  by rewrite IH.
+Qed.
+
+Lemma index_drop_uniq s x n : 
+  uniq s -> (index x s < n <= size s)%N -> index x (drop n s) = size s - n.
+Proof.
+  move=> uq /andP[] ixLe nLe.
+  rewrite memNindex ?size_drop //.
+  case: (x \in s)/idP; last first.
+  - move=> /negP; exact/contra/mem_drop. 
+  move: uq; rewrite -{1 2}[s](cat_take_drop n)=> uq xIn.
+  by rewrite -(uniq_catLR uq) // in_take_leq. 
+Qed.
+
+Lemma in_slice_index n m s x : 
+  (n <= m <= size s)%N -> uniq s -> x \in (slice n m s) = (n <= index x s < m)%N.
+Proof. 
+  rewrite /slice=> sz.
+  rewrite in_take_leq; last first.
+  - rewrite size_drop; lia. 
+  move=> uq; case: (n <= index x s)%N/idP.
+  - move=> nLe; rewrite index_drop //; lia. 
+  move=> /negP; rewrite -ltnNge=> ixLe.
+  rewrite index_drop_uniq //; lia.
+Qed.
+
+End Slice.
 
 Section FindNth.
 

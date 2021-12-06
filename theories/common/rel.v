@@ -41,59 +41,6 @@ Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
 
-Section Slice.
-Context {T : eqType}.
-Implicit Types (s : seq T) (n m : nat).
-
-Definition slice n m s := 
-  take (m - n) (drop n s).
-
-Lemma size_slice n m s : 
-  (m <= size s)%N -> size (slice n m s) = m - n.
-Proof. 
-  move=> sz.
-  rewrite /slice size_takel //. 
-  rewrite size_drop; lia.
-Qed.
-  
-Lemma index_drop s x n : 
-  (n <= index x s)%N -> index x (drop n s) = index x s - n.
-Proof.
-  move: s; elim n=> [|{}n IH] s nLe. 
-  - rewrite drop0 subn0 //=.
-  rewrite -addn1 -drop_drop.  
-  move: nLe; case: s=> [|y {}s] //=.
-  case: ifP => // _.
-  rewrite drop0 ltnS addn1 subSS=> nLe.
-  by rewrite IH.
-Qed.
-
-Lemma index_drop_uniq s x n : 
-  uniq s -> (index x s < n <= size s)%N -> index x (drop n s) = size s - n.
-Proof.
-  move=> uq /andP[] ixLe nLe.
-  rewrite memNindex ?size_drop //.
-  case: (x \in s)/idP; last first.
-  - move=> /negP; exact/contra/mem_drop. 
-  move: uq; rewrite -{1 2}[s](cat_take_drop n)=> uq xIn.
-  by rewrite -(uniq_catLR uq) // in_take_leq. 
-Qed.
-
-Lemma in_slice_index n m s x : 
-  (n <= m <= size s)%N -> uniq s -> x \in (slice n m s) = (n <= index x s < m)%N.
-Proof. 
-  rewrite /slice=> sz.
-  rewrite in_take_leq; last first.
-  - rewrite size_drop; lia. 
-  move=> uq; case: (n <= index x s)%N/idP.
-  - move=> nLe; rewrite index_drop //; lia. 
-  move=> /negP; rewrite -ltnNge=> ixLe.
-  rewrite index_drop_uniq //; lia.
-Qed.
-
-End Slice.
-
-
 Section Covering.
 Context {T : finType}.
 Implicit Types (r : rel T).
