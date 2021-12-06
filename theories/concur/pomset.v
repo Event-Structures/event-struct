@@ -850,6 +850,22 @@ Definition bhom_le : rel (pomset E L bot) :=
     let EQ := [FinEvent of (repr q)] in
     ??|{ffun EP -> EQ | lFinPoset.bhom_pred}|.
 
+Import lPoset.bHom.Syntax.
+
+Lemma pi_bhom_le : 
+  {mono \pi : p q / 
+    lFinPoset.bhom_rel [FinEvent of p] [FinEvent of q] >->
+    bhom_le p q}.
+Proof.
+  move=>>; rewrite /bhom_le. 
+  case: piP piP=>> /eqmodP/lFinPoset.fisoP[f] [> /eqmodP/lFinPoset.fisoP[g]].
+  apply/lFinPoset.fbhomP/lFinPoset.fbhomP=> [][h]; exists.
+  - exact/[bhom of lPoset.Iso.Build.inv g \o h \o f].
+  exact/[bhom of g \o h \o lPoset.Iso.Build.inv f].
+Qed.
+
+Canonical bhom_le_quote_mono2 := PiMono2 (pi_bhom_le).
+
 Definition bhom_lt : rel (pomset E L bot) := 
   fun p q => (q != p) && (bhom_le p q).
 
@@ -864,13 +880,10 @@ Proof. move=> ???; exact/lFinPoset.bhom_trans. Qed.
 
 (* TODO: move part of the proof to lposet.v ? *)
 Lemma bhom_le_antisym : antisymmetric bhom_le. 
-Proof. 
-  move=> p q /andP[] /lFinPoset.fbhomP[f] /lFinPoset.fbhomP[g].
-  (* TODO: make lemma: reflect (x = y) (e (repr x) (repr y)) ? *)
-  rewrite -(reprK p) -(reprK q).
-  apply/eqP=> /=; rewrite /pomset eqmodE /=.
-  apply/lFinPoset.fisoP=> /=.
-  exists; exact/(lFinPoset.of_ihoms f g).   
+Proof.
+  move=> p q; rewrite -[p]reprK -[q]reprK !piE.
+  case/andP=> /lFinPoset.fbhomP[f] /lFinPoset.fbhomP[g].
+  apply/eqmodP/lFinPoset.fisoP; exists; exact/(lFinPoset.of_ihoms f g).
 Qed.
 
 Lemma disp : unit. 
