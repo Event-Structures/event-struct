@@ -141,95 +141,6 @@ Arguments fin_ca  {E L bot} p.
 
 End Def.
 
-Section Build.
-Context (E : identType) {L : eqType}.
-Variable (bot : L). 
-Implicit Types (p : lfspreposet E L bot).
-Implicit Types (fE : {fset E}) (ls : seq L).
-
-Definition build {fE} (lab : fE -> L) (ica : rel fE) : lfspreposet E L bot := 
-  let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
-  [fsfun e => (lab e, rcov e)].
-
-Lemma build_finsupp {fE} lab ica : (forall e, lab e != bot) ->
-  finsupp (@build fE lab ica) = fE.
-Proof.
-  move=> labB; apply/fsetP=> ?.
-  rewrite mem_finsupp fsfun_ffun.
-  case: insubP=> [*|/negbTE-> /[! eqxx] //].
-  by rewrite xpair_eqE (negbTE (labB _)).
-Qed. 
-
-Lemma build_lab {fE} lab ica : 
-  fs_lab (@build fE lab ica) =1 sub_lift (fun=> bot) lab.
-Proof.
-  rewrite /fs_lab /sub_lift=> ?.
-  rewrite fsfun_ffun; by case: insubP.
-Qed.
-
-Lemma build_ica {fE} lab ica : 
-  fs_ica (@build fE lab ica) =2 sub_rel_lift ica.
-Proof.
-  rewrite /fs_ica /build /sub_rel_lift /fs_rcov=>> /=.
-  rewrite fsfun_ffun. (do 2 case: insubP=> //=)=> [u ?<- v*|+*].
-  - rewrite ?inE; exact/rgraphK.
-  by rewrite in_fsetval_seq; case: insubP=> // ? ->.
-Qed.
-
-Definition of_seq ls := 
-  let fE  := [fset e | e in nfresh \i0 (size ls)] in 
-  let lab := fun e : fE => (nth bot ls (encode (val e))) in
-  let ica := fun e1 e2 : fE => (encode (val e1)).+1 == encode (val e2) in
-  @build fE lab ica.
-
-Lemma of_seq_lab_defined ls : bot \notin ls ->
-  forall (e : [fset e | e in nfresh \i0 (size ls)]),
-    nth bot ls (@encode E (val e)) != bot.
-Proof.
-  move=> /negP nbl [/= ?]; rewrite ?inE /= in_nfresh encode0=> ?.
-  apply/negP; move: nbl=> /[swap]/eqP<-; apply; apply/mem_nth; lia.
-Qed.
-
-Lemma of_seq_finsupp ls : bot \notin ls -> 
-  finsupp (of_seq ls) = [fset e | e in nfresh \i0 (size ls)].
-Proof. move/of_seq_lab_defined/build_finsupp; exact. Qed.
-
-Lemma of_seq_lab ls e : 
-  fs_lab (of_seq ls) e = nth bot ls (encode e).
-Proof.
-  rewrite /of_seq build_lab /= /sub_lift.
-  case: insubP=> /= [?? ->|] //.
-  rewrite !in_fset /mem_fin /=.
-  rewrite in_nfresh encode0 addn0. 
-  rewrite negb_and ltnNge negbK -ltnNge ltn0 orFb. 
-  by move=> ?; rewrite nth_default.
-Qed.
-
-Lemma of_seq_fs_ica ls e1 e2 : bot \notin ls -> 
-  fs_ica (of_seq ls) e1 e2 = 
-    [&& (encode e1).+1 == encode e2
-      , e1 \in finsupp (of_seq ls)
-      & e2 \in finsupp (of_seq ls)
-    ].
-Proof.
-  move=> labD; rewrite !of_seq_finsupp /of_seq //. 
-  rewrite build_ica /sub_rel_lift /=.
-  (* TODO: make some lemma for `sub_rel_lift` to handle this *)
-  case: insubP=>[[e1' in1]|/negbTE] /[! inE]-> /=; rewrite ?andbF //.
-  case: insubP=>[[e2' in2]|/negbTE] /[! inE]-> /=; rewrite ?andbF //.
-  by move=> -> ->; rewrite andbT.
-Qed.
-
-Lemma of_seq_fin_ica ls : bot \notin ls ->
-  fin_ica (of_seq ls) =2 [rel e1 e2 | (encode (val e1)).+1 == encode (val e2)].
-Proof.
-  move=> labD; case=> /= ? + [/= ?].
-  rewrite /fin_ica /sub_rel_down /= ?inE of_seq_fs_ica //. 
-  by move=> -> ->; rewrite !andbT. 
-Qed.
-
-End Build.
-
 Module Export Theory.
 Section Theory.
 Context (E : identType) (L : eqType).
@@ -262,26 +173,129 @@ Proof.
   by move=> /fsfun_dflt -> //.
 Qed.
 
-Section Build_lfposet.
-Context (fE : {fset E}) (lab : fE -> L) (ica : rel fE).
-Hypothesis lab_def : forall e, lab e != bot.
+End Theory.
+End Theory.
 
-Lemma supp_closed_build : supp_closed (build bot lab ica).
+Section Build.
+Context (E : identType) (L : eqType) (bot : L). 
+Context (fE : {fset E}).
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (lab : fE -> L) (ica : rel fE).
+
+Definition build lab ica : lfspreposet E L bot := 
+  let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
+  [fsfun e => (lab e, rcov e)].
+
+Variables (lab : fE -> L) (ica : rel fE).
+Hypothesis (labD : forall e, lab e != bot).
+
+Lemma build_finsupp : 
+  finsupp (build lab ica) = fE.
+Proof.
+  apply/fsetP=> ?.
+  rewrite mem_finsupp fsfun_ffun.
+  case: insubP=> [*|/negbTE-> /[! eqxx] //].
+  by rewrite xpair_eqE (negbTE (labD _)).
+Qed. 
+
+Lemma build_lab : 
+  fs_lab (build lab ica) =1 sub_lift (fun=> bot) lab.
+Proof.
+  rewrite /fs_lab /sub_lift=> ?.
+  rewrite fsfun_ffun; by case: insubP.
+Qed.
+
+Lemma build_ica : 
+  fs_ica (build lab ica) =2 sub_rel_lift ica.
+Proof.
+  rewrite /fs_ica /build /sub_rel_lift /fs_rcov.
+  move=> x y /=; rewrite fsfun_ffun. 
+  (do 2 case: insubP=> //=) => [u ?<- v*|+*].
+  - rewrite ?inE; exact/rgraphK.
+  by rewrite in_fsetval_seq; case: insubP=> // ? ->.
+Qed.
+
+Lemma supp_closed_build : 
+  supp_closed (build lab ica).
 Proof.
   apply/supp_closedP=>>.
-  by rewrite build_ica build_finsupp // => /sub_rel_liftP[[>[[>[? /= <-<-]]]]].
+  rewrite build_ica build_finsupp //. 
+  by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
 Qed.
 
-Lemma lab_defined_build : lab_defined (build bot lab ica).
+Lemma lab_defined_build : 
+  lab_defined (build lab ica).
 Proof.
   apply/lab_definedP=>>.
-  by rewrite build_lab build_finsupp // => ? /[! @sub_liftT E].
+  rewrite build_lab build_finsupp //.
+  by move=> ? /[! @sub_liftT E].
 Qed.
 
-End Build_lfposet.
+End Build.
 
-End Theory.
-End Theory.
+Section OfSeq.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (ls : seq L).
+
+Definition of_seq ls := 
+  let fE  := [fset e | e in nfresh \i0 (size ls)] in 
+  let lab := fun e : fE => (nth bot ls (encode (val e))) in
+  let ica := fun e1 e2 : fE => (encode (val e1)).+1 == encode (val e2) in
+  @build E L bot fE lab ica.
+
+Variable (ls : seq L).
+Hypothesis (lsD : bot \notin ls).
+
+Lemma of_seq_lab_defined : 
+  forall (e : [fset e | e in nfresh \i0 (size ls)]),
+    nth bot ls (@encode E (val e)) != bot.
+Proof.
+  move: lsD=> /negP nbl [/= ?].
+  rewrite ?inE /= in_nfresh encode0=> ?.
+  apply/negP; move: nbl=> /[swap]/eqP<-. 
+  apply; apply/mem_nth; lia.
+Qed.
+
+Lemma of_seq_finsupp : 
+  finsupp (of_seq ls) = [fset e | e in nfresh \i0 (size ls)].
+Proof. rewrite build_finsupp //; exact/of_seq_lab_defined. Qed.
+
+Lemma of_seq_lab e : 
+  fs_lab (of_seq ls) e = nth bot ls (encode e).
+Proof.
+  rewrite /of_seq build_lab /= /sub_lift.
+  case: insubP=> /= [?? ->|] //.
+  rewrite !in_fset /mem_fin /=.
+  rewrite in_nfresh encode0 addn0. 
+  rewrite negb_and ltnNge negbK -ltnNge ltn0 orFb. 
+  by move=> ?; rewrite nth_default.
+Qed.
+
+Lemma of_seq_fs_ica e1 e2 :
+  fs_ica (of_seq ls) e1 e2 = 
+    [&& (encode e1).+1 == encode e2
+      , e1 \in finsupp (of_seq ls)
+      & e2 \in finsupp (of_seq ls)
+    ].
+Proof.
+  rewrite !of_seq_finsupp /of_seq //. 
+  rewrite build_ica /sub_rel_lift /=.
+  (* TODO: make some lemma for `sub_rel_lift` to handle this *)
+  case: insubP=>[[e1' in1]|/negbTE] /[! inE]-> /=; rewrite ?andbF //.
+  case: insubP=>[[e2' in2]|/negbTE] /[! inE]-> /=; rewrite ?andbF //.
+  by move=> -> ->; rewrite andbT.
+Qed.
+
+Lemma of_seq_fin_ica : 
+  fin_ica (of_seq ls) =2 [rel e1 e2 | (encode (val e1)).+1 == encode (val e2)].
+Proof.
+  case=> /= ? + [/= ?].
+  rewrite /fin_ica /sub_rel_down /= ?inE of_seq_fs_ica //. 
+  by move=> -> ->; rewrite !andbT. 
+Qed.
+
+End OfSeq.
 
 End lFsPrePoset.
 
