@@ -168,6 +168,9 @@ Definition cf_free (p : pred E) :=
 Definition cfg (p : pred E) := 
   ca_closed p /\ cf_free p.
 
+Definition wcons : pred {fset E} := 
+  [pred X | cons X && (#|` X| != 1)%N].
+
 End Def.
 End Def.
 
