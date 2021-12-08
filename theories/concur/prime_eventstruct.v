@@ -69,6 +69,7 @@ Record mixin_of (E0 : Type) (L : Type) (b : lPoset.lPoset.class_of E0 L)
                 (E := lPoset.lPoset.Pack b) := Mixin {
   cons : pred {fset E};
 
+  _ : cons fset0;
   _ : forall (e : E), cons [fset e];
   _ : forall (X Y : {fset E}), X `<=` Y -> cons Y -> cons X;
   _ : forall X e e', e <= e' -> cons (e' |` X) -> cons (e |` X)
@@ -183,6 +184,9 @@ Implicit Types (e : E) (X Y : {fset E}).
 
 Lemma cons_self e : cons [fset e].
 Proof. by move: e; case: E => ? [? []] ?? []. Qed.
+
+Lemma cons0 : cons (fset0 : {fset E}).
+Proof. by case: E=> ? [??] []. Qed.
 
 (* TODO: rename `cons_contra`? *)
 Lemma cons_contra X Y : X `<=` Y -> cons Y -> cons X.
