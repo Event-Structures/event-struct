@@ -127,6 +127,9 @@ Definition lfsp_event p e0 : nat -> E :=
 Definition lfsp_labels p : seq L := 
   map (fs_lab p) (lfsp_tseq p).
 
+Definition lfsp_fresh p : E := 
+  fresh_seq (finsupp p).
+
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -997,3 +1000,95 @@ End Tomset.
 Export Tomset.Def.
 Export Tomset.Theory.
 
+Module Export lFsPreposetLTS.
+
+Module Export Def.
+Section Def.  
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p : lfspreposet E L bot).
+
+Definition lfsp_add_event l es p : lfspreposet E L bot := 
+  let e := lfsp_fresh p in
+  [fsfun p with e |-> (l, es)].
+
+(* Definition lfsp_add_event l es p : lfspreposet E L bot :=  *)
+(*   let e := lfsp_fresh p in *)
+(*   if (l != bot) && (es `<=` (finsupp p)) then *)
+(*     [fsfun p with e |-> (l, es)] *)
+(*   else [fsfun]. *)
+   
+Definition lfsp_enabled l es p := 
+  (l != bot) && (es `<=` (finsupp p)).
+
+End Def.
+End Def.
+
+Module Export Theory.
+Section Theory.  
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p : lfspreposet E L bot).
+
+Lemma add_event_finsuppE l es p :
+  l != bot -> finsupp (lfsp_add_event l es p) = (lfsp_fresh p) |` (finsupp p).
+Proof. 
+  rewrite finsupp_with xpair_eqE=> /eqP lD. 
+  case: ifP=> [/andP[/eqP]|] //.
+Qed.
+
+Lemma add_event_fs_labE l es p e :
+  fs_lab (lfsp_add_event l es p) e = 
+    if e == lfsp_fresh p then l else fs_lab p e. 
+Proof. by rewrite /fs_lab /lfsp_add_event fsfun_withE; case: ifP. Qed.
+
+Lemma add_event_fs_rcovE l es p e :
+  fs_rcov (lfsp_add_event l es p) e = 
+    if e == lfsp_fresh p then es else fs_rcov p e. 
+Proof. by rewrite /fs_rcov /lfsp_add_event fsfun_withE; case: ifP. Qed.
+
+Lemma add_event_fs_icaE l es p e1 e2 :
+  fs_ica (lfsp_add_event l es p) e1 e2 = 
+    (e1 \in es) && (e2 == lfsp_fresh p) || (fs_ica p e1 e2).
+Proof. 
+  rewrite /fs_ica /= !add_event_fs_rcovE.
+  case: ifP=> [/eqP->|]; last first.
+  - by rewrite andbF.
+  rewrite andbT /fs_rcov fsfun_dflt /= ?inE ?orbF //. 
+  exact/fresh_seq_nmem.
+Qed.
+  
+Lemma add_event_lab_defined l es p :
+  l != bot -> lab_defined p -> lab_defined (lfsp_add_event l es p).
+Proof.  
+  move=> lD labD; apply/lab_definedP. 
+  rewrite add_event_finsuppE // => e.
+  rewrite !inE add_event_fs_labE=> /orP[|].  
+  - by move=> /eqP-> //; rewrite eq_refl.
+  move=> eIn; case: ifP=> [|_]; last first.
+  - exact/lab_definedP.
+  move: eIn=> /[swap] /eqP-> eIn.
+  exfalso; move: eIn=> /negP; apply.
+  rewrite /lfsp_fresh. 
+  exact/negP/fresh_seq_nmem.
+Qed.
+
+Lemma add_event_supp_closed l es p :
+  l != bot -> es `<=` finsupp p -> supp_closed p -> supp_closed (lfsp_add_event l es p).
+Proof.  
+  move=> lD /fsubsetP subs supcl.
+  apply/supp_closedP=> e1 e2.
+  rewrite add_event_finsuppE //.
+  rewrite add_event_fs_icaE !inE. 
+  move=> /orP[/andP[]|].
+  - move=> in1 /eqP ->. 
+    rewrite eq_refl orTb; split=> //.
+    apply/orP; right; exact/subs.
+  move=> /supp_closedP H.
+  by move: (H supcl)=> [-> ->]. 
+Qed.
+
+End Theory.
+End Theory.  
+
+End lFsPreposetLTS.
