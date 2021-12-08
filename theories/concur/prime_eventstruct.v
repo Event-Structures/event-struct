@@ -415,6 +415,64 @@ Lemma lfsposet_of0_finsupp (E : eventType L):
   finsupp (lfsposet_of (fset0 : {fset E})) = fset0.
 Proof. apply/lfsposet_of_finsupp/forallP; by case. Qed.
 
+Definition pomset_lang (E : eventType L) := fun (p : pomset E L bot) =>
+  exists2 X : {fset E}, cfg (mem X) & p = \pi (lfsposet_of X).
+
+
+Definition lfsposet_of (E : eventType L) (X : {fset E}) : lfsposet E L bot :=
+  if eqP is ReflectT p then
+    lFsPoset (@lfspreposet_of_mixin E X p)
+  else (lFsPoset.empty E L bot).
+
+Section lFsPoset_of.
+Context (E : eventType L) (X : {fset E}).
+
+Lemma lfsposet_of0 : 
+  lfsposet_of (fset0 : {fset E}) = lFsPoset.empty E L bot.
+Proof.
+  rewrite /lfsposet_of /lfspreposet_of; case: eqP=> // ?.
+  apply/eqP/lfsposet_eqP; split=>>; rewrite /lFsPoset.empty /=.
+  - rewrite lFsPrePoset.fs_lab_empty lFsPrePoset.build_lab /sub_lift.
+    by case: insubP.
+  rewrite lFsPrePoset.fs_ica_empty lFsPrePoset.build_ica /sub_rel_lift /=.
+  by case: insubP.
+Qed.
+
+Lemma lfsposet_of_emp : 
+  [forall x : X, lab (val x) != bot] <> true ->
+  lfsposet_of X = (lFsPoset.empty E L bot).
+Proof. by rewrite /lfsposet_of; case: eqP. Qed.
+
+Hypothesis lab_def : [forall x : X, lab (val x) != bot].
+
+Lemma lfsposet_of_finsupp : 
+  finsupp (lfsposet_of X) = X.
+Proof.
+  rewrite /lfsposet_of; case: eqP=> // *.
+  exact/lfspreposet_of_finsupp.
+Qed.
+
+Lemma lfsposet_of_lab :
+  {in X, fs_lab (lfsposet_of X) =1 lab}.
+Proof.
+  rewrite /lfsposet_of; case: eqP=> //= ? ?.
+  rewrite /lfspreposet_of /= lFsPrePoset.build_lab /sub_lift.
+  by case: insubP=> //= [??->|/negP].
+Qed.
+
+Lemma connect_fin_ca : 
+  connect (fin_ica (lfsposet_of X)) =2 relpre val ca.
+Proof.
+  rewrite /lfsposet_of; case: eqP=> //= ?>.
+  by rewrite lfspreposet_of_connect_fin_ca.
+Qed.
+
+End lFsPoset_of.
+
+Lemma lfsposet_of0_finsupp (E : eventType L): 
+  finsupp (lfsposet_of (fset0 : {fset E})) = fset0.
+Proof. apply/lfsposet_of_finsupp/forallP; by case. Qed.
+
 End Lang.
 
 Module Export Hom.
