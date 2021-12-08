@@ -245,7 +245,7 @@ Qed.
 Lemma cons_ca_contra (X Y : {fset E}) :
   {subsumes X <= Y : x y / x <= y} -> cons Y -> cons X.
 Proof.
-  move: X {2}(X `\` Y) (erefl (X `\` Y))=> /[swap].
+  move: X {2}(X `\` Y) (@erefl _ (X `\` Y))=> /[swap].
   elim/fset_ind=> [?/eqP/[! fsetD_eq0]/cons_contra//|].
   move=> x ?? IHxy X XYE /[dup] S + cY; rewrite -(@fsetD1K _ x X); last first.
   - move/fsetP/(_ x): XYE; rewrite ?inE eqxx andbC /=; by case: (x \in X).
@@ -268,6 +268,17 @@ Qed.
 
 Lemma prefix_cfg e : cfg (<= e).
 Proof. split; [exact/prefix_ca_closed | exact/prefix_cf_free]. Qed.
+
+Lemma cf_free_fset (X : {fset E}) : reflect (cf_free (mem X)) (cons X).
+Proof.
+  apply/(iffP idP)=> [?? /fsubsetP/cons_contra|]; exact.
+Qed.
+
+Lemma cfg0 : cfg (mem (fset0 : {fset E})).
+Proof.
+  split=> [> /=|]; first by rewrite inE.
+  apply/cf_free_fset/cons0.
+Qed.
 
 End Theory.
 End Theory.
