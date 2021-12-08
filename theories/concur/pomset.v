@@ -1,5 +1,5 @@
 From Coq Require Import Relations.
-From RelationAlgebra Require Import lattice monoid rel boolean.
+From RelationAlgebra Require Import lattice monoid rel boolean kat_tac.
 From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
@@ -77,10 +77,10 @@ Module lFsPrePoset.
 
 Module Export Def.
 Section Def. 
-Context (E : identType) (L : eqType).
-Variable (bot : L).
+Context (E : identType) (L : eqType) (bot : L).
 
 Implicit Types (p : lfspreposet E L bot).
+Implicit Types (es : {fset E}).
 
 Definition fs_lab p : E -> L := 
   fun e => (p e).1. 
@@ -130,6 +130,10 @@ Definition lfsp_labels p : seq L :=
 Definition lfsp_fresh p : E := 
   fresh_seq (finsupp p).
 
+(* TODO: unify with UpFinPOrder *)
+Definition lfsp_dw_clos p es := 
+  [seq e <- finsupp p | [exists e' : es, fs_ca p e (val e')]].
+
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -174,6 +178,90 @@ Proof.
   case: (in_fsetP (finsupp p) e2)=> [e2'|].
   - by move: (all_supp e2')=> /fsubsetP /[swap] /= <- /[apply] ->.
   by move=> /fsfun_dflt -> //.
+Qed.
+
+Lemma fs_ca_scaE p e1 e2 :
+  fs_ca p e1 e2 = (e1 == e2) || (fs_sca p e1 e2).
+Proof. admit. Admitted.
+
+Lemma fs_caP p e1 e2 : supp_closed p -> 
+  reflect (clos_refl_trans (fs_ica p) e1 e2) (fs_ca p e1 e2).
+Proof. 
+  (* TODO: try to simplify proof *)
+  move=> supcl; apply/equivP.  
+  - apply/(equivP idP); apply: iff_trans.
+    - by apply/rel_qmk_m.
+    rewrite qmk_weq; last first.
+    - move=> /= x y; rewrite /fs_ca.
+      apply: iff_sym; apply: rwP.
+      apply/sub_rel_liftP. 
+    by apply: iff_refl. 
+  apply: iff_trans=> /=. 
+  - apply: or_iff_compat_l.
+    apply/exists_equiv=> e1'.
+    apply/exists_equiv=> e2'.
+    (* TODO: make lemma? *)
+    have H: forall A1 A2 B C, A1 <-> A2 -> [/\ A1, B & C] <-> [/\ A2, B & C].
+    - move=> ???? [H1 H2]; split; move=> [???]; split=> //; [exact/H1|exact/H2].
+    apply/H; apply: iff_sym. 
+    apply: iff_trans; last first. 
+    - apply: rwP; exact/(connect_strP).
+    by apply/clos_rt_str.
+  (* apply: iff_trans; last first. *)
+  (* - by apply/clos_rt_str. *)
+  move=> /=; split=> [[|[e1' [] e2' []]] |].
+  - move=> ->; exact/rt_refl.
+  - move=> + <- <-; elim=> //.
+    + move=> ??; exact/rt_step.
+    move=> ??? ? + ?; exact/rt_trans.
+  elim=> //=.
+  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ supcl)[].
+    move=> Pe1 Pe2 ica; right; exists (Sub e1 Pe1), (Sub e2 Pe2).
+    by split=> //; apply/rt_step.
+  - by move=> ?; left.
+  move=> ??? ? [-> ? [->|] | + ? [|]]. 
+  - by left.
+  - move=> [e1' [] e2' []] ???.
+    by right; exists e1', e2'.
+  - move=> [e1' [] e2' []] ??? <-.
+    by right; exists e1', e2'.
+  move=> [e1' [] e2' []] rt12 ??.
+  move=> [e3' [] e4' []] rt34 ??.
+  right; exists e1', e4'; split=> //=.
+  apply/rt_trans; first exact/rt12. 
+  suff: e2' = e3'=> [->|] //.
+  apply/val_inj=> /=; congruence.
+Qed.  
+
+Lemma fs_scaP p e1 e2 : 
+  reflect (clos_trans (fs_ica p) e1 e2) (fs_sca p e1 e2).
+Proof. 
+  apply/equivP; last first.
+  (* rewrite /fs_sca /fs_ca /= /dhrel_one. *)
+  (* rewrite andb_orr.  *)
+  (* apply/(equivP idP); split. *)
+  (* -  *)
+  admit.
+Admitted.
+
+Lemma supp_closed_sca p e1 e2 : 
+  supp_closed p -> fs_sca p e1 e2 -> (e1 \in finsupp p) * (e2 \in finsupp p).
+Proof. admit. Admitted.
+
+Lemma lfsp_dw_closP p es e : 
+  supp_closed p -> es `<=` (finsupp p) ->
+    reflect (exists2 e', fs_ca p e e' & e' \in es) (e \in lfsp_dw_clos p es).
+Proof. 
+  move=> supcl /fsubsetP subs.
+  rewrite mem_filter.
+  apply/(equivP idP); split.
+  - move=> /andP[] /existsP[e'] eCa eIn.
+    exists (val e')=> //; exact/(valP e').
+  move=> [e'] eCa e'In; apply/andP; split.
+  - by apply/existsP; exists (Sub e' e'In).
+  move: eCa; rewrite fs_ca_scaE=> /orP[/eqP->|].
+  - exact/subs.
+  by move=> /(supp_closed_sca supcl) ->.
 Qed.
 
 End Theory.
@@ -519,65 +607,19 @@ Variable (bot : L) (p : lfsposet E L bot).
 Lemma fs_sca_def e1 e2 : 
   fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
 Proof. done. Qed.
-
-Lemma fs_caP e1 e2 : 
-  reflect ((fs_ica p : hrel E E)^* e1 e2) (fs_ca p e1 e2).
-Proof. 
-  (* TODO: try to simplify proof *)
-  apply/equivP.  
-  - apply/(equivP idP); apply: iff_trans.
-    - by apply/rel_qmk_m.
-    rewrite qmk_weq; last first.
-    - move=> /= x y; rewrite /fs_ca.
-      apply: iff_sym; apply: rwP.
-      apply/sub_rel_liftP. 
-    by apply: iff_refl. 
-  apply: iff_trans=> /=. 
-  - apply: or_iff_compat_l.
-    apply/exists_equiv=> e1'.
-    apply/exists_equiv=> e2'.
-    (* TODO: make lemma? *)
-    have H: forall A1 A2 B C, A1 <-> A2 -> [/\ A1, B & C] <-> [/\ A2, B & C].
-    - move=> ???? [H1 H2]; split; move=> [???]; split=> //; [exact/H1|exact/H2].
-    apply/H; apply: iff_sym. 
-    apply: iff_trans; last first. 
-    - apply: rwP; exact/(connect_strP).
-    by apply/clos_rt_str.
-  apply: iff_trans; last first.
-  - by apply/clos_rt_str.
-  move=> /=; split=> [[|[e1' [] e2' []]] |].
-  - move=> ->; exact/rt_refl.
-  - move=> + <- <-; elim=> //.
-    + move=> ??; exact/rt_step.
-    move=> ??? ? + ?; exact/rt_trans.
-  elim=> //=.
-  - move=> {}e1 {}e2 /[dup] /(supp_closedP _ (lfsp_supp_closed p))[].
-    move=> Pe1 Pe2 ica; right; exists (Sub e1 Pe1), (Sub e2 Pe2).
-    by split=> //; apply/rt_step.
-  - by move=> ?; left.
-  move=> ??? ? [-> ? [->|] | + ? [|]]. 
-  - by left.
-  - move=> [e1' [] e2' []] ???.
-    by right; exists e1', e2'.
-  - move=> [e1' [] e2' []] ??? <-.
-    by right; exists e1', e2'.
-  move=> [e1' [] e2' []] rt12 ??.
-  move=> [e3' [] e4' []] rt34 ??.
-  right; exists e1', e4'; split=> //=.
-  apply/rt_trans; first exact/rt12. 
-  suff: e2' = e3'=> [->|] //.
-  apply/val_inj=> /=; congruence.
-Qed.  
  
 Lemma fs_ca_refl : 
   reflexive (fs_ca p). 
-Proof. by move=> ?; apply/fs_caP/clos_rt_str/rt_refl. Qed. 
+Proof. move=> ?; apply/(fs_caP _ _ (lfsp_supp_closed p))/rt_refl. Qed.
 
 Lemma fs_ca_trans : 
   transitive (fs_ca p). 
 Proof. 
-  move=> y x z /fs_caP /clos_rt_str ca_xy /fs_caP /clos_rt_str ca_yz. 
-  apply/fs_caP/clos_rt_str/rt_trans; [exact/ca_xy | exact/ca_yz].
+  move=> y x z.
+  move=> /(fs_caP _ _ (lfsp_supp_closed p)) ca_xy.
+  move=> /(fs_caP _ _ (lfsp_supp_closed p)) ca_yz.
+  apply/(fs_caP _ _ (lfsp_supp_closed p)). 
+  apply/rt_trans; [exact/ca_xy | exact/ca_yz].
 Qed. 
 
 Lemma fs_ca_antisym : 
@@ -934,8 +976,7 @@ Export Pomset.Def.
 Export Pomset.Hom.POrder.
 Export Pomset.Theory.
 
-(* Context (E : identType) (L : choiceType). *)
-(* Variable (bot : L). *)
+(* Context (E : identType) (L : choiceType) (bot : L). *)
 (* Variables (p q : pomset E L bot). *)
 (* Variables (e1 e2 : E). *)
 (* Check (e1 <= e2 :> [Event of p]). *)
@@ -1030,24 +1071,31 @@ Context (E : identType) (L : choiceType) (bot : L).
 Implicit Types (l : L) (es : {fset E}).
 Implicit Types (p : lfspreposet E L bot).
 
-Lemma add_event_finsuppE l es p :
-  l != bot -> finsupp (lfsp_add_event l es p) = (lfsp_fresh p) |` (finsupp p).
+Variable (l : L) (es : {fset E}).
+Variable (p : lfspreposet E L bot).
+
+Hypothesis (lD : l != bot).
+Hypothesis (esSub : es `<=` finsupp p).
+
+Lemma add_event_finsuppE :
+  finsupp (lfsp_add_event l es p) = (lfsp_fresh p) |` (finsupp p).
 Proof. 
-  rewrite finsupp_with xpair_eqE=> /eqP lD. 
+  rewrite finsupp_with xpair_eqE.
   case: ifP=> [/andP[/eqP]|] //.
+  by move: lD=> /eqP.
 Qed.
 
-Lemma add_event_fs_labE l es p e :
+Lemma add_event_fs_labE e :
   fs_lab (lfsp_add_event l es p) e = 
     if e == lfsp_fresh p then l else fs_lab p e. 
 Proof. by rewrite /fs_lab /lfsp_add_event fsfun_withE; case: ifP. Qed.
 
-Lemma add_event_fs_rcovE l es p e :
+Lemma add_event_fs_rcovE e :
   fs_rcov (lfsp_add_event l es p) e = 
     if e == lfsp_fresh p then es else fs_rcov p e. 
 Proof. by rewrite /fs_rcov /lfsp_add_event fsfun_withE; case: ifP. Qed.
 
-Lemma add_event_fs_icaE l es p e1 e2 :
+Lemma add_event_fs_icaE e1 e2 :
   fs_ica (lfsp_add_event l es p) e1 e2 = 
     (e1 \in es) && (e2 == lfsp_fresh p) || (fs_ica p e1 e2).
 Proof. 
@@ -1057,11 +1105,11 @@ Proof.
   rewrite andbT /fs_rcov fsfun_dflt /= ?inE ?orbF //. 
   exact/fresh_seq_nmem.
 Qed.
-  
-Lemma add_event_lab_defined l es p :
-  l != bot -> lab_defined p -> lab_defined (lfsp_add_event l es p).
+
+Lemma add_event_lab_defined :
+  lab_defined p -> lab_defined (lfsp_add_event l es p).
 Proof.  
-  move=> lD labD; apply/lab_definedP. 
+  move=> labD; apply/lab_definedP. 
   rewrite add_event_finsuppE // => e.
   rewrite !inE add_event_fs_labE=> /orP[|].  
   - by move=> /eqP-> //; rewrite eq_refl.
@@ -1073,20 +1121,87 @@ Proof.
   exact/negP/fresh_seq_nmem.
 Qed.
 
-Lemma add_event_supp_closed l es p :
-  l != bot -> es `<=` finsupp p -> supp_closed p -> supp_closed (lfsp_add_event l es p).
+Lemma add_event_supp_closed :
+  supp_closed p -> supp_closed (lfsp_add_event l es p).
 Proof.  
-  move=> lD /fsubsetP subs supcl.
+  move=> supcl.
   apply/supp_closedP=> e1 e2.
   rewrite add_event_finsuppE //.
   rewrite add_event_fs_icaE !inE. 
   move=> /orP[/andP[]|].
   - move=> in1 /eqP ->. 
     rewrite eq_refl orTb; split=> //.
-    apply/orP; right; exact/subs.
+    apply/orP; right; exact/(fsubsetP esSub).
   move=> /supp_closedP H.
   by move: (H supcl)=> [-> ->]. 
 Qed.
+
+Lemma add_event_fs_caE e1 e2 : supp_closed p -> 
+  fs_ca (lfsp_add_event l es p) e1 e2 = 
+    (e1 \in lfsp_dw_clos p es) && (e2 == lfsp_fresh p) || (fs_ca p e1 e2).
+Proof. 
+  (* TODO: yet another terrible proof due to poor 
+   *   integration of mathcomp & relation-algebra 
+   *)
+  move=> supcl.
+  apply/eq_bool_iff; apply: iff_trans.
+  - apply: iff_sym; apply: rwP. 
+    by apply/fs_caP/add_event_supp_closed.
+  rewrite clos_rt_str.
+  rewrite str_weq; last first.
+  - move=> /= e1' e2'; apply/eq_bool_iff.
+    by rewrite add_event_fs_icaE.
+  pose r : hrel E E := 
+    (fun e1' e2' => (e1' \in es) && (e2' == lfsp_fresh p) || fs_ica p e1' e2').
+  pose r1 : hrel E E := 
+    (fun e1' e2' => (e1' \in es) && (e2' == lfsp_fresh p)).
+  pose r2 : hrel E E := 
+    (fun e1' e2' => fs_ica p e1' e2').
+  rewrite -/r.
+  have reqv : (r ≡ (r2 ⊔ r1)).
+  - rewrite cupC /r /r1 /r2=> {}e1 {}e2 /=. 
+    by split=> /orP. 
+  rewrite (str_weq reqv) kleene.str_pls.
+  have H: forall e1' e2', (r2^* ⋅ r1) e1' e2' <-> 
+        (e1' \in lfsp_dw_clos p es) && (e2' == lfsp_fresh p).
+  - move=> {}e1 {}e2; rewrite /r1 /r2; split.
+    + move=> [e3] /clos_rt_str/(fs_caP _ _ supcl) + /andP[+] /eqP->.
+      rewrite eq_refl andbT=> ??.
+      by apply/lfsp_dw_closP=> //; exists e3.
+    move=> /andP[] /(lfsp_dw_closP _ supcl esSub) [e3] ++ /eqP->.    
+    move=> ??; exists e3; rewrite ?eq_refl ?andbT //.
+    by apply/clos_rt_str/(fs_caP _ _ supcl).
+  suff->: (r2^* ⋅ (r1 ⋅ r2^*)^*) e1 e2 <-> ((r2^* ⋅ r1) ⊔ r2^*) e1 e2.
+  - split=> [[|]|].
+    + by move=> /H ->.
+    + move=> ca12; apply/orP; right; apply/fs_caP=> //.
+      by apply/clos_rt_str.
+    move=> /orP[|].
+    + by move=> /H ?; left.
+    by move=> /(fs_caP _ _ supcl)/clos_rt_str ?; right.
+  suff: r2^*⋅(r1⋅r2^*)^* ≡ r2^*⋅r1 + r2^*.
+  - by move=> ->. 
+  have->: r1 ⋅ r2^* ≡ r1.
+  - rewrite str_unfold_l dotxpls dotA.
+    have->: r1 ⋅ r2 ≡ 0%ra; last by kat.
+    move=> {}e1 {}e2 /=; split=> //.
+    rewrite /r1 /r2 /hrel_dot=> [[e3]].        
+    move=> /andP[] ? /eqP->.
+    rewrite /lfsp_fresh.
+    move=> /(supp_closedP _ supcl)=> [[+ _]].
+    by move: (fresh_seq_nmem (finsupp p))=> /negP.
+  have->: r1^* ≡ 1 ⊔ r1.
+  - rewrite str_unfold_l; apply/qmk_weq.
+    rewrite str_unfold_l dotxpls dotA.
+    have->: r1 ⋅ r1 ≡ 0%ra; last by kat.
+    move=> {}e1 {}e2 /=; split=> //.
+    rewrite /r1 /r2 /hrel_dot=> [[e3]].        
+    move=> /andP[] ? /eqP-> /andP[+ _].
+    move: esSub=> /fsubsetP /[apply].
+    rewrite /lfsp_fresh.
+    by move: (fresh_seq_nmem (finsupp p))=> /negP.
+  ka.    
+Qed.  
 
 End Theory.
 End Theory.  
