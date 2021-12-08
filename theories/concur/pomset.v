@@ -841,10 +841,10 @@ Module Export POrder.
 Import lFsPoset.Syntax.
 
 Section POrder.
-Context {E : identType} {L : choiceType} (bot : L).
-Implicit Types (p q : pomset E L bot).
+Context {L : choiceType} (bot : L).
 
-Definition bhom_le : rel (pomset E L bot) := 
+Definition bhom_le (E1 E2 : identType) : 
+  pomset E1 L bot -> pomset E2 L bot -> bool := 
   fun p q => 
     let EP := [FinEvent of (repr p)] in
     let EQ := [FinEvent of (repr q)] in
@@ -852,10 +852,11 @@ Definition bhom_le : rel (pomset E L bot) :=
 
 Import lPoset.bHom.Syntax.
 
-Lemma pi_bhom_le : 
-  {mono \pi : p q / 
-    lFinPoset.bhom_rel [FinEvent of p] [FinEvent of q] >->
-    bhom_le p q}.
+Lemma pi_bhom_le E1 E2 : 
+  forall x y,
+  bhom_le (\pi_(pomset_quotType E1 bot) x)
+    (\pi_(pomset_quotType E2 bot) y) =
+  lFinPoset.bhom_rel [FinEvent of x] [FinEvent of y].
 Proof.
   move=>>; rewrite /bhom_le. 
   case: piP piP=>> /eqmodP/lFinPoset.fisoP[f] [> /eqmodP/lFinPoset.fisoP[g]].
@@ -864,7 +865,10 @@ Proof.
   exact/[bhom of g \o h \o lPoset.Iso.Build.inv f].
 Qed.
 
-Canonical bhom_le_quote_mono2 := PiMono2 (pi_bhom_le).
+Context {E : identType}.
+Implicit Types (p q : pomset E L bot). 
+
+Canonical bhom_le_quote_mono2 := PiMono2 (@pi_bhom_le E E).
 
 Definition bhom_lt : rel (pomset E L bot) := 
   fun p q => (q != p) && (bhom_le p q).
@@ -872,14 +876,14 @@ Definition bhom_lt : rel (pomset E L bot) :=
 Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
 Proof. done. Qed.
 
-Lemma bhom_le_refl : reflexive bhom_le. 
+Lemma bhom_le_refl : reflexive (@bhom_le E E). 
 Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
 
-Lemma bhom_le_trans : transitive bhom_le. 
+Lemma bhom_le_trans : transitive (@bhom_le E E). 
 Proof. move=> ???; exact/lFinPoset.bhom_trans. Qed.
 
 (* TODO: move part of the proof to lposet.v ? *)
-Lemma bhom_le_antisym : antisymmetric bhom_le. 
+Lemma bhom_le_antisym : antisymmetric (@bhom_le E E). 
 Proof.
   move=> p q; rewrite -[p]reprK -[q]reprK !piE.
   case/andP=> /lFinPoset.fbhomP[f] /lFinPoset.fbhomP[g].
@@ -890,7 +894,7 @@ Lemma disp : unit.
 Proof. exact: tt. Qed.
 
 Definition pomset_bhomPOrderMixin := 
-  @LePOrderMixin _ bhom_le bhom_lt 
+  @LePOrderMixin _ (@bhom_le E E) bhom_lt 
     bhom_lt_def bhom_le_refl bhom_le_antisym bhom_le_trans. 
 
 Canonical pomset_bhomPOrderType := 
