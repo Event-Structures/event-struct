@@ -283,6 +283,85 @@ Qed.
 End Theory.
 End Theory.
 
+Section Lang.
+Context {L : choiceType} (bot : L).
+
+Section Build.
+Context {E : eventType L}.
+Implicit Types (e : E) (X Y : {fset E}).
+
+Context (X : {fset E}).
+Hypothesis lab_def : [forall x : X, lab (val x) != bot].
+
+Definition lfspreposet_of := 
+  @lFsPrePoset.build E L bot X (lab \o val) (cov (relpre val sca)).
+
+Lemma lfspreposet_of_finsupp : 
+  finsupp lfspreposet_of = X.
+Proof. exact/lFsPrePoset.build_finsupp/forallP. Qed.
+
+Lemma connect_ca (Y : {fset E}): 
+  (connect (relpre val ca) : rel Y) =2 relpre val ca.
+Proof.
+  move=>>; apply/(sameP idP)/(equivP idP); split=> [/connect1 //|].
+  apply/sub_connectP/rtclosedP; split; move=>>.
+  - exact/lexx.
+  exact/le_trans.
+Qed.
+
+(* TODO: generalize? *)
+Lemma lfsposet_of_fin_ca : 
+  fin_ica lfspreposet_of =2 cov (relpre val sca).
+Proof.
+  case=> ? /[dup] + in1 [? /[dup] + in2]; rewrite {1 2}lfspreposet_of_finsupp=> *.
+  rewrite /fin_ica /sub_rel_down /=.
+  rewrite lFsPrePoset.build_ica /sub_rel_lift /=.
+  do ? case: insubP=> [??? |/negP//].
+  move: in1 in2; case: _ / (esym lfspreposet_of_finsupp)=> *.
+  apply/congr2/val_inj=> //; exact/val_inj.
+Qed.
+
+Lemma connect_sca (Y : {fset E}): 
+  (connect (relpre val sca) : rel Y) =2 connect (relpre val ca).
+Proof.
+  move=>>; rewrite ?(connect_sub_one (relpre val ca)).
+  - apply eq_connect=> [[/= ?? [?? /=]]]; rewrite /sca lt_def. 
+  by rewrite -(inj_eq val_inj) /= eq_sym /ca.
+Qed.
+
+Lemma lfspreposet_of_connect_fin_ca : 
+  connect (fin_ica lfspreposet_of) =2 relpre val ca.
+Proof.
+  move=> x y; under eq_connect do rewrite lfsposet_of_fin_ca.
+  rewrite -connect_ca connect_covE ?connect_sca //. 
+  apply/acyclicP; split=> [[/= ??]|]; first by rewrite /sca ltxx.
+  apply/preacyclicP=> [][??][??] /andP[]; rewrite ?connect_sca ?connect_ca.
+  by move=> /=*; apply/val_inj/(@le_anti tt)/andP.
+Qed.
+
+Lemma lfspreposet_of_mixin :
+  [&& lab_defined lfspreposet_of,
+      supp_closed lfspreposet_of &
+      acyclic (fin_ica lfspreposet_of)].
+Proof.
+  apply/and3P; split.
+  - apply/lab_definedP=>>. 
+    rewrite lFsPrePoset.build_lab lfspreposet_of_finsupp /sub_lift.
+    case: insubP=> [/= + _ _ _ |/negP//]; exact/forallP.
+  - apply/supp_closedP=>>.
+    rewrite lFsPrePoset.build_ica /sub_rel_lift /=.
+    do ? case: insubP=> // ??; by rewrite lfspreposet_of_finsupp.
+  apply/acyclicP; split=> [[?]|].
+  - rewrite /fin_ica /sub_rel_down /= lFsPrePoset.build_ica.
+    rewrite lfspreposet_of_finsupp /sub_rel_lift /==> T.
+    by rewrite insubT /cov /= eqxx.
+  apply/preacyclicP=>> /andP[]; rewrite ?lfspreposet_of_connect_fin_ca=> *.
+  exact/val_inj/(@le_anti tt)/andP. 
+Qed.
+
+End Build.
+End Lang.
+
 Module Export Hom.
 
 Module Hom.
