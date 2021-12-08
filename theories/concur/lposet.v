@@ -572,6 +572,25 @@ Implicit Types (E : eventType L).
 Lemma id_class {E} : bHom.class_of (@idfun E).
 Proof. by constructor=> //; exists id. Qed.
 
+Lemma of_anti_bhom_class {E1 E2 : eventType L}
+  (f : E1 -> E2) (g : E2 -> E1) : 
+  cancel f g -> cancel g f ->
+  (forall e, lab e = lab (f e)) ->
+  (forall x y, f x <= f y -> x <= y) ->
+  bHom.class_of g.
+Proof.
+  move=> ? c /pair/[apply] ah; do ? split=> *; rewrite ?ah ?c //; by exists f.
+Qed.
+
+Lemma of_anti_bhom_ex {E1 E2 : eventType L}
+  (f : E1 -> E2) :
+  bijective f ->
+  (forall e, lab e = lab (f e)) ->
+  (forall x y, f x <= f y -> x <= y) ->
+  ?|{bhom E2 -> E1}|.
+Proof. case=> g *; exists; exists g; exact/of_anti_bhom_class. Qed.
+
+
 Lemma comp_class {E1 E2 E3} (f : {bhom  E2 -> E3}) (g : {bhom E1 -> E2}) :
   bHom.class_of (f \o g).
 Proof. 
