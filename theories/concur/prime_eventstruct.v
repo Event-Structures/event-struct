@@ -1,7 +1,10 @@
 From RelationAlgebra Require Import lattice boolean.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
-From mathcomp Require Import eqtype choice order finmap fintype.
-From eventstruct Require Import utils relalg order lposet.
+From mathcomp Require Import eqtype choice order finmap fintype fingraph.
+From mathcomp Require Import generic_quotient zify.
+From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
+From eventstruct Require Import pomset utils relalg order lposet ident rel.
+From eventstruct Require Import inhtype.
 
 (******************************************************************************)
 (* This file provides a theory of prime event structures.                     *)
@@ -42,6 +45,7 @@ Unset Printing Implicit Defensive.
 Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope fset_scope.
+Local Open Scope quotient_scope.
 
 (* a hack to bypass a shadowing problem caused by relation-algebra import *)
 Local Notation symmetric  := Coq.ssr.ssrbool.symmetric.
@@ -76,6 +80,8 @@ Record class_of (E L : Type) := Class {
   base   : lPoset.lPoset.class_of E L;
   mixin1 : DwFinPOrder.DwFinPOrder.mixin_of base;
   mixin2 : mixin_of base;
+  mixin3 : Countable.mixin_of E;
+  mixin4 : Ident.mixin_of (Countable.Class base mixin3);
 }.
 Unset Primitive Projections.
 
@@ -84,6 +90,9 @@ Local Coercion base : class_of >-> lPoset.lPoset.class_of.
 Local Coercion base2 E L (c : class_of E L) : 
   DwFinPOrder.DwFinPOrder.class_of E := 
     DwFinPOrder.DwFinPOrder.Class (mixin1 c).
+
+Local Coercion base3 E L (c : class_of E L) : 
+  Ident.class_of E := Ident.Class (mixin4 c).
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -97,31 +106,37 @@ Definition clone c of phant_id class c := @Pack E L c.
 
 Definition pack :=
   fun bE b & phant_id (@lPoset.lPoset.class L bE) b =>
-  fun m1 m2 => Pack (@Class E L b m1 m2).
+  fun m1 m2 m3 m4 => Pack (@Class E L b m1 m2 m3 m4).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
 Definition dwFinPOrderType := @DwFinPOrder.DwFinPOrder.Pack cT class.
 Definition lposetType := @lPoset.lPoset.Pack L cT class.
+Definition identType := @Ident.Pack cT class.
 End ClassDef.
 
 Module Export Exports.
 Coercion base : class_of >-> lPoset.lPoset.class_of.
 Coercion base2 : class_of >-> DwFinPOrder.DwFinPOrder.class_of.
+Coercion base3 : class_of >-> Ident.class_of.
 Coercion mixin1 : class_of >-> DwFinPOrder.DwFinPOrder.mixin_of.
 Coercion mixin2 : class_of >-> mixin_of.
+Coercion mixin3 : class_of >-> Countable.mixin_of.
+Coercion mixin4 : class_of >-> Ident.mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion porderType : type >-> Order.POrder.type.
 Coercion dwFinPOrderType : type >-> DwFinPOrder.DwFinPOrder.type.
 Coercion lposetType : type >-> lPoset.eventType.
+Coercion identType  : type >-> Ident.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical porderType.
 Canonical dwFinPOrderType.
 Canonical lposetType.
+Canonical identType.
 End Exports.
 
 End EventStruct.
