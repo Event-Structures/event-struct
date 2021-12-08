@@ -533,6 +533,53 @@ Proof.
 Qed.
 
 
+Lemma pomset_lang_sub (p : pomset E1 L bot) :
+  (forall x : E2, lab x != bot) ->
+  pomset_lang p -> 
+  exists2 q : pomset E2 L bot, pomset_lang q & bhom_le q p.
+Proof.
+  move=> ld2 [X [ccX cfX]].
+  case: ([forall x : X, lab (val x) != bot] =P true); first last.
+  - move/lfsposet_of_emp=>->->.
+    exists (\pi (lFsPoset.empty E2 L bot)).
+    + exists fset0; first exact/cfg0; by rewrite lfsposet_of0.
+    rewrite pi_bhom_le -?lfsposet_of0; apply/lFinPoset.fbhomP.
+    have g: forall E E' : eventType L,
+            (finsupp (lfsposet_of bot (fset0 : {fset E}))) -> 
+            (finsupp (lfsposet_of bot (fset0 : {fset E'}))) .
+    + by move=> ??; rewrite ?lfsposet_of0_finsupp=> [[]].
+    exists; exists (g E2 E1); do ? split=> /=.
+    1,2: by move=> /[dup]; rewrite {1}lfsposet_of0_finsupp=> [[]].
+    by exists (g E1 E2)=> /[dup] /=; rewrite {1}lfsposet_of0_finsupp=> [[]].
+  move=> ld1 pE; exists (\pi (lfsposet_of bot (f @` X))).
+  - exists (f @` X)=> //; split; last exact/cf_free_fset/cons_mon/cfX.
+    move=>> /[swap]/imfsetP[] /= x' /[swap]-> /[swap] /hom_prefix.
+    case=> y' -> /ccX/[apply] ?; by apply/imfsetP; exists y'.
+  rewrite pE pi_bhom_le.
+  have ?: [forall x : (f @` X), lab (val x) != bot] by exact/forallP.
+  have In: forall x : (finsupp (lfsposet_of bot X)),
+    f (val x) \in (finsupp (lfsposet_of bot (f @` X))).
+  - case=> /= x; rewrite ?lfsposet_of_finsupp //. 
+    move=> ?; by rewrite in_imfset.
+  set g : 
+    [FinEvent of lfsposet_of bot X] -> 
+    [FinEvent of lfsposet_of bot (f @` X)] := fun x => [` (In x)].
+  apply/lFinPoset.fbhomP/(@lPoset.bHom.Build.of_anti_bhom_ex _ _ _ g)=> /=.
+  - apply/inj_card_bij=> /=.
+    rewrite /g; case=> ? in1 [? in2 /=] /(congr1 val) /= /hom_cons_inj.
+    move/(_ _ _ in1 in2)=> ev; apply/val_inj/ev/cfX=> ?.
+    by rewrite lfsposet_of_finsupp.
+  - rewrite ?lfsposet_of_finsupp // -?cardfE.
+    exact/(leq_trans (leq_imfset_card _ _ _)).
+  - case=> /= ? /[dup]; rewrite {1}lfsposet_of_finsupp // => ?.
+    rewrite /g /lab /= /fin_lab /= ?lfsposet_of_lab ?lab_preserving //.
+    by rewrite ?in_imfset //.
+  case=> ? /[dup] + ? [? /[dup]+?]; rewrite {1 2}lfsposet_of_finsupp // => ??.
+  rewrite /g ?/(_ <= _) /= /fin_ca /=.
+  rewrite ?connect_fin_ca // /==> /(@in_cons_ca_anti X); apply=> //.
+  exact/cfX.
+Qed.
+
 End Theory.
 End Theory.
 
