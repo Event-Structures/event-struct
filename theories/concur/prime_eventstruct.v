@@ -585,7 +585,7 @@ End Theory.
 
 Module Build.
 Section Build.
-Context {L : Type}.
+Context {L : choiceType}.
 Implicit Types (E : eventType L).
 
 Definition mk_hom {E1 E2 : eventType L} h mkH : {hom E1 -> E2} :=
@@ -593,23 +593,26 @@ Definition mk_hom {E1 E2 : eventType L} h mkH : {hom E1 -> E2} :=
 
 Lemma id_class {E} : Hom.class_of (@idfun E).
 Proof.
-  by (do 2 split)=> // ?; rewrite imfset_id.
+  (do 2 split)=> //= e; rewrite ?imfset_id //.
+  by exists e. 
 Qed.
 
 Lemma comp_class {E1 E2 E3} (f : {hom E2 -> E3}) (g : {hom E1 -> E2}) : 
   Hom.class_of (comp f g).
 Proof. 
-  (do 2 split); first apply lPoset.Hom.Build.comp_class.
-  move=> ?. by rewrite imfset_comp=> /cons_mon/cons_mon.
+  (do 2 split)=> /= >.
+  - by rewrite ?lab_preserving.
+  - case/hom_prefix=> ?-> /hom_prefix[e->]; by exists e.
+  by rewrite imfset_comp=> *; do 2 apply/wcons_mon.
 Qed.
 
 Lemma of_eqfun_class {E1 E2} (f : {hom E1 -> E2}) g : 
   g =1 f -> Hom.class_of g.
 Proof. 
-  move=> H; (repeat constructor); move=> ?.
+  move=> H; (do 2 split); move=>>.
   - rewrite !H; exact/lab_preserving.
-  move=> ?; rewrite !H; exact/ca_monotone.
-  move/(cons_mon f); by rewrite -(eq_imfset _ H (fun=> erefl)).
+  - move=> /[!H]/hom_prefix[e]/[-!H]; by exists e.
+  move/(wcons_mon f); by under eq_imfset do [rewrite -H|by[]].
 Qed.
 
 Definition of_eqfun {E1 E2} (f : {hom E1 -> E2}) g : g =1 f -> {hom E1 -> E2} := 
@@ -619,7 +622,7 @@ End Build.
 
 Module Export Exports.
 Section Exports.
-Context {L : Type}.
+Context {L : choiceType}.
 Implicit Types (E : eventType L).
 
 Canonical id_hom E : {hom E -> E} := Hom.Pack id_class.
