@@ -180,10 +180,6 @@ Proof.
   by move=> /fsfun_dflt -> //.
 Qed.
 
-Lemma fs_ca_scaE p e1 e2 :
-  fs_ca p e1 e2 = (e1 == e2) || (fs_sca p e1 e2).
-Proof. admit. Admitted.
-
 Lemma fs_caP p e1 e2 : supp_closed p -> 
   reflect (clos_refl_trans (fs_ica p) e1 e2) (fs_ca p e1 e2).
 Proof. 
@@ -233,26 +229,94 @@ Proof.
   apply/val_inj=> /=; congruence.
 Qed.  
 
-Lemma fs_scaP p e1 e2 : 
+Lemma fs_ca_scaE p e1 e2 : 
+  fs_ca p e1 e2 = (e1 == e2) || (fs_sca p e1 e2).
+Proof.
+  rewrite /fs_sca orb_andr eq_sym orbN andTb. 
+  apply/esym; rewrite orb_idl //.
+  move=> /eqP->; rewrite /fs_ca /=. 
+  by apply/orP; left.
+Qed.
+
+Lemma fs_ica_ct_fin_sca p : supp_closed p -> acyclic (fin_ica p) ->
+  clos_trans (fs_ica p) ≦ sub_rel_lift (fin_sca p).
+Proof. 
+  move=> supcl acyc e1 e2; elim; clear e1 e2.
+  - move=> x y; rewrite /sub_rel_lift /=.
+    move=> /[dup] /(supp_closedP _ supcl) [xIn yIn].
+    rewrite !insubT /fin_sca /fin_ca /fin_ica=> ica_xy.
+    have: fin_ica p (Sub x xIn) (Sub y yIn).    
+    - by rewrite /fin_ica /sub_rel_down /=.
+    move=> fica_xy; apply/andP; split; last first.
+    - by apply/connect1. 
+    move: (acyc_irrefl acyc)=> irr. 
+    apply/eqP=> eq_xy. 
+    move: fica_xy; rewrite eq_xy.
+    by move: (irr (Sub x xIn))=> ->.
+  move=> x y z ? H1 ? H2.  
+  apply/sub_rel_lift_trans; last first.
+  - exact/H2.
+  - exact/H1.
+  move=> z' x' y'; rewrite /fin_sca /fin_ca. 
+  move=> /andP[/eqP neq_zx Hxz] /andP[/eqP neq_yz Hzy]. 
+  apply/andP; split; last first.
+  - apply/connect_trans; [exact/Hxz | exact/Hzy].
+  apply/eqP=> eq_xy. 
+  move: eq_xy Hxz Hzy=> -> ??.
+  suff: x' = z'. 
+  - by move: neq_zx=> /[swap]->.
+  move: acyc=> /connect_antisym antisym.
+  by apply/antisym/andP.  
+Qed.
+
+Lemma fs_scaP p e1 e2 : supp_closed p -> acyclic (fin_ica p) ->
   reflect (clos_trans (fs_ica p) e1 e2) (fs_sca p e1 e2).
 Proof. 
+  move=> supcl acyc.
   apply/equivP; last first.
-  (* rewrite /fs_sca /fs_ca /= /dhrel_one. *)
-  (* rewrite andb_orr.  *)
-  (* apply/(equivP idP); split. *)
-  (* -  *)
-  admit.
-Admitted.
+  - symmetry; apply/clos_t_itr.
+  suff: (fs_ica p : hrel E E)^+ ≡ !1 ⊓ (fs_ca p : hrel E E).
+  - move=> scaE.
+    apply/equivP; last first.
+    + symmetry; apply/scaE.
+    rewrite /fs_sca eq_sym.
+    apply/(equivP idP); split.
+    + by move=> /andP[] /eqP. 
+    by move=> /= [/eqP ??]; apply/andP.
+  rewrite -capC. 
+  have->: (fs_ica p : hrel E E)^+ ≡ (fs_ica p : hrel E E)^+ \ 1.
+  - apply/weq_spec; split; last by lattice.
+    rewrite -clos_t_itr; move=> x y /= ica_xy; split=> //.
+    move: ica_xy=> /[swap] <-.
+    move=> /(fs_ica_ct_fin_sca supcl acyc).
+    rewrite /sub_rel_lift /=.            
+    case: insubP=> // x'.
+    by rewrite /fin_sca eq_refl.
+  suff->: (fs_ca p : hrel E E) ≡ (fs_ica p : hrel E E)^*.
+  - by symmetry; apply/str_itr_sub_one. 
+  rewrite -clos_rt_str.
+  move=> ?? /=; symmetry; apply: rwP; exact/fs_caP.
+Qed.
 
-Lemma supp_closed_sca p e1 e2 : 
-  supp_closed p -> fs_sca p e1 e2 -> (e1 \in finsupp p) * (e2 \in finsupp p).
-Proof. admit. Admitted.
+Lemma supp_closed_sca p e1 e2 : supp_closed p -> acyclic (fin_ica p) -> 
+  fs_sca p e1 e2 -> (e1 \in finsupp p) * (e2 \in finsupp p).
+Proof. 
+  move=> supcl acyc /(fs_scaP _ _ supcl acyc) /clos_t_itr.
+  suff: (fs_ica p : hrel E E)^+ ≦ mem (finsupp p) × mem (finsupp p).   
+  - by move=> /[apply] /= /andP[].
+  etransitivity.
+  - apply kleene.itr_leq=> ??.  
+    by apply/supp_closedP.
+  move=> ?? /clos_t_itr; elim=> //=.
+  - move=> ?? [??]; exact/andP.
+  by move=> ??? H1 /andP[??] H2 /andP[??]; apply/andP.
+Qed.
 
 Lemma lfsp_dw_closP p es e : 
-  supp_closed p -> es `<=` (finsupp p) ->
+  supp_closed p -> acyclic (fin_ica p) -> es `<=` (finsupp p) ->
     reflect (exists2 e', fs_ca p e e' & e' \in es) (e \in lfsp_dw_clos p es).
 Proof. 
-  move=> supcl /fsubsetP subs.
+  move=> supcl acyc /fsubsetP subs.
   rewrite mem_filter.
   apply/(equivP idP); split.
   - move=> /andP[] /existsP[e'] eCa eIn.
@@ -261,7 +325,7 @@ Proof.
   - by apply/existsP; exists (Sub e' e'In).
   move: eCa; rewrite fs_ca_scaE=> /orP[/eqP->|].
   - exact/subs.
-  by move=> /(supp_closed_sca supcl) ->.
+  by move=> /(supp_closed_sca supcl acyc) ->.
 Qed.
 
 End Theory.
@@ -1136,14 +1200,14 @@ Proof.
   by move: (H supcl)=> [-> ->]. 
 Qed.
 
-Lemma add_event_fs_caE e1 e2 : supp_closed p -> 
+Lemma add_event_fs_caE e1 e2 : supp_closed p -> acyclic (fin_ica p) ->
   fs_ca (lfsp_add_event l es p) e1 e2 = 
     (e1 \in lfsp_dw_clos p es) && (e2 == lfsp_fresh p) || (fs_ca p e1 e2).
 Proof. 
   (* TODO: yet another terrible proof due to poor 
    *   integration of mathcomp & relation-algebra 
    *)
-  move=> supcl.
+  move=> supcl acyc.
   apply/eq_bool_iff; apply: iff_trans.
   - apply: iff_sym; apply: rwP. 
     by apply/fs_caP/add_event_supp_closed.
@@ -1168,7 +1232,7 @@ Proof.
     + move=> [e3] /clos_rt_str/(fs_caP _ _ supcl) + /andP[+] /eqP->.
       rewrite eq_refl andbT=> ??.
       by apply/lfsp_dw_closP=> //; exists e3.
-    move=> /andP[] /(lfsp_dw_closP _ supcl esSub) [e3] ++ /eqP->.    
+    move=> /andP[] /(lfsp_dw_closP _ supcl acyc esSub) [e3] ++ /eqP->.    
     move=> ??; exists e3; rewrite ?eq_refl ?andbT //.
     by apply/clos_rt_str/(fs_caP _ _ supcl).
   suff->: (r2^* ⋅ (r1 ⋅ r2^*)^*) e1 e2 <-> ((r2^* ⋅ r1) ⊔ r2^*) e1 e2.
