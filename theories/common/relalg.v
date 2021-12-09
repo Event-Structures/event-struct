@@ -1,6 +1,7 @@
 From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
+From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 From RelationAlgebra Require Import lattice monoid boolean rel fhrel kat_tac.
 
 (* ************************************************************************** *)
@@ -68,7 +69,7 @@ Context `{monoid.laws} (n : ob X).
 Implicit Types (x : X n n). 
 
 (* TODO: introduce a class of lattices/KATs with decidable equality? *)
-Context (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
+Hypothesis (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
 
 Lemma qmk_sub_one `{CUP+CAP+TOP ≪ l} x :
   (x \ 1)^? ≡ x^?.
@@ -447,6 +448,18 @@ Lemma clos_rt_str R :
 Proof. 
   rewrite str_itr clos_rt_crE clos_r_qmk.
   by rewrite clos_t_itr. 
+Qed.
+
+(* TODO: this cannot be proven for KA+NEG, 
+ *   because hrel does not have NEG
+ *)
+Lemma str_itr_sub_one R :
+  R^* \ 1 ≡ R^+ \ 1.
+Proof. 
+  rewrite str_itr capC capcup. 
+  suff->: !1 ⊓ (1 : hrel T T) ≡ 0.
+  - by lattice.
+  by move=> ?? /=; split=> // [[]].
 Qed.
 
 End RelClos.

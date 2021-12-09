@@ -566,6 +566,17 @@ Proof.
   by rewrite /rl /sub_rel_lift /= !insubT !andbT !sub_val.
 Qed.
 
+Lemma sub_rel_lift_trans r : 
+  transitive r -> transitive (sub_rel_lift r).
+Proof. 
+  move=> trans x y z. 
+  rewrite /sub_rel_lift /=. 
+  case: insubP=> // y' ??.
+  case: insubP=> // x' ??.
+  case: insubP=> // z' ??.
+  exact/trans.
+Qed.
+
 End SubTypeUtils.
 
 
