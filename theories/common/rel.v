@@ -118,6 +118,53 @@ Qed.
 
 End FinGraph. 
 
+Section RelMono. 
+Context {T U : Type}.
+Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
+Hypothesis (fbij : bijective f).
+Hypothesis (fmon : {mono f : x y / g1 x y >-> g2 x y}).
+
+Lemma irreflexive_mono : 
+  (irreflexive g1) <-> (irreflexive [rel x y | g2 (f x) (f y)]).
+Proof. 
+  split=> irr x /=. 
+  - by rewrite fmon. 
+  rewrite -fmon; exact/irr.
+Qed.
+
+Lemma antisymmetric_mono : 
+  (antisymmetric g1) <-> (antisymmetric [rel x y | g2 (f x) (f y)]).
+Proof. 
+  split=> asym x y /=.
+  - rewrite !fmon; exact/asym.
+  rewrite -fmon -fmon; exact/asym.
+Qed.
+
+End RelMono.
+
+Section FinGraphMono. 
+Context {T U : finType}.
+Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
+Hypothesis (fbij : bijective f).
+Hypothesis (fmon : {mono f : x y / g1 x y >-> g2 x y}).
+
+Lemma connect_mono : 
+  {mono f : x y / connect g1 x y >-> connect g2 x y}.
+Proof. 
+  move=> x y; apply/idP/idP; last first.
+  all: move=> /connect_strP/clos_rt_str/=> crt. 
+  all: apply/connect_strP/clos_rt_str. 
+  - elim: crt=> // [|??? _ + _]; last exact/rt_trans.
+    move=> {}x {}y; rewrite -fmon; exact/rt_step.
+  move: fbij=> [g] K K'.
+  rewrite -[x]K -[y]K.
+  elim: crt=> // [|??? _ + _]; last exact/rt_trans.
+  move=> {}x {}y; rewrite -[x]K' -[y]K' fmon=> ?. 
+  by apply/rt_step; rewrite !K.
+Qed.
+
+End FinGraphMono.
+
 Section Covering.
 Context {T : finType}.
 Implicit Types (r : rel T).
