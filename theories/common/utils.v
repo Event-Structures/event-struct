@@ -1333,59 +1333,6 @@ End Theory.
 End Subsumes.
 
 
-Section FinGraph. 
-Context {T : finType}.
-Implicit Types (g : rel T). 
-Implicit Types (gf : T -> seq T). 
-
-Definition totalb g :=
-  [forall x, forall y, g x y || g y x].
-
-Lemma totalP g : 
-  reflect (total g) (totalb g).
-Proof. exact/forall2P. Qed.
-
-Lemma connect_refl g : 
-  reflexive (connect g).
-Proof. done. Qed. 
-
-Lemma acyc_irrefl g :
-  acyclic g -> irreflexive g.
-Proof. 
-  move=> /acyclicP[irr _] x. 
-  move: (irr x)=> /negP ?; exact/negP. 
-Qed.
-
-Lemma connect_antisym g : 
-  acyclic g -> antisymmetric (connect g).
-Proof. 
-  move=> /acyclic_symconnect_eq symconE x y.
-  move: (symconE x y); rewrite /symconnect.
-  by move=> -> /eqP.
-Qed.
-
-Lemma mem_tseq gf : 
-  tseq gf =i enum T.
-Proof. 
-  move: (tseq_correct gf)=> [_ in_tseq]. 
-  apply/subset_eqP/andP; split; apply/subsetP; last first.
-  - move=> x ?; exact/in_tseq. 
-  by move=> ?; rewrite mem_enum.
-Qed.
-
-Lemma size_tseq gf : 
-  size (tseq gf) = #|T|.
-Proof. 
-  rewrite cardT; apply/eqP. 
-  rewrite -uniq_size_uniq.
-  - exact/tseq_uniq.
-  - exact/enum_uniq.
-  move=> ?; exact/esym/mem_tseq.
-Qed.
-
-End FinGraph. 
-
-
 Section IterUtils.
 Context {T : Type}.
 Implicit Types (f : T -> T).
