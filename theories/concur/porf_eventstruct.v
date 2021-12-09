@@ -1116,7 +1116,7 @@ Canonical prime_porfPrime :=
   let base := lPoset.lPoset.class (lposetType es) in 
   let dw_mix := @dwFinPOrderMixin E L es in
   @Prime.EventStruct.Pack L E 
-    (@Prime.EventStruct.Class E L base dw_mix prime_porfMixin).
+    (@Prime.EventStruct.Class E L base dw_mix prime_porfMixin (Ident.class E) (Ident.mixin (Ident.class E))).
 
 End PrimePORFEventStruct.
 
