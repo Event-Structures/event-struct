@@ -89,7 +89,7 @@ Proof.
   move: (irr x)=> /negP ?; exact/negP. 
 Qed.
 
-Lemma connect_antisym g : 
+Lemma acyc_antisym g : 
   acyclic g -> antisymmetric (connect g).
 Proof. 
   move=> /acyclic_symconnect_eq symconE x y.

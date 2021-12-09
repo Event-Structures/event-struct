@@ -265,10 +265,11 @@ Proof.
   move: eq_xy Hxz Hzy=> -> ??.
   suff: x' = z'. 
   - by move: neq_zx=> /[swap]->.
-  move: acyc=> /connect_antisym antisym.
+  move: acyc=> /acyc_antisym antisym.
   by apply/antisym/andP.  
 Qed.
 
+(* TODO: maybe prove for lfsposet? *)
 Lemma fs_scaP p e1 e2 : supp_closed p -> acyclic (fin_ica p) ->
   reflect (clos_trans (fs_ica p) e1 e2) (fs_sca p e1 e2).
 Proof. 
@@ -312,6 +313,44 @@ Proof.
   by move=> ??? H1 /andP[??] H2 /andP[??]; apply/andP.
 Qed.
 
+Lemma supp_closed_ca p e1 e2 : supp_closed p -> acyclic (fin_ica p) -> 
+  fs_ca p e1 e2 -> (e1 == e2) || (e1 \in finsupp p) && (e2 \in finsupp p).
+Proof. 
+  move=> supcl acyc. 
+  rewrite fs_ca_scaE=> /orP[/eqP->|].
+   - by rewrite eq_refl.
+  move=> /(supp_closed_sca supcl acyc) [??].
+  by apply/orP; right; apply/andP.  
+Qed.
+
+Lemma fs_ica_irrefl p : supp_closed p -> irreflexive (fin_ica p) -> 
+  irreflexive (fs_ica p).
+Proof. 
+  move=> supcl irr. 
+  rewrite /fin_ica /fs_ica /sub_rel_down => e /=.
+  case: (e \in finsupp p)/idP.
+  - by move=> eIn; move: (irr (Sub e eIn))=> /=. 
+  by move=> /negP nsupp; rewrite /fs_rcov fsfun_dflt //. 
+Qed.
+
+Lemma fs_ca_antisym p : supp_closed p -> acyclic (fin_ica p) -> 
+  antisymmetric (fs_ca p).
+Proof. 
+  move=> supcl acyc e1 e2.
+  rewrite /fs_ca /sub_rel_lift /= /dhrel_one.
+  move=> /andP[] /orP[/eqP|] //.
+  move=> /[swap] /orP[/eqP|] //.
+  case: insubP=> // e2' in2 <-.
+  case: insubP=> // e1' in1 <-.
+  move=> ??; suff->: e1' = e2'=> //.
+  move: (acyc_antisym acyc)=> anti.
+  by apply/anti/andP.
+Qed.
+
+Lemma lfsp_dw_clos_subs p es : 
+  {subset (lfsp_dw_clos p es) <= finsupp p}.
+Proof. by move=> e; rewrite mem_filter=> /andP[]. Qed.
+
 Lemma lfsp_dw_closP p es e : 
   supp_closed p -> acyclic (fin_ica p) -> es `<=` (finsupp p) ->
     reflect (exists2 e', fs_ca p e e' & e' \in es) (e \in lfsp_dw_clos p es).
@@ -325,7 +364,27 @@ Proof.
   - by apply/existsP; exists (Sub e' e'In).
   move: eCa; rewrite fs_ca_scaE=> /orP[/eqP->|].
   - exact/subs.
+  (* TODO: looks like it can be proven with weaker assumptions *)
   by move=> /(supp_closed_sca supcl acyc) ->.
+Qed.
+
+Lemma fin_ica_mono p : 
+  {mono val : x y / fin_ica p x y >-> fs_ica p x y}.
+Proof. done. Qed.
+
+Lemma fin_ca_mono p : 
+  {mono val : x y / fin_ca p x y >-> fs_ca p x y}.
+Proof. 
+  move=> e1 e2; rewrite /fs_ca /= /dhrel_one.
+  rewrite /sub_rel_lift /=.
+  case: insubP; last first.
+  - by move: (valP e1)=> + /negP.
+  case: insubP; last first.
+  - by move: (valP e2)=> + /negP.
+  move=> e1' in1 /val_inj <- e2' in2 /val_inj <-.
+  apply/orb_idl.
+  move=> /eqP /val_inj ->.
+  exact/connect0.
 Qed.
 
 End Theory.
@@ -697,8 +756,7 @@ Proof.
   move=> ++ /val_inj H1 /val_inj H2.
   rewrite H2 H1=> con_e12 con_e21.
   suff: e1' = e2'=> [->|] //.
-  apply/(connect_antisym (lfsp_acyclic p)).
-  by apply/andP.
+  by apply/(acyc_antisym (lfsp_acyclic p))/andP.
 Qed.  
 
 Definition lfsposet_porderMixin := 
@@ -732,7 +790,7 @@ Proof. exact/connect_refl. Qed.
 
 Lemma fin_ca_antisym : 
   antisymmetric (fin_ca p).
-Proof. exact/connect_antisym/(lfsp_acyclic p). Qed.
+Proof. exact/acyc_antisym/(lfsp_acyclic p). Qed.
 
 Lemma fin_ca_trans : 
   transitive (fin_ca p).
@@ -1266,6 +1324,57 @@ Proof.
     by move: (fresh_seq_nmem (finsupp p))=> /negP.
   ka.    
 Qed.  
+
+Lemma add_event_irrefl : supp_closed p -> 
+  irreflexive (fin_ica p) -> irreflexive (fin_ica (lfsp_add_event l es p)).
+Proof. 
+  move=> supcl irr.  
+  apply/irreflexive_mono.
+  - exact/fin_ica_mono.
+  move=> /=; case=> e /=. 
+  rewrite add_event_finsuppE !add_event_fs_icaE /lfsp_fresh !inE. 
+  move: (fresh_seq_nmem (finsupp p))=> /negP nFr.
+  move=> eIn; apply/orP=> [[|]].
+  - move=> /andP[] /[swap] /eqP ->.
+    by move: esSub=> /fsubsetP /[apply].
+  move: eIn=> /orP[/eqP->|eIn].   
+  - rewrite /fs_ica /= /fs_rcov fsfun_dflt //; exact/negP.
+  move: (irr (Sub e eIn)).
+  by rewrite /fin_ica /sub_rel_down /= => ->.
+Qed.
+
+Lemma add_event_acyclic : supp_closed p -> 
+  acyclic (fin_ica p) -> acyclic (fin_ica (lfsp_add_event l es p)).
+Proof.
+  move=> supcl acyc. 
+  rewrite acyclicE; apply/andP; split.
+  - apply/irreflexiveP/irreflexive_mono.
+    + exact/fin_ica_mono.
+    move=> /= e; apply/fs_ica_irrefl.
+    + exact/add_event_supp_closed.
+    + apply/add_event_irrefl=> //. 
+      by move: acyc; rewrite acyclicE=> /andP[/irreflexiveP].
+  apply/antisymmetricP/antisymmetric_mono. 
+  - exact/fin_ca_mono.
+  move=> /= e1 e2 /andP[].
+  rewrite !add_event_fs_caE //.
+  move=> /orP[|] + /orP[|].  
+  - move=> /= /andP[? /eqP ?] /andP[? /eqP ?].
+    apply/val_inj=> /=; congruence.
+  - move=> /andP[in1 /eqP ->].
+    move: (fresh_seq_nmem (finsupp p))=> /negP nFr.
+    move=> /(supp_closed_ca supcl acyc)=> /orP[|].     
+    + move: in1=> /[swap] /eqP<-. 
+      by move=> /lfsp_dw_clos_subs.
+    by move=> /andP[].    
+  - move=> /[swap] /andP[in2 /eqP ->].  
+    move: (fresh_seq_nmem (finsupp p))=> /negP nFr.
+    move=> /(supp_closed_ca supcl acyc)=> /orP[|].     
+    + move: in2=> /[swap] /eqP<-. 
+      by move=> /lfsp_dw_clos_subs.
+    by move=> /andP[].    
+   by move=> ??; apply/val_inj/(fs_ca_antisym supcl acyc)/andP.
+Qed.
 
 End Theory.
 End Theory.  
