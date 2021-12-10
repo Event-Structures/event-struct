@@ -119,7 +119,7 @@ Definition exlab {S L : Type} (ltr : L -> hrel S S) : hrel S S :=
 
 End ExLab.
 
-Module Export LTS.
+Module LTS.
 
 Module LTS.
 Section ClassDef. 
@@ -170,15 +170,15 @@ Coercion countType : type >-> Countable.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical countType.
+Notation ltsType := LTS.type.
+Notation LTSType S L m := (@LTS.pack S L _ _ id m).
 End Exports.
 
 End LTS.
 
 Export LTS.Exports.
 
-Notation ltsType := LTS.type.
-Notation LTSType S L m := (@LTS.pack S L _ _ id m).
-
+Module Export Def.
 Section Def.
 Context {L : Type} (S : ltsType L).
 Implicit Types (l : L) (s : S).
@@ -200,15 +200,19 @@ Definition ftrans : L -> S -> S :=
   end.
 
 End Def.
+End Def.
 
 Prenex Implicits ltrans has_trans ftrans.
 
+Module Export Syntax.
 Notation "s1 '--[' l ']-->' s2" := (ltrans l s1 s2) : lts_scope.
 Notation "s1 '-->' s2" := ((exlab ltrans) s1 s2) : lts_scope.
 Notation "s1 '-->?' s2" := ((exlab ltrans)^? s1 s2) : lts_scope.
 Notation "s1 '-->+' s2" := ((exlab ltrans)^+ s1 s2) : lts_scope. 
 Notation "s1 '-->*' s2" := ((exlab ltrans)^* s1 s2) : lts_scope.
+End Syntax.
 
+Module Export Theory.
 Section Theory.
 Context {L : Type} (S : ltsType L).
 Implicit Types (l : L) (s : S).
@@ -234,30 +238,36 @@ Lemma has_ftrans l s :
 Proof. rewrite /ftrans; destruct idP=> // _; apply/xchooseP. Qed. 
 
 End Theory.
+End Theory.
 
 End LTS.
 
+Export LTS.LTS.Exports.
+Export LTS.Def.
+Export LTS.Syntax.
+Export LTS.Theory.
 
-Module Export dLTS.
+
+Module dLTS.
 
 Module dLTS.
 Section ClassDef. 
 
 Record mixin_of (S0 : Type) (L : Type)
-                (sb : LTS.class_of S0 L)
-                (S := LTS.Pack sb) := Mixin {
+                (sb : LTS.LTS.class_of S0 L)
+                (S := LTS.LTS.Pack sb) := Mixin {
   _ : forall (l : L) (s1 s2 s3 : S), 
         (s1 --[l]--> s2) -> (s1 --[l]--> s3) -> s2 = s3
 }.
 
 Set Primitive Projections.
 Record class_of (S : Type) (L : Type) := Class {
-  base  : LTS.class_of S L;
+  base  : LTS.LTS.class_of S L;
   mixin : mixin_of base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> LTS.class_of.
+Local Coercion base : class_of >-> LTS.LTS.class_of.
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -269,37 +279,37 @@ Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c
 Definition clone c of phant_id class c := @Pack S c.
 
 Definition pack :=
-  fun bS b & phant_id (@LTS.class bS) b =>
+  fun bS b & phant_id (@LTS.LTS.class bS) b =>
   fun m => Pack (@Class S L b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 Definition countType := @Countable.Pack cT class.
-Definition ltsType := @LTS.Pack L cT class.
+Definition ltsType := @LTS.LTS.Pack L cT class.
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> LTS.class_of.
+Coercion base : class_of >-> LTS.LTS.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion countType : type >-> Countable.type.
-Coercion ltsType : type >-> LTS.type.
+Coercion ltsType : type >-> LTS.LTS.type.
 Canonical eqType.
 Canonical choiceType.
 Canonical countType.
 Canonical ltsType.
+Notation dltsType := dLTS.type.
+Notation dLTSType S L m := (@dLTS.pack S L _ _ id m).
 End Exports.
 
 End dLTS.
 
 Export dLTS.Exports.
 
-Notation dltsType := dLTS.type.
-Notation dLTSType S L m := (@dLTS.pack S L _ _ id m).
-
+Module Export Theory.
 Section Theory.
 Context {L : Type} {S : dltsType L}.
 Implicit Types (l : L) (s : S).
@@ -319,8 +329,12 @@ Proof.
 Qed. 
 
 End Theory.
+End Theory.
 
 End dLTS.
+
+Export dLTS.dLTS.Exports.
+Export dLTS.Theory.
 
 
 (* Context {L : Type} {S : ltsType L}. *)
@@ -864,10 +878,8 @@ End Simulation.
 Export Simulation.Exports.
 Import Simulation.Syntax.
 
-Section Theory.
+Section LTSTheory.
 Context {L : eqType}.
-
-Section LTS_Simulation.
 Context {S T : ltsType L}.
 Implicit Types (R : {sim S -> T}).
 
@@ -928,10 +940,12 @@ Proof.
   by apply/eqP/fst_stateNnil.
 Qed.
 
-End LTS_Simulation.
+End LTSTheory.
 
-Section DLTS_Simulation.
-Context {S T : dltsType L} (s : S) (t : T).
+Section DLTSTheory.
+Context {L : eqType}.
+Context {S T : dltsType L}.
+Context (s : S) (t : T).
 Implicit Types (R : {sim S -> T}).
 
 Definition det_sim_R : hrel S T := fun s1 t1 =>
@@ -966,9 +980,7 @@ Proof.
   exists (det_sim lls), [::]; split=> //; exact/lts_lang0.
 Qed.
 
-End DLTS_Simulation.
-
-End Theory.
+End DLTSTheory.
 
 End Simulation. 
 
