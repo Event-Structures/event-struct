@@ -309,6 +309,67 @@ End dLTS.
 
 Export dLTS.Exports.
 
+Module Build.
+Section Build.
+Context {L : Type} {S : countType}.
+Implicit Types (l : L) (s : S).
+Implicit Types (f : L -> S -> S).
+Implicit Types (en : L -> S -> bool).
+
+Lemma of_funP f l s :
+  reflect (exists s', s' == f l s) true.
+Proof. by constructor; exists (f l s). Qed.
+
+Definition of_fun_mixin f := 
+  @LTS.LTS.Mixin S L (Countable.class S) _ _ (of_funP f). 
+
+Lemma of_fun_enP f en l s :
+  reflect (exists s', if en l s then s' == f l s else false) 
+          (en l s).
+Proof. 
+  rewrite /ltrans; case: (en l s); constructor.
+  - by exists (f l s).
+  by move=> [].
+Qed.  
+
+Definition of_fun_en_mixin f en := 
+  @LTS.LTS.Mixin S L (Countable.class S) _ _ (of_fun_enP f en). 
+
+End Build.
+End Build.
+
+Section OfFun.
+Context {L : Type} {S : countType}.
+Implicit Types (l : L) (s : S).
+Implicit Types (f : L -> S -> S).
+Implicit Types (en : L -> S -> bool).
+
+Definition of_fun f := 
+  LTSType S L (Build.of_fun_mixin f).
+
+Definition of_fun_en f en := 
+  LTSType S L (Build.of_fun_en_mixin f en).
+                     
+(* TODO: make notation for of_fun *)
+Lemma of_fun_ftrans f l (s : of_fun f) :
+  ftrans l s = f l s.
+Proof. 
+  apply/eqP; move: (@has_ftrans _ _ l s).
+  by rewrite /has_trans /ltrans /=; apply.
+Qed.
+
+(* TODO: make notation for of_fun_en *)
+Lemma of_fun_en_ftrans f en l (s : of_fun_en f en) :
+  ftrans l s = if en l s then f l s else s.
+Proof. 
+  apply/eqP; move: (@has_ftrans _ _ l s).
+  rewrite /has_trans /ltrans /=.
+  case: (en l s)/idP=> [_|nEn _]; first by apply.
+  rewrite /ftrans; destruct idP=> //.
+Qed.
+
+End OfFun.
+
 Module Export Theory.
 Section Theory.
 Context {L : Type} {S : dltsType L}.
