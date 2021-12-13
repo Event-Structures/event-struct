@@ -1204,7 +1204,7 @@ End Tomset.
 Export Tomset.Def.
 Export Tomset.Theory.
 
-Module Export lFsPrePosetLTS.
+Module Export AddEvent.
 
 Module Export Def.
 Section Def.  
@@ -1219,72 +1219,9 @@ Definition lfspre_add_event l es p : lfspreposet E L bot :=
 End Def.
 End Def.
 
-Module LTS.
-Section LTS.
-Context (E : identType) (L : choiceType) (bot : L).
-Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p : lfspreposet E L bot).
-
-Definition ltrans l p q := 
-  (l != bot) &&
-  [exists es : fpowerset (finsupp p),
-    q == lfspre_add_event l (val es) p
-  ]. 
-
-Lemma enabledP l p :
-  reflect (exists q, ltrans l p q) (l != bot).
-Proof. 
-  case: (l != bot)/idP=> lD; last first.
-  - by constructor=> /= [[q]] /andP[].
-  constructor; exists (lfspre_add_event l fset0 p). 
-  apply/andP; split=> //.
-  apply/existsP=> /=.
-  have inPw: (fset0 \in fpowerset (finsupp p)).
-  - rewrite fpowersetE; exact/fsub0set.
-  pose es : fpowerset (finsupp p) := Sub fset0 inPw.
-  by exists es.
-Qed.
-  
-Definition mixin := 
-  let S := lfspreposet E L bot in
-  @LTS.LTS.Mixin S L _ _ _ enabledP. 
-Definition ltsType := 
-  Eval hnf in let S := lfspreposet E L bot in (LTSType S L mixin).
-
-End LTS.
-
-Module Export Exports.
-Canonical ltsType.
-End Exports.
-
-End LTS.
-
-Export LTS.Exports.
-
 Module Export Theory.
 Section Theory.  
 Context (E : identType) (L : choiceType) (bot : L).
-Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p : lfspreposet E L bot).
-
-Local Open Scope lts_scope.
-
-Lemma lfspre_ltransP l p q :
-  reflect (l != bot /\ exists2 es, 
-             es `<=` finsupp p & 
-             q = lfspre_add_event l es p)
-          (p --[l]--> q).
-Proof. 
-  rewrite /ltrans /= /LTS.ltrans.
-  apply: (andPP idP). 
-  apply/(equivP idP); split=> [/existsP|] /=.
-  - move=> [es] /eqP->; exists (val es)=> //.
-    rewrite -fpowersetE; exact/(valP es). 
-  move=> [es] + ->; rewrite -fpowersetE.
-  move=> inPw; apply/existsP=> /=.
-  by exists (Sub es inPw).
-Qed.
-
 Variable (l : L) (es : {fset E}).
 Variable (p : lfspreposet E L bot).
 
@@ -1471,7 +1408,7 @@ Qed.
 End Theory.
 End Theory.  
 
-End lFsPrePosetLTS.
+End AddEvent.
 
 
 Module Export lFsPosetLTS.
