@@ -1227,7 +1227,7 @@ End Def.
 
 Module LTS.
 Section LTS.
-Context (E : identType) (L : countType) (bot : L).
+Context (E : identType) (L : choiceType) (bot : L).
 Implicit Types (l : L) (es : {fset E}).
 Implicit Types (p : lfspreposet E L bot).
 
@@ -1265,7 +1265,7 @@ Export LTS.Exports.
 
 Module Export Theory.
 Section Theory.  
-Context (E : identType) (L : countType) (bot : L).
+Context (E : identType) (L : choiceType) (bot : L).
 Implicit Types (l : L) (es : {fset E}).
 Implicit Types (p : lfspreposet E L bot).
 

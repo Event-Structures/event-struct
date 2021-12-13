@@ -124,9 +124,10 @@ Module LTS.
 Module LTS.
 Section ClassDef. 
 
+(* TODO: strengthen to countType? *)
 Record mixin_of (S0 : Type) (L : Type)
-                (sb : Countable.class_of S0)
-                (S := Countable.Pack sb) := Mixin {
+                (sb : Choice.class_of S0)
+                (S := Choice.Pack sb) := Mixin {
   ltrans    : L -> rel S;
   has_trans : L -> S -> bool;
   _ : forall l s, reflect (exists s', ltrans l s s') (has_trans l s);
@@ -134,12 +135,12 @@ Record mixin_of (S0 : Type) (L : Type)
 
 Set Primitive Projections.
 Record class_of (S : Type) (L : Type) := Class {
-  base  : Countable.class_of S;
+  base  : Choice.class_of S;
   mixin : mixin_of L base;
 }.
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Countable.class_of.
+Local Coercion base : class_of >-> Choice.class_of.
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -151,25 +152,25 @@ Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c
 Definition clone c of phant_id class c := @Pack S c.
 
 Definition pack :=
-  fun bS b & phant_id (@Countable.class bS) b =>
+  fun bS b & phant_id (@Choice.class bS) b =>
   fun m => Pack (@Class S L b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
-Definition countType := @Countable.Pack cT class.
+(* Definition countType := @Countable.Pack cT class. *)
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Countable.class_of.
+Coercion base : class_of >-> Choice.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
-Coercion countType : type >-> Countable.type.
+(* Coercion countType : type >-> Countable.type. *)
 Canonical eqType.
 Canonical choiceType.
-Canonical countType.
+(* Canonical countType. *)
 Notation ltsType := LTS.type.
 Notation LTSType S L m := (@LTS.pack S L _ _ id m).
 End Exports.
@@ -284,7 +285,7 @@ Definition pack :=
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
-Definition countType := @Countable.Pack cT class.
+(* Definition countType := @Countable.Pack cT class. *)
 Definition ltsType := @LTS.LTS.Pack L cT class.
 
 End ClassDef.
@@ -295,11 +296,11 @@ Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
-Coercion countType : type >-> Countable.type.
+(* Coercion countType : type >-> Countable.type. *)
 Coercion ltsType : type >-> LTS.LTS.type.
 Canonical eqType.
 Canonical choiceType.
-Canonical countType.
+(* Canonical countType. *)
 Canonical ltsType.
 Notation dltsType := dLTS.type.
 Notation dLTSType S L m := (@dLTS.pack S L _ _ id m).
@@ -311,7 +312,7 @@ Export dLTS.Exports.
 
 Module Build.
 Section Build.
-Context {L : Type} {S : countType}.
+Context {L : Type} {S : choiceType}.
 Implicit Types (l : L) (s : S).
 Implicit Types (f : L -> S -> S).
 Implicit Types (en : L -> S -> bool).
@@ -321,7 +322,7 @@ Lemma of_funP f l s :
 Proof. by constructor; exists (f l s). Qed.
 
 Definition of_fun_mixin f := 
-  @LTS.LTS.Mixin S L (Countable.class S) _ _ (of_funP f). 
+  @LTS.LTS.Mixin S L (Choice.class S) _ _ (of_funP f). 
 
 Lemma of_fun_enP f en l s :
   reflect (exists s', if en l s then s' == f l s else false) 
@@ -333,13 +334,13 @@ Proof.
 Qed.  
 
 Definition of_fun_en_mixin f en := 
-  @LTS.LTS.Mixin S L (Countable.class S) _ _ (of_fun_enP f en). 
+  @LTS.LTS.Mixin S L (Choice.class S) _ _ (of_fun_enP f en). 
 
 End Build.
 End Build.
 
 Section OfFun.
-Context {L : Type} {S : countType}.
+Context {L : Type} {S : choiceType}.
 Implicit Types (l : L) (s : S).
 Implicit Types (f : L -> S -> S).
 Implicit Types (en : L -> S -> bool).
@@ -477,22 +478,22 @@ Canonical step_choiceType :=
 
 End Choice.
 
-Section Countable.
-Context {L : countType} (S : ltsType L).
+(* Section Countable. *)
+(* Context {L : countType} (S : ltsType L). *)
 
-Definition stepTuple_countMixin := 
-  CanCountMixin (@prod_of_stepK L S).
-Canonical stepTuple_countType := 
-  Eval hnf in CountType (stepTuple S) stepTuple_countMixin.
+(* Definition stepTuple_countMixin :=  *)
+(*   CanCountMixin (@prod_of_stepK L S). *)
+(* Canonical stepTuple_countType :=  *)
+(*   Eval hnf in CountType (stepTuple S) stepTuple_countMixin. *)
 
-Definition step_countMixin := 
-  Eval hnf in [countMixin of step S by <:].
-Canonical step_countType := 
-  Eval hnf in CountType (step S) step_countMixin.
+(* Definition step_countMixin :=  *)
+(*   Eval hnf in [countMixin of step S by <:]. *)
+(* Canonical step_countType :=  *)
+(*   Eval hnf in CountType (step S) step_countMixin. *)
 
-Canonical step_subCountType := [subCountType of (step S)].
+(* Canonical step_subCountType := [subCountType of (step S)]. *)
 
-End Countable.
+(* End Countable. *)
 
 Section Theory.
 Context {L : eqType} (S : ltsType L).
@@ -665,15 +666,15 @@ Canonical trace_choiceType :=
 
 End Choice.
 
-Section Countable.
-Context {L : countType} (S : ltsType L).
+(* Section Countable. *)
+(* Context {L : countType} (S : ltsType L). *)
 
-Definition trace_countMixin := 
-  Eval hnf in [countMixin of trace S by <:].
-Canonical trace_countType := 
-  Eval hnf in CountType (trace S) trace_countMixin.
+(* Definition trace_countMixin :=  *)
+(*   Eval hnf in [countMixin of trace S by <:]. *)
+(* Canonical trace_countType :=  *)
+(*   Eval hnf in CountType (trace S) trace_countMixin. *)
 
-End Countable.
+(* End Countable. *)
 
 Section LTSTheory. 
 Context {L : Type} {S : ltsType L}.
