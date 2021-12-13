@@ -78,6 +78,9 @@ Module Export Def.
 Section Def. 
 Context (E : identType) (L : eqType) (bot : L).
 
+(* TODO: perhaps, we should actually enforce 
+ *   lab_defined and supp_closed properties here
+ *)
 Definition lfspreposet := 
   { fsfun E -> (L * {fset E}) of e => (bot, fset0) }.
 
@@ -1201,7 +1204,7 @@ End Tomset.
 Export Tomset.Def.
 Export Tomset.Theory.
 
-Module Export lFsPreposetLTS.
+Module Export lFsPrePosetLTS.
 
 Module Export Def.
 Section Def.  
@@ -1209,18 +1212,9 @@ Context (E : identType) (L : choiceType) (bot : L).
 Implicit Types (l : L) (es : {fset E}).
 Implicit Types (p : lfspreposet E L bot).
 
-Definition lfsp_add_event l es p : lfspreposet E L bot := 
+Definition lfspre_add_event l es p : lfspreposet E L bot := 
   let e := lfsp_fresh p in
   [fsfun p with e |-> (l, es)].
-
-(* Definition lfsp_add_event l es p : lfspreposet E L bot :=  *)
-(*   let e := lfsp_fresh p in *)
-(*   if (l != bot) && (es `<=` (finsupp p)) then *)
-(*     [fsfun p with e |-> (l, es)] *)
-(*   else [fsfun]. *)
-   
-Definition lfsp_enabled l es p := 
-  (l != bot) && (es `<=` (finsupp p)).
 
 End Def.
 End Def.
@@ -1232,14 +1226,18 @@ Implicit Types (l : L) (es : {fset E}).
 Implicit Types (p : lfspreposet E L bot).
 
 Definition ltrans l p q := 
+  (l != bot) &&
   [exists es : fpowerset (finsupp p),
-    q == lfsp_add_event l (val es) p
+    q == lfspre_add_event l (val es) p
   ]. 
 
 Lemma enabledP l p :
-  reflect (exists q, ltrans l p q) true.
+  reflect (exists q, ltrans l p q) (l != bot).
 Proof. 
-  constructor; exists (lfsp_add_event l fset0 p). 
+  case: (l != bot)/idP=> lD; last first.
+  - by constructor=> /= [[q]] /andP[].
+  constructor; exists (lfspre_add_event l fset0 p). 
+  apply/andP; split=> //.
   apply/existsP=> /=.
   have inPw: (fset0 \in fpowerset (finsupp p)).
   - rewrite fpowersetE; exact/fsub0set.
@@ -1272,10 +1270,13 @@ Implicit Types (p : lfspreposet E L bot).
 Local Open Scope lts_scope.
 
 Lemma lfspre_ltransP l p q :
-  reflect (exists2 es, (es `<=` finsupp p) & (q = lfsp_add_event l es p)) 
+  reflect (l != bot /\ exists2 es, 
+             es `<=` finsupp p & 
+             q = lfspre_add_event l es p)
           (p --[l]--> q).
 Proof. 
   rewrite /ltrans /= /LTS.ltrans.
+  apply: (andPP idP). 
   apply/(equivP idP); split=> [/existsP|] /=.
   - move=> [es] /eqP->; exists (val es)=> //.
     rewrite -fpowersetE; exact/(valP es). 
@@ -1291,7 +1292,7 @@ Hypothesis (lD : l != bot).
 Hypothesis (esSub : es `<=` finsupp p).
 
 Lemma add_event_finsuppE :
-  finsupp (lfsp_add_event l es p) = (lfsp_fresh p) |` (finsupp p).
+  finsupp (lfspre_add_event l es p) = (lfsp_fresh p) |` (finsupp p).
 Proof. 
   rewrite finsupp_with xpair_eqE.
   case: ifP=> [/andP[/eqP]|] //.
@@ -1299,17 +1300,17 @@ Proof.
 Qed.
 
 Lemma add_event_fs_labE e :
-  fs_lab (lfsp_add_event l es p) e = 
+  fs_lab (lfspre_add_event l es p) e = 
     if e == lfsp_fresh p then l else fs_lab p e. 
-Proof. by rewrite /fs_lab /lfsp_add_event fsfun_withE; case: ifP. Qed.
+Proof. by rewrite /fs_lab /lfspre_add_event fsfun_withE; case: ifP. Qed.
 
 Lemma add_event_fs_rcovE e :
-  fs_rcov (lfsp_add_event l es p) e = 
+  fs_rcov (lfspre_add_event l es p) e = 
     if e == lfsp_fresh p then es else fs_rcov p e. 
-Proof. by rewrite /fs_rcov /lfsp_add_event fsfun_withE; case: ifP. Qed.
+Proof. by rewrite /fs_rcov /lfspre_add_event fsfun_withE; case: ifP. Qed.
 
 Lemma add_event_fs_icaE e1 e2 :
-  fs_ica (lfsp_add_event l es p) e1 e2 = 
+  fs_ica (lfspre_add_event l es p) e1 e2 = 
     (e1 \in es) && (e2 == lfsp_fresh p) || (fs_ica p e1 e2).
 Proof. 
   rewrite /fs_ica /= !add_event_fs_rcovE.
@@ -1320,7 +1321,7 @@ Proof.
 Qed.
 
 Lemma add_event_lab_defined :
-  lab_defined p -> lab_defined (lfsp_add_event l es p).
+  lab_defined p -> lab_defined (lfspre_add_event l es p).
 Proof.  
   move=> labD; apply/lab_definedP. 
   rewrite add_event_finsuppE // => e.
@@ -1335,7 +1336,7 @@ Proof.
 Qed.
 
 Lemma add_event_supp_closed :
-  supp_closed p -> supp_closed (lfsp_add_event l es p).
+  supp_closed p -> supp_closed (lfspre_add_event l es p).
 Proof.  
   move=> supcl.
   apply/supp_closedP=> e1 e2.
@@ -1350,7 +1351,7 @@ Proof.
 Qed.
 
 Lemma add_event_fs_caE e1 e2 : supp_closed p -> acyclic (fin_ica p) ->
-  fs_ca (lfsp_add_event l es p) e1 e2 = 
+  fs_ca (lfspre_add_event l es p) e1 e2 = 
     (e1 \in lfsp_dw_clos p es) && (e2 == lfsp_fresh p) || (fs_ca p e1 e2).
 Proof. 
   (* TODO: yet another terrible proof due to poor 
@@ -1417,7 +1418,7 @@ Proof.
 Qed.  
 
 Lemma add_event_irrefl : supp_closed p -> 
-  irreflexive (fin_ica p) -> irreflexive (fin_ica (lfsp_add_event l es p)).
+  irreflexive (fin_ica p) -> irreflexive (fin_ica (lfspre_add_event l es p)).
 Proof. 
   move=> supcl irr.  
   apply/irreflexive_mono.
@@ -1435,7 +1436,7 @@ Proof.
 Qed.
 
 Lemma add_event_acyclic : supp_closed p -> 
-  acyclic (fin_ica p) -> acyclic (fin_ica (lfsp_add_event l es p)).
+  acyclic (fin_ica p) -> acyclic (fin_ica (lfspre_add_event l es p)).
 Proof.
   move=> supcl acyc. 
   rewrite acyclicE; apply/andP; split.
@@ -1470,4 +1471,104 @@ Qed.
 End Theory.
 End Theory.  
 
-End lFsPreposetLTS.
+End lFsPrePosetLTS.
+
+
+Module Export lFsPosetLTS.
+
+Module Export Def.
+Section Def.  
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p : lfsposet E L bot).
+
+Definition lfsp_add_event l es p : lfsposet E L bot :=
+  let e := lfsp_fresh p in
+  let q := lfspre_add_event l es p in
+  match (l != bot) && (es `<=` (finsupp p)) =P true with
+  | ReflectF _  => lFsPoset.empty E L bot
+  | ReflectT pf => 
+    let: conj lD esSub := andP pf in
+    let labD  := add_event_lab_defined es lD (lfsp_lab_defined p) in
+    let supcl := add_event_supp_closed lD esSub (lfsp_supp_closed p) in
+    let acyc  := add_event_acyclic lD esSub 
+                   (lfsp_supp_closed p) 
+                   (lfsp_acyclic p) 
+    in
+    lFsPoset (introT and3P (And3 labD supcl acyc))
+  end.
+
+End Def.
+End Def.
+
+(* TODO: there is a lot of copypaste from lFsPrePosetLTS ... *)
+Module LTS.
+Section LTS.
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p : lfsposet E L bot).
+
+Definition ltrans l p q := 
+  (l != bot) &&
+  [exists es : fpowerset (finsupp p),
+    q == lfsp_add_event l (val es) p 
+  ]. 
+
+Lemma enabledP l p :
+  reflect (exists q, ltrans l p q) (l != bot).
+Proof. 
+  case: (l != bot)/idP=> lD; last first.
+  - by constructor=> /= [[q]] /andP[].
+  constructor; exists (lfsp_add_event l fset0 p). 
+  apply/andP; split=> //.
+  apply/existsP=> /=.
+  have inPw: (fset0 \in fpowerset (finsupp p)).
+  - rewrite fpowersetE; exact/fsub0set.
+  pose es : fpowerset (finsupp p) := Sub fset0 inPw.
+  by exists es.
+Qed.
+  
+Definition mixin := 
+  let S := lfsposet E L bot in
+  @LTS.LTS.Mixin S L _ _ _ enabledP. 
+Definition ltsType := 
+  Eval hnf in let S := lfsposet E L bot in (LTSType S L mixin).
+
+End LTS.
+
+Module Export Exports.
+Canonical ltsType.
+End Exports.
+
+End LTS.
+
+Export LTS.Exports.
+
+Module Export Theory.
+Section Theory.  
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p q : lfsposet E L bot).
+
+Local Open Scope lts_scope.
+
+Lemma lfsp_ltransP l p q :
+  reflect (l != bot /\ exists2 es, 
+             es `<=` finsupp p & 
+             q = lfsp_add_event l es p)
+          (p --[l]--> q).
+Proof. 
+  rewrite /ltrans /= /LTS.ltrans.
+  apply: (andPP idP). 
+  apply/(equivP idP); split=> [/existsP|] /=.
+  - move=> [es] /eqP->; exists (val es)=> //.
+    rewrite -fpowersetE; exact/(valP es). 
+  move=> [es] + ->; rewrite -fpowersetE.
+  move=> inPw; apply/existsP=> /=.
+  by exists (Sub es inPw).
+Qed.
+
+End Theory.
+End Theory.  
+
+End lFsPosetLTS.
