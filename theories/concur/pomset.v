@@ -1119,7 +1119,9 @@ Section Theory.
 Context {E : identType} {L : choiceType} (bot : L).
 Implicit Types (p q : pomset E L bot).
 
-(* TODO: move definition from Theory module? *)
+(* TODO: move definition from Theory module? 
+ *   make it work for lfsposet?
+ *)
 Definition lin p : pred (seq L) :=
   [pred ls | \pi (lFsPoset.of_seq E L bot ls) <= p :> pomset E L bot].
 
