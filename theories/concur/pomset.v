@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils rel relalg inhtype ident lposet.
+From eventstruct Require Import utils rel relalg inhtype ident lts lposet.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)
@@ -69,9 +69,8 @@ Delimit Scope pomset_scope with pomset.
 Local Open Scope pomset_scope.
 
 
-Notation lfspreposet E L bot := 
-  ({ fsfun E -> (L * {fset E}) of e => (bot, fset0) }).
-
+(* Notation lfspreposet E L bot :=  *)
+(*   ({ fsfun E -> (L * {fset E}) of e => (bot, fset0) }). *)
 
 Module lFsPrePoset. 
 
@@ -79,7 +78,13 @@ Module Export Def.
 Section Def. 
 Context (E : identType) (L : eqType) (bot : L).
 
-Implicit Types (p : lfspreposet E L bot).
+Definition lfspreposet := 
+  { fsfun E -> (L * {fset E}) of e => (bot, fset0) }.
+
+(* TODO: maybe get rid of this coercion? *)
+Identity Coercion lfspreposet_to_fsfun : lfspreposet >-> fsfun. 
+
+Implicit Types (p : lfspreposet).
 Implicit Types (es : {fset E}).
 
 Definition fs_lab p : E -> L := 
@@ -147,6 +152,8 @@ Arguments fin_sca {E L bot} p.
 Arguments fin_ca  {E L bot} p.
 
 End Def.
+
+Arguments lfspreposet E L bot : clear implicits.
 
 Module Export Theory.
 Section Theory.
@@ -663,7 +670,7 @@ Canonical lfsposet_choiceType E (L : choiceType) bot :=
 
 Definition lfsposet_countMixin E (L : countType) bot :=
   Eval hnf in [countMixin of (@lfsposet E L bot) by <:].
-Canonical lfinposet_countType E (L : countType) bot :=
+Canonical lfsposet_countType E (L : countType) bot :=
   Eval hnf in CountType (lfsposet E L bot) (@lfsposet_countMixin E L bot).
 
 Canonical subFinfun_subCountType E (L : countType) bot :=
@@ -1218,11 +1225,64 @@ Definition lfsp_enabled l es p :=
 End Def.
 End Def.
 
-Module Export Theory.
-Section Theory.  
-Context (E : identType) (L : choiceType) (bot : L).
+Module LTS.
+Section LTS.
+Context (E : identType) (L : countType) (bot : L).
 Implicit Types (l : L) (es : {fset E}).
 Implicit Types (p : lfspreposet E L bot).
+
+Definition ltrans l p q := 
+  [exists es : fpowerset (finsupp p),
+    q == lfsp_add_event l (val es) p
+  ]. 
+
+Lemma enabledP l p :
+  reflect (exists q, ltrans l p q) true.
+Proof. 
+  constructor; exists (lfsp_add_event l fset0 p). 
+  apply/existsP=> /=.
+  have inPw: (fset0 \in fpowerset (finsupp p)).
+  - rewrite fpowersetE; exact/fsub0set.
+  pose es : fpowerset (finsupp p) := Sub fset0 inPw.
+  by exists es.
+Qed.
+  
+Definition mixin := 
+  let S := lfspreposet E L bot in
+  @LTS.LTS.Mixin S L _ _ _ enabledP. 
+Definition ltsType := 
+  Eval hnf in let S := lfspreposet E L bot in (LTSType S L mixin).
+
+End LTS.
+
+Module Export Exports.
+Canonical ltsType.
+End Exports.
+
+End LTS.
+
+Export LTS.Exports.
+
+Module Export Theory.
+Section Theory.  
+Context (E : identType) (L : countType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p : lfspreposet E L bot).
+
+Local Open Scope lts_scope.
+
+Lemma lfspre_ltransP l p q :
+  reflect (exists2 es, (es `<=` finsupp p) & (q = lfsp_add_event l es p)) 
+          (p --[l]--> q).
+Proof. 
+  rewrite /ltrans /= /LTS.ltrans.
+  apply/(equivP idP); split=> [/existsP|] /=.
+  - move=> [es] /eqP->; exists (val es)=> //.
+    rewrite -fpowersetE; exact/(valP es). 
+  move=> [es] + ->; rewrite -fpowersetE.
+  move=> inPw; apply/existsP=> /=.
+  by exists (Sub es inPw).
+Qed.
 
 Variable (l : L) (es : {fset E}).
 Variable (p : lfspreposet E L bot).
