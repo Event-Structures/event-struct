@@ -1029,68 +1029,65 @@ Lemma bhom_leP p q :
     (exists f : [Event of q] -> [Event of p], 
       [/\                    { mono f : e / lab e }
         , {in (finsupp q) &, { homo f : e1 e2 / e1 <= e2 }}
-        & {on (finsupp p), bijective f} 
+        & {on (finsupp p)  , bijective f} 
       ])
     (bhom_le p q).
 Proof. 
-  rewrite /bhom_le.
-  apply/(equivP idP); split.
-  - move=> /lFinPoset.fbhomP [f].
-    pose g := lPoset.bHom.invF f.
-    pose f' : [Event of q] -> [Event of p] := 
-      sub_lift (fun e => fresh_seq (finsupp p)) 
-               (fun e => val (f e)).
-    pose g' : [Event of p] -> [Event of q] := 
-      sub_lift (fun e => fresh_seq (finsupp q)) 
-               (fun e => val (g e)).
-    exists f'; split.
-    + move=> e.
-      case: (e \in finsupp q)/idP=> [eIn|/negP eNIn]; last first.
-      * rewrite /f' sub_liftF // ?fs_labE ?fs_lab_bot //; last exact/negP.
-        exact/fresh_seq_nmem.               
-      rewrite /f' sub_liftT // !fs_labE.
-      have {2}->: e = val (Sub e eIn : [FinEvent of q]) by done.
-      rewrite !fin_lab_mono -fin_labE -fin_labE.
-      exact/(lab_preserving f).
-    + move=> e1 e2 in1 in2; rewrite /f' !sub_liftT !fs_caE.
-      have {1}->: e1 = val (Sub e1 in1 : [FinEvent of q]) by done.  
-      have {1}->: e2 = val (Sub e2 in2 : [FinEvent of q]) by done.  
-      rewrite !fin_ca_mono -fin_caE -fin_caE.
-      exact/(ca_monotone f).
-    exists g'=> /= e /=; last first. 
-    + move=> eIn; rewrite /f' /g' !sub_liftT //= => gIn.
-      suff->: (f.[gIn] = f (g.[eIn]))%fmap.
-      - by rewrite can_inv.
-      by f_equal; apply/val_inj=> /=.
-    case: (e \in finsupp q)/idP; last first.
-    + move=> nIn; rewrite /f' sub_liftF=> //.
-      by move: (fresh_seq_nmem (finsupp p))=> /negP.
-    move=> eIn; rewrite /g' /f' !sub_liftT => //= fIn _.
-    suff->: (g.[fIn] = g (f.[eIn]))%fmap.
-    - by rewrite /g inv_can.
+  rewrite /bhom_le; apply/(equivP idP); split; last first.
+  - move=> [f] [] flab fca fbij.
+    apply/lFinPoset.fbhomP. 
+    move: fbij=> [g] K K'.  
+    have map_suppf : forall e, e \in finsupp q -> (f e) \in finsupp p.
+    + move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
+      by move=> /eqP labD; apply/eqP; rewrite flab.  
+    have map_suppf' : forall e, (f e) \in finsupp p -> e \in finsupp q.
+    + by move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE flab.
+    have map_suppg : forall e, e \in finsupp p -> (g e) \in finsupp q.
+    + move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
+      by rewrite -flab; apply/contra; rewrite K'.
+    pose f' : [FinEvent of q] -> [FinEvent of p] := 
+      fun e => Sub (f (val e)) (map_suppf (val e) (valP e)). 
+    pose g' : [FinEvent of p] -> [FinEvent of q] := 
+      fun e => Sub (g (val e)) (map_suppg (val e) (valP e)). 
+    eexists=> /=; exists f'; repeat constructor=> /=.
+    + move=> e; rewrite !fin_labE /f' /fin_lab /= -fs_labE -fs_labE flab //. 
+    + move=> e1 e2; rewrite !fin_caE /f'. 
+      rewrite -fin_ca_mono -fin_ca_mono /=. 
+      by rewrite -fs_caE -fs_caE; apply/fca.
+    exists g'=> e; rewrite /f' /g' /=; apply/val_inj=> /=; rewrite ?K ?K'=> //. 
+    exact/map_suppf.
+  move=> /lFinPoset.fbhomP [f].
+  pose g := lPoset.bHom.invF f.
+  pose f' : [Event of q] -> [Event of p] := 
+    sub_lift (fun e => fresh_seq (finsupp p)) 
+             (fun e => val (f e)).
+  pose g' : [Event of p] -> [Event of q] := 
+    sub_lift (fun e => fresh_seq (finsupp q)) 
+             (fun e => val (g e)).
+  exists f'; split.
+  - move=> e.
+    case: (e \in finsupp q)/idP=> [eIn|/negP eNIn]; last first.
+    + rewrite /f' sub_liftF // ?fs_labE ?fs_lab_bot //; last exact/negP.
+      exact/fresh_seq_nmem.               
+    rewrite /f' sub_liftT // !fs_labE.
+    have {2}->: e = val (Sub e eIn : [FinEvent of q]) by done.
+    rewrite !fin_lab_mono -fin_labE -fin_labE.
+    exact/(lab_preserving f).
+  - move=> e1 e2 in1 in2; rewrite /f' !sub_liftT !fs_caE.
+    have {1}->: e1 = val (Sub e1 in1 : [FinEvent of q]) by done.  
+    have {1}->: e2 = val (Sub e2 in2 : [FinEvent of q]) by done.  
+    rewrite !fin_ca_mono -fin_caE -fin_caE.
+    exact/(ca_monotone f).
+  exists g'=> /= e /=; last first. 
+  - move=> eIn; rewrite /f' /g' !sub_liftT //= => gIn.
+    suff->: (f.[gIn] = f (g.[eIn]))%fmap by rewrite can_inv.
     by f_equal; apply/val_inj=> /=.
-  move=> [f] [] flab fca fbij.
-  apply/lFinPoset.fbhomP. 
-  move: fbij=> [g] K K'.  
-  have map_suppf : forall e, e \in finsupp q -> (f e) \in finsupp p.
-  - move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
-    by move=> /eqP labD; apply/eqP; rewrite flab.  
-  have map_suppf' : forall e, (f e) \in finsupp p -> e \in finsupp q.
-  - by move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE flab.
-  have map_suppg : forall e, e \in finsupp p -> (g e) \in finsupp q.
-  - move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
-    rewrite -flab; apply/contra; rewrite K' //.
-  pose f' : [FinEvent of q] -> [FinEvent of p] := 
-    fun e => Sub (f (val e)) (map_suppf (val e) (valP e)). 
-  pose g' : [FinEvent of p] -> [FinEvent of q] := 
-    fun e => Sub (g (val e)) (map_suppg (val e) (valP e)). 
-  eexists=> /=; exists f'; repeat constructor=> /=.
-  - move=> e; rewrite !fin_labE /f' /fin_lab /= -fs_labE -fs_labE flab //. 
-  - move=> e1 e2; rewrite !fin_caE /f'. 
-    rewrite -fin_ca_mono -fin_ca_mono /=. 
-    by rewrite -fs_caE -fs_caE; apply/fca.
-  exists g'=> e; rewrite /f' /g' /=; apply/val_inj=> /=; rewrite ?K ?K'=> //. 
-  exact/map_suppf.
+  case: (e \in finsupp q)/idP; last first.
+  - move=> nIn; rewrite /f' sub_liftF=> //.
+    by move: (fresh_seq_nmem (finsupp p))=> /negP.
+  move=> eIn; rewrite /g' /f' !sub_liftT => //= fIn _.
+  suff->: (g.[fIn] = g (f.[eIn]))%fmap by rewrite /g inv_can.
+  by f_equal; apply/val_inj=> /=.
 Qed.
 
 End Theory.
