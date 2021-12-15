@@ -70,6 +70,7 @@ Record mixin_of (E0 : Type) (L : Type) (b : lPoset.lPoset.class_of E0 L)
   cons : pred {fset E};
 
   _ : cons fset0;
+  (* TODO: remove single-event consistency axiom? *)
   _ : forall (e : E), cons [fset e];
   _ : forall (X Y : {fset E}), X `<=` Y -> cons Y -> cons X;
   _ : forall X e e', e <= e' -> cons (e' |` X) -> cons (e |` X)
@@ -172,6 +173,7 @@ Definition cf_free (p : pred E) :=
 Definition cfg (p : pred E) := 
   ca_closed p /\ cf_free p.
 
+(* TODO: rename? *)
 Definition wcons : pred {fset E} := 
   [pred X | cons X && (#|` X| != 1)%N].
 
@@ -287,14 +289,16 @@ Qed.
 End Theory.
 End Theory.
 
-Section Lang.
-Context {L : choiceType} (bot : L).
+Module Export Lang.
 
-Section Build.
-Context {E : eventType L}.
-Implicit Types (e : E) (X Y : {fset E}).
+(* TODO: restructure submodules/sections *)
+Section lFsPrePosetOf.
 
+(* TODO: (L bot E) order of arguments contradicts (E L bot) in pomset.v *)
+Context {L : choiceType} {bot : L} {E : eventType L}.
 Context (X : {fset E}).
+Implicit Types (e : E).
+
 Hypothesis lab_def : [forall x : X, lab (val x) != bot].
 
 Definition lfspreposet_of := 
@@ -304,6 +308,7 @@ Lemma lfspreposet_of_finsupp :
   finsupp lfspreposet_of = X.
 Proof. exact/lFsPrePoset.build_finsupp/forallP. Qed.
 
+(* TODO: generalize and move to `rel.v` *)
 Lemma connect_ca (Y : {fset E}): 
   (connect (relpre val ca) : rel Y) =2 relpre val ca.
 Proof.
@@ -363,14 +368,16 @@ Proof.
   exact/val_inj/(@le_anti tt)/andP. 
 Qed.
 
-End Build.
+End lFsPrePosetOf.
+
+Section lFsPosetOf.
+Context {L : choiceType} {bot : L}.
 
 Definition lfsposet_of (E : eventType L) (X : {fset E}) : lfsposet E L bot :=
   if eqP is ReflectT p then
-    lFsPoset (@lfspreposet_of_mixin E X p)
+    lFsPoset (@lfspreposet_of_mixin L bot E X p)
   else (lFsPoset.empty E L bot).
 
-Section lFsPoset_of.
 Context (E : eventType L) (X : {fset E}).
 
 Lemma lfsposet_of0 : 
@@ -413,16 +420,18 @@ Proof.
   by rewrite lfspreposet_of_connect_fin_ca.
 Qed.
 
-End lFsPoset_of.
+End lFsPosetOf.
 
-Lemma lfsposet_of0_finsupp (E : eventType L): 
-  finsupp (lfsposet_of (fset0 : {fset E})) = fset0.
+Lemma lfsposet_of0_finsupp {L : choiceType} {bot : L} (E : eventType L) : 
+  finsupp (@lfsposet_of L bot E (fset0 : {fset E})) = fset0.
 Proof. apply/lfsposet_of_finsupp/forallP; by case. Qed.
 
-Definition pomset_lang (E : eventType L) := fun (p : pomset E L bot) =>
-  exists2 X : {fset E}, cfg (mem X) & p = \pi (lfsposet_of X).
+Definition pomset_lang {L : choiceType} {bot : L} (E : eventType L) := 
+  fun (p : pomset E L bot) => 
+    exists2 X : {fset E}, cfg (mem X) & p = \pi (lfsposet_of X).
 
 End Lang.
+
 
 Module Export Hom.
 
@@ -552,25 +561,26 @@ Proof.
     (*         [FinEvent of @lfsposet_of L bot E  fset0] -> *)
     (*         [FinEvent of @lfsposet_of L bot E' fset0]. *)
     have g: forall E E' : eventType L,
-            (finsupp (lfsposet_of bot (fset0 : {fset E}))) ->
-            (finsupp (lfsposet_of bot (fset0 : {fset E'}))) .
+            (* TODO: make arguments of (@lfsposet_of L bot E) implicit *)
+            (finsupp (@lfsposet_of L bot E  (fset0 : {fset E}))) ->
+            (finsupp (@lfsposet_of L bot E' (fset0 : {fset E'}))) .
     + by move=> ??; rewrite ?lfsposet_of0_finsupp=> [[]].
-    exists=> /=. exists (g E2 E1). do ? split=> /=.
+    exists=> /=; exists (g E2 E1); do ? split=> /=.
     1,2: by move=> /[dup]; rewrite {1}lfsposet_of0_finsupp=> [[]].
     by exists (g E1 E2)=> /[dup] /=; rewrite {1}lfsposet_of0_finsupp=> [[]].
-  move=> ld1 pE; exists (\pi (lfsposet_of bot (f @` X))).
+  move=> ld1 pE; exists (\pi (@lfsposet_of L bot E2 (f @` X))).
   - exists (f @` X)=> //; split; last exact/cf_free_fset/cons_mon/cfX.
     move=>> /[swap]/imfsetP[] /= x' /[swap]-> /[swap] /hom_prefix.
     case=> y' -> /ccX/[apply] ?; by apply/imfsetP; exists y'.
   rewrite pE pi_bhom_le.
   have ?: [forall x : (f @` X), lab (val x) != bot] by exact/forallP.
-  have In: forall x : (finsupp (lfsposet_of bot X)),
-    f (val x) \in (finsupp (lfsposet_of bot (f @` X))).
+  have In: forall x : (finsupp (@lfsposet_of L bot E1 X)),
+    f (val x) \in (finsupp (@lfsposet_of L bot E2 (f @` X))).
   - case=> /= x; rewrite ?lfsposet_of_finsupp //. 
     move=> ?; by rewrite in_imfset.
   set g : 
-    [FinEvent of lfsposet_of bot X] -> 
-    [FinEvent of lfsposet_of bot (f @` X)] := fun x => [` (In x)].
+    [FinEvent of (@lfsposet_of L bot E1 X)] -> 
+    [FinEvent of (@lfsposet_of L bot E2 (f @` X))] := fun x => [` (In x)].
   apply/lFinPoset.fbhomP/(@lPoset.bHom.Build.of_anti_bhom_ex _ _ _ g)=> /=.
   - apply/inj_card_bij=> /=.
     rewrite /g; case=> ? in1 [? in2 /=] /(congr1 val) /= /hom_cons_inj.
