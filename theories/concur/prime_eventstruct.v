@@ -276,9 +276,7 @@ Lemma prefix_cfg e : cfg (<= e).
 Proof. split; [exact/prefix_ca_closed | exact/prefix_cf_free]. Qed.
 
 Lemma cf_free_fset (X : {fset E}) : reflect (cf_free (mem X)) (cons X).
-Proof.
-  apply/(iffP idP)=> [?? /fsubsetP/cons_contra|]; exact.
-Qed.
+Proof. apply/(iffP idP)=> [?? /fsubsetP/cons_contra|]; exact. Qed.
 
 Lemma cfg0 : cfg (mem (fset0 : {fset E})).
 Proof.
@@ -496,13 +494,13 @@ Module Export Theory.
 Section Theory. 
 Context {L : choiceType} {E1 E2 : eventType L} (f : {hom E1 -> E2}) (bot : L).
 
-Lemma wcons_mon (X : {fset E1}) : 
-  wcons X -> wcons (f @` X).
-Proof. case: f=> ? [[??+?]]; exact. Qed.
-
 Lemma lab_preserving :
   { mono f : e / lab e }.
 Proof. by case: f => ? [[]]. Qed.
+
+Lemma wcons_mon (X : {fset E1}) : 
+  wcons X -> wcons (f @` X).
+Proof. case: f=> ? [[??+?]]; exact. Qed.
 
 Lemma cons_mon (X : {fset E1}): 
   cons X -> cons (f @` X).
@@ -517,7 +515,7 @@ Lemma gcf_mon (X : {fset E1}) (e : E2) :
 Proof. exact/contra/cons_mon. Qed.
 
 Lemma cf_mon e1 e2 :
-  cf (f e1) (f e2) -> cf e1 e2.
+  f e1 \# f e2 -> e1 \# e2.
 Proof. 
   rewrite /cf=> ?; apply/(gcf_mon (f e1)).
   by rewrite imfsetU !imfset1=> /=.
@@ -536,16 +534,18 @@ Proof.
   by apply/(cons_contra _ c)/fsubsetP=>>; rewrite ?inE=>/orP[]/eqP->.
 Qed.
 
+(* TODO: try to change direction of arrows/morphisms to get rid of anti? *)
 Lemma in_cons_ca_anti X :
-  cons X ->
-  {in X & X, forall e1 e2, ca (f e1) (f e2) -> ca e1 e2}.
+  cons X -> {in X & X, forall e1 e2, f e1 <= f e2 -> e1 <= e2}.
 Proof.
   move=> c e1 e2 i ? /hom_prefix[x /[swap] l /(@hom_cons_inj (x |` X))-> //].
   - by apply/(cons_prop l); rewrite mem_fset1U.
   all: by rewrite ?inE (i, eqxx).
 Qed.
 
-
+(* TODO: prove first on the level of `lfsposet_of`, 
+ *   use subsumption notation
+ *)
 Lemma pomset_lang_sub (p : pomset E1 L bot) :
   (forall x : E2, lab x != bot) ->
   pomset_lang p -> 
@@ -581,6 +581,7 @@ Proof.
   set g : 
     [FinEvent of (@lfsposet_of L bot E1 X)] -> 
     [FinEvent of (@lfsposet_of L bot E2 (f @` X))] := fun x => [` (In x)].
+  (* TODO: use bhom_leP lemma? *)
   apply/lFinPoset.fbhomP/(@lPoset.bHom.Build.of_anti_bhom_ex _ _ _ g)=> /=.
   - apply/inj_card_bij=> /=.
     rewrite /g; case=> ? in1 [? in2 /=] /(congr1 val) /= /hom_cons_inj.
