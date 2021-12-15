@@ -78,11 +78,14 @@ Record mixin_of (E0 : Type) (L : Type) (b : lPoset.lPoset.class_of E0 L)
 Set Primitive Projections.
 Record class_of (E L : Type) := Class {
   (* TODO: inherit DwFinPOrder in lPoset.class_of ? *)
+  (* TODO: simplify hierarchy? make lPoset subclass 
+   *   with Ident type inheritance  
+   *)
   base   : lPoset.lPoset.class_of E L;
   mixin1 : DwFinPOrder.DwFinPOrder.mixin_of base;
-  mixin2 : mixin_of base;
-  mixin3 : Countable.mixin_of E;
-  mixin4 : Ident.mixin_of (Countable.Class base mixin3);
+  mixin2 : Countable.mixin_of E;
+  mixin3 : Ident.mixin_of (Countable.Class base mixin2);
+  mixin4 : mixin_of base;
 }.
 Unset Primitive Projections.
 
@@ -93,7 +96,7 @@ Local Coercion base2 E L (c : class_of E L) :
     DwFinPOrder.DwFinPOrder.Class (mixin1 c).
 
 Local Coercion base3 E L (c : class_of E L) : 
-  Ident.class_of E := Ident.Class (mixin4 c).
+  Ident.class_of E := Ident.Class (mixin3 c).
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -111,10 +114,11 @@ Definition pack :=
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
+(* TODO: countType missing *)
+Definition identType := @Ident.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
 Definition dwFinPOrderType := @DwFinPOrder.DwFinPOrder.Pack cT class.
 Definition lposetType := @lPoset.lPoset.Pack L cT class.
-Definition identType := @Ident.Pack cT class.
 End ClassDef.
 
 Module Export Exports.
@@ -122,9 +126,9 @@ Coercion base : class_of >-> lPoset.lPoset.class_of.
 Coercion base2 : class_of >-> DwFinPOrder.DwFinPOrder.class_of.
 Coercion base3 : class_of >-> Ident.class_of.
 Coercion mixin1 : class_of >-> DwFinPOrder.DwFinPOrder.mixin_of.
-Coercion mixin2 : class_of >-> mixin_of.
-Coercion mixin3 : class_of >-> Countable.mixin_of.
-Coercion mixin4 : class_of >-> Ident.mixin_of.
+Coercion mixin2 : class_of >-> Countable.mixin_of.
+Coercion mixin3 : class_of >-> Ident.mixin_of.
+Coercion mixin4 : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
@@ -134,10 +138,10 @@ Coercion lposetType : type >-> lPoset.eventType.
 Coercion identType  : type >-> Ident.type.
 Canonical eqType.
 Canonical choiceType.
+Canonical identType.
 Canonical porderType.
 Canonical dwFinPOrderType.
 Canonical lposetType.
-Canonical identType.
 End Exports.
 
 End EventStruct.
@@ -186,18 +190,18 @@ Context {L : Type} {E : eventType L}.
 Implicit Types (e : E) (X Y : {fset E}).
 
 Lemma cons_self e : cons [fset e].
-Proof. by move: e; case: E => ? [? []] ?? []. Qed.
+Proof. by move: e; case: E => ? [?] ??? []. Qed.
 
 Lemma cons0 : cons (fset0 : {fset E}).
-Proof. by case: E=> ? [??] []. Qed.
+Proof. by case: E => ? [?] ??? []. Qed.
 
 (* TODO: rename `cons_contra`? *)
 Lemma cons_contra X Y : X `<=` Y -> cons Y -> cons X.
-Proof. by move: X Y; case: E => ? [? []] ?? []. Qed.
+Proof. by move: X Y; case: E => ? [?] ??? []. Qed.
 
 Lemma cons_prop X e1 e2 : 
   e1 <= e2 -> cons (e2 |` X) -> cons (e1 |` X).
-Proof. by move: X e1 e2; case: E => ? [? []] ?? []. Qed.
+Proof. by move: X e1 e2; case: E => ? [?] ??? []. Qed.
 
 Lemma gcf_self e : ~~ (gcf [fset e]).
 Proof. rewrite /gcf negbK; exact/cons_self. Qed.
@@ -826,9 +830,9 @@ Set Primitive Projections.
 Record class_of (E L : Type) := Class {
   base   : lPoset.lPoset.class_of E L;
   mixin1 : DwFinPOrder.DwFinPOrder.mixin_of base;
-  mixin2 : mixin_of base;
-  mixin3 : Countable.mixin_of E;
-  mixin4 : Ident.mixin_of (Countable.Class base mixin3);
+  mixin2 : Countable.mixin_of E;
+  mixin3 : Ident.mixin_of (Countable.Class base mixin2);
+  mixin4 : mixin_of base;
 }.
 Unset Primitive Projections.
 
@@ -839,7 +843,7 @@ Local Coercion base2 E L (c : class_of E L) :
     DwFinPOrder.DwFinPOrder.Class (mixin1 c).
 
 Local Coercion base3 E L (c : class_of E L) : 
-  Ident.class_of E := Ident.Class (mixin4 c).
+  Ident.class_of E := Ident.Class (mixin3 c).
 
 Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
 
@@ -857,30 +861,33 @@ Definition pack :=
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
+(* TODO: countType missing *)
+Definition identType := @Ident.Pack cT class.
 Definition porderType := @Order.POrder.Pack tt cT class.
 Definition dwFinPOrderType := @DwFinPOrder.DwFinPOrder.Pack cT class.
 Definition lposetType := @lPoset.lPoset.Pack L cT class.
-Definition identType := @Ident.Pack cT class.
 End ClassDef.
 
 Module Export Exports.
 Coercion base : class_of >-> lPoset.lPoset.class_of.
 Coercion base2 : class_of >-> DwFinPOrder.DwFinPOrder.class_of.
 Coercion mixin1 : class_of >-> DwFinPOrder.DwFinPOrder.mixin_of.
-Coercion mixin2 : class_of >-> mixin_of.
+Coercion mixin2 : class_of >-> Countable.mixin_of.
+Coercion mixin3 : class_of >-> Ident.mixin_of.
+Coercion mixin4 : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
+Coercion identType  : type >-> Ident.type.
 Coercion porderType : type >-> Order.POrder.type.
 Coercion dwFinPOrderType : type >-> DwFinPOrder.DwFinPOrder.type.
 Coercion lposetType : type >-> lPoset.eventType.
-Coercion identType  : type >-> Ident.type.
 Canonical eqType.
 Canonical choiceType.
+Canonical identType.
 Canonical porderType.
 Canonical dwFinPOrderType.
 Canonical lposetType.
-Canonical identType.
 End Exports.
 
 End EventStruct.
@@ -913,13 +920,13 @@ Definition cons X :=
   ~~ [exists e1 : X, exists e2 : X, bcf (val e1) (val e2)].
 
 Lemma bcf_irr : irreflexive (bcf : rel E).
-Proof. by case: E=> [? [??]] []. Qed.
+Proof. by case: E => ? [?] ??? []. Qed.
 
 Lemma bcf_sym : symmetric (bcf : rel E).
-Proof. by case: E=> [? [??]] []. Qed.
+Proof. by case: E => ? [?] ??? []. Qed.
 
 Lemma bcf_hered : hereditary ca (bcf : rel E).
-Proof. by case: E=> [? [??]] []. Qed.
+Proof. by case: E => ? [?] ??? []. Qed.
 
 Lemma cons_self e : cons [fset e].
 Proof.
@@ -971,7 +978,7 @@ Definition primeCMixin :=
 
 Definition primeCeventType := 
   PrimeC.EventStruct.Pack 
-  (PrimeC.EventStruct.Class (class E) primeCMixin (mixin4 (class E))).
+  (PrimeC.EventStruct.Class (class E) (mixin3 (class E)) primeCMixin).
 
 End Instances.
 
