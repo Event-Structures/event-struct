@@ -674,7 +674,7 @@ Definition bhom_le E1 E2 L bot : lfsposet E1 L bot -> lfsposet E2 L bot -> bool
   := fun p q => 
        let EP := [FinEvent of p] in
        let EQ := [FinEvent of q] in
-       ??|{ffun EQ -> EP | lFinPoset.bhom_pred}|.
+       ??|{ffun EP -> EQ | lFinPoset.bhom_pred}|.
 
 (* TODO: this relation should also be heterogeneous? *)
 Definition bhom_lt E L bot : rel (lfsposet E L bot) := 
@@ -693,7 +693,7 @@ Lemma bhom_le_refl : reflexive (@bhom_le E E L bot).
 Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
 
 Lemma bhom_le_trans : transitive (@bhom_le E E L bot). 
-Proof. move=> ??? /[swap]; exact/lFinPoset.bhom_trans. Qed.
+Proof. move=> ???; exact/lFinPoset.bhom_trans. Qed.
 
 End bHom.
 End bHom.
@@ -898,13 +898,15 @@ Proof. exact/pi_bhom_le. Qed.
 
 Canonical bhom_le_quote_mono2 := PiMono2 pi_bhom_mono.
 
+(* TODO: use bhom_le_refl *)
 Lemma pom_bhom_le_refl : 
   reflexive (@bhom_le E E L bot : rel (pomset E L bot)). 
 Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
 
+(* TODO: use bhom_le_trans *)
 Lemma pom_bhom_le_trans : 
   transitive (@bhom_le E E L bot : rel (pomset E L bot)). 
-Proof. move=> ??? /[swap]; exact/lFinPoset.bhom_trans. Qed.
+Proof. move=> ???; exact/lFinPoset.bhom_trans. Qed.
 
 (* TODO: move part of the proof to lposet.v (or lFsPoset) ? *)
 Lemma pom_bhom_le_antisym : 
@@ -912,7 +914,7 @@ Lemma pom_bhom_le_antisym :
 Proof.
   move=> p q; rewrite -[p]reprK -[q]reprK !piE.
   case/andP=> /lFinPoset.fbhomP[f] /lFinPoset.fbhomP[g].
-  apply/eqmodP/lFinPoset.fisoP; exists; exact/(lFinPoset.of_ihoms g f).
+  apply/eqmodP/lFinPoset.fisoP; exists; exact/(lFinPoset.of_ihoms f g).
 Qed.
 
 Lemma disp : unit. 

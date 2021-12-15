@@ -544,11 +544,14 @@ Proof.
     exists (\pi (lFsPoset.empty E2 L bot)).
     + exists fset0; first exact/cfg0; by rewrite lfsposet_of0.
     rewrite pi_bhom_le -?lfsposet_of0; apply/lFinPoset.fbhomP.
+    (* have g: forall E E' : eventType L, *)
+    (*         [FinEvent of @lfsposet_of L bot E  fset0] -> *)
+    (*         [FinEvent of @lfsposet_of L bot E' fset0]. *)
     have g: forall E E' : eventType L,
-            (finsupp (lfsposet_of bot (fset0 : {fset E}))) -> 
+            (finsupp (lfsposet_of bot (fset0 : {fset E}))) ->
             (finsupp (lfsposet_of bot (fset0 : {fset E'}))) .
     + by move=> ??; rewrite ?lfsposet_of0_finsupp=> [[]].
-    exists; exists (g E2 E1); do ? split=> /=.
+    exists=> /=. exists (g E2 E1). do ? split=> /=.
     1,2: by move=> /[dup]; rewrite {1}lfsposet_of0_finsupp=> [[]].
     by exists (g E1 E2)=> /[dup] /=; rewrite {1}lfsposet_of0_finsupp=> [[]].
   move=> ld1 pE; exists (\pi (lfsposet_of bot (f @` X))).
