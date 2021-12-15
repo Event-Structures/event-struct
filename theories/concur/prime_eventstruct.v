@@ -549,7 +549,7 @@ Qed.
 Lemma pomset_lang_sub (p : pomset E1 L bot) :
   (forall x : E2, lab x != bot) ->
   pomset_lang p -> 
-  exists2 q : pomset E2 L bot, pomset_lang q & bhom_le q p.
+  exists2 q : pomset E2 L bot, pomset_lang q & bhom_le p q.
 Proof.
   move=> ld2 [X [ccX cfX]].
   case: ([forall x : X, lab (val x) != bot] =P true); first last.
