@@ -663,6 +663,41 @@ Notation "[ 'FinEvent' 'of' p ]" := (lfsposet_lfinposetType p)
   (at level 0, format "[ 'FinEvent'  'of'  p ]") : form_scope.
 End Syntax.
 
+Module Export bHom.
+Section bHom.
+Implicit Types (E : identType) (L : eqType).
+
+Import lPoset.Syntax.
+
+(* TODO: rename bhom_preord? *)
+Definition bhom_le E1 E2 L bot : lfsposet E1 L bot -> lfsposet E2 L bot -> bool 
+  := fun p q => 
+       let EP := [FinEvent of p] in
+       let EQ := [FinEvent of q] in
+       ??|{ffun EQ -> EP | lFinPoset.bhom_pred}|.
+
+(* TODO: this relation should also be heterogeneous? *)
+Definition bhom_lt E L bot : rel (lfsposet E L bot) := 
+  fun p q => (q != p) && (bhom_le p q).
+
+Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
+  [pred ls | bhom_le (lFsPoset.of_seq E L bot ls) p].
+
+Context (E : identType) (L : eqType) (bot : L).
+Implicit Types (p q : lfsposet E L bot).
+
+Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
+Proof. done. Qed.
+
+Lemma bhom_le_refl : reflexive (@bhom_le E E L bot). 
+Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
+
+Lemma bhom_le_trans : transitive (@bhom_le E E L bot). 
+Proof. move=> ??? /[swap]; exact/lFinPoset.bhom_trans. Qed.
+
+End bHom.
+End bHom.
+
 Module Export Theory.
 Section Theory.
 Context {E : identType} {L : eqType}.
@@ -776,7 +811,7 @@ Export lFsPoset.Def.
 Export lFsPoset.Instances.
 Export lFsPoset.Syntax.
 Export lFsPoset.Theory.
-
+Export lFsPoset.bHom.
 
 Module Pomset.
 
@@ -785,8 +820,7 @@ Import lFsPoset.Syntax.
 
 Module Export Def.
 Section Def.  
-Context (E : identType) (L : choiceType).
-Variable (bot : L).
+Context {E : identType} {L : choiceType} {bot : L}.
 
 Definition is_iso : rel (@lfsposet E L bot) := 
   fun p q => 
@@ -826,6 +860,8 @@ Canonical pomset_eqType := [eqType of pomset].
 Canonical pomset_choiceType := [choiceType of pomset].
 Canonical pomset_eqQuotType := [eqQuotType is_iso of pomset].
 
+Definition pom : lfsposet E L bot -> pomset := \pi.
+
 Implicit Types (p : pomset).
 
 Coercion lfsposet_of p : lfsposet E L bot := repr p.
@@ -837,25 +873,14 @@ Arguments pomset E L bot : clear implicits.
 
 Module Export Hom.
 Module Export POrder.
+Section POrder.
+Implicit Types (E : identType) (L : choiceType).
 
+Import lPoset.Syntax.
 Import lFsPoset.Syntax.
 
-Section POrder.
-Context {E : identType} {L : choiceType} (bot : L).
-Implicit Types (p q : pomset E L bot).
-
-Definition bhom_le : rel (pomset E L bot) := 
-  fun p q => 
-    let EP := [FinEvent of (repr p)] in
-    let EQ := [FinEvent of (repr q)] in
-    ??|{ffun EP -> EQ | lFinPoset.bhom_pred}|.
-
-Import lPoset.bHom.Syntax.
-
-Lemma pi_bhom_le : 
-  {mono \pi : p q / 
-    lFinPoset.bhom_rel [FinEvent of p] [FinEvent of q] >->
-    bhom_le p q}.
+Lemma pi_bhom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+  bhom_le (repr (pom p)) (repr (pom q)) = bhom_le p q.
 Proof.
   move=>>; rewrite /bhom_le. 
   case: piP piP=>> /eqmodP/lFinPoset.fisoP[f] [> /eqmodP/lFinPoset.fisoP[g]].
@@ -864,42 +889,48 @@ Proof.
   exact/[bhom of g \o h \o lPoset.Iso.Build.inv f].
 Qed.
 
-Canonical bhom_le_quote_mono2 := PiMono2 (pi_bhom_le).
+Context {E : identType} {L : choiceType} {bot : L}.
+Implicit Types (p q : pomset E L bot). 
 
-Definition bhom_lt : rel (pomset E L bot) := 
-  fun p q => (q != p) && (bhom_le p q).
+Lemma pi_bhom_mono :
+  {mono \pi_(pomset E L bot) : p q / bhom_le p q >-> bhom_le (repr p) (repr q)}.
+Proof. exact/pi_bhom_le. Qed.
 
-Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
-Proof. done. Qed.
+Canonical bhom_le_quote_mono2 := PiMono2 pi_bhom_mono.
 
-Lemma bhom_le_refl : reflexive bhom_le. 
+(* TODO: use bhom_le_refl *)
+Lemma pom_bhom_le_refl : 
+  reflexive (@bhom_le E E L bot : rel (pomset E L bot)). 
 Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
 
-Lemma bhom_le_trans : transitive bhom_le. 
-Proof. move=> ???; exact/lFinPoset.bhom_trans. Qed.
+(* TODO: use bhom_le_trans *)
+Lemma pom_bhom_le_trans : 
+  transitive (@bhom_le E E L bot : rel (pomset E L bot)). 
+Proof. move=> ??? /[swap]; exact/lFinPoset.bhom_trans. Qed.
 
-(* TODO: move part of the proof to lposet.v ? *)
-Lemma bhom_le_antisym : antisymmetric bhom_le. 
+(* TODO: move part of the proof to lposet.v (or lFsPoset) ? *)
+Lemma pom_bhom_le_antisym : 
+  antisymmetric (@bhom_le E E L bot : rel (pomset E L bot)). 
 Proof.
   move=> p q; rewrite -[p]reprK -[q]reprK !piE.
   case/andP=> /lFinPoset.fbhomP[f] /lFinPoset.fbhomP[g].
-  apply/eqmodP/lFinPoset.fisoP; exists; exact/(lFinPoset.of_ihoms f g).
+  apply/eqmodP/lFinPoset.fisoP; exists; exact/(lFinPoset.of_ihoms g f).
 Qed.
 
 Lemma disp : unit. 
 Proof. exact: tt. Qed.
 
 Definition pomset_bhomPOrderMixin := 
-  @LePOrderMixin _ bhom_le bhom_lt 
-    bhom_lt_def bhom_le_refl bhom_le_antisym bhom_le_trans. 
+  @LePOrderMixin _ 
+    (@bhom_le E E L bot : rel (pomset E L bot)) 
+    (fun p q => (q != p) && (bhom_le p q))
+    (fun p q => erefl) pom_bhom_le_refl pom_bhom_le_antisym pom_bhom_le_trans. 
 
 Canonical pomset_bhomPOrderType := 
   POrderType disp (pomset E L bot) pomset_bhomPOrderMixin.
 
+(* TODO: rename pom_bhom_leE? *)
 Lemma bhom_leE p q : p <= q = bhom_le p q.
-Proof. done. Qed.
-
-Lemma bhom_ltE p q : p < q = bhom_lt p q.
 Proof. done. Qed.
 
 End POrder.

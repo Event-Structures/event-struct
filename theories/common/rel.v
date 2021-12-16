@@ -142,7 +142,7 @@ Proof.
   apply/(@connect_trans _ _ z); apply/IH=> //.
   all: rewrite -/ix -/iy -/iz -/t.
   all: move: sz; rewrite /s !size_slice //; lia. 
-Qed.  
+Qed.
 
 Lemma connect_covE r x y : 
   acyclic r -> connect (cov r) x y = connect r x y.
@@ -151,6 +151,17 @@ Proof.
   - by apply/connect_sub=> {}x {}y /covP[? /connect1].
   apply/connect_sub=> {}x {}y; exact/cov_connect.  
 Qed.
+
+Lemma connect_sub_one r : 
+  connect r =2 connect ([rel a b | (a != b) && r a b]).
+Proof.
+  move=> x y; apply/(sameP (connect_strP _ _ _))/(equivP (connect_strP _ _ _)).
+  rewrite kleene.str_weq1; first reflexivity.
+  symmetry; rewrite -qmk_sub_one; first apply/qmk_weq=> ?? /=.
+  - split=> [[]|/andP[/eqP ?]] * //; apply/andP; split=> //; exact/eqP.
+  move=> a b /=; split=> // ?; case: (a =P b); by (left+right).
+Qed.
+
 
 End Covering.
 

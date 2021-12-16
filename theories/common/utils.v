@@ -1443,6 +1443,14 @@ Proof.
   by move=> [/= x /imfsetP [/= y yA ->] ->]; exists y.
 Qed.
 
+Lemma imfset0 (K V : choiceType)
+  (f : K -> V) : f @` fset0 = fset0.
+Proof.
+  apply/cardfs0_eq/eqP; rewrite -leqn0. 
+  exact/(leq_trans (leq_imfset_card _ _ _)).
+Qed.
+
+
 End Imfset.
 
 Section FinMapCount.
