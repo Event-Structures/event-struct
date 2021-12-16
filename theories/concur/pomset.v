@@ -885,45 +885,9 @@ Notation "[ 'FinEvent' 'of' p ]" := (lfsposet_lfinposetType p)
   (at level 0, format "[ 'FinEvent'  'of'  p ]") : form_scope.
 End Syntax.
 
-Module Export bHom.
-Section bHom.
-Implicit Types (E : identType) (L : eqType).
-
-Import lPoset.Syntax.
-
-(* TODO: rename bhom_preord? *)
-Definition bhom_le E1 E2 L bot : lfsposet E1 L bot -> lfsposet E2 L bot -> bool 
-  := fun p q => 
-       let EP := [FinEvent of p] in
-       let EQ := [FinEvent of q] in
-       ??|{ffun EQ -> EP | lFinPoset.bhom_pred}|.
-
-(* TODO: this relation should also be heterogeneous? *)
-Definition bhom_lt E L bot : rel (lfsposet E L bot) := 
-  fun p q => (q != p) && (bhom_le p q).
-
-Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
-  [pred ls | bhom_le (lFsPoset.of_seq E L bot ls) p].
-
-Context (E : identType) (L : eqType) (bot : L).
-Implicit Types (p q : lfsposet E L bot).
-
-Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
-Proof. done. Qed.
-
-Lemma bhom_le_refl : reflexive (@bhom_le E E L bot). 
-Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
-
-Lemma bhom_le_trans : transitive (@bhom_le E E L bot). 
-Proof. move=> ??? /[swap]; exact/lFinPoset.bhom_trans. Qed.
-
-End bHom.
-End bHom.
-
 Module Export Theory.
 Section Theory.
-Context {E : identType} {L : eqType}.
-Variable (bot : L).
+Context {E : identType} {L : eqType} {bot : L}.
 Implicit Types (p q : lfsposet E L bot).
 
 Lemma fs_labE p : 
@@ -1028,7 +992,32 @@ Proof.
   by rewrite mem_lfsp_tseq. 
 Qed.
 
-Lemma bhom_leP p q :
+End Theory.
+End Theory.
+
+Module Export bHom.
+Section bHom.
+Implicit Types (E : identType) (L : eqType).
+
+Import lPoset.Syntax.
+
+(* TODO: rename bhom_preord? *)
+Definition bhom_le E1 E2 L bot : lfsposet E1 L bot -> lfsposet E2 L bot -> bool 
+  := fun p q => 
+       let EP := [FinEvent of p] in
+       let EQ := [FinEvent of q] in
+       ??|{ffun EQ -> EP | lFinPoset.bhom_pred}|.
+
+(* TODO: this relation should also be heterogeneous? *)
+Definition bhom_lt E L bot : rel (lfsposet E L bot) := 
+  fun p q => (q != p) && (bhom_le p q).
+
+Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
+  [pred ls | bhom_le (lFsPoset.of_seq E L bot ls) p].
+
+
+(* TODO: `f` can be declared {hom [Event of q] -> [Event of p]} ? *)
+Lemma bhom_leP E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   reflect 
     (exists f : [Event of q] -> [Event of p], 
       [/\                    { mono f : e / lab e }
@@ -1094,8 +1083,20 @@ Proof.
   by f_equal; apply/val_inj=> /=.
 Qed.
 
-End Theory.
-End Theory.
+Context (E : identType) (L : eqType) (bot : L).
+Implicit Types (p q : lfsposet E L bot).
+
+Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
+Proof. done. Qed.
+
+Lemma bhom_le_refl : reflexive (@bhom_le E E L bot). 
+Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
+
+Lemma bhom_le_trans : transitive (@bhom_le E E L bot). 
+Proof. move=> ??? /[swap]; exact/lFinPoset.bhom_trans. Qed.
+
+End bHom.
+End bHom.
 
 End lFsPoset.
 
@@ -1176,7 +1177,7 @@ Import lFsPoset.Syntax.
 Lemma pi_bhom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   bhom_le (repr (pom p)) (repr (pom q)) = bhom_le p q.
 Proof.
-  move=> p q; rewrite /bhom_le. 
+  rewrite /bhom_le. 
   case: piP piP=> q' /eqmodP/lFinPoset.fisoP[f] [p' /eqmodP/lFinPoset.fisoP[g]].
   apply/lFinPoset.fbhomP/lFinPoset.fbhomP=> [][h]; exists.
   - exact/[bhom of lPoset.Iso.Build.inv g \o h \o f].
