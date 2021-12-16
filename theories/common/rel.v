@@ -34,12 +34,136 @@ From eventstruct Require Import utils relalg wftype.
 
 
 Set Implicit Arguments.
+Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
 Set Equations Transparent.
 
 Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
+
+
+Section FinGraph. 
+Context {T : finType}.
+Implicit Types (g : rel T). 
+Implicit Types (gf : T -> seq T). 
+
+Definition irreflexiveb g :=
+  [forall x, ~~ g x x].
+
+Definition antisymmetricb g :=
+  [forall x, forall y, g x y && g y x ==> (x == y)].
+
+Definition totalb g :=
+  [forall x, forall y, g x y || g y x].
+
+Lemma irreflexiveP g : 
+  reflect (irreflexive g) (irreflexiveb g).
+Proof. apply/forallPP=> ?; exact/negPf. Qed.
+
+Lemma antisymmetricP g : 
+  reflect (antisymmetric g) (antisymmetricb g).
+Proof. do 2 apply/forallPP=> ?; exact/(implyPP idP)/eqP. Qed.
+
+Lemma totalP g : 
+  reflect (total g) (totalb g).
+Proof. exact/forall2P. Qed.
+
+Lemma preacyclicE g :
+  preacyclic g = antisymmetricb (connect g).
+Proof. done. Qed.
+
+Lemma acyclicE g :
+  acyclic g = irreflexiveb g && antisymmetricb (connect g).
+Proof. done. Qed.
+
+Lemma connect_refl g : 
+  reflexive (connect g).
+Proof. done. Qed. 
+
+Lemma acyc_irrefl g :
+  acyclic g -> irreflexive g.
+Proof. 
+  move=> /acyclicP[irr _] x. 
+  move: (irr x)=> /negP ?; exact/negP. 
+Qed.
+
+Lemma acyc_antisym g : 
+  acyclic g -> antisymmetric (connect g).
+Proof. 
+  move=> /acyclic_symconnect_eq symconE x y.
+  move: (symconE x y); rewrite /symconnect.
+  by move=> -> /eqP.
+Qed.
+
+Lemma mem_tseq gf : 
+  tseq gf =i enum T.
+Proof. 
+  move: (tseq_correct gf)=> [_ in_tseq]. 
+  apply/subset_eqP/andP; split; apply/subsetP; last first.
+  - move=> x ?; exact/in_tseq. 
+  by move=> ?; rewrite mem_enum.
+Qed.
+
+Lemma size_tseq gf : 
+  size (tseq gf) = #|T|.
+Proof. 
+  rewrite cardT; apply/eqP. 
+  rewrite -uniq_size_uniq.
+  - exact/tseq_uniq.
+  - exact/enum_uniq.
+  move=> ?; exact/esym/mem_tseq.
+Qed.
+
+End FinGraph. 
+
+Section RelMono. 
+Context {T U : Type}.
+Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
+Hypothesis (fbij : bijective f).
+Hypothesis (fmon : {mono f : x y / g1 x y >-> g2 x y}).
+
+Lemma irreflexive_mono : 
+  (irreflexive g1) <-> (irreflexive [rel x y | g2 (f x) (f y)]).
+Proof. 
+  split=> irr x /=. 
+  - by rewrite fmon. 
+  rewrite -fmon; exact/irr.
+Qed.
+
+Lemma antisymmetric_mono : 
+  (antisymmetric g1) <-> (antisymmetric [rel x y | g2 (f x) (f y)]).
+Proof. 
+  split=> asym x y /=.
+  - rewrite !fmon; exact/asym.
+  rewrite -fmon -fmon; exact/asym.
+Qed.
+
+End RelMono.
+
+Section FinGraphMono. 
+Context {T U : finType}.
+Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
+Hypothesis (fbij : bijective f).
+Hypothesis (fmon : {mono f : x y / g1 x y >-> g2 x y}).
+
+Lemma connect_mono : 
+  {mono f : x y / connect g1 x y >-> connect g2 x y}.
+Proof. 
+  move=> x y; apply/idP/idP; last first.
+  all: move=> /connect_strP/clos_rt_str/=> crt. 
+  all: apply/connect_strP/clos_rt_str. 
+  - elim: crt=> // [|??? _ + _]; last exact/rt_trans.
+    move=> {}x {}y; rewrite -fmon; exact/rt_step.
+  move: fbij=> [g] K K'.
+  rewrite -[x]K -[y]K.
+  elim: crt=> // [|??? _ + _]; last exact/rt_trans.
+  move=> {}x {}y; rewrite -[x]K' -[y]K' fmon=> ?. 
+  by apply/rt_step; rewrite !K.
+Qed.
+
+End FinGraphMono.
 
 Section Covering.
 Context {T : finType}.
@@ -124,7 +248,7 @@ Proof.
   case: (has p s)/idP; last first.
   - move=> hasN; apply/connect1.
     apply/covP; split=> //.
-    by move=> /(cov_sliceP _ _ _ acyc).
+    by move=> /(cov_sliceP _ _ acyc).
   move=> /hasP[z] zIn /andP[rxz rzy].  
   pose iz := index z t.
   have iy_sz: (iy <= size t)%N. 
@@ -189,6 +313,8 @@ Lemma strictify_leq f :
 Proof. by rewrite strictify_weq; lattice. Qed.
 
 End Strictify. 
+
+Set Strict Implicit.
 
 Module WfClosure.
 
