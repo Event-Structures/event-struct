@@ -200,6 +200,13 @@ Definition ftrans : L -> S -> S :=
   | ReflectF pf => s 
   end.
 
+(* Definition invariant (p : pred S) :=  *)
+(*   forall s s', (s --> s') -> p s -> p s'. *)
+
+(* Lemma trace_invariant p s tr :  *)
+(*   invariant p -> p (fst_state s tr) -> p (lst_state s tr). *)
+(* Proof. admit. Admitted. *)
+
 End Def.
 End Def.
 

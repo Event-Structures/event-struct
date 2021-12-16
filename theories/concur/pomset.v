@@ -126,7 +126,9 @@ Definition supp_closed p :=
 
 (* TODO: better name? *)
 Definition operational p := 
-  [forall e1 : finsupp p, forall e2 : finsupp p, val e1 <=^i val e2].
+  [forall e1 : finsupp p, forall e2 : finsupp p, 
+    (fs_ca p (val e1) (val e2)) ==> (val e1 <=^i val e2)
+  ].
 
 Definition lfsp_tseq p : seq E := 
   map val (tseq (rgraph (@fin_ica p))).
@@ -196,7 +198,9 @@ Proof.
 Qed.
 
 Lemma operationalP p : 
-  reflect {in finsupp p &, forall e1 e2, e1 <=^i e2} (operational p).
+  reflect 
+    {in finsupp p &, forall e1 e2, fs_ca p e1 e2 -> e1 <=^i e2} 
+    (operational p).
 Proof. admit. Admitted.
 
 Lemma fs_caP p e1 e2 : supp_closed p -> 
