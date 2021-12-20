@@ -200,13 +200,6 @@ Definition ftrans : L -> S -> S :=
   | ReflectF pf => s 
   end.
 
-(* Definition invariant (p : pred S) :=  *)
-(*   forall s s', (s --> s') -> p s -> p s'. *)
-
-(* Lemma trace_invariant p s tr :  *)
-(*   invariant p -> p (fst_state s tr) -> p (lst_state s tr). *)
-(* Proof. admit. Admitted. *)
-
 End Def.
 End Def.
 
@@ -836,6 +829,28 @@ Proof. exact/eqxx. Qed.
 
 Lemma lts_lang0 s : lts_lang s [::].
 Proof. (exists [trace])=> //; exact/trace_lang0. Qed.
+
+Definition invariant (p : pred S) :=
+  forall s s', s --> s' -> p s -> p s'.
+
+Lemma trace_invariant p s tr : 
+  invariant p -> p (fst_state s tr) -> p (lst_state s tr).
+Proof.
+  case: tr s; elim/last_ind=> //= t [l s1 s2] IHt.
+  rewrite is_trace_rcons=> /and3P[/= st {}/IHt IHt].
+  rewrite /adjoint /==> /eqP E ? /[dup] {}/IHt IHt i.
+  rewrite fst_state_rcons lst_state_rcons /==> pf; apply/(i s1).
+  - by exists l.
+  rewrite -E; apply/IHt; by case: (t) pf.
+Qed.
+
+Lemma invarianl_trace_lan p s tr : 
+  invariant p -> tr \in trace_lang s -> 
+  p s -> p (lst_state s tr).
+Proof.
+  by move/trace_invariant=> /(_ s tr)/[swap]/eqP<-/[apply].
+Qed.
+
 
 End LTSTheory.
 
