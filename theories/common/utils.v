@@ -42,6 +42,10 @@ Proof. by rewrite !orbT. Qed.
 Lemma orbbbbT a b c d: [|| a, b, c, d | true].
 Proof. by rewrite !orbT. Qed.
 
+Lemma andb_iff (a b c d : bool) : 
+  (a <-> c) -> (b <-> d) -> (a && b <-> c && d).
+Proof. by move=> ??; split=> /andP[??]; apply/andP; split; firstorder. Qed.
+
 #[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
 (* ************************************************************************** *)
@@ -584,6 +588,10 @@ Proof.
   case: insubP=> // z' ??.
   exact/trans.
 Qed.
+
+Lemma eq_sub_rel_down r1 r2 : 
+  r1 =2 r2 -> sub_rel_down r1 =2 sub_rel_down r2.
+Proof. by move=> eqr x y; rewrite /sub_rel_down /= eqr. Qed.
 
 End SubTypeUtils.
 

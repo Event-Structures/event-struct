@@ -491,6 +491,34 @@ Proof.
   by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
 Qed.
 
+Lemma acyclic_build :
+  acyclic ica -> acyclic (fin_ica (build lab ica)).
+Proof. 
+  move=> acyc; rewrite acyclicE; apply/andP; split.
+  - apply/irreflexiveP/irreflexive_mono; first exact/fin_ica_mono.
+    move=> x /=; rewrite build_ica /= /sub_rel_lift /=.
+    rewrite !insubT //= -?build_finsupp; first exact/(valP x).
+    move=> x'; exact/acyc_irrefl.
+  apply/antisymmetricP/antisymmetric_mono; first exact/fin_ca_mono. 
+  move=> /= x y /andP[].
+  pose supcl := supp_closed_build.
+  move=> /(fs_caP _ _ supcl)/clos_rt_str + /(fs_caP _ _ supcl)/clos_rt_str.
+  have eq_ica: (fs_ica (build lab ica) : hrel E E) ≡ sub_rel_lift ica.
+  - by move=> ?? /=; rewrite build_ica.
+  rewrite !(str_weq eq_ica) !sub_rel_lift_connect.
+  have xIn: val x \in fE.
+  - rewrite -build_finsupp; exact/(valP x).
+  have yIn: val y \in fE.
+  - rewrite -build_finsupp; exact/(valP y).
+  move=> /= [/val_inj->|] // + [/val_inj->|] //.
+  have->: val x = val (Sub (val x) xIn : fE) by done.
+  have->: val y = val (Sub (val y) yIn : fE) by done.
+  rewrite !sub_rel_lift_val=> ??.
+  suff: (Sub (val x) xIn) = (Sub (val y) yIn : fE).
+  - by move=> [] /val_inj.
+  by apply/(acyc_antisym acyc)/andP.
+Qed.  
+
 End Build.
 
 Section BuildCov.
@@ -742,16 +770,13 @@ Implicit Types (p : lfspreposet E L bot).
 Implicit Types (r : rel E).
 
 Definition inter p r := 
-  @build_cov E L bot _ (fin_lab p) [rel e1 e2 | (fs_ca p e1 e2) && r e1 e2].
+  @build_cov E L bot _ (fin_lab p) (r ⊓ (fs_ca p)).
 
-Variable (p : lfspreposet E L bot).
-Hypothesis (labD : lab_defined p).
+Lemma inter_finsupp p r : 
+  lab_defined p -> finsupp (inter p r) = finsupp p.
+Proof. by move=> ?; rewrite build_finsupp //; apply/forallP. Qed.
 
-Lemma inter_finsupp r : 
-  finsupp (inter p r) = finsupp p.
-Proof. by rewrite build_finsupp //; apply/forallP. Qed.
-
-Lemma inter_labE r : 
+Lemma inter_labE p r : 
   fs_lab (inter p r) =1 fs_lab p.
 Proof.
   move=> e; rewrite /inter build_lab. 
@@ -761,15 +786,27 @@ Proof.
   exact/negP.    
 Qed.
 
+Lemma inter_lab_defined p r : 
+  lab_defined p -> lab_defined (inter p r).
+Proof. move=> labD; apply/lab_defined_build; exact/forallP. Qed.
+
+Lemma inter_supp_closed p r : 
+  lab_defined p -> supp_closed p -> supp_closed (inter p r).
+Proof.
+  move=> labD supcl; apply/supp_closedP=>>.
+  rewrite build_ica build_finsupp //; last first. 
+  - move=> ?; rewrite /fin_lab; apply/lab_definedP=> //; exact/valP. 
+  by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
+Qed.
+
+Lemma inter_acyclic p r : 
+  lab_defined p -> acyclic (fin_ica p) -> acyclic (fin_ica (inter p r)).
+Proof. 
+  move=> labD acyc; apply/build_cov_acyclic.
+  - move=> e; apply/lab_definedP=> //; exact/valP.
+  - 
+
 End Intersection.
-
-Context (T : finType) (e : rel T). 
-Hypothesis (erefl  : reflexive e).
-Hypothesis (esym   : symmetric e).
-Hypothesis (etrans : transitive e).
-
-Definition eqv_clss : seq (pred T) (* or : seq (seq E) *) := 
-  [seq (e r) | r <- enum (roots e) ].
 
 End lFsPrePoset.
 
@@ -993,123 +1030,6 @@ Definition lfsposet_lfinposetType :=
 
 End FinPOrder.
 End FinPOrder.
-
-Module Export Syntax. 
-Notation "[ 'Event' 'of' p ]" := (lfsposet_lposetType p)
-  (at level 0, format "[ 'Event'  'of'  p ]") : form_scope.
-Notation "[ 'FinEvent' 'of' p ]" := (lfsposet_lfinposetType p)
-  (at level 0, format "[ 'FinEvent'  'of'  p ]") : form_scope.
-End Syntax.
-
-Module Export Theory.
-Section Theory.
-Context {E : identType} {L : eqType} {bot : L}.
-Implicit Types (p q : lfsposet E L bot).
-
-Lemma fs_labE p : 
-  lab =1 fs_lab p :> ([Event of p] -> L).  
-Proof. done. Qed.
-
-Lemma fs_caE p : 
-  (<=%O) =2 fs_ca p :> rel [Event of p].  
-Proof. done. Qed.
-
-Lemma fs_scaE p : 
-  (<%O) =2 fs_sca p :> rel [Event of p].  
-Proof. done. Qed.
-
-Lemma fin_labE p : 
-  lab =1 fin_lab p :> ([FinEvent of p] -> L).  
-Proof. done. Qed.
-
-Lemma fin_caE p : 
-  (<=%O) =2 fin_ca p :> rel [FinEvent of p].  
-Proof. done. Qed.
-
-Lemma fin_scaE p : 
-  (<%O) =2 fin_sca p :> rel [FinEvent of p].  
-Proof. done. Qed.
-
-Lemma val_ca_mon p : 
-  { homo (val : [FinEvent of p] -> [Event of p]) : e1 e2 / e1 <= e2 }.
-Proof. 
-  move=> x y; rewrite fin_caE fs_caE /fs_ca /=.
-  by rewrite !sub_rel_lift_val=> ->.
-Qed.
-
-Lemma fs_labNbot p e : 
-  (fs_lab p e != bot) = (e \in finsupp p).
-Proof. 
-  rewrite mem_finsupp /fs_lab /=.
-  move: (lfsp_lab_defined p)=> /lab_definedP labP.
-  case: finsuppP=> //=.  
-  - by rewrite xpair_eqE negb_and eq_refl.
-  move: labP=> /[apply]; rewrite /fs_lab.
-  case: (p e)=> l es //=.
-  by rewrite xpair_eqE negb_and=> ->.
-Qed.
-
-Lemma fs_lab_bot p e : 
-  (e \notin finsupp p) -> fs_lab p e = bot.
-Proof. by rewrite -fs_labNbot negbK=> /eqP. Qed.
-
-Lemma fs_rcov_fsupp p e :
-  {subset (fs_rcov p e) <= (finsupp p)}.
-Proof.
-  apply/fsubsetP/fsubsetPn=> [[e']] /=.
-  move: (lfsp_supp_closed p)=> /supp_closedP. 
-  by move=> /[apply][[->]].
-Qed.
-
-Lemma lfsposet_eqP p q : 
-  reflect ((fs_lab p =1 fs_lab q) * (fs_ica p =2 fs_ica q)) (p == q).
-Proof. 
-  apply/(equivP idP); split=> [/eqP->|[]] //.
-  rewrite /fs_lab /fs_ica=> eq_lab eq_ica.
-  apply/eqP/val_inj=> /=.
-  apply/fsfunP=> e /=; apply/eqP.
-  rewrite /eq_op=> /=; apply/andP; split.
-  - by rewrite (eq_lab e).
-  apply/fset_eqP=> e'.
-  move: (eq_ica e' e)=> /=.
-  by rewrite /fs_rcov.
-Qed.
-
-Lemma lfsp_tseq_size p : 
-  size (lfsp_tseq p) = #|`finsupp p|. 
-Proof. by rewrite /lfsp_tseq size_map size_tseq cardfE. Qed.
-
-Lemma mem_lfsp_tseq p : 
-  lfsp_tseq p =i finsupp p.
-Proof. 
-  rewrite /lfsp_tseq=> e.
-  apply/idP/idP.
-  - by move=> /mapP [e'] + ->; case: e'.
-  move=> in_supp; apply/mapP.
-  exists (Sub e in_supp)=> //.
-  by rewrite mem_tseq fintype.mem_enum. 
-Qed.
-
-Lemma lfsp_idx_lt p e :
-  e \in finsupp p -> lfsp_idx p e < #|`finsupp p|.
-Proof. 
-  rewrite /lfsp_idx=> in_supp.
-  rewrite -lfsp_tseq_size ltEnat /=. 
-  by rewrite index_mem mem_lfsp_tseq.
-Qed.  
-
-Lemma lfsp_idx_le p e :
-  lfsp_idx p e <= #|`finsupp p|.
-Proof. 
-  case: (e \in finsupp p)/idP.
-  - by move=> /lfsp_idx_lt /ltW.
-  move=> /negP Nin_supp.
-  rewrite /lfsp_idx memNindex ?lfsp_tseq_size //.
-  by rewrite mem_lfsp_tseq. 
-Qed.
-
-End Theory.
-End Theory.
 
 Module Export bHom.
 Section bHom.
