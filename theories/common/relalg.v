@@ -52,10 +52,9 @@ Lemma itr_qmk `{laws} `{BKA ≪ l} n (x : X n n) :
 Proof. by ka. Qed.
 
 (* TODO: make lemma instance of Proper for rewriting? *)
-Lemma qmk_weq `{laws} `{BKA ≪ l} n (x y : X n n): 
+Lemma qmk_weq `{laws} `{CUP ≪ l} n (x y : X n n): 
   x ≡ y -> x^? ≡ y^?.
 Proof. by move => ->. Qed.
-
 
 (* ************************************************************************** *)
 (*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
@@ -461,6 +460,13 @@ Proof.
   - by lattice.
   by move=> ?? /=; split=> // [[]].
 Qed.
+
+(* TODO: also need to reprove this (see qmk_weq), 
+ *   because of some techinical issues with typeclass inference
+ *)
+Lemma qmk_weq_rel {U : eqType} (r1 r2 : {dhrel U & U}) : 
+  r1 ≡ r2 -> r1^? ≡ r2^?.
+Proof. by move=> ->. Qed.
 
 End RelClos.
 

@@ -434,12 +434,13 @@ Section Build.
 Context (E : identType) (L : eqType) (bot : L). 
 Context (fE : {fset E}).
 Implicit Types (p : lfspreposet E L bot).
-Implicit Types (lab : fE -> L) (ica : rel fE).
+Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel fE).
 
 Definition build lab ica : lfspreposet E L bot := 
   let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
   [fsfun e => (lab e, rcov e)].
 
+Section BuildICA.
 Variables (lab : fE -> L) (ica : rel fE).
 Hypothesis (labD : forall e, lab e != bot).
 
@@ -484,6 +485,69 @@ Proof.
   rewrite build_ica build_finsupp //. 
   by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
 Qed.
+
+End BuildICA.
+
+Section BuildCA.
+Variables (lab : fE -> L) (ca : rel E).
+Hypothesis (labD : forall e, lab e != bot).
+Hypothesis (ca_refl  : reflexive ca).
+Hypothesis (ca_anti  : antisymmetric ca).
+Hypothesis (ca_trans : transitive ca).
+
+Let sca : rel E  := (fun x y => (y != x) && (ca x y)).
+Let ica : rel fE := cov (relpre val sca).
+
+Lemma build_fin_ica_cov : 
+  fin_ica (build lab ica) =2 cov (relpre val sca).
+Proof.
+  case=> ? /[dup] + in1 [? /[dup] + in2]. 
+  rewrite {1 2}build_finsupp => * //.
+  rewrite /fin_ica /sub_rel_down /=.
+  rewrite build_ica /sub_rel_lift /=.
+  do ? case: insubP=> [??? |/negP//].
+  move: in1 in2; case: _ / (esym (@build_finsupp lab ica labD))=> *.
+  apply/congr2/val_inj=> //; exact/val_inj.
+Qed.
+
+Lemma build_fin_ca_cov : 
+  fin_ca (build lab ica) =2 (relpre val ca).
+Proof.
+  move=> x y; rewrite /fin_ca. 
+  under eq_connect do rewrite build_fin_ica_cov. 
+  have crt_ca : (connect (relpre val ca)) =2 relpre val ca.
+  - move=> ??; apply/connect_eqP/rtclosedP. 
+    split; move=>> /=; [exact/ca_refl | exact/ca_trans].
+  have crt_sca : (connect (relpre val sca)) =2 connect (relpre val ca).
+  - move=>>; rewrite ?(connect_sub_one (relpre val ca)).
+    apply eq_connect=> ?? /=.
+    by rewrite /sca -(inj_eq val_inj) /= eq_sym.
+  rewrite -crt_ca connect_covE ?crt_sca //.
+  apply/acyclicP; split=> [[/= ??]|]; first by rewrite /sca eq_refl.
+  apply/preacyclicP=> ?? /andP[].
+  rewrite !crt_sca !crt_ca /= => ??. 
+  by apply/val_inj/ca_anti/andP.
+Qed.
+
+(* TODO: reformulate in terms of relation-algebra? *)
+Lemma build_ca_cov e1 e2 : 
+  fs_ca (build lab ica) e1 e2 = 
+    (e1 == e2) || [&& ca e1 e2, e1 \in fE & e2 \in fE].
+Proof. 
+  move: e1 e2; rewrite /fs_ca.
+  apply: qmk_weq_rel=> /= e1 e2.
+  (* TODO: make a lemma? *)
+  rewrite /sub_rel_lift /=.  
+  case: insubP=> [e1'|]; rewrite {1}build_finsupp //; last first.
+  - by move=> /negPf->; rewrite !andbF.
+  move=> -> val1.
+  case: insubP=> [e2'|]; rewrite {1}build_finsupp //; last first.
+  - by move=> /negPf->; rewrite !andbF.
+  move=> -> val2. 
+  by rewrite build_fin_ca_cov /= val1 val2 andbT. 
+Qed.
+
+End BuildCA.
 
 End Build.
 
