@@ -3,7 +3,8 @@ From RelationAlgebra Require Import lattice monoid rel boolean kat_tac.
 From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
-From eventstruct Require Import utils rel relalg inhtype ident lposet pomset.
+From eventstruct Require Import utils rel relalg inhtype ident.
+From eventstruct Require Import lts lposet pomset.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -116,3 +117,21 @@ End Theory.
 
 End Lab.
 
+
+Section SeqCst.
+Context {E : identType} {L : labType}.
+Context {Tid : identType}.
+(* data-type semantics *)
+Context (DS : ltsType L).
+(* thread semantics *)
+Context (TS : ltsType L).
+
+Implicit Types (p q : @pomset E _ (\i0 : Tid, bot : L)).
+
+Definition eqtid p : rel [Event of p] := 
+  fun e1 e2 => fst (lab e1) == fst (lab e2).
+
+Definition po p : rel [Event of p] := 
+  [rel e1 e2 | (eqtid e1 e2) && (e1 <= e2)].
+
+End SeqCst.
