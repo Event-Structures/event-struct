@@ -434,13 +434,18 @@ Section Build.
 Context (E : identType) (L : eqType) (bot : L). 
 Context (fE : {fset E}).
 Implicit Types (p : lfspreposet E L bot).
-Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel fE).
+Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel E).
 
 Definition build lab ica : lfspreposet E L bot := 
   let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
   [fsfun e => (lab e, rcov e)].
 
-Section BuildICA.
+Definition build_cov lab ca : lfspreposet E L bot := 
+  let sca : rel E := (fun x y => (y != x) && (ca x y)) in
+  let ica : rel fE := cov (relpre val sca) in
+  build lab ica.
+
+Section Build.
 Variables (lab : fE -> L) (ica : rel fE).
 Hypothesis (labD : forall e, lab e != bot).
 
@@ -486,9 +491,9 @@ Proof.
   by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
 Qed.
 
-End BuildICA.
+End Build.
 
-Section BuildCA.
+Section BuildCov.
 Variables (lab : fE -> L) (ca : rel E).
 Hypothesis (labD : forall e, lab e != bot).
 Hypothesis (ca_refl  : reflexive ca).
@@ -498,8 +503,8 @@ Hypothesis (ca_trans : transitive ca).
 Let sca : rel E  := (fun x y => (y != x) && (ca x y)).
 Let ica : rel fE := cov (relpre val sca).
 
-Lemma build_fin_ica_cov : 
-  fin_ica (build lab ica) =2 cov (relpre val sca).
+Lemma build_cov_fin_ica : 
+  fin_ica (build_cov lab ca) =2 cov (relpre val sca).
 Proof.
   case=> ? /[dup] + in1 [? /[dup] + in2]. 
   rewrite {1 2}build_finsupp => * //.
@@ -510,28 +515,57 @@ Proof.
   apply/congr2/val_inj=> //; exact/val_inj.
 Qed.
 
-Lemma build_fin_ca_cov : 
-  fin_ca (build lab ica) =2 (relpre val ca).
-Proof.
-  move=> x y; rewrite /fin_ca. 
-  under eq_connect do rewrite build_fin_ica_cov. 
-  have crt_ca : (connect (relpre val ca)) =2 relpre val ca.
-  - move=> ??; apply/connect_eqP/rtclosedP. 
-    split; move=>> /=; [exact/ca_refl | exact/ca_trans].
-  have crt_sca : (connect (relpre val sca)) =2 connect (relpre val ca).
-  - move=>>; rewrite ?(connect_sub_one (relpre val ca)).
-    apply eq_connect=> ?? /=.
-    by rewrite /sca -(inj_eq val_inj) /= eq_sym.
-  rewrite -crt_ca connect_covE ?crt_sca //.
+(* TODO: generalize! *)
+Lemma build_cov_connect_ca : 
+  let D := finsupp (build_cov lab ca) in
+  (connect (relpre val ca) : rel D) =2 relpre val ca.
+Proof. 
+  move=>>; apply/connect_eqP/rtclosedP. 
+  split; move=>> /=; [exact/ca_refl | exact/ca_trans].
+Qed.
+
+(* TODO: generalize! *)
+Lemma build_cov_connect_sca : 
+  let D := finsupp (build_cov lab ca) in
+  (connect (relpre val sca) : rel D) =2 connect (relpre val ca).
+Proof. 
+  move=>>; rewrite ?(connect_sub_one (relpre val ca)).
+  apply eq_connect=> ?? /=.
+  by rewrite /sca -(inj_eq val_inj) /= eq_sym.
+Qed.
+
+(* TODO: generalize! *)
+Lemma build_cov_acyclic_sca : 
+  let D := finsupp (build_cov lab ca) in
+  acyclic (relpre val sca : rel D).
+Proof. 
   apply/acyclicP; split=> [[/= ??]|]; first by rewrite /sca eq_refl.
   apply/preacyclicP=> ?? /andP[].
-  rewrite !crt_sca !crt_ca /= => ??. 
+  rewrite !build_cov_connect_sca !build_cov_connect_ca /= => ??. 
   by apply/val_inj/ca_anti/andP.
 Qed.
 
+Lemma build_cov_acyclic : 
+  acyclic (fin_ica (build_cov lab ca)).
+Proof. 
+  under eq_acyclic do rewrite build_cov_fin_ica. 
+  apply/sub_acyclic; first exact/cov_subrel.
+  exact/build_cov_acyclic_sca.
+Qed.
+
+Lemma build_cov_fin_ca : 
+  fin_ca (build_cov lab ca) =2 (relpre val ca).
+Proof.
+  move=> x y; rewrite /fin_ca. 
+  under eq_connect do rewrite build_cov_fin_ica. 
+  rewrite -build_cov_connect_ca. 
+  rewrite connect_covE ?build_cov_connect_sca //.
+  exact/build_cov_acyclic_sca.
+Qed.
+
 (* TODO: reformulate in terms of relation-algebra? *)
-Lemma build_ca_cov e1 e2 : 
-  fs_ca (build lab ica) e1 e2 = 
+Lemma build_cov_ca e1 e2 : 
+  fs_ca (build_cov lab ca) e1 e2 = 
     (e1 == e2) || [&& ca e1 e2, e1 \in fE & e2 \in fE].
 Proof. 
   move: e1 e2; rewrite /fs_ca.
@@ -544,10 +578,10 @@ Proof.
   case: insubP=> [e2'|]; rewrite {1}build_finsupp //; last first.
   - by move=> /negPf->; rewrite !andbF.
   move=> -> val2. 
-  by rewrite build_fin_ca_cov /= val1 val2 andbT. 
+  by rewrite build_cov_fin_ca /= val1 val2 andbT. 
 Qed.
 
-End BuildCA.
+End BuildCov.
 
 End Build.
 
@@ -628,8 +662,8 @@ Implicit Types (ls : seq L).
 Definition of_seq ls := 
   let fE  := [fset e | e in nfresh \i1 (size ls)] in 
   let lab := fun e : fE => (nth bot (bot :: ls) (encode (val e))) in
-  let ica := fun e1 e2 : fE => (encode (val e1)).+1 == encode (val e2) in
-  @build E L bot fE lab ica.
+  let ca  := fun e1 e2 : E => e1 <=^i e2 in
+  @build_cov E L bot fE lab ca.
 
 Variable (ls : seq L).
 Hypothesis (lsD : bot \notin ls).
@@ -660,38 +694,38 @@ Proof.
   by move=> ?; rewrite nth_default.
 Qed.
 
-Lemma of_seq_fs_icaE e1 e2 :
-  fs_ica (of_seq ls) e1 e2 = 
-    [&& (encode e1).+1 == encode e2
-      , e1 \in finsupp (of_seq ls)
-      & e2 \in finsupp (of_seq ls)
-    ].
-Proof.
-  rewrite !of_seq_finsupp /of_seq //. 
-  rewrite build_ica /sub_rel_lift /=.
-  (* TODO: make some lemma for `sub_rel_lift` to handle this *)
-  case: insubP=>[[e1' in1]|/negbTE] /[! inE]-> /=; rewrite ?andbF //.
-  case: insubP=>[[e2' in2]|/negbTE] /[! inE]-> /=; rewrite ?andbF //.
-  by move=> -> ->; rewrite andbT.
-Qed.
+(* Lemma of_seq_fs_icaE e1 e2 : *)
+(*   fs_ica (of_seq ls) e1 e2 =  *)
+(*     [&& (encode e1).+1 == encode e2 *)
+(*       , e1 \in finsupp (of_seq ls) *)
+(*       & e2 \in finsupp (of_seq ls) *)
+(*     ]. *)
+(* Proof. *)
+(*   rewrite !of_seq_finsupp /of_seq //.  *)
+(*   rewrite build_ica /sub_rel_lift /=. *)
+(*   (* TODO: make some lemma for `sub_rel_lift` to handle this *) *)
+(*   case: insubP=>[[e1' in1]|/negbTE] /[! inE]-> /=; rewrite ?andbF //. *)
+(*   case: insubP=>[[e2' in2]|/negbTE] /[! inE]-> /=; rewrite ?andbF //. *)
+(*   by move=> -> ->; rewrite andbT. *)
+(* Qed. *)
 
-Lemma of_seq_fin_icaE : 
-  fin_ica (of_seq ls) =2 [rel e1 e2 | (encode (val e1)).+1 == encode (val e2)].
-Proof.
-  case=> /= ? + [/= ?].
-  rewrite /fin_ica /sub_rel_down /= ?inE of_seq_fs_icaE //. 
-  by move=> -> ->; rewrite !andbT. 
-Qed.
+(* Lemma of_seq_fin_icaE :  *)
+(*   fin_ica (of_seq ls) =2 [rel e1 e2 | (encode (val e1)).+1 == encode (val e2)]. *)
+(* Proof. *)
+(*   case=> /= ? + [/= ?]. *)
+(*   rewrite /fin_ica /sub_rel_down /= ?inE of_seq_fs_icaE //.  *)
+(*   by move=> -> ->; rewrite !andbT.  *)
+(* Qed. *)
 
 (* TODO: this probably should be proven in the other direction too *)
-Lemma of_seq_fin_ca_sub : 
-  subrel (fin_ca (of_seq ls)) [rel e1 e2 | (val e1) <=^i (val e2)].
-Proof.
-  move=> /= ?? /connect_strP/clos_rt_str/(@clos_rt_rtn1 _ _ _ _) /=.
-  elim=> // [[/= e1 in1 [/= e2 in2]]].
-  rewrite of_seq_fin_icaE /= => ??.
-  rewrite ?/(_ <=^i _) /= /Ident.Def.ident_le; lia. 
-Qed.
+(* Lemma of_seq_fin_ca_sub :  *)
+(*   subrel (fin_ca (of_seq ls)) [rel e1 e2 | (val e1) <=^i (val e2)]. *)
+(* Proof. *)
+(*   move=> /= ?? /connect_strP/clos_rt_str/(@clos_rt_rtn1 _ _ _ _) /=. *)
+(*   elim=> // [[/= e1 in1 [/= e2 in2]]]. *)
+(*   rewrite of_seq_fin_icaE /= => ??. *)
+(*   rewrite ?/(_ <=^i _) /= /Ident.Def.ident_le; lia.  *)
+(* Qed. *)
 
 Lemma of_seq_fs_caE e1 e2 : 
   fs_ca (of_seq ls) e1 e2 = 
@@ -700,7 +734,13 @@ Lemma of_seq_fs_caE e1 e2 :
       , e1 \in finsupp (of_seq ls)
       & e2 \in finsupp (of_seq ls)
     ].
-Proof. admit. Admitted.
+Proof. 
+  rewrite of_seq_finsupp /of_seq. 
+  rewrite build_cov_ca // => [? ||]; last first.
+  - exact/le_trans.
+  - exact/le_anti.
+  by rewrite of_seq_nth_defined.
+Qed.
 
 Lemma of_seq_lab_defined : 
   lab_defined (of_seq ls).
@@ -718,11 +758,11 @@ Qed.
 Lemma of_seq_fin_ica_acyclic : 
   acyclic (fin_ica (of_seq ls)).
 Proof.
-  apply/andP; split.
-  - apply/forallP=> ?; rewrite of_seq_fin_icaE /=; lia.
-  apply/forall2P=> e1 e2; apply/implyP. 
-  move=> /andP[] /of_seq_fin_ca_sub /= ? /of_seq_fin_ca_sub /= ?.
-  by apply/eqP/val_inj/le_anti/andP.
+  apply/build_cov_acyclic=> [? |||]; last first.
+  - exact/le_trans.
+  - exact/le_anti.
+  - exact/le_refl.
+  by rewrite of_seq_nth_defined.
 Qed.
 
 End OfSeq.
