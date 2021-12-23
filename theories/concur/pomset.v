@@ -736,6 +736,41 @@ End OfSeq.
 
 Arguments of_seq E L bot : clear implicits.
 
+Section Intersection.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (r : rel E).
+
+Definition inter p r := 
+  @build_cov E L bot _ (fin_lab p) [rel e1 e2 | (fs_ca p e1 e2) && r e1 e2].
+
+Variable (p : lfspreposet E L bot).
+Hypothesis (labD : lab_defined p).
+
+Lemma inter_finsupp r : 
+  finsupp (inter p r) = finsupp p.
+Proof. by rewrite build_finsupp //; apply/forallP. Qed.
+
+Lemma inter_labE r : 
+  fs_lab (inter p r) =1 fs_lab p.
+Proof.
+  move=> e; rewrite /inter build_lab. 
+  case: (e \in finsupp p)/idP=> [eIn | enIn].
+  - by rewrite sub_liftT. 
+  rewrite sub_liftF // /fs_lab fsfun_dflt //. 
+  exact/negP.    
+Qed.
+
+End Intersection.
+
+Context (T : finType) (e : rel T). 
+Hypothesis (erefl  : reflexive e).
+Hypothesis (esym   : symmetric e).
+Hypothesis (etrans : transitive e).
+
+Definition eqv_clss : seq (pred T) (* or : seq (seq E) *) := 
+  [seq (e r) | r <- enum (roots e) ].
+
 End lFsPrePoset.
 
 Export lFsPrePoset.Def.
