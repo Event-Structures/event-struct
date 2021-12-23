@@ -694,39 +694,6 @@ Proof.
   by move=> ?; rewrite nth_default.
 Qed.
 
-(* Lemma of_seq_fs_icaE e1 e2 : *)
-(*   fs_ica (of_seq ls) e1 e2 =  *)
-(*     [&& (encode e1).+1 == encode e2 *)
-(*       , e1 \in finsupp (of_seq ls) *)
-(*       & e2 \in finsupp (of_seq ls) *)
-(*     ]. *)
-(* Proof. *)
-(*   rewrite !of_seq_finsupp /of_seq //.  *)
-(*   rewrite build_ica /sub_rel_lift /=. *)
-(*   (* TODO: make some lemma for `sub_rel_lift` to handle this *) *)
-(*   case: insubP=>[[e1' in1]|/negbTE] /[! inE]-> /=; rewrite ?andbF //. *)
-(*   case: insubP=>[[e2' in2]|/negbTE] /[! inE]-> /=; rewrite ?andbF //. *)
-(*   by move=> -> ->; rewrite andbT. *)
-(* Qed. *)
-
-(* Lemma of_seq_fin_icaE :  *)
-(*   fin_ica (of_seq ls) =2 [rel e1 e2 | (encode (val e1)).+1 == encode (val e2)]. *)
-(* Proof. *)
-(*   case=> /= ? + [/= ?]. *)
-(*   rewrite /fin_ica /sub_rel_down /= ?inE of_seq_fs_icaE //.  *)
-(*   by move=> -> ->; rewrite !andbT.  *)
-(* Qed. *)
-
-(* TODO: this probably should be proven in the other direction too *)
-(* Lemma of_seq_fin_ca_sub :  *)
-(*   subrel (fin_ca (of_seq ls)) [rel e1 e2 | (val e1) <=^i (val e2)]. *)
-(* Proof. *)
-(*   move=> /= ?? /connect_strP/clos_rt_str/(@clos_rt_rtn1 _ _ _ _) /=. *)
-(*   elim=> // [[/= e1 in1 [/= e2 in2]]]. *)
-(*   rewrite of_seq_fin_icaE /= => ??. *)
-(*   rewrite ?/(_ <=^i _) /= /Ident.Def.ident_le; lia.  *)
-(* Qed. *)
-
 Lemma of_seq_fs_caE e1 e2 : 
   fs_ca (of_seq ls) e1 e2 = 
     (e1 == e2) ||
