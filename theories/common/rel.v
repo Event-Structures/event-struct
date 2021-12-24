@@ -47,9 +47,33 @@ Section Rel.
 Context {T : Type}.
 Implicit Types (r : rel T). 
 
-(* Lemma refl_cap r1 r2 :  *)
-(*   reflexive r1 -> reflexive (r1 ⊓ r2). *)
-(* Proof.  *)
+Lemma refl_cap r1 r2 :
+  reflexive r1 -> reflexive r2 -> reflexive (r1 ⊓ r2).
+Proof. by move=> refl1 refl2 x /=; apply/andP. Qed.
+
+Lemma antisym_cap r1 r2 :
+  antisymmetric r1 -> antisymmetric (r1 ⊓ r2).
+Proof. 
+  move=> asym x y /=. 
+  rewrite -andbA=> /and4P[????].
+  by apply/asym/andP.
+Qed.
+
+Lemma trans_cap r1 r2 :
+  transitive r1 -> transitive r2 -> transitive (r1 ⊓ r2).
+Proof. 
+  move=> trans1 trans2 z x y /=. 
+  move=> /andP[??] /andP[??]; apply/andP. 
+  by firstorder.
+Qed.
+
+Lemma eq_antisym r1 r2 : 
+  r1 =2 r2 -> antisymmetric r1 <-> antisymmetric r2.
+Proof. 
+  move=> eqr; split=> anti x y.
+  - rewrite -eqr -eqr; exact/anti.
+  rewrite !eqr; exact/anti.
+Qed.
 
 End Rel. 
 

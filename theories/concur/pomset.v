@@ -197,6 +197,19 @@ Proof.
   by move=> /fsfun_dflt -> //.
 Qed.
 
+Lemma fs_sca_def p e1 e2 : 
+  fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
+Proof. done. Qed.
+
+Lemma fs_ca_scaE p e1 e2 : 
+  fs_ca p e1 e2 = (e1 == e2) || (fs_sca p e1 e2).
+Proof.
+  rewrite /fs_sca orb_andr eq_sym orbN andTb. 
+  apply/esym; rewrite orb_idl //.
+  move=> /eqP->; rewrite /fs_ca /=. 
+  by apply/orP; left.
+Qed.
+ 
 Lemma fs_caP p e1 e2 : supp_closed p -> 
   reflect (clos_refl_trans (fs_ica p) e1 e2) (fs_ca p e1 e2).
 Proof. 
@@ -246,14 +259,33 @@ Proof.
   apply/val_inj=> /=; congruence.
 Qed.  
 
-Lemma fs_ca_scaE p e1 e2 : 
-  fs_ca p e1 e2 = (e1 == e2) || (fs_sca p e1 e2).
-Proof.
-  rewrite /fs_sca orb_andr eq_sym orbN andTb. 
-  apply/esym; rewrite orb_idl //.
-  move=> /eqP->; rewrite /fs_ca /=. 
-  by apply/orP; left.
+Lemma fs_ca_refl p : 
+  reflexive (fs_ca p). 
+Proof. by move=> x; rewrite /fs_ca /=; apply/orP; left. Qed.
+
+Lemma fs_ca_antisym p : supp_closed p -> acyclic (fin_ica p) -> 
+  antisymmetric (fs_ca p).
+Proof. 
+  move=> supcl acyc e1 e2.
+  rewrite /fs_ca /sub_rel_lift /= /dhrel_one.
+  move=> /andP[] /orP[/eqP|] //.
+  move=> /[swap] /orP[/eqP|] //.
+  case: insubP=> // e2' in2 <-.
+  case: insubP=> // e1' in1 <-.
+  move=> ??; suff->: e1' = e2'=> //.
+  move: (acyc_antisym acyc)=> anti.
+  by apply/anti/andP.
 Qed.
+
+Lemma fs_ca_trans p : 
+  supp_closed p -> transitive (fs_ca p). 
+Proof. 
+  move=> supcl y x z.
+  move=> /(fs_caP _ _ supcl) ca_xy.
+  move=> /(fs_caP _ _ supcl) ca_yz.
+  apply/(fs_caP _ _ supcl). 
+  apply/rt_trans; [exact/ca_xy | exact/ca_yz].
+Qed. 
 
 Lemma fs_ica_ct_fin_sca p : supp_closed p -> acyclic (fin_ica p) ->
   clos_trans (fs_ica p) ≦ sub_rel_lift (fin_sca p).
@@ -340,20 +372,6 @@ Proof.
   by apply/orP; right; apply/andP.  
 Qed.
 
-Lemma operationalP p : 
-  supp_closed p -> acyclic (fin_ica p) -> 
-  reflect 
-    (subrel (fs_ca p) (<=^i%O))
-    (operational p).
-Proof.
-  move=> sp ac; apply: (iffP forallP).
-  - move=> /[swap] ? /[swap] ? /[swap] /[dup] ? /(supp_closed_ca sp ac).
-    case/orP=> [/eqP->//|/andP[] in1 in2 /(_ [` in1]) /forallP/(_ [` in2])].
-    move/implyP; exact.
-  by move=> o [>]; apply/forallP=> -[>]; apply/implyP=> /o.
-Qed.
-
-
 Lemma fs_ica_irrefl p : supp_closed p -> irreflexive (fin_ica p) -> 
   irreflexive (fs_ica p).
 Proof. 
@@ -362,20 +380,6 @@ Proof.
   case: (e \in finsupp p)/idP.
   - by move=> eIn; move: (irr (Sub e eIn))=> /=. 
   by move=> /negP nsupp; rewrite /fs_rcov fsfun_dflt //. 
-Qed.
-
-Lemma fs_ca_antisym p : supp_closed p -> acyclic (fin_ica p) -> 
-  antisymmetric (fs_ca p).
-Proof. 
-  move=> supcl acyc e1 e2.
-  rewrite /fs_ca /sub_rel_lift /= /dhrel_one.
-  move=> /andP[] /orP[/eqP|] //.
-  move=> /[swap] /orP[/eqP|] //.
-  case: insubP=> // e2' in2 <-.
-  case: insubP=> // e1' in1 <-.
-  move=> ??; suff->: e1' = e2'=> //.
-  move: (acyc_antisym acyc)=> anti.
-  by apply/anti/andP.
 Qed.
 
 Lemma lfsp_dw_clos_subs p es : 
@@ -397,6 +401,20 @@ Proof.
   - exact/subs.
   (* TODO: looks like it can be proven with weaker assumptions *)
   by move=> /(supp_closed_sca supcl acyc) ->.
+Qed.
+
+(* TODO: do we need acyclic precondition? *)
+Lemma operationalP p : 
+  supp_closed p -> acyclic (fin_ica p) -> 
+  reflect 
+    (subrel (fs_ca p) (<=^i%O))
+    (operational p).
+Proof.
+  move=> sp ac; apply: (iffP forallP).
+  - move=> /[swap] ? /[swap] ? /[swap] /[dup] ? /(supp_closed_ca sp ac).
+    case/orP=> [/eqP->//|/andP[] in1 in2 /(_ [` in1]) /forallP/(_ [` in2])].
+    move/implyP; exact.
+  by move=> o [>]; apply/forallP=> -[>]; apply/implyP=> /o.
 Qed.
 
 Lemma fs_ca_ident_le p :
@@ -562,7 +580,7 @@ Proof.
   by rewrite /sca -(inj_eq val_inj) /= eq_sym.
 Qed.
 
-(* TODO: generalize! *)
+(* TODO: generalize *)
 Lemma build_cov_acyclic_sca : 
   let D := finsupp (build_cov lab ca) in
   acyclic (relpre val sca : rel D).
@@ -573,6 +591,7 @@ Proof.
   by apply/val_inj/ca_anti/andP.
 Qed.
 
+(* TODO: use build_acyclic? *)
 Lemma build_cov_acyclic : 
   acyclic (fin_ica (build_cov lab ca)).
 Proof. 
@@ -799,12 +818,24 @@ Proof.
   by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
 Qed.
 
-Lemma inter_acyclic p r : 
-  lab_defined p -> acyclic (fin_ica p) -> acyclic (fin_ica (inter p r)).
+Variables (p : lfspreposet E L bot) (r : rel E).
+Hypothesis (labD  : lab_defined p).
+Hypothesis (supcl : supp_closed p).
+Hypothesis (acyc  : acyclic (fin_ica p)).
+Hypothesis (refl  : reflexive r).
+Hypothesis (trans : transitive r).
+
+(* TODO: prove for lfposet? *)
+Lemma inter_acyclic : 
+  acyclic (fin_ica (inter p r)).
 Proof. 
-  move=> labD acyc; apply/build_cov_acyclic.
+  apply/build_cov_acyclic.
   - move=> e; apply/lab_definedP=> //; exact/valP.
-  - 
+  - apply/refl_cap=> //; exact/fs_ca_refl.
+  - under eq_antisym do rewrite capC.
+    exact/antisym_cap/fs_ca_antisym. 
+  apply/trans_cap=> //; exact/fs_ca_trans.
+Qed.
 
 End Intersection.
 
@@ -935,41 +966,12 @@ Section POrder.
 Context {E : identType} {L : eqType}.
 Variable (bot : L) (p : lfsposet E L bot).
 
-Lemma fs_sca_def e1 e2 : 
-  fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
-Proof. done. Qed.
- 
-Lemma fs_ca_refl : 
-  reflexive (fs_ca p). 
-Proof. move=> ?; apply/(fs_caP _ _ (lfsp_supp_closed p))/rt_refl. Qed.
-
-Lemma fs_ca_trans : 
-  transitive (fs_ca p). 
-Proof. 
-  move=> y x z.
-  move=> /(fs_caP _ _ (lfsp_supp_closed p)) ca_xy.
-  move=> /(fs_caP _ _ (lfsp_supp_closed p)) ca_yz.
-  apply/(fs_caP _ _ (lfsp_supp_closed p)). 
-  apply/rt_trans; [exact/ca_xy | exact/ca_yz].
-Qed. 
-
-Lemma fs_ca_antisym : 
-  antisymmetric (fs_ca p). 
-Proof. 
-  move=> e1 e2 /andP[]; rewrite /fs_ca /=.
-  rewrite /dhrel_one=> /orP[/eqP->|+ /orP[/eqP<-|]] //. 
-  move=> /sub_rel_liftP + /sub_rel_liftP.
-  move=> [e1' [] e2' [+++]] [e3' [] e4' [+++]].
-  move=> /[swap] <- /[swap] <-.
-  move=> ++ /val_inj H1 /val_inj H2.
-  rewrite H2 H1=> con_e12 con_e21.
-  suff: e1' = e2'=> [->|] //.
-  by apply/(acyc_antisym (lfsp_acyclic p))/andP.
-Qed.  
-
 Definition lfsposet_porderMixin := 
   @LePOrderMixin E (fs_ca p) (fs_sca p) 
-    fs_sca_def fs_ca_refl fs_ca_antisym fs_ca_trans. 
+    (fs_sca_def p) 
+    (fs_ca_refl p) 
+    (fs_ca_antisym (lfsp_supp_closed p) (lfsp_acyclic p))
+    (fs_ca_trans (lfsp_supp_closed p)). 
 
 Definition lfsposet_porderType := 
   POrderType tt E lfsposet_porderMixin.
