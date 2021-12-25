@@ -458,12 +458,6 @@ Definition build lab ica : lfspreposet E L bot :=
   let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
   [fsfun e => (lab e, rcov e)].
 
-Definition build_cov lab ca : lfspreposet E L bot := 
-  let sca : rel E := (fun x y => (y != x) && (ca x y)) in
-  let ica : rel fE := cov (relpre val sca) in
-  build lab ica.
-
-Section Build.
 Variables (lab : fE -> L) (ica : rel fE).
 Hypothesis (labD : forall e, lab e != bot).
 
@@ -540,6 +534,16 @@ Qed.
 End Build.
 
 Section BuildCov.
+Context (E : identType) (L : eqType) (bot : L). 
+Context (fE : {fset E}).
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel E).
+
+Definition build_cov lab ca : lfspreposet E L bot := 
+  let sca : rel E := (fun x y => (y != x) && (ca x y)) in
+  let ica : rel fE := cov (relpre val sca) in
+  @build E L bot fE lab ica.
+
 Variables (lab : fE -> L) (ca : rel E).
 Hypothesis (labD : forall e, lab e != bot).
 Hypothesis (ca_refl  : reflexive ca).
@@ -557,7 +561,7 @@ Proof.
   rewrite /fin_ica /sub_rel_down /=.
   rewrite build_ica /sub_rel_lift /=.
   do ? case: insubP=> [??? |/negP//].
-  move: in1 in2; case: _ / (esym (@build_finsupp lab ica labD))=> *.
+  move: in1 in2; case: _ / (esym (@build_finsupp E L bot fE lab ica labD))=> *.
   apply/congr2/val_inj=> //; exact/val_inj.
 Qed.
 
@@ -581,21 +585,21 @@ Proof.
 Qed.
 
 (* TODO: generalize *)
-Lemma build_cov_acyclic_sca : 
+Lemma build_cov_acyclic_sca :
   let D := finsupp (build_cov lab ca) in
   acyclic (relpre val sca : rel D).
-Proof. 
+Proof.
   apply/acyclicP; split=> [[/= ??]|]; first by rewrite /sca eq_refl.
   apply/preacyclicP=> ?? /andP[].
-  rewrite !build_cov_connect_sca !build_cov_connect_ca /= => ??. 
+  rewrite !build_cov_connect_sca !build_cov_connect_ca /= => ??.
   by apply/val_inj/ca_anti/andP.
 Qed.
 
 (* TODO: use build_acyclic? *)
-Lemma build_cov_acyclic : 
+Lemma build_cov_acyclic :
   acyclic (fin_ica (build_cov lab ca)).
-Proof. 
-  under eq_acyclic do rewrite build_cov_fin_ica. 
+Proof.
+  under eq_acyclic do rewrite build_cov_fin_ica.
   apply/sub_acyclic; first exact/cov_subrel.
   exact/build_cov_acyclic_sca.
 Qed.
@@ -628,9 +632,20 @@ Proof.
   by rewrite build_cov_fin_ca /= val1 val2 andbT. 
 Qed.
 
-End BuildCov.
+(* TODO: rename? *)
+Lemma build_cov_ca_wf : reflexive ca -> subrel ca (mem fE × mem fE : {dhrel E & E})^? -> 
+  fs_ca (build_cov lab ca) =2 ca.
+Proof. 
+  move=> refl sub e1 e2; rewrite build_cov_ca.
+  apply/idP/idP=> [/orP[|]|].
+  - move=> /eqP->; exact/refl.
+  - by move=> /and3P[].
+  move=> /[dup] /sub /= /orP[|]. 
+  - by move=> /eqP-> ?; apply/orP; left. 
+  by move=> /andP[-> ->] ->; rewrite orbT.
+Qed.
 
-End Build.
+End BuildCov.
 
 Section Empty.
 Context (E : identType) (L : eqType) (bot : L). 
@@ -783,34 +798,44 @@ End OfSeq.
 
 Arguments of_seq E L bot : clear implicits.
 
-Section Intersection.
+Section InterRel.
 Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p : lfspreposet E L bot).
 Implicit Types (r : rel E).
+Implicit Types (p : lfspreposet E L bot).
 
-Definition inter p r := 
+(* TODO: perhaps, we should define intersection for preorders only?
+ *   Then we would have homogeneous binary operation, 
+ *   and all the invariants in-place. 
+ *   For that, however, we need to change hierarchy to something like:
+ *  
+ *                             /-- lfsposet
+ *   lfsrepr <-- lfspreposet <-
+ *                             \-- lfsequiv
+ *            
+ *)
+Definition inter_rel r p := 
   @build_cov E L bot _ (fin_lab p) (r ⊓ (fs_ca p)).
 
-Lemma inter_finsupp p r : 
-  lab_defined p -> finsupp (inter p r) = finsupp p.
+Lemma inter_rel_finsupp r p : 
+  lab_defined p -> finsupp (inter_rel r p) = finsupp p.
 Proof. by move=> ?; rewrite build_finsupp //; apply/forallP. Qed.
 
-Lemma inter_labE p r : 
-  fs_lab (inter p r) =1 fs_lab p.
+Lemma inter_rel_labE r p : 
+  fs_lab (inter_rel r p) =1 fs_lab p.
 Proof.
-  move=> e; rewrite /inter build_lab. 
+  move=> e; rewrite /inter_rel build_lab. 
   case: (e \in finsupp p)/idP=> [eIn | enIn].
   - by rewrite sub_liftT. 
   rewrite sub_liftF // /fs_lab fsfun_dflt //. 
   exact/negP.    
 Qed.
 
-Lemma inter_lab_defined p r : 
-  lab_defined p -> lab_defined (inter p r).
+Lemma inter_rel_lab_defined r p : 
+  lab_defined p -> lab_defined (inter_rel r p).
 Proof. move=> labD; apply/lab_defined_build; exact/forallP. Qed.
 
-Lemma inter_supp_closed p r : 
-  lab_defined p -> supp_closed p -> supp_closed (inter p r).
+Lemma inter_rel_supp_closed r p : 
+  lab_defined p -> supp_closed p -> supp_closed (inter_rel r p).
 Proof.
   move=> labD supcl; apply/supp_closedP=>>.
   rewrite build_ica build_finsupp //; last first. 
@@ -818,16 +843,16 @@ Proof.
   by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
 Qed.
 
-Variables (p : lfspreposet E L bot) (r : rel E).
+Variables (r : rel E) (p : lfspreposet E L bot).
+Hypothesis (refl  : reflexive r).
+Hypothesis (trans : transitive r).
 Hypothesis (labD  : lab_defined p).
 Hypothesis (supcl : supp_closed p).
 Hypothesis (acyc  : acyclic (fin_ica p)).
-Hypothesis (refl  : reflexive r).
-Hypothesis (trans : transitive r).
 
 (* TODO: prove for lfposet? *)
-Lemma inter_acyclic : 
-  acyclic (fin_ica (inter p r)).
+Lemma inter_rel_acyclic : 
+  acyclic (fin_ica (inter_rel r p)).
 Proof. 
   apply/build_cov_acyclic.
   - move=> e; apply/lab_definedP=> //; exact/valP.
@@ -837,7 +862,23 @@ Proof.
   apply/trans_cap=> //; exact/fs_ca_trans.
 Qed.
 
-End Intersection.
+Lemma inter_rel_ca : 
+  fs_ca (inter_rel r p) =2 r ⊓ (fs_ca p).
+Proof. 
+  rewrite /inter_rel=> e1 e2.
+  rewrite build_cov_ca_wf //.
+  (* TODO: remove copy-paste! *)
+  - move=> e; apply/lab_definedP=> //; exact/valP.
+  - apply/refl_cap=> //; exact/fs_ca_refl.
+  - under eq_antisym do rewrite capC.
+    exact/antisym_cap/fs_ca_antisym. 
+  - apply/trans_cap=> //; exact/fs_ca_trans.
+  - apply/refl_cap=> //; exact/fs_ca_refl.
+  move=> {}e1 {}e2 /andP[_] ca12. 
+  by apply/supp_closed_ca. 
+Qed.
+
+End InterRel.
 
 End lFsPrePoset.
 
@@ -953,13 +994,48 @@ Lemma of_seq_valE :
   val (of_seq ls) = lFsPrePoset.of_seq E L bot ls.
 Proof. rewrite /of_seq; case: eqP=> //. Qed.
 
-(* Lemma of_seq_labE e :  *)
-(*   fs_lab (of_seq ls) e = nth bot ls (encode e). *)
-(* Proof. rewrite /of_seq; case: eqP=> //. Qed. *)
-
 End OfSeq.
 
 Arguments of_seq E L bot : clear implicits.
+
+Section InterRel.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfsposet E L bot).
+
+Variable (r : rel E).
+Hypothesis (refl  : reflexive r).
+Hypothesis (trans : transitive r).
+
+Lemma inter_relP p :  
+  let q := lFsPrePoset.inter_rel r p in
+  [&& lab_defined q,
+      supp_closed q &
+      acyclic (fin_ica q)].
+Proof.
+  move: (lfsp_lab_defined p)=> labD.
+  move: (lfsp_supp_closed p)=> supcl.
+  move: (lfsp_acyclic p)=> acyc.
+  apply/and3P; split.
+  - exact/lFsPrePoset.inter_rel_lab_defined. 
+  - exact/lFsPrePoset.inter_rel_supp_closed. 
+  exact/lFsPrePoset.inter_rel_acyclic. 
+Qed.
+
+Definition inter_rel p := lFsPoset (inter_relP p).
+
+End InterRel.
+
+Arguments inter_rel {E L bot} r. 
+
+Section Inter.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p q : lfsposet E L bot).
+
+Definition inter p q := 
+  let supcl := lfsp_supp_closed p in
+  inter_rel (fs_ca p) (fs_ca_refl p) (fs_ca_trans supcl) q.
+
+End Inter.
 
 Module Export POrder.
 Section POrder.
