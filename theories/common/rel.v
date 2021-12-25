@@ -187,6 +187,10 @@ Definition cov_tseq r x y :=
   ~~ has p (slice ix iy t). 
   (* [rel x y | index y t - (index x t).+1 == find (r x) (drop (index x t).+1 t)]. *)
 
+Lemma cov_subrel r : 
+  subrel (cov r) r.
+Proof. by move=> ?? /and3P[]. Qed.
+
 (* TODO: reformulate in terms of relation algebra? *)
 Lemma covP r x y : 
   reflect [/\ x <> y , r x y & ~ exists z, r x z && r z y] (cov r x y).
