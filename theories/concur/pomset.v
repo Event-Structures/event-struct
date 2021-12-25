@@ -1109,6 +1109,123 @@ Definition lfsposet_lfinposetType :=
 End FinPOrder.
 End FinPOrder.
 
+Module Export Syntax. 
+Notation "[ 'Event' 'of' p ]" := (lfsposet_lposetType p)
+  (at level 0, format "[ 'Event'  'of'  p ]") : form_scope.
+Notation "[ 'FinEvent' 'of' p ]" := (lfsposet_lfinposetType p)
+  (at level 0, format "[ 'FinEvent'  'of'  p ]") : form_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory.
+Context {E : identType} {L : eqType} {bot : L}.
+Implicit Types (p q : lfsposet E L bot).
+
+Lemma fs_labE p : 
+  lab =1 fs_lab p :> ([Event of p] -> L).  
+Proof. done. Qed.
+
+Lemma fs_caE p : 
+  (<=%O) =2 fs_ca p :> rel [Event of p].  
+Proof. done. Qed.
+
+Lemma fs_scaE p : 
+  (<%O) =2 fs_sca p :> rel [Event of p].  
+Proof. done. Qed.
+
+Lemma fin_labE p : 
+  lab =1 fin_lab p :> ([FinEvent of p] -> L).  
+Proof. done. Qed.
+
+Lemma fin_caE p : 
+  (<=%O) =2 fin_ca p :> rel [FinEvent of p].  
+Proof. done. Qed.
+
+Lemma fin_scaE p : 
+  (<%O) =2 fin_sca p :> rel [FinEvent of p].  
+Proof. done. Qed.
+
+Lemma val_ca_mon p : 
+  { homo (val : [FinEvent of p] -> [Event of p]) : e1 e2 / e1 <= e2 }.
+Proof. 
+  move=> x y; rewrite fin_caE fs_caE /fs_ca /=.
+  by rewrite !sub_rel_lift_val=> ->.
+Qed.
+
+Lemma fs_labNbot p e : 
+  (fs_lab p e != bot) = (e \in finsupp p).
+Proof. 
+  rewrite mem_finsupp /fs_lab /=.
+  move: (lfsp_lab_defined p)=> /lab_definedP labP.
+  case: finsuppP=> //=.  
+  - by rewrite xpair_eqE negb_and eq_refl.
+  move: labP=> /[apply]; rewrite /fs_lab.
+  case: (p e)=> l es //=.
+  by rewrite xpair_eqE negb_and=> ->.
+Qed.
+
+Lemma fs_lab_bot p e : 
+  (e \notin finsupp p) -> fs_lab p e = bot.
+Proof. by rewrite -fs_labNbot negbK=> /eqP. Qed.
+
+Lemma fs_rcov_fsupp p e :
+  {subset (fs_rcov p e) <= (finsupp p)}.
+Proof.
+  apply/fsubsetP/fsubsetPn=> [[e']] /=.
+  move: (lfsp_supp_closed p)=> /supp_closedP. 
+  by move=> /[apply][[->]].
+Qed.
+
+Lemma lfsposet_eqP p q : 
+  reflect ((fs_lab p =1 fs_lab q) * (fs_ica p =2 fs_ica q)) (p == q).
+Proof. 
+  apply/(equivP idP); split=> [/eqP->|[]] //.
+  rewrite /fs_lab /fs_ica=> eq_lab eq_ica.
+  apply/eqP/val_inj=> /=.
+  apply/fsfunP=> e /=; apply/eqP.
+  rewrite /eq_op=> /=; apply/andP; split.
+  - by rewrite (eq_lab e).
+  apply/fset_eqP=> e'.
+  move: (eq_ica e' e)=> /=.
+  by rewrite /fs_rcov.
+Qed.
+
+Lemma lfsp_tseq_size p : 
+  size (lfsp_tseq p) = #|`finsupp p|. 
+Proof. by rewrite /lfsp_tseq size_map size_tseq cardfE. Qed.
+
+Lemma mem_lfsp_tseq p : 
+  lfsp_tseq p =i finsupp p.
+Proof. 
+  rewrite /lfsp_tseq=> e.
+  apply/idP/idP.
+  - by move=> /mapP [e'] + ->; case: e'.
+  move=> in_supp; apply/mapP.
+  exists (Sub e in_supp)=> //.
+  by rewrite mem_tseq fintype.mem_enum. 
+Qed.
+
+Lemma lfsp_idx_lt p e :
+  e \in finsupp p -> lfsp_idx p e < #|`finsupp p|.
+Proof. 
+  rewrite /lfsp_idx=> in_supp.
+  rewrite -lfsp_tseq_size ltEnat /=. 
+  by rewrite index_mem mem_lfsp_tseq.
+Qed.  
+
+Lemma lfsp_idx_le p e :
+  lfsp_idx p e <= #|`finsupp p|.
+Proof. 
+  case: (e \in finsupp p)/idP.
+  - by move=> /lfsp_idx_lt /ltW.
+  move=> /negP Nin_supp.
+  rewrite /lfsp_idx memNindex ?lfsp_tseq_size //.
+  by rewrite mem_lfsp_tseq. 
+Qed.
+
+End Theory.
+End Theory.
+
 Module Export bHom.
 Section bHom.
 Implicit Types (E : identType) (L : eqType).
@@ -1279,6 +1396,45 @@ End Def.
 End Def.
 
 Arguments pomset E L bot : clear implicits.
+
+Section InterRel.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p : lfsposet E L bot).
+
+Variable (r : rel E).
+Hypothesis (refl  : reflexive r).
+Hypothesis (trans : transitive r).
+
+Lemma inter_relP p :  
+  let q := lFsPrePoset.inter_rel r p in
+  [&& lab_defined q,
+      supp_closed q &
+      acyclic (fin_ica q)].
+Proof.
+  move: (lfsp_lab_defined p)=> labD.
+  move: (lfsp_supp_closed p)=> supcl.
+  move: (lfsp_acyclic p)=> acyc.
+  apply/and3P; split.
+  - exact/lFsPrePoset.inter_rel_lab_defined. 
+  - exact/lFsPrePoset.inter_rel_supp_closed. 
+  exact/lFsPrePoset.inter_rel_acyclic. 
+Qed.
+
+Definition inter_rel p := lFsPoset (inter_relP p).
+
+End InterRel.
+
+Arguments inter_rel {E L bot} r. 
+
+Section Inter.
+Context (E : identType) (L : eqType) (bot : L). 
+Implicit Types (p q : lfsposet E L bot).
+
+Definition inter p q := 
+  let supcl := lfsp_supp_closed p in
+  inter_rel (fs_ca p) (fs_ca_refl p) (fs_ca_trans supcl) q.
+
+End Inter.
 
 Module Export Hom.
 Module Export POrder.
