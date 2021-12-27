@@ -118,6 +118,45 @@ End Theory.
 End Lab.
 
 
+Section ProgramOrder.
+Context {E : identType} {L : labType}.
+Context {Tid : identType}.
+(* thread semantics *)
+Context (TS : ltsType L).
+Implicit Types (p q : @pomset E _ (\i0 : Tid, bot : L)).
+
+Definition eqtid p : rel [Event of p] := 
+  fun e1 e2 => fst (lab e1) == fst (lab e2).
+
+Arguments eqtid p : clear implicits. 
+
+Lemma eqtid_refl p : reflexive (eqtid p).
+Proof. by rewrite /eqtid. Qed.
+
+Lemma eqtid_sym p : symmetric (eqtid p).
+Proof. by rewrite /eqtid. Qed.
+
+Lemma eqtid_trans p : transitive (eqtid p).
+Proof. by rewrite /eqtid=> ??? /eqP-> /eqP->. Qed.
+
+Definition lab_prj : Tid * L -> L := snd.
+
+Lemma lab_prjD l :
+  (l == (\i0, bot)) = (lab_prj l == bot).
+Proof using. 
+  case: l=> t l; rewrite /lab_prj xpair_eqE /=.
+  admit.
+Admitted.
+
+Definition po p := 
+  let q := Pomset.inter_rel (eqtid p) (@eqtid_refl p) (@eqtid_trans p) p in
+  Pomset.relabel p lab_prjD. 
+
+(* Definition po_total p :=  *)
+(*   totalb (fin_ca (po p)). *)
+
+End ProgramOrder.
+
 Section SeqCst.
 Context {E : identType} {L : labType}.
 Context {Tid : identType}.
@@ -126,12 +165,10 @@ Context (DS : ltsType L).
 (* thread semantics *)
 Context (TS : ltsType L).
 
+Implicit Types (d : DS) (s : TS).
 Implicit Types (p q : @pomset E _ (\i0 : Tid, bot : L)).
 
-Definition eqtid p : rel [Event of p] := 
-  fun e1 e2 => fst (lab e1) == fst (lab e2).
-
-Definition po p : rel [Event of p] := 
-  [rel e1 e2 | (eqtid e1 e2) && (e1 <= e2)].
+Definition seq_cst d p := 
+  (eq (po p) : pomlang E L bot) \supports (@lts_pomlang E L bot _ d).
 
 End SeqCst.
