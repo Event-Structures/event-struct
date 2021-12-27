@@ -880,6 +880,48 @@ Qed.
 
 End InterRel.
 
+Section Relabel.
+Context (E : identType) (L1 : eqType) (L2 : eqType) (bot1 : L1) (bot2 : L2). 
+Implicit Types (f : L1 -> L2).
+Implicit Types (p : lfspreposet E L1 bot1).
+
+Definition relabel f p : lfspreposet E L2 bot2 :=
+  [fsfun e in finsupp p => (f (fs_lab p e), fs_rcov p e)].
+
+Variables (f : L1 -> L2) (p : lfspreposet E L1 bot1).
+Hypothesis (flabD : forall l, (l == bot1) = (f l == bot2)).
+(* Hypothesis (labD : lab_defined p). *)
+
+Lemma relabel_finsupp : 
+  finsupp (relabel f p) = finsupp p.
+Proof. 
+  apply/fsetP=> e.
+  rewrite mem_finsupp fsfun_ffun.
+  case: insubP=> [e' /[swap] <- eIn|/negbTE-> /[! eqxx] //] /=.
+  rewrite xpair_eqE negb_and -flabD eIn; apply/idP.
+  by move: eIn; rewrite mem_finsupp negb_and. 
+Qed. 
+
+Lemma relabel_lab : 
+  fs_lab (relabel f p) =1 (f \o fs_lab p).
+Proof. 
+  rewrite /relabel /fs_lab=> e /=.
+  rewrite fsfun_fun; case: ifP=> //.
+  move=> /negP ?; rewrite fsfun_dflt //=; last exact/negP.  
+  by apply/esym/eqP; rewrite -flabD. 
+Qed.
+
+Lemma relabel_ica : 
+  fs_ica (relabel f p) =2 fs_ica p.
+Proof.
+  rewrite /fs_ica /relabel=> e1 e2 /=.
+  rewrite /fs_rcov fsfun_fun. 
+  case: ifP=> //= /negP ?.
+  rewrite fsfun_dflt ?inE //; exact/negP.
+Qed.
+
+End Relabel.
+
 End lFsPrePoset.
 
 Export lFsPrePoset.Def.
@@ -1397,42 +1439,37 @@ End Def.
 
 Arguments pomset E L bot : clear implicits.
 
+Section OfSeq.
+Context (E : identType) (L : choiceType) (bot : L). 
+Implicit Types (p : pomset E L bot).
+Implicit Types (ls : seq L).
+
+Definition of_seq ls : pomset E L bot := 
+  \pi (@lFsPoset.of_seq E L bot ls).
+
+End OfSeq.
+
 Section InterRel.
-Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p : lfsposet E L bot).
+Context (E : identType) (L : choiceType) (bot : L). 
+Implicit Types (p : pomset E L bot).
 
 Variable (r : rel E).
 Hypothesis (refl  : reflexive r).
 Hypothesis (trans : transitive r).
 
-Lemma inter_relP p :  
-  let q := lFsPrePoset.inter_rel r p in
-  [&& lab_defined q,
-      supp_closed q &
-      acyclic (fin_ica q)].
-Proof.
-  move: (lfsp_lab_defined p)=> labD.
-  move: (lfsp_supp_closed p)=> supcl.
-  move: (lfsp_acyclic p)=> acyc.
-  apply/and3P; split.
-  - exact/lFsPrePoset.inter_rel_lab_defined. 
-  - exact/lFsPrePoset.inter_rel_supp_closed. 
-  exact/lFsPrePoset.inter_rel_acyclic. 
-Qed.
-
-Definition inter_rel p := lFsPoset (inter_relP p).
+Definition inter_rel p : pomset E L bot := 
+  \pi (lFsPoset.inter_rel r refl trans p).
 
 End InterRel.
 
 Arguments inter_rel {E L bot} r. 
 
 Section Inter.
-Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p q : lfsposet E L bot).
+Context (E : identType) (L : choiceType) (bot : L). 
+Implicit Types (p q : pomset E L bot).
 
-Definition inter p q := 
-  let supcl := lfsp_supp_closed p in
-  inter_rel (fs_ca p) (fs_ca_refl p) (fs_ca_trans supcl) q.
+Definition inter p q : pomset E L bot := 
+  \pi (lFsPoset.inter p q).
 
 End Inter.
 
@@ -1458,7 +1495,7 @@ Context {E : identType} {L : choiceType} {bot : L}.
 Implicit Types (p q : pomset E L bot). 
 
 Lemma pi_bhom_mono :
-  {mono \pi_(pomset E L bot) : p q / bhom_le p q >-> bhom_le (repr p) (repr q)}.
+  {mono (@pom E L bot) : p q / bhom_le p q >-> bhom_le (repr p) (repr q)}.
 Proof. exact/pi_bhom_le. Qed.
 
 Canonical bhom_le_quote_mono2 := PiMono2 pi_bhom_mono.
@@ -1584,9 +1621,26 @@ End Theory.
 
 End Tomset.
 
-
 Export Tomset.Def.
 Export Tomset.Theory.
+
+
+Module Export PomLang.
+Section PomLang.
+Context (E : identType) (L : choiceType) (bot : L).
+Context (S : ltsType L).
+Implicit Types (l : L) (s : S).
+Implicit Types (p : pomset E L bot).
+
+(* TODO: consider decidable/bool languages only? *)
+Notation pomlang E L bot := (pomset E L bot -> Prop).
+
+(* TODO: this should be simplified *)
+Definition lts_pomlang s : pomlang E L bot := 
+  fun p => exists2 ls, p = @Pomset.of_seq E L bot ls & lts_lang s ls. 
+
+End PomLang.
+End PomLang.
 
 Module Export AddEvent.
 
@@ -1915,6 +1969,7 @@ Proof.
            add_event_fs_caE)//; case: (p)=> /=> /and3P[] //.
 Qed.
 
+(* TODO: remove hints? *)
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
 
 Lemma invariant_operational : 
