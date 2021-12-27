@@ -593,6 +593,13 @@ Lemma eq_sub_rel_down r1 r2 :
   r1 =2 r2 -> sub_rel_down r1 =2 sub_rel_down r2.
 Proof. by move=> eqr x y; rewrite /sub_rel_down /= eqr. Qed.
 
+Lemma eq_sub_rel_lift r1 r2 : 
+  r1 =2 r2 -> sub_rel_lift r1 =2 sub_rel_lift r2.
+Proof. 
+  move=> eqr x y; rewrite /sub_rel_lift /=.
+  by do 2 case: insubP=> //. 
+Qed.
+
 End SubTypeUtils.
 
 
