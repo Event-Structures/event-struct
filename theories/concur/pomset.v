@@ -1848,6 +1848,20 @@ Proof.
   by apply/orP; right; apply/and3P.
 Qed.
 
+Lemma lfsp_lin_lang tr : 
+  let emp := lFsPoset.empty E L bot in 
+  let p := lst_state emp tr in
+  map lbl tr \in lin p -> tr \in trace_lang emp.
+Proof.
+  case: tr=> /= t it; rewrite /trace_lang ?/(_ \in _) /= /lin /=.
+  elim/last_ind: t it=> //= -[][l s1 s2 /=].
+  - rewrite is_trace_cons /==> _ /andP[/lfsp_ltransP[/= ? [??->_]]].
+    
+  rewrite is_trace_rcons=> /andP[/lfsp_ltransP[/= ? [es s s2E]]].
+  case/andP=> it adj.
+  rewrite map_rcons /= lst_state_rcons /==> /bhom_leP /=.
+Qed.
+
 End Theory.
 End Theory.  
 
