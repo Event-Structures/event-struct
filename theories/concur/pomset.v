@@ -682,12 +682,12 @@ Proof.
 Qed.
 
 (* TODO: rename? *)
-Lemma build_cov_ca_wf : reflexive ca -> subrel ca (mem fE × mem fE : {dhrel E & E})^? -> 
+Lemma build_cov_ca_wf : subrel ca (mem fE × mem fE : {dhrel E & E})^? -> 
   fs_ca (build_cov lab ca) =2 ca.
 Proof. 
-  move=> refl sub e1 e2; rewrite build_cov_ca.
+  move=> sub e1 e2; rewrite build_cov_ca.
   apply/idP/idP=> [/orP[|]|].
-  - move=> /eqP->; exact/refl.
+  - move=> /eqP->; exact/ca_refl.
   - by move=> /and3P[].
   move=> /[dup] /sub /= /orP[|]. 
   - by move=> /eqP-> ?; apply/orP; left. 
@@ -922,12 +922,121 @@ Proof.
   - under eq_antisym do rewrite capC.
     exact/antisym_cap/fs_ca_antisym. 
   - apply/trans_cap=> //; exact/fs_ca_trans.
-  - apply/refl_cap=> //; exact/fs_ca_refl.
   move=> {}e1 {}e2 /andP[_] ca12. 
   by apply/supp_closed_ca. 
 Qed.
 
 End InterRel.
+
+Section Restrict.
+Context (E : identType) (L : eqType) (bot : L).
+Implicit Types (P : pred E).
+Implicit Types (p : lfspreposet E L bot).
+
+Definition restrict P p : lfspreposet E L bot :=
+  (* TODO: there should be a simpler solution... *)
+  let fE  := [fset e in finsupp p | P e] in
+  let lab := (fun e : fE => fs_lab p (val e)) in
+  let ca  := (eq_op ⊔ (P × P)) ⊓ (fs_ca p) in
+  @build_cov E L bot _ lab ca.
+
+Variables (P : pred E) (p : lfspreposet E L bot).
+Hypothesis (labD  : lab_defined p).
+Hypothesis (supcl : supp_closed p).
+Hypothesis (acyc  : acyclic (fin_ica p)).
+
+Lemma restrict_finsupp : 
+  finsupp (restrict P p) = [fset e in finsupp p | P e].
+Proof. 
+  apply/fsetP=> e.
+  rewrite mem_finsupp fsfun_ffun.
+  case: insubP=> /= [e' /[swap] /= <- eIn|/negbTE-> /[! eqxx] //] /=.
+  rewrite xpair_eqE negb_and eIn. 
+  apply/idP/orP; left.
+  apply/lab_definedP=> //.
+  apply/(fsubsetP _ _ eIn).
+  exact/fset_sub.
+Qed.
+
+Lemma restrict_lab e : 
+  fs_lab (restrict P p) e = if P e then fs_lab p e else bot.
+Proof. 
+  rewrite /restrict /build_cov build_lab /sub_lift /=.
+  case: insubP; rewrite !inE=> //=. 
+  - by move=> ? /andP[? ->] ->.
+  rewrite negb_and=> /orP[nIn|/negPf->] //=. 
+  case: ifP=> //.
+  by rewrite /fs_lab fsfun_dflt.
+Qed.
+
+(* Lemma restrict_ica :  *)
+(*   fs_ica (restrict P p) =2 (P × P) ⊓ fs_ica p. *)
+(* Proof. *)
+(*   rewrite /fs_ica /restrict=> e1 e2 /=. *)
+(*   rewrite /fs_rcov fsfun_fun.  *)
+(*   case: ifP; rewrite !inE=> //=. *)
+(*   - by move=> /andP[? ->]; rewrite andbT andbC. *)
+(*   move=> /negbT; rewrite negb_and=> /orP[nIn|] //.  *)
+(*   - by rewrite fsfun_dflt ?inE ?andbF. *)
+(*   by move=> /negPf->; rewrite andbF. *)
+(* Qed. *)
+
+Lemma restrict_lab_defined : 
+  lab_defined (restrict P p).
+Proof. 
+  apply/lab_definedP=> e.
+  rewrite restrict_finsupp restrict_lab !inE.
+  move=> /= /andP[eIn ->].
+  exact/lab_definedP.
+Qed.
+
+Lemma restrict_supp_closed : 
+  supp_closed (restrict P p).
+Proof. 
+  apply/supp_closedP=> e1 e2.
+  rewrite restrict_finsupp=> /=. 
+  rewrite /restrict /build_cov build_ica /sub_rel_lift /=.
+  by do 2 (case: insubP=> //= ? /[swap] <-). 
+Qed.
+
+Lemma restrict_ca e1 e2 : 
+  fs_ca (restrict P p) e1 e2 = (e1 == e2) || [&& P e1, P e2 & fs_ca p e1 e2].
+Proof.
+  rewrite build_cov_ca_wf=> //=.  
+  (* TODO: remove copypaste! *)
+  - rewrite andb_orl andbA. 
+    apply/orb_id2r=> _; apply/andb_idr.
+    move=> /eqP->; exact/fs_ca_refl.
+  - move=> e; apply/lab_definedP=> //.
+    apply/(fsubsetP _ _ (valP e)).
+    exact/fset_sub.
+  - apply/refl_cap=> //; last exact/fs_ca_refl.
+    by move=> ? /=; rewrite eq_refl.
+  - under eq_antisym do rewrite capC.
+    exact/antisym_cap/fs_ca_antisym. 
+  - apply/trans_cap=> // [??? |] /=; last exact/fs_ca_trans.
+    move=> /orP[/eqP->|/andP[??]] //. 
+    move=> /orP[/eqP<-|/andP[??]] //. 
+    1-2: by apply/orP; right; apply/andP.
+  move=> /= {}e1 {}e2; rewrite /dhrel_one /=.
+  move=> /andP[/orP[->|/andP[??]]] //.
+  move=> /(supp_closed_ca supcl acyc) /orP[->|/andP[??]] //.
+  by rewrite !inE; apply/orP; right; apply/andP; split; apply/andP.
+Qed.
+
+(* Lemma relabel_acyclic :  *)
+(*   supp_closed p -> acyclic (fin_ica p) -> acyclic (fin_ica (relabel f p)). *)
+(* Proof. *)
+(*   move=> suplc acyc; apply/fin_ica_acyclic. *)
+(*   - move=> e; rewrite relabel_ica. *)
+(*     apply/fs_ica_irrefl=> //.  *)
+(*     exact/acyc_irrefl. *)
+(*   move=> e1 e2; rewrite !relabel_ca //. *)
+(*   exact/fs_ca_antisym.  *)
+(* Qed. *)
+
+End Restrict.
+
 
 Section Relabel.
 Context (E : identType) (L1 : eqType) (L2 : eqType) (bot1 : L1) (bot2 : L2). 
