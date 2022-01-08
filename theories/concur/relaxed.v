@@ -125,6 +125,15 @@ Context {Tid : identType}.
 Context (TS : ltsType L).
 Implicit Types (p q : @pomset E _ (\i0 : Tid, bot : L)).
 
+Definition fs_tid p e := 
+  fst (fs_lab p e).
+
+Definition fs_dlab p e := 
+  snd (fs_lab p e).
+
+Definition dlab_defined p := 
+  [forall e : finsupp p, fs_dlab p (val e) != bot].
+
 Definition eqtid p : rel [Event of p] := 
   fun e1 e2 => fst (lab e1) == fst (lab e2).
 
@@ -141,16 +150,13 @@ Proof. by rewrite /eqtid=> ??? /eqP-> /eqP->. Qed.
 
 Definition lab_prj : Tid * L -> L := snd.
 
-Lemma lab_prjD l :
-  (l == (\i0, bot)) = (lab_prj l == bot).
-Proof using. 
-  case: l=> t l; rewrite /lab_prj xpair_eqE /=.
-  admit.
-Admitted.
+Lemma lab_prj_bot :
+  lab_prj (\i0, bot) = bot.
+Proof. done. Qed.
 
-Definition po p := 
+Definition po p (dlabD : dlab_defined p) := 
   let q := Pomset.inter_rel (eqtid p) (@eqtid_refl p) (@eqtid_trans p) p in
-  Pomset.relabel p lab_prjD. 
+  Pomset.relabel lab_prj p lab_prj_bot dlabD. 
 
 (* Definition po_total p :=  *)
 (*   totalb (fin_ca (po p)). *)
@@ -168,7 +174,7 @@ Context (TS : ltsType L).
 Implicit Types (d : DS) (s : TS).
 Implicit Types (p q : @pomset E _ (\i0 : Tid, bot : L)).
 
-Definition seq_cst d p := 
-  (eq (po p) : pomlang E L bot) \supports (@lts_pomlang E L bot _ d).
+Definition seq_cst d p (dlabD : dlab_defined p) := 
+  eq (po dlabD) \supports (lts_pomlang d).
 
 End SeqCst.

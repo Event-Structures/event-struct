@@ -1184,26 +1184,32 @@ Definition relabel f p : lfspreposet E L2 bot2 :=
   [fsfun e in finsupp p => (f (fs_lab p e), fs_rcov p e)].
 
 Variables (f : L1 -> L2) (p : lfspreposet E L1 bot1).
-Hypothesis (flabD : forall l, (l == bot1) = (f l == bot2)).
-(* Hypothesis (labD : lab_defined p). *)
+Hypothesis (fbot : f bot1 = bot2).
+Hypothesis (flabD : [forall e : finsupp p, f (fs_lab p (val e)) != bot2]).
+
+(* TODO: refactor this precondition? *)
+(* Hypothesis (flabD : forall e, let l := fs_lab p e in (l == bot1) = (f l == bot2)). *)
+(* Hypothesis (labD : lab_defined (relabel f p)). *)
 
 Lemma relabel_finsupp : 
   finsupp (relabel f p) = finsupp p.
 Proof. 
   apply/fsetP=> e.
   rewrite mem_finsupp fsfun_ffun.
-  case: insubP=> [e' /[swap] <- eIn|/negbTE-> /[! eqxx] //] /=.
-  rewrite xpair_eqE negb_and -flabD eIn; apply/idP.
-  by move: eIn; rewrite mem_finsupp negb_and. 
-Qed. 
+  case: insubP=> /= [e' /[swap] /= <- eIn|/negbTE-> /[! eqxx] //] /=.
+  rewrite xpair_eqE negb_and eIn. 
+  apply/idP/orP; left.
+  exact/(forallP flabD). 
+Qed.
 
 Lemma relabel_lab : 
   fs_lab (relabel f p) =1 (f \o fs_lab p).
 Proof. 
   rewrite /relabel /fs_lab=> e /=.
-  rewrite fsfun_fun; case: ifP=> //.
-  move=> /negP ?; rewrite fsfun_dflt //=; last exact/negP.  
-  by apply/esym/eqP; rewrite -flabD. 
+  rewrite fsfun_fun; case: ifP=> //=.
+  move=> /negP nIn /=; apply/esym/eqP.
+  rewrite fsfun_dflt ?fbot //=. 
+  exact/negP.
 Qed.
 
 Lemma relabel_ica : 
@@ -1216,11 +1222,12 @@ Proof.
 Qed.
 
 Lemma relabel_lab_defined : 
-  lab_defined p -> lab_defined (relabel f p).
+  lab_defined (relabel f p).
 Proof. 
-  move=> labD; apply/lab_definedP=> e.
-  rewrite relabel_finsupp relabel_lab -flabD /=.
-  by move=> eIn; apply/lab_definedP.
+  apply/lab_definedP=> e.
+  rewrite relabel_finsupp relabel_lab=> eIn /=. 
+  have->: e = val (Sub e eIn : finsupp p) by done.
+  exact/(forallP flabD). 
 Qed.
 
 Lemma relabel_supp_closed : 
@@ -1633,7 +1640,11 @@ Section Relabel.
 Context (E : identType) (L1 : eqType) (L2 : eqType) (bot1 : L1) (bot2 : L2). 
 
 Variables (f : L1 -> L2) (p : lfsposet E L1 bot1).
-Hypothesis (flabD : forall l, (l == bot1) = (f l == bot2)).
+Hypothesis (fbot : f bot1 = bot2).
+Hypothesis (flabD : [forall e : finsupp p, f (fs_lab p (val e)) != bot2]).
+
+(* Hypothesis (flabD : forall e, let l := fs_lab p e in (l == bot1) = (f l == bot2)). *)
+(* Hypothesis (flabD : forall l, (l == bot1) = (f l == bot2)). *)
 (* Hypothesis (labD : lab_defined p). *)
 
 Lemma relabelP :  
@@ -1654,6 +1665,8 @@ Qed.
 Definition relabel := mklFsPoset relabelP.
 
 End Relabel.
+
+Arguments relabel {E L1 L2 bot1 bot2} f p.
 
 Module Export POrder.
 Section POrder.
@@ -2652,15 +2665,18 @@ End Restrict.
 Section Relabel.
 Context (E : identType) (L1 L2 : choiceType) (bot1 : L1) (bot2 : L2). 
 Implicit Types (f : L1 -> L2).
-Implicit Types (p : lfsposet E L1 bot1).
+Implicit Types (p : pomset E L1 bot1).
 
-(* Variables (f : L1 -> L2) (p : lfsposet E L1 bot1). *)
-(* Hypothesis (flabD : forall l, (l == bot1) = (f l == bot2)). *)
+Variables (f : L1 -> L2) (p : lfsposet E L1 bot1).
+Hypothesis (fbot : f bot1 = bot2).
+Hypothesis (flabD : [forall e : finsupp p, f (fs_lab p (val e)) != bot2]).
 
-Definition relabel f p flabD : pomset E L2 bot2 := 
-  \pi (@lFsPoset.relabel E L1 L2 bot1 bot2 f p flabD).
+Definition relabel : pomset E L2 bot2 := 
+  \pi (@lFsPoset.relabel E L1 L2 bot1 bot2 f p fbot flabD).
 
 End Relabel.
+
+Arguments relabel {E L1 L2 bot1 bot2} f p.
 
 Import lPoset.Syntax.
 Import lFsPoset.Syntax.
@@ -2831,6 +2847,7 @@ End Def.
 End Def.
 
 Arguments tomset E L bot : clear implicits.
+
 
 Section OfSeq.
 Context (E : identType) (L : choiceType) (bot : L). 
