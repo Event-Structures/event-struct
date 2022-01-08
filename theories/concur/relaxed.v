@@ -117,12 +117,11 @@ End Theory.
 
 End Lab.
 
+Module Export ThrdPomset.
 
-Section ProgramOrder.
+Section Def.
 Context {E : identType} {L : labType}.
 Context {Tid : identType}.
-(* thread semantics *)
-Context (TS : ltsType L).
 Implicit Types (p q : @pomset E _ (\i0 : Tid, bot : L)).
 
 Definition fs_tid p e := 
@@ -134,8 +133,52 @@ Definition fs_dlab p e :=
 Definition dlab_defined p := 
   [forall e : finsupp p, fs_dlab p (val e) != bot].
 
+Structure thrd_pomset : Type := ThrdPomset {
+  thrd_pomset_val :> @pomset E _ (\i0 : Tid, bot : L); 
+  _ : let p := thrd_pomset_val in 
+      dlab_defined p
+}.
+
+Canonical thrd_pomset_subType := Eval hnf in [subType for thrd_pomset_val].
+
+End Def.
+
+Arguments thrd_pomset E L Tid : clear implicits.
+
+Section Instances. 
+
+Definition thrd_pomset_eqMixin E L Tid := 
+  Eval hnf in [eqMixin of (thrd_pomset E L Tid) by <:].
+Canonical thrd_pomset_eqType E L Tid := 
+  Eval hnf in EqType (thrd_pomset E L Tid) (@thrd_pomset_eqMixin E L Tid).
+
+Definition thrd_pomset_choiceMixin E L Tid :=
+  Eval hnf in [choiceMixin of (thrd_pomset E L Tid) by <:].
+Canonical thrd_pomset_choiceType E L Tid :=
+  Eval hnf in ChoiceType (thrd_pomset E L Tid) 
+                         (@thrd_pomset_choiceMixin E L Tid).
+
+(* Definition thrd_pomset_countMixin E L Tid := *)
+(*   Eval hnf in [countMixin of (@thrd_pomset E L Tid) by <:]. *)
+(* Canonical thrd_pomset_countType E L Tid := *)
+(*   Eval hnf in CountType (thrd_pomset E L Tid) (@thrd_pomset_countType E L Tid). *)
+
+(* Canonical thrd_pomset_subCountType E L Tid := *)
+(*   Eval hnf in [subCountType of (thrd_pomset E L Tid)]. *)
+
+End Instances.
+
+End ThrdPomset.
+
+Section ProgramOrder.
+Context {E : identType} {L : labType}.
+Context {Tid : identType}.
+(* thread semantics *)
+Context (TS : ltsType L).
+Implicit Types (p q : @thrd_pomset E L Tid).
+
 Definition eqtid p : rel [Event of p] := 
-  fun e1 e2 => fst (lab e1) == fst (lab e2).
+  fun e1 e2 => fs_tid p e1 == fs_tid p e2.
 
 Arguments eqtid p : clear implicits. 
 
@@ -154,12 +197,9 @@ Lemma lab_prj_bot :
   lab_prj (\i0, bot) = bot.
 Proof. done. Qed.
 
-Definition po p (dlabD : dlab_defined p) := 
+Definition po p := 
   let q := Pomset.inter_rel (eqtid p) (@eqtid_refl p) (@eqtid_trans p) p in
-  Pomset.relabel lab_prj p lab_prj_bot dlabD. 
-
-(* Definition po_total p :=  *)
-(*   totalb (fin_ca (po p)). *)
+  Pomset.relabel lab_prj p lab_prj_bot (valP p). 
 
 End ProgramOrder.
 
@@ -172,9 +212,9 @@ Context (DS : ltsType L).
 Context (TS : ltsType L).
 
 Implicit Types (d : DS) (s : TS).
-Implicit Types (p q : @pomset E _ (\i0 : Tid, bot : L)).
+Implicit Types (p q : @thrd_pomset E L Tid).
 
-Definition seq_cst d p (dlabD : dlab_defined p) := 
-  eq (po dlabD) \supports (lts_pomlang d).
+Definition seq_cst d p := 
+  eq (po p) \supports (lts_pomlang d).
 
 End SeqCst.
