@@ -151,6 +151,7 @@ Definition lfsp_dw_clos p es :=
 
 Definition fs_size p : nat := #|` finsupp p|.
 
+
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -1883,18 +1884,22 @@ Proof.
   by apply/orP; right; apply/and3P.
 Qed.
 
+Arguments measure_lst {_ _ _} _ _.
+
 Lemma lfsp_lin_lang tr : 
   let emp := lFsPoset.empty E L bot in 
   let p := lst_state emp tr in
   map lbl tr \in lin p -> tr \in trace_lang emp.
 Proof.
-  case: tr=> /= t it; rewrite /trace_lang ?/(_ \in _) /= /lin /=.
-  elim/last_ind: t it=> //= -[][l s1 s2 /=].
-  - rewrite is_trace_cons /==> _ /andP[/lfsp_ltransP[/= ? [??->_]]].
-    
-  rewrite is_trace_rcons=> /andP[/lfsp_ltransP[/= ? [es s s2E]]].
-  case/andP=> it adj.
-  rewrite map_rcons /= lst_state_rcons /==> /bhom_leP /=.
+  move=> /=; rewrite /trace_lang ?/(_ \in _) /= /lin /=.
+  move/bhom_le_size; rewrite lFsPoset.of_seq_size ?size_map.
+  - move=> sizeE; apply/eqP/esym/val_inj/lFsPrePoset.eq_emptyE=> /=.
+    set f := [eta (@fs_size E L bot)]: lfsposet _ _ _ -> nat.
+    move: (measure_lst f S) sizeE=> /=; rewrite /f /==> ->>.
+    - by rewrite iter_succn; lia.
+    by move/lfsp_ltransP=> [? [??->]];rewrite lfsp_add_eventE.
+  case: tr=> /= ? /andP[/allP /= i ?]; apply/mapP=>-[/= [> /i + ?]].
+  case/lfsp_ltransP=> /eqP + ?; exact.
 Qed.
 
 End Theory.
