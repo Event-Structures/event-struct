@@ -149,6 +149,8 @@ Definition lfsp_fresh p : E :=
 Definition lfsp_dw_clos p es := 
   [seq e <- finsupp p | [exists e' : es, fs_ca p e (val e')]].
 
+Definition fs_size p : nat := #|` finsupp p|.
+
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -650,6 +652,13 @@ Proof.
   by rewrite fin_ca_empty=> /eqP->. 
 Qed.
 
+Lemma eq_emptyE p: 
+  p = empty <-> fs_size p = 0%N.
+Proof.
+  split=> [->|]; rewrite /fs_size ?finsupp0 // /empty => /cardfs0_eq fE.
+  by apply/fsfunP=> ?; rewrite ?fsfun_dflt // (finsupp0, fE) ?inE.
+Qed.
+
 End Empty.
 
 Arguments empty E L bot : clear implicits.
@@ -681,6 +690,13 @@ Qed.
 Lemma of_seq_finsupp : 
   finsupp (of_seq ls) = [fset e | e in nfresh \i1 (size ls)].
 Proof. rewrite build_finsupp //; exact/of_seq_nth_defined. Qed.
+
+Lemma of_seq_size : 
+  fs_size (of_seq ls) = size ls.
+Proof.
+  rewrite /fs_size of_seq_finsupp card_fseq undup_id ?size_nfresh //.
+  exact/lt_sorted_uniq/nfresh_sorted.
+Qed.
 
 Lemma of_seq_labE e : 
   fs_lab (of_seq ls) e = nth bot (bot :: ls) (encode e).
@@ -849,6 +865,10 @@ Hypothesis (lsD : bot \notin ls).
 Lemma of_seq_valE : 
   val (of_seq ls) = lFsPrePoset.of_seq E L bot ls.
 Proof. rewrite /of_seq; case: eqP=> //. Qed.
+
+Lemma of_seq_size : 
+  fs_size (of_seq ls) = size ls.
+Proof. by rewrite of_seq_valE lFsPrePoset.of_seq_size. Qed.
 
 (* Lemma of_seq_labE e :  *)
 (*   fs_lab (of_seq ls) e = nth bot ls (encode e). *)
@@ -1164,6 +1184,14 @@ Proof.
   by f_equal; apply/val_inj=> /=.
 Qed.
 
+Lemma bhom_le_size E1 E2 L bot 
+  (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+  bhom_le p q -> fs_size p = fs_size q.
+Proof.
+  rewrite /bhom_le /fs_size ?cardfE=> /lFinPoset.fbhomP[/=] f.
+  by move: (bij_eq_card (bhom_bij f)).
+Qed.
+
 Context (E : identType) (L : eqType) (bot : L).
 Implicit Types (p q : lfsposet E L bot).
 
@@ -1430,6 +1458,11 @@ Proof.
   case: ifP=> [/andP[/eqP]|] //.
   by move: lD=> /eqP.
 Qed.
+
+Lemma add_event_fs_sizeE : 
+  fs_size (lfspre_add_event l es p) = 
+  (fs_size p).+1.
+Proof. rewrite /fs_size add_event_finsuppE cardfsU1 fresh_seq_nmem; lia. Qed.
 
 Lemma add_event_fs_labE e :
   fs_lab (lfspre_add_event l es p) e = 
@@ -1715,7 +1748,8 @@ Lemma lfsp_add_eventE l es p :
   (fs_ica (lfsp_add_event l es p)   =2 fun e1 e2 => 
     (e1 \in es) && (e2 == lfsp_fresh p) || (fs_ica p e1 e2)))    *
   (fs_ca (lfsp_add_event l es p)    =2 fun e1 e2 =>
-    (e1 \in lfsp_dw_clos p es) && (e2 == lfsp_fresh p) || (fs_ca p e1 e2)).
+    (e1 \in lfsp_dw_clos p es) && (e2 == lfsp_fresh p) || (fs_ca p e1 e2)) * 
+  (fs_size (lfsp_add_event l es p) = (fs_size p).+1).
 Proof.
   rewrite ?/lfsp_add_event; do ? case: eqP=> //=.
   move=> p0; case: (andP p0)=> //= *.
@@ -1723,7 +1757,8 @@ Proof.
   rewrite (add_event_fs_labE,
            add_event_fs_icaE,
            add_event_fs_rcovE,
-           add_event_fs_caE)//; case: (p)=> /=> /and3P[] //.
+           add_event_fs_caE,
+           add_event_fs_sizeE)//; case: (p)=> /=> /and3P[] //.
 Qed.
 
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
