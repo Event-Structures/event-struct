@@ -830,6 +830,26 @@ Proof. exact/eqxx. Qed.
 Lemma lts_lang0 s : lts_lang s [::].
 Proof. (exists [trace])=> //; exact/trace_lang0. Qed.
 
+Section measure.
+
+Context {M : Type}.
+Context (μ : S -> M) (Δ : M -> M).
+
+Hypothesis delta_step : 
+  forall s s' l, s --[l]--> s' -> μ s' = Δ (μ s).
+
+Lemma measure_lst s tr : 
+  μ (lst_state s tr) = iter (size tr) Δ (μ (fst_state s tr)).
+Proof.
+  case: tr; elim=> //= -[??? /= [_|>/[swap]]]; rewrite is_trace_cons.
+  - by case/and3P=>st*; apply/delta_step/st.
+  case/and3P=> /delta_step /[swap] ? /[swap] /eqP /= <-->.
+  rewrite -iterSr; exact.
+Qed.
+
+End measure.
+
+
 Definition invariant (p : pred S) :=
   forall s s', s --> s' -> p s -> p s'.
 
