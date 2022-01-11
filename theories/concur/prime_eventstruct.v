@@ -78,7 +78,7 @@ Record mixin_of (E0 : Type) (L : Type) (b : lPoset.lPoset.class_of E0 L)
 
 Set Primitive Projections.
 Record class_of (E L : Type) := Class {
-  (* TODO: inherit DwFinPOrder in lPoset.class_of ? *)
+  (* TODO: use lDwFinPoset.class_of *)
   (* TODO: simplify hierarchy? make lPoset subclass 
    *   with Ident type inheritance  
    *)

@@ -231,6 +231,7 @@ Section ClassDef.
 
 Record mixin_of (T0 : Type) 
                 (b : Order.POrder.class_of T0)
+                (* TODO: parametrize by disp? *)
                 (T := Order.POrder.Pack tt b) := Mixin {
   pideal : T -> {fset T};
   _ : forall x y : T, x \in (pideal y) = (x <= y);

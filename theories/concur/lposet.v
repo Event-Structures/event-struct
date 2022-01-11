@@ -2,7 +2,7 @@ From RelationAlgebra Require Import lattice monoid rel boolean.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path div.
 From mathcomp Require Import fintype finfun fingraph finmap.
-From eventstruct Require Import utils inhtype.
+From eventstruct Require Import utils inhtype order.
 
 (******************************************************************************)
 (* This file provides a theory of labelled partially ordered sets             *)
@@ -1423,6 +1423,74 @@ Import lPoset.Pref.Syntax.
 End lLoset.
 
 Export lLoset.lLoset.Exports.
+
+
+Module lDwFinPoset.
+
+Module lDwFinPoset.
+Section ClassDef. 
+
+Set Primitive Projections.
+Record class_of (E : Type) (L : Type) := Class { 
+  base  : DwFinPOrder.DwFinPOrder.class_of E;
+  mixin : lPoset.lPoset.mixin_of L base;
+}.
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> DwFinPOrder.DwFinPOrder.class_of.
+
+Local Coercion base2 E L (c : class_of E L) : 
+  lPoset.lPoset.class_of E L := 
+    lPoset.lPoset.Class (mixin c).
+
+Structure type (L : Type) := Pack { sort; _ : class_of sort L }.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (E : Type) (L : Type) (cT : type L).
+
+Definition class := let: Pack _ c as cT' := cT return class_of (sort cT') L in c.
+Definition clone c of phant_id class c := @Pack E c.
+
+Definition pack :=
+  fun bE b & phant_id (@Order.FinPOrder.class bE) b =>
+  fun m => Pack (@Class E L b m).
+
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition porderType := @Order.POrder.Pack tt cT class.
+Definition dwFinPOrderType := @DwFinPOrder.DwFinPOrder.Pack cT class.
+Definition lposetType := @lPoset.lPoset.Pack L cT class.
+End ClassDef.
+
+Module Export Exports.
+Coercion base : class_of >-> DwFinPOrder.DwFinPOrder.class_of.
+Coercion base2 : class_of >-> lPoset.lPoset.class_of.
+Coercion mixin : class_of >-> lPoset.lPoset.mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion porderType : type >-> Order.POrder.type.
+Coercion dwFinPOrderType : type >-> DwFinPOrder.DwFinPOrder.type.
+Coercion lposetType : type >-> lPoset.lPoset.type.
+Canonical eqType.
+Canonical choiceType.
+Canonical porderType.
+Canonical dwFinPOrderType.
+Canonical lposetType.
+Notation lDwFinPosetType E L m := (@pack E L _ _ id m).
+End Exports.
+
+End lDwFinPoset.
+
+Export lDwFinPoset.Exports.
+
+Notation eventType := lDwFinPoset.type.
+Notation eventStruct := lDwFinPoset.class_of.
+
+End lDwFinPoset.
+
+Export lDwFinPoset.lDwFinPoset.Exports.
 
 
 Module lFinPoset.
