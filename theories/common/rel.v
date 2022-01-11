@@ -67,6 +67,14 @@ Proof.
   by firstorder.
 Qed.
 
+Lemma eq_irrefl r1 r2 : 
+  r1 =2 r2 -> irreflexive r1 <-> irreflexive r2.
+Proof. 
+  move=> eqr; split=> irr x. 
+  - rewrite -eqr; exact/irr.
+  rewrite eqr; exact/irr.
+Qed.
+
 Lemma eq_antisym r1 r2 : 
   r1 =2 r2 -> antisymmetric r1 <-> antisymmetric r2.
 Proof. 
@@ -296,6 +304,10 @@ Proof.
   split; case=> ???; split=> //; try exact/eqP; 
     exact/(negPP existsP).
 Qed.
+
+Lemma cov_irrefl r : 
+  irreflexive (cov r).
+Proof. by move=> x; apply/negP=> /andP[]; rewrite eq_refl. Qed.
 
 Lemma cov_sliceP r x y : 
   let t := tseq (rgraph r) in

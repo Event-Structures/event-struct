@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils rel relalg inhtype ident lts lposet.
+From eventstruct Require Import utils rel relalg inhtype ident order lts lposet.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)
@@ -969,18 +969,6 @@ Proof.
   by rewrite /fs_lab fsfun_dflt.
 Qed.
 
-(* Lemma restrict_ica :  *)
-(*   fs_ica (restrict P p) =2 (P × P) ⊓ fs_ica p. *)
-(* Proof. *)
-(*   rewrite /fs_ica /restrict=> e1 e2 /=. *)
-(*   rewrite /fs_rcov fsfun_fun.  *)
-(*   case: ifP; rewrite !inE=> //=. *)
-(*   - by move=> /andP[? ->]; rewrite andbT andbC. *)
-(*   move=> /negbT; rewrite negb_and=> /orP[nIn|] //.  *)
-(*   - by rewrite fsfun_dflt ?inE ?andbF. *)
-(*   by move=> /negPf->; rewrite andbF. *)
-(* Qed. *)
-
 Lemma restrict_lab_defined : 
   lab_defined (restrict P p).
 Proof. 
@@ -1024,16 +1012,19 @@ Proof.
   by rewrite !inE; apply/orP; right; apply/andP; split; apply/andP.
 Qed.
 
-(* Lemma relabel_acyclic :  *)
-(*   supp_closed p -> acyclic (fin_ica p) -> acyclic (fin_ica (relabel f p)). *)
-(* Proof. *)
-(*   move=> suplc acyc; apply/fin_ica_acyclic. *)
-(*   - move=> e; rewrite relabel_ica. *)
-(*     apply/fs_ica_irrefl=> //.  *)
-(*     exact/acyc_irrefl. *)
-(*   move=> e1 e2; rewrite !relabel_ca //. *)
-(*   exact/fs_ca_antisym.  *)
-(* Qed. *)
+Lemma restrict_acyclic :
+  acyclic (fin_ica (restrict P p)).
+Proof.
+  apply/fin_ica_acyclic.
+  - apply/fs_ica_irrefl; first exact/restrict_supp_closed.
+    move=> x; rewrite /restrict build_cov_fin_ica; first exact/cov_irrefl.
+    move=> e; apply/(lab_definedP _ labD). 
+    by move: (valP e); rewrite !inE=> /andP[].
+  move=> e1 e2; rewrite !restrict_ca //.
+  move=> /andP[] /orP[/eqP->|] // + /orP[/eqP->|] //.
+  move=> /and3P[???] /and3P[???].
+  exact/(fs_ca_antisym supcl acyc)/andP. 
+Qed.
 
 End Restrict.
 
@@ -1272,6 +1263,30 @@ Definition inter p q :=
   inter_rel (fs_ca p) (fs_ca_refl p) (fs_ca_trans supcl) q.
 
 End Inter.
+
+Section Restrict.
+Context (E : identType) (L : eqType) (bot : L).
+Implicit Types (P : pred E).
+Implicit Types (p : lfsposet E L bot).
+
+Lemma restrictP P p :  
+  let q := lFsPrePoset.restrict P p in
+  [&& lab_defined q,
+      supp_closed q &
+      acyclic (fin_ica q)].
+Proof.
+  move: (lfsp_lab_defined p)=> labD.
+  move: (lfsp_supp_closed p)=> supcl.
+  move: (lfsp_acyclic p)=> acyc.
+  apply/and3P; split.
+  - exact/lFsPrePoset.restrict_lab_defined. 
+  - exact/lFsPrePoset.restrict_supp_closed. 
+  exact/lFsPrePoset.restrict_acyclic. 
+Qed.
+
+Definition restrict P p := lFsPoset (restrictP P p).
+
+End Restrict.
 
 Section Relabel.
 Context (E : identType) (L1 : eqType) (L2 : eqType) (bot1 : L1) (bot2 : L2). 
@@ -1692,6 +1707,17 @@ Definition inter p q : pomset E L bot :=
   \pi (lFsPoset.inter p q).
 
 End Inter.
+
+Section Restrict.
+Context (E : identType) (L : choiceType) (bot : L). 
+Implicit Types (P : pred E).
+Implicit Types (p q : pomset E L bot).
+
+Definition restrict P p : pomset E L bot := 
+  \pi (lFsPoset.restrict P p).
+
+End Restrict.
+
 
 Section Relabel.
 Context (E : identType) (L1 L2 : choiceType) (bot1 : L1) (bot2 : L2). 
