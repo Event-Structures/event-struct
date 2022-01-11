@@ -238,36 +238,6 @@ Proof.
   by apply/rt_step; rewrite !K.
 Qed.
 
-(* Lemma acyclic_mono f gT gU : bijective f ->  *)
-(*   {mono f : x y / gT x y >-> gU x y} -> *)
-(*   acyclic gT <-> acyclic gU. *)
-(* Proof.  *)
-(*   move=> fbij fmon; rewrite !acyclicE; apply: andb_iff. *)
-(*   - admit. *)
-(*     (* by split=> /irreflexiveP/(irreflexive_mono fmon)/irreflexiveP.  *) *)
-(*   split=> /antisymmetricP anti; apply/antisymmetricP. *)
-(*   - apply/antisymmetric_mono. *)
-(*     admit. *)
-(*   pose crt_fmon := connect_mono fbij fmon. *)
-(*   apply/(antisymmetric_mono crt_fmon) => x y /= /andP[??]. *)
-(*   by apply/(bij_inj fbij)/anti/andP. *)
-
-(*   move=> x y /= /andP[??].  *)
-(*   apply/anti/andP; split. *)
-  
-
-(*   suff: forall x y, connect gU (f x) (f y) = connect [rel x y | ] *)
-  
-(* apply/anti/andP; split=> //=. *)
-
-(*   last exact/anti. *)
-
-(*   - apply/antisymmetric_mono. 2 : { apply/anti.  *)
-
-(*   2 : {  rewrite -(antisymmetric_mono crt_fmon). /antisymmetricP.  *)
-(*     apply/irreflexive_mono. *)
-
-
 End FinGraphMono.
 
 Section Covering.

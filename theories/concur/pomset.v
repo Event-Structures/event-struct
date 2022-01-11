@@ -322,25 +322,6 @@ Proof.
   by apply/val_inj/asym/andP.
 Qed.
 
-(* Lemma fs_ca_ica_eq p q : supp_closed p ->  *)
-(*   finsupp p = finsupp q -> fs_ica p =2 fs_ica q -> fs_ca p =2 fs_ca q. *)
-(* Proof.  *)
-(*   move=> supclp eqsupp eq_ica e1 e2.  *)
-(*   have supclq : supp_closed q. *)
-(*   - apply/supp_closedP=> {}e1 {}e2. *)
-(*     rewrite -eqsupp -eq_ica. *)
-(*     by apply/supp_closedP. *)
-(*   have eq_ica': (fs_ica p : hrel E E) ≡ fs_ica q. *)
-(*   - by move=> ?? /=; rewrite eq_ica. *)
-(*   apply/idP/idP. *)
-(*   - move=> /(fs_caP _ _ supclp)/clos_rt_str. *)
-(*     rewrite !(str_weq eq_ica')=> ?.  *)
-(*     by apply/(fs_caP _ _ supclq)/clos_rt_str. *)
-(*   move=> /(fs_caP _ _ supclq)/clos_rt_str. *)
-(*   rewrite -(str_weq eq_ica')=> ?.  *)
-(*   by apply/(fs_caP _ _ supclp)/clos_rt_str.     *)
-(* Qed. *)
-
 Lemma fs_ica_ct_fin_sca p : supp_closed p -> acyclic (fin_ica p) ->
   clos_trans (fs_ica p) ≦ sub_rel_lift (fin_sca p).
 Proof. 
