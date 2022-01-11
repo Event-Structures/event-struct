@@ -1698,7 +1698,11 @@ Definition lfsposet_porderType :=
 (* TODO: rename/restructure? *)
 Lemma lfsp_pideal_mixinP (e e' : lfsposet_porderType) :  
   e \in (lfsp_pideal p e') = (e <= e').
-Proof. admit. Admitted.
+Proof. 
+  move: (lfsp_supp_closed p)=> supcl.
+  move: (lfsp_acyclic p)=> acyc.
+  exact/(lfsp_pidealP _ _ supcl acyc).
+Qed.
 
 Definition lfsposet_dwFinPOrderMixin := 
   @DwFinPOrder.DwFinPOrder.Mixin E (Order.POrder.class lfsposet_porderType)
