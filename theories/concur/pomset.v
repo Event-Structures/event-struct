@@ -152,6 +152,9 @@ Definition lfsp_labels p : seq L :=
 Definition lfsp_fresh p : E := 
   fresh_seq (finsupp p).
 
+Definition lfsp_pideal p e : {fset E} := 
+  [fset e' in (e |` finsupp p) | fs_ca p e' e].
+
 (* TODO: unify with UpFinPOrder *)
 Definition lfsp_dw_clos p es := 
   [seq e <- finsupp p | [exists e' : es, fs_ca p e (val e')]].
@@ -436,6 +439,15 @@ Lemma lfsp_dw_clos_subs p es :
   {subset (lfsp_dw_clos p es) <= finsupp p}.
 Proof. by move=> e; rewrite mem_filter=> /andP[]. Qed.
 
+Lemma lfsp_pidealP p e e' : supp_closed p -> acyclic (fin_ica p) -> 
+  e' \in (lfsp_pideal p e) = (fs_ca p e' e).
+Proof. 
+  move=> supcl acyc.
+  rewrite /lfsp_pideal !inE; apply/andb_idl.
+  move=> /(supp_closed_ca supcl acyc).
+  by move=> /orP[/eqP->|/andP[->]]; rewrite ?eq_refl. 
+Qed.  
+   
 Lemma lfsp_dw_closP p es e : 
   supp_closed p -> acyclic (fin_ica p) -> es `<=` (finsupp p) ->
     reflect (exists2 e', fs_ca p e e' & e' \in es) (e \in lfsp_dw_clos p es).
@@ -1683,11 +1695,28 @@ Definition lfsposet_porderMixin :=
 Definition lfsposet_porderType := 
   POrderType tt E lfsposet_porderMixin.
 
-Definition lfsposet_lposetMixin := 
-  @lPoset.lPoset.Mixin E L (Order.POrder.class lfsposet_porderType) (fs_lab p).
+(* TODO: rename/restructure? *)
+Lemma lfsp_pideal_mixinP (e e' : lfsposet_porderType) :  
+  e \in (lfsp_pideal p e') = (e <= e').
+Proof. admit. Admitted.
 
-Definition lfsposet_lposetType := 
-  @lPoset.lPoset.Pack L E (lPoset.lPoset.Class lfsposet_lposetMixin).
+Definition lfsposet_dwFinPOrderMixin := 
+  @DwFinPOrder.DwFinPOrder.Mixin E (Order.POrder.class lfsposet_porderType)
+    (lfsp_pideal p)
+    lfsp_pideal_mixinP.
+
+Definition lfsposet_dwFinPOrderType := 
+  @DwFinPOrder.DwFinPOrder.Pack E 
+    (DwFinPOrder.DwFinPOrder.Class lfsposet_dwFinPOrderMixin).
+
+Definition lfsposet_lposetMixin := 
+  @lPoset.lPoset.Mixin E L 
+    (DwFinPOrder.DwFinPOrder.class lfsposet_dwFinPOrderType) 
+    (fs_lab p).
+
+Definition lfsposet_lDwFinPosetType := 
+  @lDwFinPoset.lDwFinPoset.Pack L E 
+    (lDwFinPoset.lDwFinPoset.Class lfsposet_lposetMixin).
 
 End POrder.
 End POrder.
@@ -1741,7 +1770,7 @@ End FinPOrder.
 End FinPOrder.
 
 Module Export Syntax. 
-Notation "[ 'Event' 'of' p ]" := (lfsposet_lposetType p)
+Notation "[ 'Event' 'of' p ]" := (lfsposet_lDwFinPosetType p)
   (at level 0, format "[ 'Event'  'of'  p ]") : form_scope.
 Notation "[ 'FinEvent' 'of' p ]" := (lfsposet_lfinposetType p)
   (at level 0, format "[ 'FinEvent'  'of'  p ]") : form_scope.

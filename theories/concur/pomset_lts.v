@@ -50,6 +50,15 @@ Definition subsumes : pomlang E L bot -> pomlang E L bot -> Prop :=
 Definition supports : pomlang E L bot -> pomlang E L bot -> Prop := 
   fun P Q => forall p, P p -> exists q, Q q /\ bhom_le q p.
 
+(* for a given pomset p returns language consisting of 
+ * restrictions of p onto its principal ideals, 
+ * that is prefixes of events e of p.  
+ *)
+Definition pideal_lang p : pomlang E L bot := 
+  let pideals := [fset (pideal (e : [Event of p])) | e in finsupp p] in
+  let qs := [fset (Pomset.restrict (mem (es : {fset E})) p) | es in pideals] in
+  fun q => q \in qs.
+
 End PomLang.
 End PomLang.
 
