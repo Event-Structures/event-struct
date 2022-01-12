@@ -52,7 +52,7 @@ Definition supports : pomlang E L bot -> pomlang E L bot -> Prop :=
 
 (* for a given pomset p returns language consisting of 
  * restrictions of p onto its principal ideals, 
- * that is prefixes of events e of p.  
+ * that is prefixes of events of p.  
  *)
 Definition pideal_lang p : pomlang E L bot := 
   let pideals := [fset (pideal (e : [Event of p])) | e in finsupp p] in

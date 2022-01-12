@@ -159,6 +159,17 @@ Definition lfsp_pideal p e : {fset E} :=
 Definition lfsp_dw_clos p es := 
   [seq e <- finsupp p | [exists e' : es, fs_ca p e (val e')]].
 
+(* TODO: move/restructure *)
+Context (L' : eqType) (bot' : L').
+Implicit Types (f : L -> L').
+
+(* TODO: move to inhtype, make a type of inhtype morphisms? *)
+Definition bot_preserving f := 
+  f bot == bot'.
+
+Definition finsupp_preserving p f := 
+  [forall e : finsupp p, f (fs_lab p (val e)) != bot'].
+
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -446,7 +457,7 @@ Proof.
   rewrite /lfsp_pideal !inE; apply/andb_idl.
   move=> /(supp_closed_ca supcl acyc).
   by move=> /orP[/eqP->|/andP[->]]; rewrite ?eq_refl. 
-Qed.  
+Qed.
    
 Lemma lfsp_dw_closP p es e : 
   supp_closed p -> acyclic (fin_ica p) -> es `<=` (finsupp p) ->
@@ -1196,8 +1207,9 @@ Definition relabel f p : lfspreposet E L2 bot2 :=
   [fsfun e in finsupp p => (f (fs_lab p e), fs_rcov p e)].
 
 Variables (f : L1 -> L2) (p : lfspreposet E L1 bot1).
-Hypothesis (fbot : f bot1 = bot2).
-Hypothesis (flabD : [forall e : finsupp p, f (fs_lab p (val e)) != bot2]).
+(* TODO: use inhtype to get rid of explicit bot arguments... *)
+Hypothesis (fbot : bot_preserving bot1 bot2 f).
+Hypothesis (fsupp : finsupp_preserving bot2 p f).
 
 (* TODO: refactor this precondition? *)
 (* Hypothesis (flabD : forall e, let l := fs_lab p e in (l == bot1) = (f l == bot2)). *)
@@ -1211,7 +1223,7 @@ Proof.
   case: insubP=> /= [e' /[swap] /= <- eIn|/negbTE-> /[! eqxx] //] /=.
   rewrite xpair_eqE negb_and eIn. 
   apply/idP/orP; left.
-  exact/(forallP flabD). 
+  exact/(forallP fsupp). 
 Qed.
 
 Lemma relabel_lab : 
@@ -1239,7 +1251,7 @@ Proof.
   apply/lab_definedP=> e.
   rewrite relabel_finsupp relabel_lab=> eIn /=. 
   have->: e = val (Sub e eIn : finsupp p) by done.
-  exact/(forallP flabD). 
+  exact/(forallP fsupp). 
 Qed.
 
 Lemma relabel_supp_closed : 
@@ -1650,21 +1662,21 @@ End Restrict.
 
 Section Relabel.
 Context (E : identType) (L1 : eqType) (L2 : eqType) (bot1 : L1) (bot2 : L2). 
-
-Variables (f : L1 -> L2) (p : lfsposet E L1 bot1).
-Hypothesis (fbot : f bot1 = bot2).
-Hypothesis (flabD : [forall e : finsupp p, f (fs_lab p (val e)) != bot2]).
+Implicit Types (f : L1 -> L2). 
+Implicit Types (p : lfsposet E L1 bot1).
 
 (* Hypothesis (flabD : forall e, let l := fs_lab p e in (l == bot1) = (f l == bot2)). *)
 (* Hypothesis (flabD : forall l, (l == bot1) = (f l == bot2)). *)
 (* Hypothesis (labD : lab_defined p). *)
 
-Lemma relabelP :  
+Lemma relabelP f p : 
+  bot_preserving bot1 bot2 f -> finsupp_preserving bot2 p f -> 
   let q := @lFsPrePoset.relabel E L1 L2 bot1 bot2 f p in
   [&& lab_defined q,
       supp_closed q &
       acyclic (fin_ica q)].
 Proof.
+  move=> fbot fsupp.
   move: (lfsp_lab_defined p)=> labD.
   move: (lfsp_supp_closed p)=> supcl.
   move: (lfsp_acyclic p)=> acyc.
@@ -1674,7 +1686,25 @@ Proof.
   exact/lFsPrePoset.relabel_acyclic. 
 Qed.
 
-Definition relabel := mklFsPoset relabelP.
+Definition relabel f p :=
+  match (bot_preserving bot1 bot2 f) && (finsupp_preserving bot2 p f) =P true with
+  | ReflectF _  => lFsPoset.empty E L2 bot2
+  | ReflectT pf =>
+    let: conj fbot fsupp := andP pf in
+    mklFsPoset (relabelP fbot fsupp)
+  end.
+
+Variable (f : L1 -> L2) (p : lfsposet E L1 bot1).
+Hypothesis (fbot : bot_preserving bot1 bot2 f).
+Hypothesis (fsupp : finsupp_preserving bot2 p f).
+
+Lemma relabel_valE : 
+  val (relabel f p) = @lFsPrePoset.relabel E L1 L2 bot1 bot2 f p.
+Proof. 
+  rewrite /relabel; case: eqP=> [pf|] //=.
+  - by case: (andP pf). 
+  by move=> /negP; rewrite negb_and=> /orP[|] /negP. 
+Qed.
 
 End Relabel.
 
@@ -2700,12 +2730,8 @@ Context (E : identType) (L1 L2 : choiceType) (bot1 : L1) (bot2 : L2).
 Implicit Types (f : L1 -> L2).
 Implicit Types (p : pomset E L1 bot1).
 
-Variables (f : L1 -> L2) (p : lfsposet E L1 bot1).
-Hypothesis (fbot : f bot1 = bot2).
-Hypothesis (flabD : [forall e : finsupp p, f (fs_lab p (val e)) != bot2]).
-
-Definition relabel : pomset E L2 bot2 := 
-  \pi (@lFsPoset.relabel E L1 L2 bot1 bot2 f p fbot flabD).
+Definition relabel f p : pomset E L2 bot2 := 
+  \pi (@lFsPoset.relabel E L1 L2 bot1 bot2 f p).
 
 End Relabel.
 
