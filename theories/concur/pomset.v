@@ -159,6 +159,10 @@ Definition lfsp_pideal p e : {fset E} :=
 Definition lfsp_dw_clos p es := 
   [seq e <- finsupp p | [exists e' : es, fs_ca p e (val e')]].
 
+(* TODO: unify with UpFinPOrder *)
+Definition lfsp_is_max p e := 
+  [forall e' : finsupp p, (fs_ca p e (val e')) ==> (fs_ca p (val e') e)].
+
 (* TODO: move/restructure *)
 Context (L' : eqType) (bot' : L').
 Implicit Types (f : L -> L').
