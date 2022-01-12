@@ -391,15 +391,6 @@ End Syntax.
 Module Export Theory.
 Section Theory.
 
-
-Lemma foldr_monoid {S : Type} {f : S -> S -> S} {n s1 s2}: 
-  associative f ->
-  (forall a, f n a = a) ->
-  (forall a, f a n = a) ->
-  f (foldr f n s1) (foldr f n s2) =
-  foldr f n (s1 ++ s2).
-Proof. by move=> A L R; elim: s1=> //= ??; rewrite -A=>->. Qed.
-
 Context {T : identType}.
 Implicit Types (x : T) (s : seq T).
 

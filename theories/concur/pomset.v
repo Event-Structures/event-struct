@@ -151,7 +151,6 @@ Definition lfsp_dw_clos p es :=
 
 Definition fs_size p : nat := #|` finsupp p|.
 
-
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -871,6 +870,7 @@ Lemma of_seq_size :
   fs_size (of_seq ls) = size ls.
 Proof. by rewrite of_seq_valE lFsPrePoset.of_seq_size. Qed.
 
+
 (* Lemma of_seq_labE e :  *)
 (*   fs_lab (of_seq ls) e = nth bot ls (encode e). *)
 (* Proof. rewrite /of_seq; case: eqP=> //. Qed. *)
@@ -1117,31 +1117,45 @@ Definition bhom_lt E L bot : rel (lfsposet E L bot) :=
 Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
   [pred ls | bhom_le (lFsPoset.of_seq E L bot ls) p].
 
+Definition is_bhom E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot)
+  (f : [Event of q] -> [Event of p]) 
+  := 
+  [/\                    { mono f : e / lab e }
+  , {in (finsupp q) &, { homo f : e1 e2 / e1 <= e2 }}
+  & {on (finsupp p)  , bijective f} 
+  ].
+Arguments is_bhom /.
+
+Lemma bhom_suppf E1 E2 L bot (f : E1 -> E2) 
+  (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) e : 
+  is_bhom (f : [Event of p] -> [Event of q]) -> 
+  e \in finsupp p -> f e \in finsupp q.
+Proof.
+  case=> [flab fca [g K K']].
+  move=> /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
+  by move=> /eqP labD; apply/eqP; rewrite flab. 
+Qed.
 
 (* TODO: `f` can be declared {hom [Event of q] -> [Event of p]} ? *)
 Lemma bhom_leP E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   reflect 
-    (exists f : [Event of q] -> [Event of p], 
-      [/\                    { mono f : e / lab e }
-        , {in (finsupp q) &, { homo f : e1 e2 / e1 <= e2 }}
-        & {on (finsupp p)  , bijective f} 
-      ])
+    (exists f : [Event of q] -> [Event of p], is_bhom f)
     (bhom_le p q).
 Proof. 
   rewrite /bhom_le; apply/(equivP idP); split; last first.
-  - move=> [f] [] flab fca fbij.
+  - move=> [f] /[dup] bh [] flab fca fbij.
     apply/lFinPoset.fbhomP. 
     move: fbij=> [g] K K'.  
-    have map_suppf : forall e, e \in finsupp q -> (f e) \in finsupp p.
+    (* have map_suppf : forall e, e \in finsupp q -> (f e) \in finsupp p.
     + move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
-      by move=> /eqP labD; apply/eqP; rewrite flab.  
+      by move=> /eqP labD; apply/eqP; rewrite flab.   *)
     have map_suppf' : forall e, (f e) \in finsupp p -> e \in finsupp q.
     + by move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE flab.
     have map_suppg : forall e, e \in finsupp p -> (g e) \in finsupp q.
     + move=> e /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
       by rewrite -flab; apply/contra; rewrite K'.
     pose f' : [FinEvent of q] -> [FinEvent of p] := 
-      fun e => Sub (f (val e)) (map_suppf (val e) (valP e)). 
+      fun e => Sub (f (val e)) (bhom_suppf bh (valP e)). 
     pose g' : [FinEvent of p] -> [FinEvent of q] := 
       fun e => Sub (g (val e)) (map_suppg (val e) (valP e)). 
     eexists=> /=; exists f'; repeat constructor=> /=.
@@ -1150,7 +1164,7 @@ Proof.
       rewrite -fin_ca_mono -fin_ca_mono /=. 
       by rewrite -fs_caE -fs_caE; apply/fca.
     exists g'=> e; rewrite /f' /g' /=; apply/val_inj=> /=; rewrite ?K ?K'=> //. 
-    exact/map_suppf.
+    apply/bhom_suppf=> //; exact/bh.
   move=> /lFinPoset.fbhomP [f].
   pose g := lPoset.bHom.invF f.
   pose f' : [Event of q] -> [Event of p] := 
@@ -1433,11 +1447,10 @@ Module Export AddEvent.
 Module Export Def.
 Section Def.  
 Context (E : identType) (L : choiceType) (bot : L).
-Implicit Types (l : L) (es : {fset E}).
+Implicit Types (l : L) (es : {fset E}) (e : E).
 Implicit Types (p : lfspreposet E L bot).
 
-Definition lfspre_add_event l es p : lfspreposet E L bot := 
-  let e := lfsp_fresh p in
+Definition lfspre_add_event l es e p : lfspreposet E L bot := 
   [fsfun p with e |-> (l, es)].
 
 End Def.
@@ -1446,14 +1459,15 @@ End Def.
 Module Export Theory.
 Section Theory.  
 Context (E : identType) (L : choiceType) (bot : L).
-Variable (l : L) (es : {fset E}).
+Variable (l : L) (es : {fset E}) (f : E).
 Variable (p : lfspreposet E L bot).
 
-Hypothesis (lD : l != bot).
+Hypothesis (lD    : l != bot).
+Hypothesis (nMem  : f \notin finsupp p).
 Hypothesis (esSub : es `<=` finsupp p).
 
 Lemma add_event_finsuppE :
-  finsupp (lfspre_add_event l es p) = (lfsp_fresh p) |` (finsupp p).
+  finsupp (lfspre_add_event l es f p) = f |` (finsupp p).
 Proof. 
   rewrite finsupp_with xpair_eqE.
   case: ifP=> [/andP[/eqP]|] //.
@@ -1461,33 +1475,32 @@ Proof.
 Qed.
 
 Lemma add_event_fs_sizeE : 
-  fs_size (lfspre_add_event l es p) = 
+  fs_size (lfspre_add_event l es f p) = 
   (fs_size p).+1.
-Proof. rewrite /fs_size add_event_finsuppE cardfsU1 fresh_seq_nmem; lia. Qed.
+Proof. rewrite /fs_size add_event_finsuppE cardfsU1 nMem; lia. Qed.
 
 Lemma add_event_fs_labE e :
-  fs_lab (lfspre_add_event l es p) e = 
-    if e == lfsp_fresh p then l else fs_lab p e. 
+  fs_lab (lfspre_add_event l es f p) e = 
+    if e == f then l else fs_lab p e. 
 Proof. by rewrite /fs_lab /lfspre_add_event fsfun_withE; case: ifP. Qed.
 
 Lemma add_event_fs_rcovE e :
-  fs_rcov (lfspre_add_event l es p) e = 
-    if e == lfsp_fresh p then es else fs_rcov p e. 
+  fs_rcov (lfspre_add_event l es f p) e = 
+    if e == f then es else fs_rcov p e. 
 Proof. by rewrite /fs_rcov /lfspre_add_event fsfun_withE; case: ifP. Qed.
 
 Lemma add_event_fs_icaE e1 e2 :
-  fs_ica (lfspre_add_event l es p) e1 e2 = 
-    (e1 \in es) && (e2 == lfsp_fresh p) || (fs_ica p e1 e2).
+  fs_ica (lfspre_add_event l es f p) e1 e2 = 
+    (e1 \in es) && (e2 == f) || (fs_ica p e1 e2).
 Proof. 
   rewrite /fs_ica /= !add_event_fs_rcovE.
   case: ifP=> [/eqP->|]; last first.
   - by rewrite andbF.
   rewrite andbT /fs_rcov fsfun_dflt /= ?inE ?orbF //. 
-  exact/fresh_seq_nmem.
 Qed.
 
 Lemma add_event_lab_defined :
-  lab_defined p -> lab_defined (lfspre_add_event l es p).
+  lab_defined p -> lab_defined (lfspre_add_event l es f p).
 Proof.  
   move=> labD; apply/lab_definedP. 
   rewrite add_event_finsuppE // => e.
@@ -1495,14 +1508,11 @@ Proof.
   - by move=> /eqP-> //; rewrite eq_refl.
   move=> eIn; case: ifP=> [|_]; last first.
   - exact/lab_definedP.
-  move: eIn=> /[swap] /eqP-> eIn.
-  exfalso; move: eIn=> /negP; apply.
-  rewrite /lfsp_fresh. 
-  exact/negP/fresh_seq_nmem.
+  by move: eIn=> /[swap] /eqP-> /(negP nMem).
 Qed.
 
 Lemma add_event_supp_closed :
-  supp_closed p -> supp_closed (lfspre_add_event l es p).
+  supp_closed p -> supp_closed (lfspre_add_event l es f p).
 Proof.  
   move=> supcl.
   apply/supp_closedP=> e1 e2.
@@ -1517,8 +1527,8 @@ Proof.
 Qed.
 
 Lemma add_event_fs_caE e1 e2 : supp_closed p -> acyclic (fin_ica p) ->
-  fs_ca (lfspre_add_event l es p) e1 e2 = 
-    (e1 \in lfsp_dw_clos p es) && (e2 == lfsp_fresh p) || (fs_ca p e1 e2).
+  fs_ca (lfspre_add_event l es f p) e1 e2 = 
+    (e1 \in lfsp_dw_clos p es) && (e2 == f) || (fs_ca p e1 e2).
 Proof. 
   (* TODO: yet another terrible proof due to poor 
    *   integration of mathcomp & relation-algebra 
@@ -1532,9 +1542,9 @@ Proof.
   - move=> /= e1' e2'; apply/eq_bool_iff.
     by rewrite add_event_fs_icaE.
   pose r : hrel E E := 
-    (fun e1' e2' => (e1' \in es) && (e2' == lfsp_fresh p) || fs_ica p e1' e2').
+    (fun e1' e2' => (e1' \in es) && (e2' == f) || fs_ica p e1' e2').
   pose r1 : hrel E E := 
-    (fun e1' e2' => (e1' \in es) && (e2' == lfsp_fresh p)).
+    (fun e1' e2' => (e1' \in es) && (e2' == f)).
   pose r2 : hrel E E := 
     (fun e1' e2' => fs_ica p e1' e2').
   rewrite -/r.
@@ -1543,7 +1553,7 @@ Proof.
     by split=> /orP. 
   rewrite (str_weq reqv) kleene.str_pls.
   have H: forall e1' e2', (r2^* ⋅ r1) e1' e2' <-> 
-        (e1' \in lfsp_dw_clos p es) && (e2' == lfsp_fresh p).
+        (e1' \in lfsp_dw_clos p es) && (e2' == f).
   - move=> {}e1 {}e2; rewrite /r1 /r2; split.
     + move=> [e3] /clos_rt_str/(fs_caP _ _ supcl) + /andP[+] /eqP->.
       rewrite eq_refl andbT=> ??.
@@ -1568,8 +1578,7 @@ Proof.
     rewrite /r1 /r2 /hrel_dot=> [[e3]].        
     move=> /andP[] ? /eqP->.
     rewrite /lfsp_fresh.
-    move=> /(supp_closedP _ supcl)=> [[+ _]].
-    by move: (fresh_seq_nmem (finsupp p))=> /negP.
+    by move=> /(supp_closedP _ supcl)=> [[]] /(negP nMem).
   have->: r1^* ≡ 1 ⊔ r1.
   - rewrite str_unfold_l; apply/qmk_weq.
     rewrite str_unfold_l dotxpls dotA.
@@ -1577,14 +1586,12 @@ Proof.
     move=> {}e1 {}e2 /=; split=> //.
     rewrite /r1 /r2 /hrel_dot=> [[e3]].        
     move=> /andP[] ? /eqP-> /andP[+ _].
-    move: esSub=> /fsubsetP /[apply].
-    rewrite /lfsp_fresh.
-    by move: (fresh_seq_nmem (finsupp p))=> /negP.
+    by move: esSub=> /fsubsetP /[apply] /(negP nMem).
   ka.    
 Qed.  
 
 Lemma add_event_irrefl : supp_closed p -> 
-  irreflexive (fin_ica p) -> irreflexive (fin_ica (lfspre_add_event l es p)).
+  irreflexive (fin_ica p) -> irreflexive (fin_ica (lfspre_add_event l es f p)).
 Proof. 
   move=> supcl irr.  
   apply/irreflexive_mono.
@@ -1594,7 +1601,7 @@ Proof.
   move: (fresh_seq_nmem (finsupp p))=> /negP nFr.
   move=> eIn; apply/orP=> [[|]].
   - move=> /andP[] /[swap] /eqP ->.
-    by move: esSub=> /fsubsetP /[apply].
+    by move: esSub=> /fsubsetP /[apply] /(negP nMem).
   move: eIn=> /orP[/eqP->|eIn].   
   - rewrite /fs_ica /= /fs_rcov fsfun_dflt //; exact/negP.
   move: (irr (Sub e eIn)).
@@ -1602,7 +1609,7 @@ Proof.
 Qed.
 
 Lemma add_event_acyclic : supp_closed p -> 
-  acyclic (fin_ica p) -> acyclic (fin_ica (lfspre_add_event l es p)).
+  acyclic (fin_ica p) -> acyclic (fin_ica (lfspre_add_event l es f p)).
 Proof.
   move=> supcl acyc. 
   rewrite acyclicE; apply/andP; split.
@@ -1620,13 +1627,13 @@ Proof.
   - move=> /= /andP[? /eqP ?] /andP[? /eqP ?].
     apply/val_inj=> /=; congruence.
   - move=> /andP[in1 /eqP ->].
-    move: (fresh_seq_nmem (finsupp p))=> /negP nFr.
+    move: nMem=> /negP nFr.
     move=> /(supp_closed_ca supcl acyc)=> /orP[|].     
     + move: in1=> /[swap] /eqP<-. 
       by move=> /lfsp_dw_clos_subs.
     by move=> /andP[].    
   - move=> /[swap] /andP[in2 /eqP ->].  
-    move: (fresh_seq_nmem (finsupp p))=> /negP nFr.
+    move: nMem=> /negP nFr.
     move=> /(supp_closed_ca supcl acyc)=> /orP[|].     
     + move: in2=> /[swap] /eqP<-. 
       by move=> /lfsp_dw_clos_subs.
@@ -1645,39 +1652,78 @@ Module Export lFsPosetLTS.
 Module Export Def.
 Section Def.  
 Context (E : identType) (L : choiceType) (bot : L).
-Implicit Types (l : L) (es : {fset E}).
+Implicit Types (l : L) (es : {fset E}) (f : E).
 Implicit Types (p : lfsposet E L bot).
 
-Definition lfsp_add_event l es p : lfsposet E L bot :=
-  let e := lfsp_fresh p in
-  let q := lfspre_add_event l es p in
-  match (l != bot) && (es `<=` (finsupp p)) =P true with
-  | ReflectF _  => lFsPoset.empty E L bot
-  | ReflectT pf => 
-    let: conj lD esSub := andP pf in
-    let labD  := add_event_lab_defined es lD (lfsp_lab_defined p) in
-    let supcl := add_event_supp_closed lD esSub (lfsp_supp_closed p) in
-    let acyc  := add_event_acyclic lD esSub 
+Definition lfsp_add_event l es f p : lfsposet E L bot :=
+  let q := lfspre_add_event l es f p in
+  match 
+    l   !=     bot        =P true,
+    es  `<=`   finsupp p  =P true,
+    f   \notin finsupp p  =P true with
+  | ReflectT lD, ReflectT esSub, ReflectT nMem => 
+    let labD  := add_event_lab_defined es lD nMem (lfsp_lab_defined p) in
+    let supcl := add_event_supp_closed lD nMem esSub (lfsp_supp_closed p) in
+    let acyc  := add_event_acyclic lD nMem esSub 
                    (lfsp_supp_closed p) 
                    (lfsp_acyclic p) 
     in
-    lFsPoset (introT and3P (And3 labD supcl acyc))
+      lFsPoset (introT and3P (And3 labD supcl acyc))
+  | _, _, _  => lFsPoset.empty E L bot
   end.
 
 End Def.
 End Def.
+
+Module Export Theory.
+Section Theory.  
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p q : lfsposet E L bot).
+(* Implicit Types (tr : trace (LTS.ltsType E L bot)). *)
+
+Import lPoset.Syntax.
+Local Open Scope lts_scope.
+
+Lemma lfsp_add_eventE l es f p : 
+  l != bot ->
+  f \notin finsupp p -> 
+  (es `<=` finsupp p) ->
+  ((finsupp (lfsp_add_event l es f p) =  f |` finsupp p) *
+  (fs_lab (lfsp_add_event l es f p)   =1 fun e =>
+    if e == f then l else fs_lab p e))                *
+  ((fs_rcov (lfsp_add_event l es f p) =1 fun e =>
+    if e == f then es else fs_rcov p e)               *
+  (fs_ica (lfsp_add_event l es f p)   =2 fun e1 e2 => 
+    (e1 \in es) && (e2 == f) || (fs_ica p e1 e2)))    *
+  (fs_ca (lfsp_add_event l es f p)    =2 fun e1 e2 =>
+    (e1 \in lfsp_dw_clos p es) && (e2 == f) || (fs_ca p e1 e2)) * 
+  (fs_size (lfsp_add_event l es f p) = (fs_size p).+1).
+Proof.
+  rewrite ?/lfsp_add_event; (do ? case: eqP=> //=)=> /eqP*.
+  by rewrite add_event_finsuppE //; do ? split=> //>;
+  rewrite ?(add_event_fs_labE,
+           add_event_fs_icaE,
+           add_event_fs_rcovE,
+           add_event_fs_caE,
+           add_event_fs_sizeE)//; case: (p)=> /=> /and3P[].
+Qed.
+End Theory.
+End Theory.
 
 (* TODO: there is a lot of copypaste from lFsPrePosetLTS ... *)
 Module LTS.
 Section LTS.
 Context (E : identType) (L : choiceType) (bot : L).
 Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p : lfsposet E L bot).
+Implicit Types (p q : lfsposet E L bot).
 
 Definition ltrans l p q := 
   (l != bot) &&
   [exists es : fpowerset (finsupp p),
-    q == lfsp_add_event l (val es) p 
+   exists f : finsupp q, 
+    ((val f) \notin finsupp p) &&
+    (q == lfsp_add_event l (val es) (val f) p) 
   ]. 
 
 Lemma enabledP l p :
@@ -1685,13 +1731,17 @@ Lemma enabledP l p :
 Proof. 
   case: (l != bot)/idP=> lD; last first.
   - by constructor=> /= [[q]] /andP[].
-  constructor; exists (lfsp_add_event l fset0 p). 
+  constructor; exists (lfsp_add_event l fset0 (fresh_seq (finsupp p)) p). 
   apply/andP; split=> //.
   apply/existsP=> /=.
   have inPw: (fset0 \in fpowerset (finsupp p)).
   - rewrite fpowersetE; exact/fsub0set.
   pose es : fpowerset (finsupp p) := Sub fset0 inPw.
-  by exists es.
+  exists es; apply/existsP.
+  have i: (fresh_seq (finsupp p)) \in 
+          (finsupp (lfsp_add_event l fset0 (fresh_seq (finsupp p)) p)).
+  - by rewrite lfsp_add_eventE // ?inE ?eqxx // fresh_seq_nmem.
+  by exists [`i]; rewrite /= fresh_seq_nmem eqxx.
 Qed.
   
 Definition mixin := 
@@ -1712,8 +1762,8 @@ End LTS.
 
 Export LTS.Exports.
 
-Module Export Theory.
-Section Theory.  
+Module Export Linearization.
+Section Linearization.  
 Context (E : identType) (L : choiceType) (bot : L).
 Implicit Types (l : L) (es : {fset E}).
 Implicit Types (p q : lfsposet E L bot).
@@ -1723,48 +1773,29 @@ Import lPoset.Syntax.
 Local Open Scope lts_scope.
 
 Lemma lfsp_ltransP l p q :
-  reflect (l != bot /\ exists2 es, 
-             es `<=` finsupp p & 
-             q = lfsp_add_event l es p)
+  reflect (l != bot /\ exists es f, 
+             [/\ f \in    finsupp q       ,
+                 f \notin finsupp p       ,
+                 es `<=` finsupp p &
+                 q = lfsp_add_event l es f p])
           (p --[l]--> q).
 Proof.
   rewrite /ltrans /= /LTS.ltrans.
-  apply: (andPP idP). 
-  apply/(equivP idP); split=> [/existsP|] /=.
-  - move=> [es] /eqP->; exists (val es)=> //.
-    rewrite -fpowersetE; exact/(valP es). 
-  move=> [es] + ->; rewrite -fpowersetE.
-  move=> inPw; apply/existsP=> /=.
-  by exists (Sub es inPw).
-Qed.
-
-Lemma lfsp_add_eventE l es p : 
-  l != bot ->
-  (es `<=` finsupp p) ->
-  ((finsupp (lfsp_add_event l es p) =  lfsp_fresh p |` finsupp p) *
-  (fs_lab (lfsp_add_event l es p)   =1 fun e =>
-    if e == lfsp_fresh p then l else fs_lab p e))                *
-  ((fs_rcov (lfsp_add_event l es p) =1 fun e =>
-    if e == lfsp_fresh p then es else fs_rcov p e)               *
-  (fs_ica (lfsp_add_event l es p)   =2 fun e1 e2 => 
-    (e1 \in es) && (e2 == lfsp_fresh p) || (fs_ica p e1 e2)))    *
-  (fs_ca (lfsp_add_event l es p)    =2 fun e1 e2 =>
-    (e1 \in lfsp_dw_clos p es) && (e2 == lfsp_fresh p) || (fs_ca p e1 e2)) * 
-  (fs_size (lfsp_add_event l es p) = (fs_size p).+1).
-Proof.
-  rewrite ?/lfsp_add_event; do ? case: eqP=> //=.
-  move=> p0; case: (andP p0)=> //= *.
-  rewrite add_event_finsuppE //; do ? split=> //>;
-  rewrite (add_event_fs_labE,
-           add_event_fs_icaE,
-           add_event_fs_rcovE,
-           add_event_fs_caE,
-           add_event_fs_sizeE)//; case: (p)=> /=> /and3P[] //.
+  apply/(iffP andP)=> [[/[dup]?->]/existsP[es]|].
+  (* apply/(equivP idP); split=> [/existsP|] /=. *)
+  - move=> /existsP[f] /andP[? /eqP->]; split=> //.
+    exists (val es), (val f); split=> //;
+    rewrite ?lfsp_add_eventE // ?inE ?eqxx // -fpowersetE; exact/(valP es).
+  case=>/[dup]?-> [es][f[+++->]]; rewrite -fpowersetE=> ? e inPw; split=> //.
+  apply/existsP; exists [`inPw].
+  have inF:  f \in finsupp (lfsp_add_event l es f p). 
+  - by rewrite lfsp_add_eventE ?inE // -?fpowersetE // eqxx.
+  by apply/existsP; exists [`inF] => /=; rewrite e eqxx.
 Qed.
 
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
 
-Lemma invariant_operational : 
+(* Lemma invariant_operational : 
   @invariant L (LTS.ltsType E L bot) (@operational _ _ _).
 Proof.
   move=> p q [l /lfsp_ltransP[? [? /[dup] ? /fsubsetP sub ->]]].
@@ -1858,9 +1889,82 @@ Proof.
   rewrite -(inj_eq encode_inj) /= ?(encode_fresh, encode_iter) encode0 add1n.
   case: ifP=> [/eqP->|]; case: ifP=> //=; first by rewrite ltnn.
   move=> *; rewrite nth_default //= size_map; lia.
+Qed. *)
+
+Lemma of_seq_rcons l ls: 
+  l != bot ->
+  lFsPoset.of_seq E L bot (rcons ls l) = 
+  lfsp_add_event 
+    l
+    (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i1])
+    (iter (size ls) fresh \i1)
+    (lFsPoset.of_seq E L bot ls).
+Proof.
+Admitted.
+
+Lemma bhom_add_event (f : E -> E) p q f1 f2 es1 es2 l : 
+  is_bhom (f : [Event of q] -> [Event of p]) ->
+  es1 `<=` finsupp p -> es2 `<=` finsupp q ->
+  f1 \notin finsupp p -> f2 \notin finsupp q ->
+  l != bot -> 
+  {subsumes es2 <= es1 : e1 e2 / f e1 <= e2} ->
+  bhom_le (lfsp_add_event l es1 f1 p) (lfsp_add_event l es2 f2 q).
+Proof. Admitted.
+
+Lemma max_of_seq ls e :
+  bot \notin ls ->
+  e \in finsupp (lFsPoset.of_seq E L bot ls) ->
+  e <=^i iter (size ls).-1 fresh \i1.
+Proof.
+  move=> ?. 
+  rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_finsupp ?inE //= in_nfresh.
+  rewrite /(_ <=^i _) /Order.POrder.le /= /Ident.Def.ident_le encode_iter.
+  rewrite encode1; lia.
 Qed.
 
 Lemma lfsp_lang_lin tr : 
+  let emp := lFsPoset.empty E L bot in 
+  let p := lst_state emp tr in
+  tr \in trace_lang emp -> (map lbl tr) \in lin p.
+Proof.
+  case: tr=> /= t it; rewrite /trace_lang /lin ?inE /(_ \in _) /=.
+  elim/last_ind: t it=> //= [_ _|].
+  - have ->: lFsPoset.of_seq E L bot [::] = lFsPoset.empty E L bot.
+    - apply/val_inj; rewrite /lFsPoset.of_seq; case: eqP=>//=*.
+      apply/lFsPrePoset.eq_emptyE; by rewrite lFsPrePoset.of_seq_size.
+    exact/bhom_le_refl.
+  move=> t [l s1 s2] IHt; rewrite is_trace_rcons=> /andP[].
+  case/lfsp_ltransP=> /= ? [es [f [?? ess e /andP[]]]].
+  move=> /[dup]it {}/IHt IHt /eqP/=adj fs.
+  rewrite map_rcons /= lst_state_rcons /= e.
+  have: lFsPoset.empty E L bot == fst_state (lFsPoset.empty E L bot) t.
+  - by case: (t) (fs).
+  have: s1 = lst_state (lFsPoset.empty E L bot) t.
+  - by case: (t) (fs) (adj)=> //= /eqP->.
+  move=>/[dup] s1E ->.
+  case/IHt/bhom_leP=> /= ? bh; rewrite of_seq_rcons=> //.
+  have nb: bot \notin [seq lbl i | i <- t].
+  - apply/mapP=>-[[/=>]]; case/andP: it=> als ? /(allP als) /lfsp_ltransP[].
+    by move=> /eqP F _ /esym/F.
+  apply/(bhom_add_event bh)=> //.
+  - case: ifP=> [|ne]; first by case: (t).
+    rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_finsupp //.
+    rewrite size_map fsub1set inE; apply/path.trajectP.
+    exists (size t).-1=> //; by case: (t) (ne).
+  - by rewrite -s1E.
+  - rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_finsupp //.
+    rewrite size_map inE; apply/path.trajectP=> -[?/[swap]].
+    move/(congr1 encode); rewrite ?encode_iter {IHt fs nb s1E e}; lia.
+  - by rewrite -s1E.
+  case: ifP=> [|?>].
+  - case: (t) (fs) (ess)=> //= /eqP<-; rewrite finsupp0 fsubset0.
+    by move/eqP=>->*>; rewrite inE.
+  move/(fsubsetP ess).
+  exists (iter (size (labels t)).-1 fresh \i1); rewrite ?inE//.
+  by apply/(max_of_seq nb)/(bhom_suppf bh); rewrite -s1E.
+Qed.
+
+(*Lemma lfsp_lang_lin tr : 
   let emp := lFsPoset.empty E L bot in 
   let p := lst_state emp tr in
   tr \in trace_lang emp -> (map lbl tr) \in lin p.
@@ -1886,7 +1990,7 @@ Qed.
 
 Arguments measure_lst {_ _ _} _ _.
 
-Lemma lfsp_lin_lang tr : 
+Lemma lfsp_lin_lang tr: 
   let emp := lFsPoset.empty E L bot in 
   let p := lst_state emp tr in
   map lbl tr \in lin p -> tr \in trace_lang emp.
@@ -1902,7 +2006,20 @@ Proof.
   case/lfsp_ltransP=> /eqP + ?; exact.
 Qed.
 
-End Theory.
-End Theory.  
+Lemma lin_lang p (l : seq L) : 
+  let emp := lFsPoset.empty E L bot in 
+  l \in lin p -> 
+  exists tr, 
+    [/\ tr \in trace_lang emp, 
+        lst_state p tr = p   & 
+        labels tr = l].
+Proof.
+  rewrite /= inE; elim: l p => [p ? |].
+  - exists [trace]; split=> //=; by rewrite /trace_lang/(_ \in _) //=.
+
+Qed.*)
+
+End Linearization.
+End Linearization.  
 
 End lFsPosetLTS.
