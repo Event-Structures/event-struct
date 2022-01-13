@@ -278,7 +278,7 @@ Implicit Types (p : @thrd_pomset E L Tid).
 Definition causal_relab (Q : pomlang E L bot) : thrd_pomlang E L Tid := 
   fun p => exists f, exists q, exists e,
     let es := 
-      [fset e' in finsupp p | eq_tid p e e' || ~~ is_read (fs_dlab p e)] 
+      [fset e' in finsupp p | eq_tid p e e' || ~~ is_read (fs_dlab p e')] 
     in
     [/\ is_val_relab p es f
       , e \in finsupp p, lfsp_is_max p e
@@ -292,4 +292,38 @@ Definition causal_cst d p :=
   eq (po p) \supports (causal d).  
 
 End CausalCst.
+
+
+Section PipeCst. 
+Context {E : identType} {L : labType}.
+Context {Tid : identType}.
+(* data-type semantics *)
+Context (DS : ltsType L).
+(* thread semantics *)
+Context (TS : ltsType L).
+
+Implicit Types (d : DS) (s : TS).
+Implicit Types (p : @thrd_pomset E L Tid).
+
+(* Pipelined relabeled threaded pomset language w.r.t. 
+ * thread t and pomset language Q.
+ * Pomset p belongs to this language if: 
+ * (1) p is relabeling of some q \in Q such that this relabeling
+ *   (1.1) preserves labels of all events from the thread t 
+ *         and all writes events (i.e. non-reads);
+ *   (1.2) preserves types (i.e. reads/writes) of all events.
+ *)
+Definition pipe_relab (t : Tid) (Q : pomlang E L bot) : thrd_pomlang E L Tid :=
+  fun p => exists f, exists q,
+    let es := 
+      [fset e' in finsupp p | (fs_tid p e' == t) || ~~ is_read (fs_dlab p e')] 
+    in
+    [/\ is_val_relab p es f
+      , Q q & q = Pomset.relabel f p
+    ].
+
+Definition pipe_cst d p := 
+  forall t, eq (po p) \supports (pipe_relab t (lts_pomlang d)).
+
+End PipeCst.
 
