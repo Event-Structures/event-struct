@@ -163,6 +163,10 @@ Definition lfsp_dw_clos p es :=
 Definition lfsp_is_max p e := 
   [forall e' : finsupp p, (fs_ca p e (val e')) ==> (fs_ca p (val e') e)].
 
+Definition lfsp_equiv_partition p r : {fset {fset E}} := 
+  let part := equivalence_partition r [set: finsupp p] in
+  [fset [fset (val e) | e : finsupp p & (e \in (P : {set _}))] | P in part].
+
 (* TODO: move/restructure *)
 Context (L' : eqType) (bot' : L').
 Implicit Types (f : L -> L').
