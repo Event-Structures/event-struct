@@ -160,8 +160,12 @@ Definition lfsp_dw_clos p es :=
   [seq e <- finsupp p | [exists e' : es, fs_ca p e (val e')]].
 
 (* TODO: unify with UpFinPOrder *)
-Definition lfsp_is_max p e := 
+Definition lfsp_is_maximal p e := 
   [forall e' : finsupp p, (fs_ca p e (val e')) ==> (fs_ca p (val e') e)].
+
+(* TODO: unify with UpFinPOrder *)
+Definition lfsp_is_greatest p e := 
+  [forall e' : finsupp p, fs_ca p (val e') e].
 
 Definition lfsp_equiv_partition p r : {fset {fset E}} := 
   let part := equivalence_partition r [set: finsupp p] in
@@ -1666,6 +1670,10 @@ Qed.
 
 Definition restrict P p := mklFsPoset (restrictP P p).
 
+Lemma restrict_valE P p : 
+  val (restrict P p) = lFsPrePoset.restrict P p.
+Proof. done. Qed.
+
 End Restrict.
 
 Section Relabel.
@@ -2681,7 +2689,7 @@ Coercion lfsposet_of p : lfsposet E L bot := repr p.
 (* TODO: specialize lemma event further? use is_iso equivalence directly? *)
 Lemma pomP q : 
   pi_spec pomset_quotType q (repr (pom q)).
-Proof. by case: piP. Qed.
+Proof. by case: piP. Qed. 
 
 End Def.
 End Def.
