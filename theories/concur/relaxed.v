@@ -217,6 +217,13 @@ Proof. by rewrite /eq_tid=> ??? /eqP-> /eqP->. Qed.
 Definition po p : thrd_pomset E L Tid := 
   Pomset.inter_rel (eq_tid p) (@eqtid_refl p) (@eqtid_trans p) p.
 
+Definition po_spec p := 
+  {in (fs_tids p), forall t, exists (s0 : TS),
+    let es := [fset e | e in finsupp p & (fs_tid p e == t)] in
+    let pt := Pomset.restrict (mem es) p in
+    (lts_pomlang s0 : pomlang E L bot) (Pomset.relabel lab_prj pt)
+  }.
+
 End ProgramOrder.
 
 
