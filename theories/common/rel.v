@@ -43,6 +43,47 @@ Import Order.LTheory.
 Local Open Scope order_scope.
 Local Open Scope ra_terms.
 
+Section Rel.
+Context {T : Type}.
+Implicit Types (r : rel T). 
+
+Lemma refl_cap r1 r2 :
+  reflexive r1 -> reflexive r2 -> reflexive (r1 ⊓ r2).
+Proof. by move=> refl1 refl2 x /=; apply/andP. Qed.
+
+Lemma antisym_cap r1 r2 :
+  antisymmetric r1 -> antisymmetric (r1 ⊓ r2).
+Proof. 
+  move=> asym x y /=. 
+  rewrite -andbA=> /and4P[????].
+  by apply/asym/andP.
+Qed.
+
+Lemma trans_cap r1 r2 :
+  transitive r1 -> transitive r2 -> transitive (r1 ⊓ r2).
+Proof. 
+  move=> trans1 trans2 z x y /=. 
+  move=> /andP[??] /andP[??]; apply/andP. 
+  by firstorder.
+Qed.
+
+Lemma eq_irrefl r1 r2 : 
+  r1 =2 r2 -> irreflexive r1 <-> irreflexive r2.
+Proof. 
+  move=> eqr; split=> irr x. 
+  - rewrite -eqr; exact/irr.
+  rewrite eqr; exact/irr.
+Qed.
+
+Lemma eq_antisym r1 r2 : 
+  r1 =2 r2 -> antisymmetric r1 <-> antisymmetric r2.
+Proof. 
+  move=> eqr; split=> anti x y.
+  - rewrite -eqr -eqr; exact/anti.
+  rewrite !eqr; exact/anti.
+Qed.
+
+End Rel. 
 
 Section FinGraph. 
 Context {T : finType}.
@@ -70,6 +111,10 @@ Lemma totalP g :
   reflect (total g) (totalb g).
 Proof. exact/forall2P. Qed.
 
+Lemma connect_refl g : 
+  reflexive (connect g).
+Proof. done. Qed. 
+
 Lemma preacyclicE g :
   preacyclic g = antisymmetricb (connect g).
 Proof. done. Qed.
@@ -77,10 +122,6 @@ Proof. done. Qed.
 Lemma acyclicE g :
   acyclic g = irreflexiveb g && antisymmetricb (connect g).
 Proof. done. Qed.
-
-Lemma connect_refl g : 
-  reflexive (connect g).
-Proof. done. Qed. 
 
 Lemma acyc_irrefl g :
   acyclic g -> irreflexive g.
@@ -118,6 +159,41 @@ Qed.
 
 End FinGraph. 
 
+Section SubFinGraph. 
+Context {T : choiceType} {fT : {fset T}}.
+Implicit Types (g : rel fT). 
+
+Lemma sub_rel_lift_connect g : 
+  (sub_rel_lift g : hrel T T)^* ≡ (sub_rel_lift (connect g) : hrel T T)^?.
+Proof. 
+  move=> x y; split.
+  - move=> /clos_rt_str; elim.
+    + move=> {}x {}y /=.
+      rewrite /sub_rel_lift /=.
+      case: insubP=> //.
+      case: insubP=> //.
+      move=> ???????; right; exact/connect1.
+    + by move=> {}x /=; left.
+    move=> ???? [->|xy] ? [<-|yz] /=; [left|right|right|] => //. 
+    right; apply/(sub_rel_lift_trans _ xy yz).
+    exact/connect_trans.
+  move=> xy; apply/clos_rt_str.
+  move: xy; rewrite /sub_rel_lift /=.
+  move=> [->|].
+  - exact/rt_refl.
+  case: insubP=> //.
+  case: insubP=> //.
+  move=> /= y' yIn <- x' xIn <-.
+  move=> /connect_strP/clos_rt_str; elim. 
+  - move=> /= x'' y'' xy; apply/rt_step. 
+    rewrite !insubT //. 
+    move=> ??; rewrite !sub_val //.
+  - move=> ?; exact/rt_refl.
+  move=> ???? xy ? yz; apply/rt_trans; [exact/xy | exact/yz].
+Qed.
+
+End SubFinGraph.
+
 Section RelMono. 
 Context {T U : Type}.
 Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
@@ -144,14 +220,13 @@ End RelMono.
 
 Section FinGraphMono. 
 Context {T U : finType}.
-Variables (f : T -> U) (g1 : rel T) (g2 : rel U).
-Hypothesis (fbij : bijective f).
-Hypothesis (fmon : {mono f : x y / g1 x y >-> g2 x y}).
+Implicit Types (f : T -> U) (gT : rel T) (gU : rel U).
 
-Lemma connect_mono : 
-  {mono f : x y / connect g1 x y >-> connect g2 x y}.
+Lemma connect_mono f gT gU : bijective f -> 
+  {mono f : x y / gT x y >-> gU x y} ->
+  {mono f : x y / connect gT x y >-> connect gU x y}.
 Proof. 
-  move=> x y; apply/idP/idP; last first.
+  move=> fbij fmon x y; apply/idP/idP; last first.
   all: move=> /connect_strP/clos_rt_str/=> crt. 
   all: apply/connect_strP/clos_rt_str. 
   - elim: crt=> // [|??? _ + _]; last exact/rt_trans.
@@ -199,6 +274,10 @@ Proof.
   split; case=> ???; split=> //; try exact/eqP; 
     exact/(negPP existsP).
 Qed.
+
+Lemma cov_irrefl r : 
+  irreflexive (cov r).
+Proof. by move=> x; apply/negP=> /andP[]; rewrite eq_refl. Qed.
 
 Lemma cov_sliceP r x y : 
   let t := tseq (rgraph r) in

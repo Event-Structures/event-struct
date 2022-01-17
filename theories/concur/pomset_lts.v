@@ -28,6 +28,36 @@ Local Open Scope lposet_scope.
 Local Open Scope pomset_scope.
 
 
+(* TODO: consider decidable/bool languages only? *)
+Notation pomlang E L bot := (pomset E L bot -> Prop).
+
+Module Export PomLang.
+Section PomLang.
+Context (E : identType) (L : choiceType) (bot : L).
+Context (S : ltsType L).
+Implicit Types (l : L) (s : S).
+Implicit Types (p : pomset E L bot).
+
+(* TODO: this should be simplified *)
+Definition lts_pomlang s : pomlang E L bot := 
+  fun p => exists2 ls, p = @Pomset.of_seq E L bot ls & lts_lang s ls. 
+
+(* TODO: for bool-languages it can be stated using {subsumes} notation *)
+Definition subsumes : pomlang E L bot -> pomlang E L bot -> Prop := 
+  fun P Q => forall p, P p -> exists q, Q q /\ bhom_le p q.
+
+(* TODO: for bool-languages it can be stated using {subsumes} notation *)
+Definition supports : pomlang E L bot -> pomlang E L bot -> Prop := 
+  fun P Q => forall p, P p -> exists q, Q q /\ bhom_le q p.
+
+End PomLang.
+End PomLang.
+
+(* TODO: remove these notations? *)
+Notation "P '\subsumes' Q" := (subsumes P Q) (at level 40, no associativity).
+Notation "P '\supports' Q" := (supports P Q) (at level 40, no associativity).
+
+
 Module Export AddEvent.
 
 Module Export Def.
