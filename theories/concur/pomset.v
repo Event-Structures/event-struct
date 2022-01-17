@@ -1532,6 +1532,9 @@ Definition lift (ff : [FinEvent of p] -> [FinEvent of q]) :
   [Event of p] -> [Event of q] := 
     sub_lift (fun e => fresh_seq (finsupp q)) (fun e => val (ff e)).
 
+(* TODO: think about better naming convention for this 
+ *   and the following lemmas 
+ *)
 Lemma hom_mixin ff : 
   lPoset.Hom.Hom.mixin_of (lift ff).
 Proof.
@@ -1600,6 +1603,94 @@ Definition fhom_of f :
 End Hom.
 End Hom.
 
+
+Module Export iHom.
+Section iHom.
+Context {E1 E2 : identType} {L : eqType} {bot : L}.
+Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Implicit Types (f : {hom [Event of p] -> [Event of q]}).
+Implicit Types (ff : { ffun [FinEvent of p] -> [FinEvent of q] 
+                     | lFinPoset.ihom_pred }).
+
+Lemma fihom_inj ff : 
+  { in (finsupp p) &, injective (Hom.lift ff) }.
+Proof. 
+  pose f := lFinPoset.ihom_of_fihom ff.  
+  rewrite /Hom.lift => /= e1 e2 e1In e2In.
+  rewrite !sub_liftT=> //=.  
+  by move=> /val_inj/(@ihom_inj _ _ _ f)/sub_inj.
+Qed.
+
+Lemma ihom_pred_of_ihom f : 
+  { in (finsupp p) &, injective f } -> lFinPoset.ihom_pred (Hom.restr f).
+Proof. 
+  move=> finj.
+  rewrite /lFinPoset.ihom_pred /=.
+  apply/andP; split.
+  - exact/Hom.hom_pred_of_hom. 
+  apply/injectiveP=> e1 e2; rewrite /Hom.restr !ffunE.
+  move=> /sub_inj/(finj _ _ (valP e1) (valP e2)); exact/val_inj.
+Qed.
+
+End iHom.
+
+Module PreOrder.
+Section hPreOrder.
+Context {E1 E2 : identType} {L : eqType} {bot : L}.
+Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+
+(* TODO: rename bhom_preord? *)
+Definition ihom_le p q := 
+  let EP := [FinEvent of p] in
+  let EQ := [FinEvent of q] in
+  ??|{ffun EQ -> EP | lFinPoset.ihom_pred}|.
+
+Lemma ihom_leP p q :
+  reflect 
+    (exists (f : {hom [Event of q] -> [Event of p]}), 
+      {in (finsupp q) &, injective f})
+    (ihom_le p q).
+Proof. 
+  rewrite /ihom_le; apply/(equivP idP); split.
+  - move=> /fin_inhP [] f. 
+    pose fi := lFinPoset.fhom_of_fihom f.
+    exists (Hom.of_fhom fi).
+    exact/fihom_inj. 
+  move=> [f] finj; apply/fin_inhP. 
+  exists; exists (Hom.restr f).
+  exact/(ihom_pred_of_ihom finj).
+Qed.
+
+Lemma ihom_le_size p q :
+  ihom_le p q -> fs_size q <= fs_size p.
+Proof.
+  rewrite /ihom_le /fs_size ?cardfE=> /lFinPoset.fihomP[/=] f.
+  exact/leq_card/(@ihom_inj _ _ _ f).
+Qed.
+
+End hPreOrder.
+
+Section PreOrder.
+Context (E : identType) (L : eqType) (bot : L).
+Implicit Types (p q : lfsposet E L bot).
+
+(* TODO: this relation should also be heterogeneous? *)
+Definition ihom_lt : rel (lfsposet E L bot) := 
+  fun p q => (q != p) && (ihom_le p q).
+
+Lemma ihom_lt_def p q : ihom_lt p q = (q != p) && (ihom_le p q).
+Proof. done. Qed.
+
+Lemma ihom_le_refl : reflexive (@ihom_le E E L bot). 
+Proof. move=> ?; exact/lFinPoset.ihom_refl. Qed.
+
+Lemma ihom_le_trans : transitive (@ihom_le E E L bot). 
+Proof. move=> ??? /[swap]; exact/lFinPoset.ihom_trans. Qed.
+
+End PreOrder.
+End PreOrder.
+
+End iHom.
 
 Module Export bHom.
 Section bHom.
