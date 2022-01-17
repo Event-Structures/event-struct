@@ -171,6 +171,9 @@ Implicit Types (p q : @thrd_pomset E L Tid).
 Definition fs_tid p e := 
   fst (fs_lab p e).
 
+Definition fs_tids p := 
+  [fset (fs_tid p e) | e in finsupp p].
+
 Definition fs_dlab p e := 
   snd (fs_lab p e).
 
@@ -323,7 +326,7 @@ Definition pipe_relab (t : Tid) (Q : pomlang E L bot) : thrd_pomlang E L Tid :=
     ].
 
 Definition pipe_cst d p := 
-  forall t, eq (po p) \supports (pipe_relab t (lts_pomlang d)).
+  {in (fs_tids p), forall t, 
+    eq (po p) \supports (pipe_relab t (lts_pomlang d))}.
 
 End PipeCst.
-
