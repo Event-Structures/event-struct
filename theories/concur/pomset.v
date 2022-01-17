@@ -1863,7 +1863,7 @@ Qed.
 Lemma lfsp_lang_lin tr : 
   let emp := lFsPoset.empty E L bot in 
   let p := lst_state emp tr in
-  tr \in trace_lang emp -> (map lbl tr) \in lin p.
+  tr \in trace_lang emp -> labels tr \in lin p.
 Proof. 
   move=> emp p inTr; rewrite /lin inE /=.
   pose q := lFsPoset.of_seq E L bot (map lbl tr).
@@ -1879,23 +1879,21 @@ Proof.
   rewrite !lFsPrePoset.of_seq_finsupp //=.
   rewrite lfsp_trace_finsupp //= !in_fset /= !size_labels. 
   have op: operational p.
-  - exact/(invarianl_trace_lan invariant_operational)/opetaional0.
+  - exact/(invariant_trace_lan invariant_operational)/opetaional0.
   move=> in1 in2 /(fs_ca_ident_le)-/(_ _ _ op)-> //.
   by apply/orP; right; apply/and3P.
 Qed.
 
-Arguments measure_lst {_ _ _} _ _.
-
 Lemma lfsp_lin_lang tr : 
   let emp := lFsPoset.empty E L bot in 
   let p := lst_state emp tr in
-  map lbl tr \in lin p -> tr \in trace_lang emp.
+  labels tr \in lin p -> tr \in trace_lang emp.
 Proof.
   move=> /=; rewrite /trace_lang ?/(_ \in _) /= /lin /=.
   move/bhom_le_size; rewrite lFsPoset.of_seq_size ?size_map.
   - move=> sizeE; apply/eqP/esym/val_inj/lFsPrePoset.eq_emptyE=> /=.
     set f := [eta (@fs_size E L bot)]: lfsposet _ _ _ -> nat.
-    move: (measure_lst f S) sizeE=> /=; rewrite /f /==> ->>.
+    move: (@measure_lst _ _ _ f S) sizeE=> /=; rewrite /f /==> ->>.
     - by rewrite iter_succn; lia.
     by move/lfsp_ltransP=> [? [??->]];rewrite lfsp_add_eventE.
   case: tr=> /= ? /andP[/allP /= i ?]; apply/mapP=>-[/= [> /i + ?]].

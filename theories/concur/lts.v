@@ -571,6 +571,10 @@ Definition adjoin : traceSeq S -> traceSeq S -> traceSeq S :=
 Definition mk_trace tr mkTr : trace :=
   mkTr (let: Trace _ trP := tr return is_trace tr in trP).
 
+(* TODO: move to a separate submodule? *)
+Definition invariant (p : pred S) :=
+  forall s s', s --> s' -> p s -> p s'.
+
 End Def. 
 
 Arguments adjoint : simpl never.
@@ -830,16 +834,16 @@ Proof. exact/eqxx. Qed.
 Lemma lts_lang0 s : lts_lang s [::].
 Proof. (exists [trace])=> //; exact/trace_lang0. Qed.
 
-Section measure.
 
+Section Measure.
 Context {M : Type}.
-Context (μ : S -> M) (Δ : M -> M).
+Context (m : S -> M) (delta : M -> M).
 
 Hypothesis delta_step : 
-  forall s s' l, s --[l]--> s' -> μ s' = Δ (μ s).
+  forall s s' l, s --[l]--> s' -> m s' = delta (m s).
 
 Lemma measure_lst s tr : 
-  μ (lst_state s tr) = iter (size tr) Δ (μ (fst_state s tr)).
+  m (lst_state s tr) = iter (size tr) delta (m (fst_state s tr)).
 Proof.
   case: tr; elim=> //= -[??? /= [_|>/[swap]]]; rewrite is_trace_cons.
   - by case/and3P=>st*; apply/delta_step/st.
@@ -847,11 +851,9 @@ Proof.
   rewrite -iterSr; exact.
 Qed.
 
-End measure.
+End Measure.
 
-
-Definition invariant (p : pred S) :=
-  forall s s', s --> s' -> p s -> p s'.
+Section Invariant.
 
 Lemma trace_invariant p s tr : 
   invariant p -> p (fst_state s tr) -> p (lst_state s tr).
@@ -864,13 +866,13 @@ Proof.
   rewrite -E; apply/IHt; by case: (t) pf.
 Qed.
 
-Lemma invarianl_trace_lan p s tr : 
-  invariant p -> tr \in trace_lang s -> 
-  p s -> p (lst_state s tr).
+Lemma invariant_trace_lan p s tr : 
+  invariant p -> tr \in trace_lang s -> p s -> p (lst_state s tr).
 Proof.
   by move/trace_invariant=> /(_ s tr)/[swap]/eqP<-/[apply].
 Qed.
 
+End Invariant.
 
 End LTSTheory.
 
