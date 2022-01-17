@@ -2,6 +2,7 @@ From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path zify.
 From mathcomp Require Import fintype finfun fingraph finmap.
+From mathcomp Require Import generic_quotient.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 
 Set Implicit Arguments.
@@ -1486,3 +1487,29 @@ Proof.
 Qed.  
 
 End FinMapUtils.
+
+
+Section QuotUtils.
+Variables (T : Type) (e : rel T) (Q : eqQuotType e).
+
+Lemma eqquot_eqP (x y : Q) :
+  reflect (x = y) (e (repr x) (repr y)).
+Proof. by apply/equivP; first exact/eqquotP; rewrite !reprK. Qed.
+
+Lemma eqquot_eqE (x y : Q) :
+  (x == y) = (e (repr x) (repr y)).
+Proof. exact/eqP/eqquot_eqP. Qed.
+
+Lemma piK (x : T) :
+  (repr (\pi_Q x) = x %[mod Q])%qT.
+Proof. by rewrite reprK. Qed.
+
+Lemma eqquot_piE (x : Q) (y : T) :
+  x == (\pi y)%qT = e (repr x) y.
+Proof.
+  rewrite eqquot_eqE; apply/etrans. 
+  - by rewrite -(@eqquotE T e Q) piK.
+  by rewrite -(@eqquotE T e Q). 
+Qed.
+
+End QuotUtils.
