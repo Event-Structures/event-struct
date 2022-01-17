@@ -1650,24 +1650,17 @@ Qed.
 End bHom.
 
 Module PreOrder.
-Section PreOrder.
-Implicit Types (E : identType) (L : eqType).
+Section hPreOrder.
+Context {E1 E2 : identType} {L : eqType} {bot : L}.
+Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 
 (* TODO: rename bhom_preord? *)
-Definition bhom_le E1 E2 L bot : lfsposet E1 L bot -> lfsposet E2 L bot -> bool 
-  := fun p q => 
-       let EP := [FinEvent of p] in
-       let EQ := [FinEvent of q] in
-       ??|{ffun EQ -> EP | lFinPoset.bhom_pred}|.
+Definition bhom_le p q := 
+  let EP := [FinEvent of p] in
+  let EQ := [FinEvent of q] in
+  ??|{ffun EQ -> EP | lFinPoset.bhom_pred}|.
 
-(* TODO: this relation should also be heterogeneous? *)
-Definition bhom_lt E L bot : rel (lfsposet E L bot) := 
-  fun p q => (q != p) && (bhom_le p q).
-
-Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
-  [pred ls | bhom_le (lFsPoset.of_seq E L bot ls) p].
-
-Lemma bhom_leP E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+Lemma bhom_leP p q :
   reflect 
     (exists (f : {hom [Event of q] -> [Event of p]}), 
       {on (finsupp p), bijective f})
@@ -1684,16 +1677,25 @@ Proof.
   exact/(bhom_pred_of_bhom fbij).
 Qed.
 
-Lemma bhom_le_size E1 E2 L bot 
-  (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+Lemma bhom_le_size p q :
   bhom_le p q -> fs_size p = fs_size q.
 Proof.
   rewrite /bhom_le /fs_size ?cardfE=> /lFinPoset.fbhomP[/=] f.
   by move: (bij_eq_card (bhom_bij f)).
 Qed.
 
+End hPreOrder.
+
+Section PreOrder.
 Context (E : identType) (L : eqType) (bot : L).
 Implicit Types (p q : lfsposet E L bot).
+
+(* TODO: this relation should also be heterogeneous? *)
+Definition bhom_lt : rel (lfsposet E L bot) := 
+  fun p q => (q != p) && (bhom_le p q).
+
+Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
+  [pred ls | bhom_le (lFsPoset.of_seq E L bot ls) p].
 
 Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
 Proof. done. Qed.
