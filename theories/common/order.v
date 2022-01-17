@@ -301,6 +301,11 @@ Lemma pidealE x y :
   x \in (pideal y) = (x <= y).
 Proof. by move: x y; case: T=> [? [? []]]. Qed.
 
+(* TODO: rename? *)
+Lemma pidealx x : 
+  x \in pideal x.
+Proof. by rewrite pidealE. Qed.
+
 Lemma up_closP P x : 
   reflect (exists2 y, y <= x & y \in P) (x \in up_clos P). 
 Proof. 
