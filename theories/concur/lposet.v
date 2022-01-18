@@ -634,8 +634,11 @@ Section ClassDef.
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
+Definition axiom f := 
+  forall e1 e2, f e1 <= f e2 -> e1 <= e2.
+
 Record mixin_of f := Mixin {
-  _ : forall e1 e2, f e1 <= f e2 -> e1 <= e2;
+  _ : axiom f;
 }.
 
 Set Primitive Projections.
@@ -720,7 +723,7 @@ Context {L : Type}.
 Implicit Types (E : eventType L).
 
 Lemma id_class {E} : Emb.class_of (@idfun E).
-Proof. by constructor=> //; exists id. Qed.
+Proof. by repeat constructor. Qed.
 
 Lemma comp_mixin {E1 E2 E3} (f : {emb  E1 -> E2}) (g : {emb E2 -> E3}) : 
   Emb.mixin_of (g \o f).
@@ -987,7 +990,7 @@ Context {L : Type}.
 Implicit Types (E : eventType L).
 
 Lemma id_class {E} : Iso.class_of (@idfun E).
-Proof. constructor=> //; exact/bHom.Build.id_class. Qed.
+Proof. by repeat constructor=> //; exact/bHom.Build.id_class. Qed.
 
 Lemma inv_class {E1 E2} (f : {iso E1 -> E2}) :
   Iso.class_of (invF f).
