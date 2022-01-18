@@ -151,7 +151,6 @@ Definition lfsp_dw_clos p es :=
 
 Definition fs_size p : nat := #|` finsupp p|.
 
-
 End Def.
 
 Arguments fs_lab {E L bot} p.
@@ -1808,6 +1807,7 @@ Export lFsPoset.Def.
 Export lFsPoset.Instances.
 Export lFsPoset.Syntax.
 Export lFsPoset.Theory.
+Export lFsPoset.iHom.PreOrder.
 Export lFsPoset.bHom.PreOrder.
 
 
@@ -1865,6 +1865,11 @@ Implicit Types (p : pomset).
 
 Coercion lfsposet_of p : lfsposet E L bot := repr p.
 
+(* TODO: specialize lemma event further? use is_iso equivalence directly? *)
+Lemma pomP q : 
+  pi_spec pomset_quotType q (repr (pom q)).
+Proof. by case: piP. Qed.
+
 End Def.
 End Def.
 
@@ -1876,7 +1881,7 @@ Implicit Types (p : pomset E L bot).
 Implicit Types (ls : seq L).
 
 Definition of_seq ls : pomset E L bot := 
-  \pi (@lFsPoset.of_seq E L bot ls).
+  pom (@lFsPoset.of_seq E L bot ls).
 
 End OfSeq.
 
@@ -1940,7 +1945,8 @@ Lemma pi_bhom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   bhom_le (repr (pom p)) (repr (pom q)) = bhom_le p q.
 Proof.
   rewrite /bhom_le. 
-  case: piP piP=> q' /eqmodP/lFinPoset.fisoP[f] [p' /eqmodP/lFinPoset.fisoP[g]].
+  case: pomP=> q' /eqmodP/lFinPoset.fisoP[f]. 
+  case: pomP=> p' /eqmodP/lFinPoset.fisoP[g].
   apply/lFinPoset.fbhomP/lFinPoset.fbhomP=> [][h]; exists.
   - exact/[bhom of lPoset.Iso.Build.inv g \o h \o f].
   exact/[bhom of g \o h \o lPoset.Iso.Build.inv f].
