@@ -752,6 +752,10 @@ Proof.
   by move=> ?? [] /IH H; apply/H. 
 Qed.
 
+Lemma mkseq_in_uniq (f : nat -> T) n : 
+  { in iota 0 n &, injective f } -> uniq (mkseq f n).
+Proof. by move/map_inj_in_uniq ->; apply: iota_uniq. Qed.
+
 End SeqEqUtils.
 
 Section Slice.
@@ -1225,54 +1229,46 @@ Qed.
 
 End FindNthMkMask.
 
-Section MkMaskMask.
-Context {T : Type} {n m : nat}.
-Variables (t : n.-tuple T) (u : m.-tuple T) (f : 'I_n -> 'I_m).
-Let s := mkseq (sub_lift (addn m) f) n.
+Section MaskMkMask.
+Context {T : Type} {x : T}. (* {n m : nat} *)
+(* Variables (t : n.-tuple T) (u : m.-tuple T) (f : 'I_n -> 'I_m).  *)
+Variables (t u : seq T).
+Variables (f : nat -> nat).
 
-Hypothesis (Hhm  : {homo f : x y / x < y}).
-Hypothesis (Hinj : injective f).
-Hypothesis (Hnm  : forall i, f i < m).
-Hypothesis (Hnth : forall i, tnth t i = tnth u (f i)).
+Let n := size t.
+Let m := size u.
+Let s := mkseq f n.
+Let D := iota 0 n.
+(* Let D := ltn^~ n : pred nat. *)
 
-Lemma mkmask_mask :
+Hypothesis (le_nm : n <= m).
+Hypothesis (Hhm   : { in D &, {homo f : x y / x < y}}).
+Hypothesis (Hinj  : { in D &, injective f}).
+Hypothesis (Hnm   : { in D, forall i, f i < m}).
+Hypothesis (Hnth  : { in D, forall i, nth x t i = nth x u (f i)}).
+
+Lemma mask_mkmask :
   mask (mkmask s m) u = t.
 Proof. 
-  (* move=> Hfh Hf Hm Hn. *)
-  have Ha: all (fun i : nat => i < m) s.
+  have all_lt: all (fun i : nat => i < m) s.
   - apply/allP=> i /(nthP 0) [j]. 
-    rewrite size_mkseq=> Hj <-.
-    by rewrite nth_mkseq // sub_liftT.
-  have Hsz: size (mask (mkmask s m) u) = size t.
-  - rewrite size_mask ?size_mkmask ?count_mkmask ?size_tuple //.
-    apply/mkseq_uniq/sub_lift_inj.
-    + by move=> {}x {}y; move: (valP (f y))=> /[swap] /= <-; lia.
-    + by move=> ??; apply/addnI. 
-    by move=> ???; apply/Hinj/val_inj. 
-  have Hsz': size (mask (mkmask s m) u) = n.
-  - by rewrite Hsz size_tuple.
-  apply/(@eq_from_tuple _ _ _ Hsz).
-  rewrite tvalK; apply/eq_from_tnth.
-  move=> i; rewrite tcastE /tnth /=.
-  have Hi: i < n by move: i=> []; rewrite size_tuple.
-  rewrite nth_mask ?find_nth_mkmask=> //; last first.
-  - by rewrite size_mkmask ?size_tuple //.
-  - rewrite size_mkseq; apply/andP; split=> //.
-    move: Hinj Hi=> /leq_card /=. 
-    by rewrite !card_ord.
-  - apply/homo_sorted; last by exact/iota_ltn_sorted.
-    apply/sub_lift_homo=> //=; [lia| ..]; last first.
-    + by move=> ?? /=; rewrite ltn_add2l.
-    move=> {}x {}y /= /negP; rewrite -leqNgt=> Hyn.
-    rewrite -[val (f x)]addn0 -addnS; apply/leq_add. 
-    - by apply/ltnW; move: (valP (f x)). 
-   apply/(leq_trans _ Hyn); lia.
-  rewrite -tnth_nth tcastE esymK Hnth. 
-  have ->: cast_ord (size_tuple t) i = Ordinal Hi by exact/val_inj.
-  by subst s; rewrite nth_mkseq // sub_liftT // -tnth_nth.
+    rewrite size_mkseq=> Hj <-. 
+    rewrite nth_mkseq //; apply/Hnm. 
+    by rewrite mem_iota.
+  have szmE : size (mkmask s m) = m.
+  - by rewrite size_mkmask ?size_nseq // all_map /=.
+  have szE: size (mask (mkmask s m) u) = n.
+  - rewrite size_mask ?szmE ?count_mkmask ?size_mkseq //.
+    by apply/mkseq_in_uniq.
+  apply/(@eq_from_nth _ x)=> //.
+  rewrite szE=> i Hi.
+  rewrite nth_mask ?find_nth_mkmask=> //.
+  - by subst s; rewrite nth_mkseq ?Hnth ?mem_iota //. 
+  - by apply/homo_sorted_in; [exact/Hhm | | exact/iota_ltn_sorted]. 
+  by rewrite size_mkseq; apply/andP. 
 Qed.
 
-End MkMaskMask.
+End MaskMkMask.
 
 Module Export SubFinFun.
 
