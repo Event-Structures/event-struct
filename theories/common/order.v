@@ -17,6 +17,29 @@ Local Open Scope order_scope.
 (*                                                                            *)
 (******************************************************************************)
 
+Section POrderUtils. 
+Context {disp : unit} {T : porderType disp}.
+Implicit Types (x y z : T).
+
+Lemma le_ge_incomp x y : 
+  [|| (x <= y), (x >= y) | (x >< y)].
+Proof. 
+  case: (x <= y)/idP=> //=.
+  case: (y <= x)/idP=> //=.
+  rewrite !negb_or=> /negP ? /negP ?; exact/andP.
+Qed.
+
+Lemma le_gt_incomp x y : 
+  [|| (x <= y), (x > y) | (x >< y)].
+Proof. 
+  move: (le_ge_incomp x y)=> /or3P[->||->] //.
+  rewrite le_eqVlt=> /orP[/eqP->|->] //.
+  by rewrite le_refl.
+Qed.
+
+End POrderUtils.
+
+
 Module Export MaxSup.
 Section Def.
 Context {disp : unit} {T : porderType disp}.
