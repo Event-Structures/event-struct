@@ -2162,7 +2162,7 @@ Implicit Types (E : identType) (L : choiceType).
 Import lPoset.Syntax.
 Import lFsPoset.Syntax.
 
-Lemma pi_bhom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+Lemma pom_bhom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   bhom_le (repr (pom p)) (repr (pom q)) = bhom_le p q.
 Proof.
   rewrite /bhom_le. 
@@ -2176,21 +2176,21 @@ Qed.
 Context {E : identType} {L : choiceType} {bot : L}.
 Implicit Types (p q : pomset E L bot). 
 
-Lemma pi_bhom_mono :
+Lemma pom_bhom_mono :
   {mono (@pom E L bot) : p q / bhom_le p q >-> bhom_le (repr p) (repr q)}.
-Proof. exact/pi_bhom_le. Qed.
+Proof. exact/pom_bhom_le. Qed.
 
-Canonical bhom_le_quote_mono2 := PiMono2 pi_bhom_mono.
+Canonical bhom_le_quote_mono2 := PiMono2 pom_bhom_mono.
 
 (* TODO: use bhom_le_refl *)
 Lemma pom_bhom_le_refl : 
   reflexive (@bhom_le E E L bot : rel (pomset E L bot)). 
-Proof. move=> ?; exact/lFinPoset.bhom_refl. Qed.
+Proof. exact/bhom_le_refl. Qed.
 
 (* TODO: use bhom_le_trans *)
 Lemma pom_bhom_le_trans : 
   transitive (@bhom_le E E L bot : rel (pomset E L bot)). 
-Proof. move=> ??? /[swap]; exact/lFinPoset.bhom_trans. Qed.
+Proof. exact/bhom_le_trans. Qed.
 
 (* TODO: move part of the proof to lposet.v (or lFsPoset) ? *)
 Lemma pom_bhom_le_antisym : 
@@ -2213,8 +2213,7 @@ Definition pomset_bhomPOrderMixin :=
 Canonical pomset_bhomPOrderType := 
   POrderType disp (pomset E L bot) pomset_bhomPOrderMixin.
 
-(* TODO: rename pom_bhom_leE? *)
-Lemma bhom_leE p q : p <= q = bhom_le p q.
+Lemma pom_bhom_leE p q : p <= q = bhom_le p q.
 Proof. done. Qed.
 
 End POrder.
