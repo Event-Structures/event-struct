@@ -2717,6 +2717,28 @@ End Def.
 
 Arguments tomset E L bot : clear implicits.
 
+Section OfSeq.
+Context (E : identType) (L : choiceType) (bot : L). 
+Implicit Types (p : lfspreposet E L bot).
+Implicit Types (ls : seq L).
+
+Lemma of_seq_total ls : 
+  let p := @Pomset.of_seq E L bot ls in
+  total (fin_ca p).   
+Proof. 
+  pose p := @lFsPoset.of_seq E L bot ls.
+  rewrite /Pomset.of_seq=> /= e1 e2.
+  move: (iso_eqv_pom p)=> /lFinPoset.fisoP [f]. 
+  move: (lFsPoset.of_seq_total (f e1) (f e2)).
+  repeat rewrite -fin_caE.
+  by rewrite !(ca_reflecting f).
+Qed.
+
+Definition of_seq ls := 
+  mkTomset (introT (totalP _) (@of_seq_total ls)).
+
+End OfSeq.
+
 Module Export Theory.
 Section Theory.
 Context {E : identType} {L : choiceType}.
