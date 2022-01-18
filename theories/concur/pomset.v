@@ -800,8 +800,8 @@ Implicit Types (p : lfspreposet E L bot).
 Implicit Types (ls : seq L).
 
 Definition of_seq ls := 
-  let fE  := [fset e | e in nfresh \i1 (size ls)] in 
-  let lab := fun e : fE => (nth bot (bot :: ls) (encode (val e))) in
+  let fE  := [fset e | e in nfresh \i0 (size ls)] in 
+  let lab := fun e : fE => (nth bot ls (encode (val e))) in
   let ca  := fun e1 e2 : E => e1 <=^i e2 in
   @build_cov E L bot fE lab ca.
 
@@ -809,17 +809,17 @@ Variable (ls : seq L).
 Hypothesis (lsD : bot \notin ls).
 
 Lemma of_seq_nth_defined : 
-  forall (e : [fset e | e in nfresh \i1 (size ls)]),
-    nth bot (bot :: ls) (@encode E (val e)) != bot.
+  forall (e : [fset e | e in nfresh \i0 (size ls)]),
+    nth bot ls (@encode E (val e)) != bot.
 Proof.
-  move: lsD=> /negP nbl [/= ?].
-  rewrite ?inE /= in_nfresh encode1; case: (encode _)=> //> ?.
-  apply/negP; move: nbl=> /[swap]/eqP<-.
-  apply; apply/mem_nth; lia.
+  move: lsD=> /negP nbl [/= e].
+  rewrite ?inE /= in_nfresh encode0 addn0 /= => He.
+  apply/negP; move: nbl=> /[swap]/eqP<-.  
+  apply; exact/mem_nth.
 Qed.
 
 Lemma of_seq_finsupp : 
-  finsupp (of_seq ls) = [fset e | e in nfresh \i1 (size ls)].
+  finsupp (of_seq ls) = [fset e | e in nfresh \i0 (size ls)].
 Proof. rewrite build_finsupp //; exact/of_seq_nth_defined. Qed.
 
 Lemma of_seq_fresh :
@@ -843,15 +843,14 @@ Proof.
 Qed.
 
 Lemma of_seq_labE e : 
-  fs_lab (of_seq ls) e = nth bot (bot :: ls) (encode e).
+  fs_lab (of_seq ls) e = nth bot ls (encode e).
 Proof.
   rewrite /of_seq build_lab /= /sub_lift.
   case: insubP=> /= [?? ->|] //.
   rewrite !in_fset /mem_fin /=.
-  rewrite in_nfresh encode1.
-  rewrite negb_and ltnNge negbK addn1 -ltnNge leqn0 ltnS.
-  case/orP=>[/eqP-> //|].
-  by move=> ?; rewrite nth_default.
+  rewrite in_nfresh encode0 addn0 /=.
+  rewrite ltnNge negbK=> ?. 
+  by rewrite nth_default.
 Qed.
 
 Lemma of_seq_fin_caE : 
