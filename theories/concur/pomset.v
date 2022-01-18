@@ -55,6 +55,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.LTheory.
+Import Order.Theory.
 
 Local Open Scope order_scope.
 Local Open Scope fset_scope.
@@ -462,9 +463,9 @@ Proof.
   by move=> o [>]; apply/forallP=> -[>]; apply/implyP=> /o.
 Qed.
 
-Lemma operational_fs_sca p : 
+Lemma operational_sca p : 
   supp_closed p -> acyclic (fin_ica p) -> operational p ->
-  subrel (fs_sca p) (<^i%O).
+    subrel (fs_sca p) (<^i%O).
 Proof.
   move/operationalP/[apply]/[apply] => sb> /andP[/[swap]/sb].
   by rewrite lt_neqAle eq_sym=>->->. 
@@ -472,7 +473,7 @@ Qed.
 
 Lemma fs_ca_ident_le p :
   supp_closed p -> acyclic (fin_ica p) -> operational p ->
-  subrel (fs_ca p) <=^i%O.
+    subrel (fs_ca p) <=^i%O.
 Proof. move=>?? /operationalP; exact. Qed.
 
 Lemma fs_ica_fin_icaE p : 
@@ -482,7 +483,6 @@ Proof.
   move=> sc>; rewrite /fin_ica sub_rel_lift_downK=> //=>.
   by case/(supp_closedP _ sc)=> /=->.
 Qed.
-
 
 End Theory.
 
@@ -769,6 +769,20 @@ Proof.
   by rewrite fin_ca_empty=> /eqP->. 
 Qed.
 
+Lemma empty_operational : 
+  operational empty.
+Proof.
+  apply/forall2P=> ??; rewrite fs_ca_empty.
+  by apply/implyP=> /eqP->.
+Qed.
+
+Lemma empty_total : 
+  total (fin_ca empty).
+Proof.
+  case=> x xP; exfalso.
+  by move: xP; rewrite finsupp0. 
+Qed.
+
 Lemma eq_emptyE p: 
   p = empty <-> fs_size p = 0%N.
 Proof.
@@ -838,6 +852,15 @@ Proof.
   rewrite negb_and ltnNge negbK addn1 -ltnNge leqn0 ltnS.
   case/orP=>[/eqP-> //|].
   by move=> ?; rewrite nth_default.
+Qed.
+
+Lemma of_seq_fin_caE : 
+  fin_ca (of_seq ls) =2 relpre val [rel e1 e2 | e1 <=^i e2]. 
+Proof. 
+  apply/build_cov_fin_ca=> // [? ||]; last first.
+  - exact/le_trans.
+  - exact/le_anti.
+  by rewrite of_seq_nth_defined.
 Qed.
 
 Lemma of_seq_fs_caE e1 e2 : 
@@ -910,7 +933,7 @@ Proof.
   rewrite of_seq_fin_icaE=>->->; lattice.
 Qed.
 
-Lemma of_seq_fin_ica_acyclic : 
+Lemma of_seq_acyclic : 
   acyclic (fin_ica (of_seq ls)).
 Proof.
   apply/build_cov_acyclic=> [? |||]; last first.
@@ -918,6 +941,23 @@ Proof.
   - exact/le_anti.
   - exact/le_refl.
   by rewrite of_seq_nth_defined.
+Qed.
+
+Lemma of_seq_operational : 
+  operational (of_seq ls). 
+Proof. 
+  apply/operationalP.
+  - exact/of_seq_supp_closed.
+  - exact/of_seq_acyclic.
+  move=> e1 e2; rewrite of_seq_fs_caE.
+  by move=> /orP[/eqP->|/and3P[]].
+Qed.
+
+Lemma of_seq_total : 
+  total (fin_ca (of_seq ls)).   
+Proof. 
+  move=> e1 e2; rewrite !of_seq_fin_caE /=.
+  exact/le_total.
 Qed.
 
 End OfSeq.
@@ -1316,7 +1356,7 @@ Proof.
   move=> labD; apply/and3P; split.
   - exact/lFsPrePoset.of_seq_lab_defined.
   - exact/lFsPrePoset.of_seq_supp_closed.
-  exact/lFsPrePoset.of_seq_fin_ica_acyclic.
+  exact/lFsPrePoset.of_seq_acyclic.
 Qed.
 
 Definition of_seq ls : lfsposet E L bot := 
@@ -1324,16 +1364,37 @@ Definition of_seq ls : lfsposet E L bot :=
     lFsPoset (of_seqP nbl)
   else empty E L bot.
 
-Variable (ls : seq L).
-Hypothesis (lsD : bot \notin ls).
+Lemma of_seq_valE ls : 
+  val (of_seq ls) = 
+    if (bot \notin ls) then 
+      lFsPrePoset.of_seq E L bot ls
+    else 
+      lFsPrePoset.empty E L bot.
+Proof. by case: ifP; rewrite /of_seq; case: eqP=> //= ->. Qed.
 
-Lemma of_seq_valE : 
-  val (of_seq ls) = lFsPrePoset.of_seq E L bot ls.
-Proof. rewrite /of_seq; case: eqP=> //. Qed.
+Lemma of_seq_size ls : 
+  fs_size (of_seq ls) = if (bot \notin ls) then size ls else 0%N.
+Proof. 
+  rewrite of_seq_valE; case: ifP=> ?. 
+  - by rewrite lFsPrePoset.of_seq_size. 
+  exact/lFsPrePoset.eq_emptyE.
+Qed.
 
-Lemma of_seq_size : 
-  fs_size (of_seq ls) = size ls.
-Proof. by rewrite of_seq_valE lFsPrePoset.of_seq_size. Qed.
+Lemma of_seq_operational ls : 
+  operational (of_seq ls).
+Proof. 
+  rewrite of_seq_valE; case: ifP=> ?.
+  - exact/lFsPrePoset.of_seq_operational. 
+  exact/lFsPrePoset.empty_operational. 
+Qed.
+
+Lemma of_seq_total ls : 
+  total (fin_ca (of_seq ls)).
+Proof. 
+  rewrite of_seq_valE; case: ifP=> ?.
+  - exact/lFsPrePoset.of_seq_total. 
+  exact/lFsPrePoset.empty_total. 
+Qed.
 
 (* Lemma of_seq_labE e :  *)
 (*   fs_lab (of_seq ls) e = nth bot ls (encode e). *)
@@ -2486,13 +2547,50 @@ Definition relabel f p flabD : pomset E L2 bot2 :=
 
 End Relabel.
 
-Module Export Hom.
+Import lPoset.Syntax.
+Import lFsPoset.Syntax.
+
+Module Export iHom.
 Module Export POrder.
 Section POrder.
 Implicit Types (E : identType) (L : choiceType).
 
-Import lPoset.Syntax.
-Import lFsPoset.Syntax.
+Lemma pom_ihom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+  ihom_le (repr (pom p)) (repr (pom q)) = ihom_le p q.
+Proof.
+  rewrite /ihom_le. 
+  case: pomP=> q' /eqmodP/lFinPoset.fisoP[f]. 
+  case: pomP=> p' /eqmodP/lFinPoset.fisoP[g].
+  apply/lFinPoset.fihomP/lFinPoset.fihomP=> [][h]; exists. 
+  - (* TODO: fix bug with canonical instance inference *)
+    pose f' := lPoset.Iso.Build.inv f : {ihom _ -> _}.
+    pose g' := g : {ihom _ -> _}.
+    exact/[ihom of g' \o h \o f'].
+  (* TODO: fix bug with canonical instance inference *)
+  pose f' := f : {ihom _ -> _}.
+  pose g' := lPoset.Iso.Build.inv g : {ihom _ -> _}. 
+  exact/[ihom of g' \o h \o f'].
+Qed.
+
+Context {E : identType} {L : choiceType} {bot : L}.
+Implicit Types (p q : pomset E L bot). 
+
+Lemma pom_ihom_mono :
+  {mono (@pom E L bot) : p q / ihom_le p q >-> ihom_le (repr p) (repr q)}.
+Proof. exact/pom_ihom_le. Qed.
+
+Canonical ihom_le_quot_mono2 := PiMono2 pom_ihom_mono.
+
+(* TODO: porder instance for ihom_le *)
+
+End POrder.
+End POrder.
+End iHom.
+
+Module Export bHom.
+Module Export POrder.
+Section POrder.
+Implicit Types (E : identType) (L : choiceType).
 
 Lemma pom_bhom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   bhom_le (repr (pom p)) (repr (pom q)) = bhom_le p q.
@@ -2512,7 +2610,7 @@ Lemma pom_bhom_mono :
   {mono (@pom E L bot) : p q / bhom_le p q >-> bhom_le (repr p) (repr q)}.
 Proof. exact/pom_bhom_le. Qed.
 
-Canonical bhom_le_quote_mono2 := PiMono2 pom_bhom_mono.
+Canonical bhom_le_quot_mono2 := PiMono2 pom_bhom_mono.
 
 Lemma pom_bhom_le_refl : 
   reflexive (@bhom_le E E L bot : rel (pomset E L bot)). 
@@ -2546,12 +2644,16 @@ Proof. done. Qed.
 
 End POrder.
 End POrder.
-End Hom.
+End bHom.
 
 Module Export Theory.
 Section Theory.
 Context {E : identType} {L : choiceType} (bot : L).
 Implicit Types (p q : pomset E L bot).
+
+Lemma iso_eqv_pom (p : lfsposet E L bot) :
+  iso_eqv p (pom p).
+Proof. by rewrite -eqmodE piK. Qed.
 
 Lemma bhom_lin p q :
   p <= q -> {subset (lin p) <= (lin q)}.
@@ -2566,7 +2668,8 @@ End Theory.
 End Pomset.
 
 Export Pomset.Def.
-Export Pomset.Hom.POrder.
+Export Pomset.iHom.POrder.
+Export Pomset.bHom.POrder.
 Export Pomset.Theory.
 
 (* Context (E : identType) (L : choiceType) (bot : L). *)
@@ -2583,8 +2686,7 @@ Import lFsPoset.Syntax.
 
 Module Export Def.
 Section Def.  
-Context (E : identType) (L : choiceType).
-Variable (bot : L).
+Context (E : identType) (L : choiceType) (bot : L).
 
 Structure tomset : Type := mkTomset {
   tomset_val :> pomset E L bot;

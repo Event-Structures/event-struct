@@ -508,10 +508,10 @@ Proof.
   - exists id; split=> //; last by exists id.
   repeat constructor.
   - move=> e; rewrite !fs_labE.
-    rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_labE //=.
+    rewrite lFsPoset.of_seq_valE labsD ?lFsPrePoset.of_seq_labE //=.
     by rewrite lfsp_trace_lab.
   move=> e1 e2; rewrite !fs_caE.
-  rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_fs_caE //.
+  rewrite lFsPoset.of_seq_valE labsD ?lFsPrePoset.of_seq_fs_caE //.
   rewrite !lFsPrePoset.of_seq_finsupp //=.
   rewrite !in_fset /= !size_labels. 
   move: (lfsp_supp_closed p)=> supcl.
