@@ -2040,6 +2040,21 @@ Proof.
   exists; exact/[iso of f \o g].
 Qed.
 
+Lemma iso_ihom_le_antisym p q : 
+  ihom_le p q -> ihom_le q p -> iso_eqv p q.
+Proof.
+  move=> /lFinPoset.fihomP[f] /lFinPoset.fihomP[g].
+  apply/lFinPoset.fisoP; exists; exact/(lFinPoset.of_ihoms f g).
+Qed.
+
+Lemma iso_bhom_le_antisym p q : 
+  bhom_le p q -> bhom_le q p -> iso_eqv p q.
+Proof. move=> /bhom_ihom_le + /bhom_ihom_le; exact/iso_ihom_le_antisym. Qed.
+
+Lemma iso_emb_le_antisym p q : 
+  emb_le p q -> emb_le q p -> iso_eqv p q.
+Proof. move=> /emb_ihom_le + /emb_ihom_le; exact/iso_ihom_le_antisym. Qed.
+
 End Equiv.
 End Equiv.
 
@@ -2182,24 +2197,20 @@ Proof. exact/pom_bhom_le. Qed.
 
 Canonical bhom_le_quote_mono2 := PiMono2 pom_bhom_mono.
 
-(* TODO: use bhom_le_refl *)
 Lemma pom_bhom_le_refl : 
   reflexive (@bhom_le E E L bot : rel (pomset E L bot)). 
 Proof. exact/bhom_le_refl. Qed.
 
-(* TODO: use bhom_le_trans *)
+Lemma pom_bhom_le_antisym : 
+  antisymmetric (@bhom_le E E L bot : rel (pomset E L bot)). 
+Proof. 
+  move=> p q; rewrite -[p]reprK -[q]reprK !piE.
+  move=> /andP[??]; exact/eqmodP/iso_bhom_le_antisym.
+Qed.
+
 Lemma pom_bhom_le_trans : 
   transitive (@bhom_le E E L bot : rel (pomset E L bot)). 
 Proof. exact/bhom_le_trans. Qed.
-
-(* TODO: move part of the proof to lposet.v (or lFsPoset) ? *)
-Lemma pom_bhom_le_antisym : 
-  antisymmetric (@bhom_le E E L bot : rel (pomset E L bot)). 
-Proof.
-  move=> p q; rewrite -[p]reprK -[q]reprK !piE.
-  case/andP=> /lFinPoset.fbhomP[f] /lFinPoset.fbhomP[g].
-  apply/eqmodP/lFinPoset.fisoP; exists; exact/(lFinPoset.of_ihoms f g).
-Qed.
 
 Lemma disp : unit. 
 Proof. exact: tt. Qed.
