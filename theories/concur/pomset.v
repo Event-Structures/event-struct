@@ -2743,7 +2743,77 @@ Module Export Theory.
 Section Theory.
 Context {E : identType} {L : choiceType}.
 Variable (bot : L).
-Implicit Types (t : tomset E L bot).
+Implicit Types (t u : tomset E L bot).
+
+Lemma tomset_ihomE lt lu : 
+  let t := @of_seq E L bot lt in
+  let u := @of_seq E L bot lu in
+  ihom_le t u = subseq lu lt.
+Proof. 
+  rewrite /of_seq /Pomset.of_seq piE /=.
+  pose t := lFsPoset.of_seq E L bot lt. 
+  pose u := lFsPoset.of_seq E L bot lu. 
+  apply/idP/idP; first last.
+  - admit.
+  rewrite /of_seq /=.
+  move=> /ihom_leP [f] finj; apply/subseqP.
+  pose n := size lu.
+  pose m := size lt.
+  pose g : nat -> nat := fun i => encode (f (decode i)).
+  pose s := mkseq g n.
+  exists (mkmask s m)=> //.
+  - admit. (* rewrite size_mkmask ?size_nseq // all_map /=. *)
+  rewrite (@mask_mkmask _ bot)=> //.
+  - admit.
+  - rewrite /g=> /= i j. 
+    rewrite !mem_iota !add0n /=. 
+    move=> Hi Hj Hij.
+    apply/(@operational_sca E L bot t).
+    + exact/(lfsp_supp_closed t).
+    + exact/(lfsp_acyclic t).
+    + exact/lFsPoset.of_seq_operational.
+    rewrite -fs_scaE.
+    apply/sca_monotone_in=> /=. 
+    + exact/finj.
+    + admit.
+    + admit.
+      admit.
+  - move=> /= i j; rewrite !mem_iota !add0n /g /= => Hi Hj.
+    move=> /encode_inj/finj=> dinj.
+    apply/decode_inj/dinj.
+    
+    move=> 
+    admit.
+  - admit.
+  move=> /= i Hi; rewrite /g.
+  rewrite -lFsPrePoset.of_seq_labE.
+
+
+(* TODO: use notation for ihom_le *)
+Lemma tomset_ihomE t u : 
+  ihom_le t u = subseq (lfsp_labels u) (lfsp_labels t).
+Proof. 
+  apply/idP/idP.
+  - move=> /ihom_leP [f] finj; apply/subseqP.
+    pose n := fs_size u.
+    pose m := fs_size t.
+    pose g : nat -> nat := fun i => 
+      (* TODO: set default for lfsp_event to fresh_seq? *)
+      let e := lfsp_event u (fresh_seq (finsupp u)) i in 
+      lfsp_idx t (f e).
+    pose s := mkseq g n.
+    exists (mkmask s m).
+    + rewrite size_mkmask ?size_nseq ?size_tuple // all_map /=.
+      subst g=> /=; apply/allP=> i /=.
+      rewrite mem_iota addnC addn0=> /andP[??]. 
+      by rewrite sub_liftT.
+    apply/esym; subst s. 
+    rewrite (@mkmask_mask L _ _ t)=> //.
+    + by move=> ???; apply (sca_monotone f).
+    + exact/ihom_inj.
+    by move=> ?; rewrite -tlabE -tlabE lab_preserving.
+  
+
 
 (* Lemma tomset_labelsK : 
   cancel (@lfsp_labels E L bot) (@lFsPrePoset.of_seq E L bot).

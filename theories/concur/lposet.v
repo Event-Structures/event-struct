@@ -2059,68 +2059,68 @@ End Iso.
 Section HomP. 
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
-Lemma homP : 
-  reflect ?|{ihom eventType t -> eventType u}| (subseq t u).
-Proof. 
-  apply/(iffP idP); last first.
-  - move=> [f]; apply/subseqP.
-    pose g := sub_lift (fun i => (m + i)%N) (fun i => val (f i)) : nat -> nat.  
-    pose s := mkseq g n.
-    exists (mkmask s m).
-    + rewrite size_mkmask ?size_nseq ?size_tuple // all_map /=.
-      subst g=> /=; apply/allP=> i /=.
-      rewrite mem_iota addnC addn0=> /andP[??]. 
-      by rewrite sub_liftT.
-    apply/esym; subst s. 
-    rewrite (@mkmask_mask L _ _ t)=> //.
-    + by move=> ???; apply (sca_monotone f).
-    + exact/ihom_inj.
-    by move=> ?; rewrite -tlabE -tlabE lab_preserving.
-  move: m u; clear m u.
-  case=> [u|m u].
-  - move: (tuple0 u)=> /= -> /=.
-    rewrite -size_eq0 size_tuple=> /eqP Hn.
-    have efalse: (forall e : eventType t, False).
-    + by rewrite /eventType /= Hn => [[i]]; rewrite ltn0. 
-    have f: ({hom eventType t -> eventType ([tuple] : 0.-tuple L)}).
-    + by exists (fun e => match efalse e with end).
-    constructor; exists f; repeat constructor; by move=> ?. 
-  move=> /subseqP=> [[b Hsz Hb]].
-  pose g := (fun => ord_max) : eventType t -> eventType u.
-  pose f := sub_down g (find_nth id b).
-  pose l := (@lab L (eventType u) ord_max) : L.
-  have He: forall (e : eventType t), (find_nth id b e < m.+1)%N.
-  - move=> e; rewrite -[m.+1](size_tuple u) -Hsz.
-    by rewrite (mask_size_find_nth Hsz) // -Hb (size_tuple t).
-  constructor; unshelve eexists; [exact/f |]. 
-  repeat constructor; move=>/=.
-  - move=> e; rewrite !tlabE. 
-    rewrite !(tnth_nth l) Hb (nth_mask l e Hsz).
-    by rewrite val_sub_downT //. 
-  - move=> e1 e2; rewrite !tleE !val_sub_downT //; exact/find_nth_leq.
-  move=> e1 e2=> /=; subst f.
-  apply/sub_down_inj_inT; rewrite ?/in_mem //=.
-  by move=>?? /find_nth_inj/val_inj. 
-Qed.
+(* Lemma homP :  *)
+(*   reflect ?|{ihom eventType t -> eventType u}| (subseq t u). *)
+(* Proof.  *)
+(*   apply/(iffP idP); last first. *)
+(*   - move=> [f]; apply/subseqP. *)
+(*     pose g := sub_lift (fun i => (m + i)%N) (fun i => val (f i)) : nat -> nat.   *)
+(*     pose s := mkseq g n. *)
+(*     exists (mkmask s m). *)
+(*     + rewrite size_mkmask ?size_nseq ?size_tuple // all_map /=. *)
+(*       subst g=> /=; apply/allP=> i /=. *)
+(*       rewrite mem_iota addnC addn0=> /andP[??].  *)
+(*       by rewrite sub_liftT. *)
+(*     apply/esym; subst s.  *)
+(*     rewrite (@mkmask_mask L _ _ t)=> //. *)
+(*     + by move=> ???; apply (sca_monotone f). *)
+(*     + exact/ihom_inj. *)
+(*     by move=> ?; rewrite -tlabE -tlabE lab_preserving. *)
+(*   move: m u; clear m u. *)
+(*   case=> [u|m u]. *)
+(*   - move: (tuple0 u)=> /= -> /=. *)
+(*     rewrite -size_eq0 size_tuple=> /eqP Hn. *)
+(*     have efalse: (forall e : eventType t, False). *)
+(*     + by rewrite /eventType /= Hn => [[i]]; rewrite ltn0.  *)
+(*     have f: ({hom eventType t -> eventType ([tuple] : 0.-tuple L)}). *)
+(*     + by exists (fun e => match efalse e with end). *)
+(*     constructor; exists f; repeat constructor; by move=> ?.  *)
+(*   move=> /subseqP=> [[b Hsz Hb]]. *)
+(*   pose g := (fun => ord_max) : eventType t -> eventType u. *)
+(*   pose f := sub_down g (find_nth id b). *)
+(*   pose l := (@lab L (eventType u) ord_max) : L. *)
+(*   have He: forall (e : eventType t), (find_nth id b e < m.+1)%N. *)
+(*   - move=> e; rewrite -[m.+1](size_tuple u) -Hsz. *)
+(*     by rewrite (mask_size_find_nth Hsz) // -Hb (size_tuple t). *)
+(*   constructor; unshelve eexists; [exact/f |].  *)
+(*   repeat constructor; move=>/=. *)
+(*   - move=> e; rewrite !tlabE.  *)
+(*     rewrite !(tnth_nth l) Hb (nth_mask l e Hsz). *)
+(*     by rewrite val_sub_downT //.  *)
+(*   - move=> e1 e2; rewrite !tleE !val_sub_downT //; exact/find_nth_leq. *)
+(*   move=> e1 e2=> /=; subst f. *)
+(*   apply/sub_down_inj_inT; rewrite ?/in_mem //=. *)
+(*   by move=>?? /find_nth_inj/val_inj.  *)
+(* Qed. *)
 
 End HomP.
 
 Section IsoP.
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
-Lemma isoP : 
-  reflect ?|{iso eventType t -> eventType u}| (t == u :> seq L).
-Proof. 
-  apply/(iffP idP); last first.  
-  - move=> [f]; move: (lPoset.Iso.Build.inv f)=> g.
-    apply/eqP/subseq_anti/andP. 
-    split; apply/homP; eexists; [exact/f | exact/g]. 
-  move=> /eqP H; have Hn: n = m. 
-  - by rewrite -(size_tuple t) -(size_tuple u) H.
-  move: u H; clear u; case Hn=> u.
-  move=> /val_inj ->.
-  constructor; exact/[iso of idfun]. 
-Qed.
+(* Lemma isoP :  *)
+(*   reflect ?|{iso eventType t -> eventType u}| (t == u :> seq L). *)
+(* Proof.  *)
+(*   apply/(iffP idP); last first.   *)
+(*   - move=> [f]; move: (lPoset.Iso.Build.inv f)=> g. *)
+(*     apply/eqP/subseq_anti/andP.  *)
+(*     split; apply/homP; eexists; [exact/f | exact/g].  *)
+(*   move=> /eqP H; have Hn: n = m.  *)
+(*   - by rewrite -(size_tuple t) -(size_tuple u) H. *)
+(*   move: u H; clear u; case Hn=> u. *)
+(*   move=> /val_inj ->. *)
+(*   constructor; exact/[iso of idfun].  *)
+(* Qed. *)
 
 End IsoP. 
 
