@@ -392,7 +392,6 @@ End Syntax.
 Module Export Theory.
 Section Theory.
 
-
 Lemma foldr_monoid {S : Type} {f : S -> S -> S} {n s1 s2}: 
   associative f ->
   (forall a, f n a = a) ->

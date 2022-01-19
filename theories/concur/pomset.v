@@ -1797,12 +1797,28 @@ Qed.
 
 Lemma lfsp_idx_inj p : 
   { in finsupp p &, injective (lfsp_idx p)}.
-Proof. admit. Admitted.
+Proof. 
+  rewrite /lfsp_idx=> e1 e2 e1In e2In.
+  by apply/index_inj; rewrite mem_lfsp_tseq.
+Qed.
 
 Lemma lfsp_idx_le p e1 e2 : 
   fs_ca p e1 e2 -> (lfsp_idx p e1 <= lfsp_idx p e2)%N.
-Proof. admit. Admitted.
-  
+Proof. 
+  rewrite /lfsp_idx /lfsp_tseq /fs_ca /=.
+  move=> /orP[/eqP->|]; first exact/leqnn. 
+  rewrite /sub_rel_lift /=. 
+  case: insubP=> // e1' e1In <-.
+  case: insubP=> // e2' e2In <-.
+  rewrite !index_map; try exact/val_inj.
+  move: (tseq_correct (rgraph (fin_ica p)))=> [tc tin]. 
+  pose g := grel (rgraph (fin_ica p)).
+  have gE: g =2 (fin_ica p).
+  - by move=> x y /=; rewrite /grel /rgraph fintype.mem_enum. 
+  move=> ca12; apply/(@acyclic_connect_before _ g)=> //. 
+  - rewrite (eq_acyclic gE); exact/lfsp_acyclic.
+  by rewrite (eq_connect gE).
+Qed.
 
 Lemma lfsp_labels_size p : 
   size (lfsp_labels p) = #|`finsupp p|.
@@ -2792,41 +2808,39 @@ Proof.
   move=> t; apply/val_inj/esym/eqP=> /=.
   rewrite eqquot_piE iso_eqv_sym.
   apply/iso_eqvP.
+  pose u_pre := lFsPrePoset.of_seq E L bot (lfsp_labels t).
   pose u := lFsPoset.of_seq E L bot (lfsp_labels t).
   pose f : [Event of t] -> [Event of u] := 
     fun e => decode (lfsp_idx t e).
   move: (lfsp_labels_Nbot t)=> labD.
+  have in_u_preE: 
+    forall e, (e \in finsupp u_pre) = (encode e < #|` finsupp t|)%N=> [e|].
+  - rewrite lFsPrePoset.of_seq_finsupp //.
+    by rewrite !in_fset !in_nfresh !decodeK !addn0 lfsp_labels_size /=.
   unshelve eexists; first unshelve eexists; first exact/f. 
   all: try split=> /=; try constructor. 
   - move=> e; rewrite !fs_labE /=. 
-    rewrite lFsPoset.of_seq_valE lfsp_labels_Nbot.
-    rewrite lFsPrePoset.of_seq_labE /f decodeK.
-    by rewrite fs_lab_nthE.
-  - move=> e1 e2; rewrite !fs_caE /=. 
+    rewrite lFsPoset.of_seq_valE labD lFsPrePoset.of_seq_labE.
+    by rewrite decodeK fs_lab_nthE.
+  - move=> e1 e2; rewrite !fs_caE /=.
     rewrite lFsPoset.of_seq_valE labD lFsPrePoset.of_seq_fs_caE //.
     move=> /[dup] /(supp_closed_ca (lfsp_supp_closed t) (lfsp_acyclic t)).
     move=> /orP[/eqP->|/andP[]]; rewrite ?eq_refl //.
     move=> e1In e2In Hca; apply/orP; right.
-    rewrite /f !lFsPrePoset.of_seq_finsupp //.
-    rewrite !in_fset !in_nfresh !decodeK !addn0 /=. 
-    rewrite lfsp_labels_size !lfsp_idx_lt_szE.
+    rewrite !in_u_preE /f !decodeK !lfsp_idx_lt_szE.
     apply/and3P; split=> //. 
     (* TODO: make a lemma *)
     rewrite /Order.le /= /Ident.Def.ident_le. 
     rewrite !decodeK; exact/lfsp_idx_le.
   - pose g : [Event of u] -> [Event of t] := 
       fun e => lfsp_event t \i0 (encode e).
-    move=> /=; rewrite lFsPoset.of_seq_valE labD lFsPrePoset.of_seq_finsupp //.
-    exists g=> e; rewrite /f /g /= ?decodeK. 
-    + rewrite !in_fset !in_nfresh !decodeK !addn0 lfsp_labels_size /=. 
-      by move=> ?; rewrite lfsp_idxK // -lfsp_idx_lt_szE.
-    rewrite !in_fset !in_nfresh !decodeK !addn0 lfsp_labels_size /=. 
+    move=> /=; rewrite lFsPoset.of_seq_valE labD.
+    exists g=> e; rewrite !in_u_preE /f /g /= ?decodeK.
+    + by move=> ?; rewrite lfsp_idxK // -lfsp_idx_lt_szE.
     by move=> ?; rewrite lfsp_eventK ?encodeK //. 
-  move=> e1 e2 e1In e2In.
-  rewrite /f fs_caE /=.
+  move=> e1 e2 e1In e2In; rewrite /f fs_caE /=.
   rewrite lFsPoset.of_seq_valE labD lFsPrePoset.of_seq_fs_caE //.
-  rewrite !lFsPrePoset.of_seq_finsupp //.
-  rewrite !in_fset !in_nfresh !decodeK !addn0 /=. 
+  rewrite !in_u_preE !decodeK !lfsp_idx_lt_szE.
   rewrite /Order.le /= /Ident.Def.ident_le. 
   rewrite !decodeK=> /orP[/eqP|].
   - move=> /decode_inj /lfsp_idx_inj -> //; exact/fs_ca_refl.
@@ -2838,8 +2852,6 @@ Proof.
   apply/(lfsp_idx_inj e1In e2In).
   by apply/le_anti/andP. 
 Qed.
-
-Variables (lt lu : seq L).
 
 Lemma tomset_ihomE lt lu : 
   let t := @of_seq E L bot lt in
@@ -2877,12 +2889,11 @@ Proof.
   - move=> /= i j; rewrite !mem_iota !add0n /g /= => Hi Hj.
     move=> /encode_inj/finj=> dinj.
     apply/decode_inj/dinj.
-    
-    move=> 
+    + admit.
     admit.
   - admit.
-  move=> /= i Hi; rewrite /g.
-  rewrite -lFsPrePoset.of_seq_labE.
+  admit.
+Admitted.
 
 
 (* TODO: use notation for ihom_le *)
