@@ -518,7 +518,7 @@ Proof.
   - move/lfsposet_of_emp=>->->.
     exists (\pi (lFsPoset.empty E2 L bot)).
     + exists fset0; first exact/cfg0; by rewrite lfsposet_of0.
-    rewrite pi_bhom_le -?lfsposet_of0; apply/lFinPoset.fbhomP.
+    rewrite pom_bhom_le -?lfsposet_of0; apply/lFinPoset.fbhomP.
     (* have g: forall E E' : eventType L, *)
     (*         [FinEvent of @lfsposet_of L bot E  fset0] -> *)
     (*         [FinEvent of @lfsposet_of L bot E' fset0]. *)
@@ -534,7 +534,7 @@ Proof.
   - exists (f @` X)=> //; split; last exact/cf_free_fset/cons_mon/cfX.
     move=>> /[swap]/imfsetP[] /= x' /[swap]-> /[swap] /hom_prefix.
     case=> y' -> /ccX/[apply] ?; by apply/imfsetP; exists y'.
-  rewrite pE pi_bhom_le.
+  rewrite pE pom_bhom_le.
   have ?: [forall x : (f @` X), lab (val x) != bot] by exact/forallP.
   have In: forall x : (finsupp (@lfsposet_of L bot E1 X)),
     f (val x) \in (finsupp (@lfsposet_of L bot E2 (f @` X))).

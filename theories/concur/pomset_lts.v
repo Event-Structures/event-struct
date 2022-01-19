@@ -500,18 +500,24 @@ Proof.
   have labsD : bot \notin (map lbl tr).
   - apply/mapP=> -[[/=> /(allP (trace_steps _))/[swap]<-]].
     by case/lfsp_ltransP=> /eqP.
-  rewrite -/q /=; apply/bhom_leP; exists id; split; last by exists id.
+  rewrite -/q /=; apply/bhom_leP=> /=. 
+  unshelve eexists; first (unshelve econstructor); first exact: id; last first.  
+  - by move=> /=; exists id.
+  repeat constructor.
   - move=> e; rewrite !fs_labE.
-    rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_labE //.
+    rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_labE //=.
     by rewrite lfsp_trace_lab.
   move=> e1 e2; rewrite !fs_caE.
   rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_fs_caE //.
   rewrite !lFsPrePoset.of_seq_finsupp //=.
-  rewrite lfsp_trace_finsupp //= !in_fset /= !size_labels. 
-  have op: operational p.
-  - exact/(invariant_trace_lan invariant_operational)/opetaional0.
-  move=> in1 in2 /(fs_ca_ident_le)-/(_ _ _ op)-> //.
-  by apply/orP; right; apply/and3P.
+  rewrite !in_fset /= !size_labels. 
+  move: (lfsp_supp_closed p)=> supcl.
+  move: (lfsp_acyclic p)=> acyc.
+  move=> /[dup] + /(supp_closed_ca supcl acyc) /orP[->|/andP[]] //. 
+  rewrite lfsp_trace_finsupp // !inE => ???.
+  apply/orP; right; apply/and3P; split=> //.
+  apply/(fs_ca_ident_le supcl acyc)=> //.
+  exact/(invariant_trace_lan invariant_operational)/opetaional0.
 Qed.
 
 Lemma lfsp_lin_lang tr : 
