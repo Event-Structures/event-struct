@@ -452,6 +452,8 @@ Proof.
   exact/eqP.
 Qed.
 
+Notation of_seq := (lFsPoset.of_seq E L bot).
+
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
 
 Lemma invariant_operational : 
@@ -580,7 +582,7 @@ Proof.
   exact/(invariant_trace_lan invariant_operational)/opetaional0.
 Qed.
 
-Lemma lfsp_lin_lang tr : 
+Lemma lfsp_lin_trace_lang tr : 
   let emp := lFsPoset.empty E L bot in 
   let p := lst_state emp tr in
   labels tr \in lin p -> tr \in trace_lang emp.
@@ -635,6 +637,11 @@ Proof.
   case: (size ls)=> //=; lia.
 Qed.
 
+Lemma is_sup_fresh (X : {fset E}) : 
+  is_sup (fresh_seq X |` X) (fresh_seq X).
+Proof.
+  by split=>>; rewrite ?inE ?eqxx // => /orP[/eqP->|/fresh_seq_mem/ltW].
+Qed.
 
 Lemma operational_of_seq ls : 
   bot \notin ls ->
