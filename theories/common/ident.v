@@ -403,6 +403,14 @@ Proof. by move=> A L R; elim: s1=> //= ??; rewrite -A=>->. Qed.
 Context {T : identType}.
 Implicit Types (x : T) (s : seq T).
 
+Lemma ident_leE x y : 
+  x <=^i y = ident_le x y.
+Proof. done. Qed.
+
+Lemma ident_ltE x y : 
+  x <^i y = ident_lt x y.
+Proof. done. Qed.
+
 Lemma fresh0 : 
   fresh (\i0 : T) = \i1.
 Proof. by rewrite /fresh encode0. Qed.
@@ -458,23 +466,12 @@ Proof.
   move=>->; rewrite encode_fresh -(inj_eq encode_inj); lia.
 Qed.
 
-Import Order.Exports.
-
 Definition fresh_seq : seq T -> T := fun t => 
   max_seq (\i0 : T) (map fresh t).
 
 Lemma fresh_seq_nil : 
   fresh_seq [::] = (\i0 : T).
 Proof. by rewrite /fresh_seq /=. Qed.
-
-(* Lemma fresh_seq0 s :  *)
-(*   \i0 <^i fresh_seq s. *)
-(* Proof. by rewrite /fresh_seq /ident0 /ident_lt /= /Def.ident_lt !decodeK. Qed. *)
-
-(* Lemma i0_min {x} : \i0 <=^i x. *)
-(* Proof. by rewrite /(_ <=^i _)/= /Def.ident_le encode0. Qed. *)
-
-(* Hint Resolve i0_min : core. *)
 
 Lemma maxx0 x : Order.max x \i0 = x.
 Proof. exact/max_idPl/le0x. Qed.

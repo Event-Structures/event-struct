@@ -545,12 +545,11 @@ Proof.
   move=> /=; rewrite /trace_lang ?/(_ \in _) /= /lin /=.
   move/bhom_le_size; rewrite lFsPoset.of_seq_size size_map.
   rewrite lfsp_trace_labels_defined.  
-  move=> sizeE; apply/eqP/esym/val_inj/lFsPrePoset.eq_emptyE=> /=.
+  move=> sizeE; apply/eqP/esym/val_inj/lFsPrePoset.empty_eqP=> /=. 
   set f := [eta (@fs_size E L bot)]: lfsposet _ _ _ -> nat.
   move: (@measure_lst _ _ _ f S) sizeE=> /=; rewrite /f /= /==> -> //.
   - rewrite iter_succn; lia.
-  move=> s s' l.
-  case/lfsp_ltransP=> ? [?? ->]. 
+  move=> s s' l; case/lfsp_ltransP=> ? [?? ->]. 
   by rewrite lfsp_add_eventE.
 Qed.
 

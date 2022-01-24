@@ -719,6 +719,23 @@ Implicit Types (p : lfspreposet E L bot).
 
 Definition empty : lfspreposet E L bot := [fsfun].
 
+Lemma finsupp_empty : 
+  finsupp empty = fset0.
+Proof. exact/finsupp0. Qed.
+
+Lemma fs_size_empty : 
+  fs_size empty = 0%N.
+Proof. by rewrite /fs_size finsupp_empty. Qed.
+
+Lemma empty_eqP p : 
+  reflect (p = empty) (fs_size p == 0%N).
+Proof.
+  apply/(equivP idP); split=> [|->]; last first. 
+  - by rewrite fs_size_empty. 
+  rewrite /fs_size=> /eqP/cardfs0_eq fE; apply/fsfunP=> e /=. 
+  by rewrite /empty fsfun0E !fsfun_dflt // fE inE.
+Qed.
+
 Lemma fs_lab_empty : 
   fs_lab empty =1 (fun=> bot).
 Proof. by move=> ?; rewrite /fs_lab fsfun_dflt ?inE. Qed.
@@ -785,18 +802,20 @@ Proof.
   by apply/implyP=> /eqP->.
 Qed.
 
+Lemma empty_conseq_num : 
+  conseq_num empty.
+Proof.
+  rewrite /conseq_num finsupp_empty. 
+  apply/eqP/fsetP=> e /=.
+  rewrite in_fset /= inE in_nfresh encode0 addn0 /=.
+  by rewrite fs_size_empty ltn0. 
+Qed.
+
 Lemma empty_total : 
   total (fin_ca empty).
 Proof.
   case=> x xP; exfalso.
   by move: xP; rewrite finsupp0. 
-Qed.
-
-Lemma eq_emptyE p: 
-  p = empty <-> fs_size p = 0%N.
-Proof.
-  split=> [->|]; rewrite /fs_size ?finsupp0 // /empty => /cardfs0_eq fE.
-  by apply/fsfunP=> ?; rewrite ?fsfun_dflt // (finsupp0, fE) ?inE.
 Qed.
 
 End Empty.
@@ -831,6 +850,7 @@ Lemma of_seq_finsupp :
   finsupp (of_seq ls) = [fset e | e in nfresh \i0 (size ls)].
 Proof. rewrite build_finsupp //; exact/of_seq_nth_defined. Qed.
 
+(* TODO: derie from conseq_num *)
 Lemma of_seq_fresh :
   lfsp_fresh (of_seq ls) = iter (size ls) fresh \i1.
 Proof.
@@ -843,13 +863,16 @@ Proof.
   by apply/fresh_seq_nfresh.
 Qed.
 
-
 Lemma of_seq_size : 
   fs_size (of_seq ls) = size ls.
 Proof.
   rewrite /fs_size of_seq_finsupp card_fseq undup_id ?size_nfresh //.
   exact/lt_sorted_uniq/nfresh_sorted.
 Qed.
+
+Lemma of_seq_conseq_num : 
+  conseq_num (of_seq ls).
+Proof. by rewrite /conseq_num of_seq_finsupp of_seq_size. Qed.
 
 Lemma of_seq_labE e : 
   fs_lab (of_seq ls) e = nth bot ls (encode e).
@@ -963,10 +986,7 @@ Qed.
 
 Lemma of_seq_total : 
   total (fin_ca (of_seq ls)).   
-Proof. 
-  move=> e1 e2; rewrite !of_seq_fin_caE /=.
-  exact/le_total.
-Qed.
+Proof. move=> e1 e2; rewrite !of_seq_fin_caE /=; exact/le_total. Qed.
 
 End OfSeq.
 
@@ -1344,7 +1364,7 @@ Proof.
 Qed.
 
 Definition empty : lfsposet E L bot := 
-  lFsPoset emptyP.
+  mklFsPoset emptyP.
 
 End Empty.
 
@@ -1385,7 +1405,29 @@ Lemma of_seq_size ls :
 Proof. 
   rewrite of_seq_valE; case: ifP=> ?. 
   - by rewrite lFsPrePoset.of_seq_size. 
-  exact/lFsPrePoset.eq_emptyE.
+  exact/eqP/lFsPrePoset.empty_eqP.
+Qed.
+
+Lemma of_seq_labE ls e :
+  fs_lab (of_seq ls) e = if (bot \notin ls) then nth bot ls (encode e) else bot.
+Proof. 
+  rewrite of_seq_valE; case: ifP=> ?.
+  - exact/lFsPrePoset.of_seq_labE.
+  exact/lFsPrePoset.fs_lab_empty. 
+Qed.
+
+Lemma of_seq_caE ls e1 e2 :
+  fs_ca (of_seq ls) e1 e2 = 
+    (e1 == e2) ||
+    [&& e1 <=^i e2
+      , e1 \in finsupp (of_seq ls)
+      , e2 \in finsupp (of_seq ls)
+      & bot \notin ls
+    ].
+Proof. 
+  rewrite of_seq_valE; case: ifP=> ?.
+  - by rewrite andbT lFsPrePoset.of_seq_fs_caE.
+  by rewrite !andbF orbF lFsPrePoset.fs_ca_empty. 
 Qed.
 
 Lemma of_seq_operational ls : 
@@ -1396,6 +1438,14 @@ Proof.
   exact/lFsPrePoset.empty_operational. 
 Qed.
 
+Lemma of_seq_conseq_num ls : 
+   (conseq_num (of_seq ls)).
+Proof. 
+  rewrite of_seq_valE; case: ifP=> ?.
+  - exact/lFsPrePoset.of_seq_conseq_num. 
+  exact/lFsPrePoset.empty_conseq_num. 
+Qed.
+
 Lemma of_seq_total ls : 
   total (fin_ca (of_seq ls)).
 Proof. 
@@ -1403,10 +1453,6 @@ Proof.
   - exact/lFsPrePoset.of_seq_total. 
   exact/lFsPrePoset.empty_total. 
 Qed.
-
-(* Lemma of_seq_labE e :  *)
-(*   fs_lab (of_seq ls) e = nth bot ls (encode e). *)
-(* Proof. rewrite /of_seq; case: eqP=> //. Qed. *)
 
 End OfSeq.
 
@@ -1542,7 +1588,7 @@ Proof.
   exact/lFsPrePoset.inter_rel_acyclic. 
 Qed.
 
-Definition inter_rel p := lFsPoset (inter_relP p).
+Definition inter_rel p := mklFsPoset (inter_relP p).
 
 End InterRel.
 
@@ -1762,8 +1808,8 @@ Proof.
 Qed.
 
 Lemma lfsp_tseq_size p : 
-  size (lfsp_tseq p) = #|`finsupp p|. 
-Proof. by rewrite /lfsp_tseq size_map size_tseq cardfE. Qed.
+  size (lfsp_tseq p) = fs_size p. 
+Proof. by rewrite /lfsp_tseq /fs_size size_map size_tseq cardfE. Qed.
 
 Lemma mem_lfsp_tseq p : 
   lfsp_tseq p =i finsupp p.
@@ -1781,11 +1827,11 @@ Lemma lfsp_tseq_uniq p :
 Proof. rewrite /lfsp_tseq (map_inj_uniq val_inj); exact/tseq_uniq. Qed.
 
 Lemma lfsp_idx_lt_szE p e :
-  (lfsp_idx p e < #|`finsupp p|)%N = (e \in finsupp p).
+  (lfsp_idx p e < fs_size p)%N = (e \in finsupp p).
 Proof. by rewrite /lfsp_idx -lfsp_tseq_size index_mem mem_lfsp_tseq. Qed.
 
 Lemma lfsp_idx_le_sz p e :
-  lfsp_idx p e <= #|`finsupp p|.
+  lfsp_idx p e <= fs_size p.
 Proof. rewrite /lfsp_idx -lfsp_tseq_size; exact/index_size. Qed.
 
 Lemma lfsp_idxK p e0 :
@@ -1796,7 +1842,7 @@ Proof.
 Qed.
 
 Lemma lfsp_eventK p e0 :
-  {in (< #|` finsupp p|), cancel (lfsp_event p e0) (lfsp_idx p)}. 
+  {in (< fs_size p), cancel (lfsp_event p e0) (lfsp_idx p)}. 
 Proof. 
   rewrite /lfsp_idx /lfsp_event=> n. 
   rewrite inE ltEnat=> nLe.
@@ -1830,7 +1876,7 @@ Proof.
 Qed.
 
 Lemma lfsp_labels_size p : 
-  size (lfsp_labels p) = #|`finsupp p|.
+  size (lfsp_labels p) = fs_size p.
 Proof. by rewrite /lfsp_labels size_map lfsp_tseq_size. Qed.
 
 Lemma lfsp_labels_Nbot p : 
@@ -2817,39 +2863,37 @@ Proof.
   move=> t; apply/val_inj/esym/eqP=> /=.
   rewrite eqquot_piE iso_eqv_sym.
   apply/iso_eqvP.
-  pose u_pre := lFsPrePoset.of_seq E L bot (lfsp_labels t).
   pose u := lFsPoset.of_seq E L bot (lfsp_labels t).
   pose f : [Event of t] -> [Event of u] := 
     fun e => decode (lfsp_idx t e).
   move: (lfsp_labels_Nbot t)=> labD.
-  have in_u_preE: 
-    forall e, (e \in finsupp u_pre) = (encode e < #|` finsupp t|)%N=> [e|].
-  - rewrite lFsPrePoset.of_seq_finsupp //.
-    by rewrite !in_fset !in_nfresh !decodeK !addn0 lfsp_labels_size /=.
+  have usz : fs_size u = fs_size t.
+  - by rewrite lFsPoset.of_seq_size labD lfsp_labels_size. 
+  have uconseq: (conseq_num u).
+  - exact/lFsPoset.of_seq_conseq_num.
   unshelve eexists; first unshelve eexists; first exact/f. 
-  all: try split=> /=; try constructor. 
+  all: try split=> /=; try constructor=> //=.
   - move=> e; rewrite !fs_labE /=. 
-    rewrite lFsPoset.of_seq_valE labD lFsPrePoset.of_seq_labE.
+    rewrite lFsPoset.of_seq_labE labD.
     by rewrite decodeK fs_lab_nthE.
   - move=> e1 e2; rewrite !fs_caE /=.
-    rewrite lFsPoset.of_seq_valE labD lFsPrePoset.of_seq_fs_caE //.
+    rewrite lFsPoset.of_seq_caE labD andbT. 
     move=> /[dup] /(supp_closed_ca (lfsp_supp_closed t) (lfsp_acyclic t)).
     move=> /orP[/eqP->|/andP[]]; rewrite ?eq_refl //.
     move=> e1In e2In Hca; apply/orP; right.
-    rewrite !in_u_preE /f !decodeK !lfsp_idx_lt_szE.
+    rewrite !conseq_num_mem // /f !decodeK usz !lfsp_idx_lt_szE.
     apply/and3P; split=> //. 
     (* TODO: make a lemma *)
     rewrite /Order.le /= /Ident.Def.ident_le. 
     rewrite !decodeK; exact/lfsp_idx_le.
   - pose g : [Event of u] -> [Event of t] := 
       fun e => lfsp_event t \i0 (encode e).
-    move=> /=; rewrite lFsPoset.of_seq_valE labD.
-    exists g=> e; rewrite !in_u_preE /f /g /= ?decodeK.
-    + by move=> ?; rewrite lfsp_idxK // -lfsp_idx_lt_szE.
+    exists g=> e; rewrite !conseq_num_mem // /f /g !usz ?decodeK.
+    + rewrite lfsp_idx_lt_szE; exact/lfsp_idxK. 
     by move=> ?; rewrite lfsp_eventK ?encodeK //. 
   move=> e1 e2 e1In e2In; rewrite /f fs_caE /=.
-  rewrite lFsPoset.of_seq_valE labD lFsPrePoset.of_seq_fs_caE //.
-  rewrite !in_u_preE !decodeK !lfsp_idx_lt_szE.
+  rewrite lFsPoset.of_seq_caE labD andbT //.
+  rewrite !conseq_num_mem // !decodeK !usz !lfsp_idx_lt_szE.
   rewrite /Order.le /= /Ident.Def.ident_le. 
   rewrite !decodeK=> /orP[/eqP|].
   - move=> /decode_inj /lfsp_idx_inj -> //; exact/fs_ca_refl.
