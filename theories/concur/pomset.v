@@ -119,6 +119,9 @@ Definition fs_ca p : rel E :=
 Definition fs_sca p : rel E := 
   fun e1 e2 => (e2 != e1) && (fs_ca p e1 e2).
 
+(* TODO: rename lfsp_size? *)
+Definition fs_size p : nat := #|` finsupp p|.
+
 Definition lab_defined p := 
   [forall e : finsupp p, fs_lab p (val e) != bot].
 
@@ -130,6 +133,9 @@ Definition operational p :=
   [forall e1 : finsupp p, forall e2 : finsupp p, 
     (fs_ca p (val e1) (val e2)) ==> (val e1 <=^i val e2)
   ].
+
+Definition conseq_num p :=
+  finsupp p == [fset e | e in nfresh \i0 (fs_size p)].
 
 Definition lfsp_tseq p : seq E := 
   map val (tseq (rgraph (@fin_ica p))).
@@ -149,8 +155,6 @@ Definition lfsp_fresh p : E :=
 (* TODO: unify with UpFinPOrder *)
 Definition lfsp_dw_clos p es := 
   [seq e <- finsupp p | [exists e' : es, fs_ca p e (val e')]].
-
-Definition fs_size p : nat := #|` finsupp p|.
 
 End Def.
 
@@ -477,11 +481,16 @@ Lemma fs_ca_ident_le p :
 Proof. move=>?? /operationalP; exact. Qed.
 
 Lemma fs_ica_fin_icaE p : 
-  supp_closed p ->
-  fs_ica p =2 sub_rel_lift (fin_ica p).
+  supp_closed p -> fs_ica p =2 sub_rel_lift (fin_ica p).
 Proof.
   move=> sc>; rewrite /fin_ica sub_rel_lift_downK=> //=>.
   by case/(supp_closedP _ sc)=> /=->.
+
+Lemma conseq_num_mem p e : 
+  conseq_num p -> (e \in finsupp p) = (encode e < fs_size p)%N.
+Proof. 
+  move=> /eqP->; rewrite in_fset /=.
+  by rewrite in_nfresh encode0 addn0 /=. 
 Qed.
 
 End Theory.
