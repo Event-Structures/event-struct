@@ -266,12 +266,11 @@ Qed.
 
 Lemma add_event_freshE :
   lfsp_fresh (lfspre_add_event l es p) = fresh (lfsp_fresh p).
-Proof. admit. Admitted.
-(*   rewrite finsupp_with xpair_eqE. *)
-(*   case: ifP=> [/andP[/eqP]|] //. *)
-(*   by move: lD=> /eqP. *)
-(* Qed. *)
-
+Proof. 
+  rewrite /lfsp_fresh add_event_finsuppE fresh_seq_add.
+  rewrite /lfsp_fresh max_l //.
+  exact/ltW/fresh_lt.
+Qed. 
 
 End Theory.
 End Theory.  
