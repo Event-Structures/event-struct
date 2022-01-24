@@ -536,6 +536,18 @@ Proof.
   case/lfsp_ltransP=> /eqP + ?; exact.
 Qed.
 
+
+Lemma operational_of_seq ls : 
+  bot \notin ls ->
+  operational (of_seq ls).
+Proof.
+  move=> ?; apply/operationalP=>>.
+  - exact/lfsp_supp_closed.
+  - exact/lfsp_acyclic.
+  rewrite lFsPoset.of_seq_valE // lFsPrePoset.of_seq_fs_caE //.
+  by case/orP=> [/eqP->|/andP[->]].
+Qed.
+
 End Theory.
 End Theory.  
 

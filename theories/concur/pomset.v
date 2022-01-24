@@ -462,6 +462,14 @@ Proof.
   by move=> o [>]; apply/forallP=> -[>]; apply/implyP=> /o.
 Qed.
 
+Lemma operational_fs_sca p : 
+  supp_closed p -> acyclic (fin_ica p) -> operational p ->
+  subrel (fs_sca p) (<^i%O).
+Proof.
+  move/operationalP/[apply]/[apply] => sb> /andP[/[swap]/sb].
+  by rewrite lt_neqAle eq_sym=>->->. 
+Qed.
+
 Lemma fs_ca_ident_le p :
   supp_closed p -> acyclic (fin_ica p) -> operational p ->
   subrel (fs_ca p) <=^i%O.
