@@ -1308,6 +1308,103 @@ Proof. by rewrite of_seq_valE lFsPrePoset.of_seq_size. Qed.
 
 End OfSeq.
 
+Section Delete_max.
+
+Context (E : identType) (L : eqType) (bot : L).
+Context (p : lfsposet E L bot) (x : E).
+
+Section Delete_pre.
+
+Hypothesis x_max : [forall y : finsupp p, ~~ fs_ica p x (val y)].
+
+Lemma x_maximal : forall y, ~ fs_ica p x y.
+Proof.
+  move=> ? /[dup] /(supp_closedP _ (lfsp_supp_closed _))[_ i].
+  by move/forallP/(_ [`i])/negP: x_max.
+Qed.
+
+Definition delete := [fsfun p without x].
+
+Lemma delete_finsupp : finsupp delete = finsupp p `\ x.
+Proof. exact/finsupp_without. Qed.
+
+Lemma delete_fs_lab : 
+  fs_lab delete =1 fun e => if e == x then bot else fs_lab p e.
+Proof. move=>>; rewrite /fs_lab fsfun_withE; by case: ifP. Qed.
+
+Lemma delete_fs_ica : 
+  fs_ica delete =2 fun e1 e2 => if e2 != x then fs_ica p e1 e2 else false.
+Proof. move=>>; rewrite /fs_ica /= /fs_rcov fsfun_withE; by case: ifP. Qed.
+
+Lemma delete_supp_closed : supp_closed delete.
+Proof.
+  apply/supp_closedP=> e1 e2.
+  move/supp_closedP/(_ e1 e2): (lfsp_supp_closed p).
+  rewrite delete_fs_ica delete_finsupp ?inE; case: ifP=> //= _.
+  by move=> sc /[dup]/sc [->->]; case: (_ =P _)=> //->/x_maximal.
+Qed.
+
+Lemma delete_fs_ca : 
+  fs_ca delete =2 fun e1 e2 => if e2 != x then fs_ca p e1 e2 else e1 == e2.
+Proof.
+  move=>>; apply/(fs_caP _ _ delete_supp_closed)/idP.
+  - move/clos_rt_rtn1_iff; elim=> [|y ? + _].
+    - case: (_ =P _)=> //= _; exact/fs_ca_refl.
+    rewrite delete_fs_ica; case: ifP=> // ?.
+    case: (_ =P _)=> //= [-> /x_maximal //|? fi ?].
+    apply/(fs_caP _ _ (lfsp_supp_closed p))/clos_rt_rtn1_iff.
+    econstructor; first exact/fi.
+    exact/clos_rt_rtn1_iff/(fs_caP _ _ (lfsp_supp_closed p)).
+  case: (_ =P _)=> /= [->/eqP->|/[swap]]; first by constructor.
+  move/(fs_caP _ _ (lfsp_supp_closed p))/clos_rt_rtn1_iff.
+  rewrite clos_rt_rtn1_iff.
+  elim=> [|y ? + _]; first by constructor.
+  case: (y =P x)=> [->/x_maximal //| nyx ? /(_ nyx) fi ?].
+  econstructor; last exact/fi; rewrite delete_fs_ica; by case (_ =P _).
+Qed.
+
+Lemma delete_lab_defined : lab_defined delete.
+Proof.
+  apply/lab_definedP=>>. 
+  rewrite delete_finsupp delete_fs_lab ?inE; case: ifP=> //= _.
+  exact/lab_definedP/lfsp_lab_defined.
+Qed.
+
+Lemma delete_acyclic : acyclic (fin_ica delete).
+Proof.
+  apply/fin_ica_acyclic=>>. 
+  - rewrite delete_fs_ica; case: ifP=> // *.
+    exact/fs_ica_irrefl/acyc_irrefl/lfsp_acyclic/lfsp_supp_closed.
+  rewrite? delete_fs_ca; case: ifP=> [_|_ /andP[/eqP->]] //.
+  case: ifP=> [_|_ /andP[? /eqP->]] //.
+  exact/fs_ca_antisym/lfsp_acyclic/lfsp_supp_closed.
+Qed.
+
+Lemma deleteP :  
+  [&& lab_defined delete,
+      supp_closed delete &
+      acyclic (fin_ica delete)].
+Proof. by rewrite delete_lab_defined delete_supp_closed delete_acyclic. Qed.
+
+End Delete_pre.
+
+Definition del :=
+  if eqP is ReflectT pf then lFsPoset (deleteP pf) else lFsPoset.empty E L bot.
+
+Definition lfsp_delE: 
+  [forall y : finsupp p, ~~ fs_ica p x (val y)] ->
+  (finsupp del = finsupp p `\ x) *
+  (fs_lab del =1 fun e => if e == x then bot else fs_lab p e) *
+  (fs_ica del =2 fun e1 e2 => if e2 != x then fs_ica p e1 e2 else false) *
+  (fs_ca del =2 fun e1 e2 => if e2 != x then fs_ca p e1 e2 else e1 == e2).
+Proof.
+  move=>*; rewrite /del; case: eqP=> //= ?.
+  do ? split=>>; 
+  by rewrite (delete_finsupp, delete_fs_ca, delete_fs_ica, delete_fs_lab).
+Qed.
+
+End Delete_max.
+
 Arguments of_seq E L bot : clear implicits.
 
 Section InterRel.
