@@ -654,6 +654,68 @@ Proof.
   by case/orP=> [/eqP->|/andP[->]].
 Qed.
 
+
+Lemma lfsp_lin_lang p (ls : seq L) : 
+  let emp := lFsPoset.empty E L bot in 
+  bot \notin ls ->
+  lFsPoset.bHom.axiom_explicit p (of_seq ls) id ->
+  exists2 tr : trace _,
+      lst_state p tr = p & 
+      labels tr = ls.
+Proof.
+  elim/last_ind: ls p=>/=; first by exists [trace].
+  move=> ls l IHl p nb ax.
+  case: (@backward_step p (size ls).+1).
+  - exact/(bhom_operation ax)/operational_of_seq.
+  - lia.
+  - rewrite -(finsupp_bhom_id ax) lFsPoset.of_seq_valE //.
+    by rewrite lFsPrePoset.of_seq_finsupp // size_rcons.
+  move=> q.
+  have->: fs_lab p (m (size ls).+1) = l.
+  - case: ax=> /(_ (m (size ls).+1)); rewrite ?fs_labE /=.
+    rewrite lFsPoset.of_seq_valE // lFsPrePoset.of_seq_labE.
+    rewrite encode_iter encode1 /= nth_rcons /=.
+    case: ifP; first lia; by rewrite eqxx.
+  move=> str; move: nb ax.
+  rewrite mem_rcons ?inE negb_or=> /andP[/[1! eq_sym]??].
+  rewrite of_seq_rcons // => ax.
+  set e := lfsp_fresh (of_seq ls).
+  have?: 
+    (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i1])
+    `<=` finsupp (lFsPoset.of_seq E L bot ls).
+  - exact/max_of_seq.
+  move: (str); case/lfsp_ltransP=> ?[es ?/[dup] pE->].
+  move/finsupp_bhom_id: (ax).
+  rewrite pE ?lfsp_add_eventE // => fE.
+  have fqE: lfsp_fresh (of_seq ls) = lfsp_fresh q.
+  - apply/(@is_sup_uniq _ _ (lfsp_fresh q |` finsupp q));
+    first rewrite -?fE; exact/is_sup_fresh.
+  have fsE: finsupp q = finsupp (of_seq ls).
+  - apply/fsetP=> x; move/fsetP/(_ x): fE; rewrite ?inE fqE.
+    case: (x =P _)=> //->_; by rewrite -{2}fqE ?(negbTE (fresh_seq_nmem _)).
+  case: (IHl q)=> //.
+  - move: ax; rewrite /lFsPoset.bHom.axiom_explicit /lab /==> -[lf lc _].
+    split.
+    - move: lf=> /[swap] x /(_ x); rewrite pE ?lfsp_add_eventE // fqE.
+      case: ifP=> // /eqP-> _.
+      by rewrite ?fs_lab_bot // -?fsE /lfsp_fresh fresh_seq_nmem.
+    - move: lc=> /[swap] e1 /(_ e1)/[swap] e2 /(_ e2) /[swap]in1/[swap] in2.
+      have /negbTE nf: e2 != lfsp_fresh q. 
+      - apply/eqP; move: in2=> /[swap]->.
+        by rewrite (negbTE (fresh_seq_nmem _)).
+      rewrite ?/(_ <= _) /= pE ?lfsp_add_eventE // fqE nf ?andbF /= ?inE.
+      rewrite in1 in2 ?orbT; exact.
+    by exists id.
+  move=> tr lstE labE.
+  have it: is_trace (rcons tr (mk_step l q p)).
+  - rewrite is_trace_rcons; apply/and3P; split=> //.
+    + by case: (tr).
+    by rewrite adjoint_lastE /= lstE.
+  exists (Trace it)=> /=; rewrite ?lst_state_rcons // /labels map_rcons.
+  exact/congr2.
+Qed.
+
+
 End Theory.
 End Theory.  
 
