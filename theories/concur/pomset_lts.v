@@ -299,7 +299,7 @@ Definition lfsp_add_event l es p : lfsposet E L bot :=
                    (lfsp_supp_closed p) 
                    (lfsp_acyclic p) 
     in
-     (introT and3P (And3 labD supcl acyc)))
+    (introT and3P (And3 labD supcl acyc)))
   end.
 
 End Def.
@@ -360,22 +360,6 @@ Implicit Types (tr : trace (LTS.ltsType E L bot)).
 Import lPoset.Syntax.
 Local Open Scope lts_scope.
 
-Lemma lfsp_ltransP l p q :
-  reflect (l != bot /\ exists2 es, 
-             es `<=` finsupp p & 
-             q = lfsp_add_event l es p)
-          (p --[l]--> q).
-Proof.
-  rewrite /ltrans /= /LTS.ltrans.
-  apply: (andPP idP). 
-  apply/(equivP idP); split=> [/existsP|] /=.
-  - move=> [es] /eqP->; exists (val es)=> //.
-    rewrite -fpowersetE; exact/(valP es). 
-  move=> [es] + ->; rewrite -fpowersetE.
-  move=> inPw; apply/existsP=> /=.
-  by exists (Sub es inPw).
-Qed.
-
 Lemma lfsp_add_eventE l es p : l != bot -> (es `<=` finsupp p) ->
   (* --- *)
   ((finsupp (lfsp_add_event l es p) =  lfsp_fresh p |` finsupp p)               *
@@ -407,9 +391,24 @@ Proof.
     //; case: (p)=> /=> /and3P[] //.
 Qed.
 
-Notation of_seq := (lFsPoset.of_seq E L bot).
-
+(* TODO: remove hints? *)
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
+
+Lemma lfsp_ltransP l p q :
+  reflect (l != bot /\ exists2 es, 
+             es `<=` finsupp p & 
+             q = lfsp_add_event l es p)
+          (p --[l]--> q).
+Proof.
+  rewrite /ltrans /= /LTS.ltrans.
+  apply: (andPP idP). 
+  apply/(equivP idP); split=> [/existsP|] /=.
+  - move=> [es] /eqP->; exists (val es)=> //.
+    rewrite -fpowersetE; exact/(valP es). 
+  move=> [es] + ->; rewrite -fpowersetE.
+  move=> inPw; apply/existsP=> /=.
+  by exists (Sub es inPw).
+Qed.
 
 Lemma lfsp_trace_labels_defined tr : 
   bot \notin labels tr.
@@ -428,13 +427,6 @@ Proof.
   case/andP=> /lfsp_dw_closP[] // ? /supp_closed_ca/orP[]//.
   - by move/eqP=>-> /sub/fresh_seq_mem/ltW ? /eqP->.
   by case/andP=> /fresh_seq_mem/ltW ??? /eqP->.
-Qed.
-
-Lemma opetaional0 : operational (lFsPoset.empty E L bot).
-Proof.
-  rewrite /lFsPoset.empty /=.
-  apply/forall2P=> ??; rewrite lFsPrePoset.fs_ca_empty.
-  by apply/implyP=> /eqP->.
 Qed.
 
 Lemma lfsp_trace_fresh tr p:
@@ -541,7 +533,8 @@ Proof.
   rewrite lfsp_trace_finsupp // !inE => ???.
   apply/orP; right; apply/and3P; split=> //.
   apply/(fs_ca_ident_le supcl acyc)=> //.
-  exact/(invariant_trace_lan invariant_operational)/opetaional0.
+  apply/(invariant_trace_lang invariant_operational)=> //. 
+  exact/lFsPrePoset.empty_operational.
 Qed.
 
 Lemma lfsp_lin_trace_lang tr : 

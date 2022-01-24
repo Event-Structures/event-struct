@@ -882,7 +882,7 @@ Proof.
   rewrite -E; apply/IHt; by case: (t) pf.
 Qed.
 
-Lemma invariant_trace_lan p s tr : 
+Lemma invariant_trace_lang p s tr : 
   invariant p -> tr \in trace_lang s -> p s -> p (lst_state s tr).
 Proof.
   by move/trace_invariant=> /(_ s tr)/[swap]/eqP<-/[apply].

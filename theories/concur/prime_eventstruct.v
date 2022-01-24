@@ -328,7 +328,7 @@ Context {L : choiceType} {bot : L}.
 
 Definition lfsposet_of (E : eventType L) (X : {fset E}) : lfsposet E L bot :=
   if eqP is ReflectT p then
-    lFsPoset (@lfspreposet_of_mixin L bot E X p)
+    mklFsPoset (@lfspreposet_of_mixin L bot E X p)
   else (lFsPoset.empty E L bot).
 
 Context (E : eventType L) (X : {fset E}).
