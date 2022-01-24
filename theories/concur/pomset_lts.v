@@ -536,6 +536,45 @@ Proof.
   case/lfsp_ltransP=> /eqP + ?; exact.
 Qed.
 
+Lemma max_of_seq (ls : seq L): 
+  bot \notin ls ->
+  (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i1])
+  `<=` finsupp (lFsPoset.of_seq E L bot ls).
+Proof.
+  move=> ?.
+  rewrite /= lFsPoset.of_seq_valE // lFsPrePoset.of_seq_finsupp //.
+  case: (ls)=> //= ? l'.
+  rewrite fsub1set ?inE in_nfresh encode_iter encode_fresh encode1.
+  case: l'=> //=*; rewrite ?eqxx; lia.
+Qed.
+
+Lemma of_seq_rcons l ls: 
+  bot \notin ls ->
+  l != bot ->
+  lFsPoset.of_seq E L bot (rcons ls l) = 
+  lfsp_add_event 
+    l
+    (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i1])
+    (lFsPoset.of_seq E L bot ls).
+Proof.
+  move=> nls nl; apply/eqP/lfsposet_eqP.
+  have?: bot \notin rcons ls l by rewrite mem_rcons ?inE negb_or eq_sym nls nl.
+  split=> x>; rewrite lfsp_add_eventE ?max_of_seq ?lFsPoset.of_seq_valE //.
+  all: rewrite lFsPrePoset.of_seq_fresh //.
+  - rewrite ?lFsPrePoset.of_seq_labE -rcons_cons nth_rcons /=.
+    rewrite -[x == _](inj_eq (encode_inj)) encode_iter encode1 add1n.
+    case: ltngtP=> // ?; rewrite nth_default //=; lia.
+  have ?: bot != l by rewrite eq_sym.
+  case: ifP=> [/eqP->|];
+  rewrite ?lFsPrePoset.of_seq_fs_icaE ?lFsPrePoset.of_seq_finsupp ?inE //=.
+  - rewrite ?inE andbF; (do ? case: (_ =P _)=> //)=>->-> /(congr1 encode).
+    rewrite encode_fresh; lia.
+  rewrite -size_eq0 -[fresh _ == _](inj_eq (encode_inj)).
+  do 2 rewrite -[_ == iter _ _ _](inj_eq (encode_inj)).
+  rewrite ?in_nfresh ?encode_iter ?encode1 ?encode_fresh size_rcons.
+  case: (size ls)=> //=; lia.
+Qed.
+
 
 Lemma operational_of_seq ls : 
   bot \notin ls ->

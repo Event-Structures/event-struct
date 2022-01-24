@@ -475,6 +475,15 @@ Lemma fs_ca_ident_le p :
   subrel (fs_ca p) <=^i%O.
 Proof. move=>?? /operationalP; exact. Qed.
 
+Lemma fs_ica_fin_icaE p : 
+  supp_closed p ->
+  fs_ica p =2 sub_rel_lift (fin_ica p).
+Proof.
+  move=> sc>; rewrite /fin_ica sub_rel_lift_downK=> //=>.
+  by case/(supp_closedP _ sc)=> /=->.
+Qed.
+
+
 End Theory.
 
 Section TheoryAux.
@@ -799,6 +808,19 @@ Lemma of_seq_finsupp :
   finsupp (of_seq ls) = [fset e | e in nfresh \i1 (size ls)].
 Proof. rewrite build_finsupp //; exact/of_seq_nth_defined. Qed.
 
+Lemma of_seq_fresh :
+  lfsp_fresh (of_seq ls) = iter (size ls) fresh \i1.
+Proof.
+  rewrite /lfsp_fresh /fresh_seq.
+  have /(max_set_eq (@i0_min _))->: 
+    (finsupp (of_seq ls) =i nfresh \i1 (size ls))=>>. 
+  - by rewrite of_seq_finsupp ?inE.
+  case: (boolP (size ls == 0%N))=> [|?].
+  - by rewrite size_eq0=> /eqP-> /=.
+  by apply/fresh_seq_nfresh.
+Qed.
+
+
 Lemma of_seq_size : 
   fs_size (of_seq ls) = size ls.
 Proof.
@@ -833,6 +855,33 @@ Proof.
   by rewrite of_seq_nth_defined.
 Qed.
 
+Lemma of_seq_fin_icaE e1 e2 : 
+  fin_ica (of_seq ls) e1 e2 = (fresh (val e1) == val e2).
+Proof.
+  rewrite /of_seq build_cov_fin_ica; first last.
+  - case=> /= ?; rewrite ?inE /= in_nfresh encode1.
+    case: (encode _)=> //= ??; apply/eqP; move: lsD=> /[swap]<-.
+    rewrite mem_nth=> //; lia.
+  apply/covP/eqP=> /=; case: e1 e2=> /= e1 i1 [/= e2 i2].
+  - case=> _ /andP[ne le nex]; apply/encode_inj; rewrite encode_fresh.
+    case: ((encode e1).+1 =P encode e2)=> // ?; case: nex.
+    move: i1 i2 le ne; rewrite of_seq_finsupp ?inE ?in_nfresh encode1.
+    rewrite /(_ <=^i _) /= /Ident.Def.ident_le -(inj_eq encode_inj)=>*.
+    have IN: (fresh e1 \in [fset e | e in nfresh \i1 (size ls)]).
+    - rewrite ?inE in_nfresh encode1 encode_fresh; lia.
+    exists [`IN] => /=. 
+    rewrite ?/(_ <=^i _) /= ?/Ident.Def.ident_le -(inj_eq encode_inj).
+    rewrite -[_ == fresh _](inj_eq encode_inj) ?encode_fresh; lia.
+  move=> fE.
+  have: e1 <^i e2 by rewrite -fE fresh_lt.
+  move=> /[dup]; rewrite {1}lt_neqAle=> /andP[*]; split.
+  - move/(congr1 val)=> /=; exact/eqP.
+  - rewrite eq_sym; exact/andP.
+  case=> -[/= e _]; rewrite -fE ?/(_ <=^i _) /= ?/Ident.Def.ident_le.
+  rewrite -(inj_eq encode_inj) -[fresh _ == _](inj_eq encode_inj) encode_fresh.
+  lia.
+Qed.
+
 Lemma of_seq_lab_defined : 
   lab_defined (of_seq ls).
 Proof. exact/lab_defined_build/of_seq_nth_defined. Qed.
@@ -844,6 +893,21 @@ Proof.
   rewrite build_ica build_finsupp //; last first. 
   - exact/of_seq_nth_defined.
   by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
+Qed.
+
+Hint Resolve of_seq_supp_closed : core. 
+
+Lemma of_seq_fs_icaE e1 e2 : 
+  fs_ica (of_seq ls) e1 e2 = 
+    [&& fresh e1 == e2
+      , e1 \in finsupp (of_seq ls)
+      & e2 \in finsupp (of_seq ls)
+    ].
+Proof.
+  rewrite fs_ica_fin_icaE // /sub_rel_lift /=. 
+  case: insubP=> [? ->|/negbTE->]; last lattice.
+  case: insubP=> [? ->|/negbTE-> //]; last by rewrite andbC.
+  rewrite of_seq_fin_icaE=>->->; lattice.
 Qed.
 
 Lemma of_seq_fin_ica_acyclic : 
