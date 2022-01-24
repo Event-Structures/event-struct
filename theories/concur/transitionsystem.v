@@ -147,7 +147,10 @@ Qed.
 
 Lemma add_fed0 : 
   add_fed ident0 = {| lab_prj := \init; fpo_prj := ident0; frf_prj := ident0 |}.
-Proof. rewrite add_fedE lt_eqF=> //; [ exact/fed0 | exact/fresh_seq0 ]. Qed.
+Proof. 
+  rewrite add_fedE lt_eqF; first exact/fed0.
+  exact/fresh_seq_mem/dom0.  
+Qed.
 
 Fact add_fpo_dom :
   [forall e : finsupp add_fed, add_fpo (val e) \in fresh_id :: dom].
