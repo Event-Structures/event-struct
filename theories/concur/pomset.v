@@ -1236,7 +1236,7 @@ Section Def.
 Context (E : identType) (L : eqType).
 Variable (bot : L).
 
-Structure lfsposet : Type := lFsPoset {
+Structure lfsposet : Type := mklFsPoset {
   lfsposet_val :> lfspreposet E L bot ; 
   _ : let p := lfsposet_val in 
       [&& lab_defined p, supp_closed p & acyclic (fin_ica p)]
@@ -1360,7 +1360,7 @@ Qed.
 
 Definition of_seq ls : lfsposet E L bot := 
   if bot \notin ls =P true is ReflectT nbl then
-    lFsPoset (of_seqP nbl)
+    mklFsPoset (of_seqP nbl)
   else empty E L bot.
 
 Lemma of_seq_valE ls : 
@@ -1569,7 +1569,7 @@ Proof.
   exact/lFsPrePoset.restrict_acyclic. 
 Qed.
 
-Definition restrict P p := lFsPoset (restrictP P p).
+Definition restrict P p := mklFsPoset (restrictP P p).
 
 End Restrict.
 
@@ -1595,7 +1595,7 @@ Proof.
   exact/lFsPrePoset.relabel_acyclic. 
 Qed.
 
-Definition relabel := lFsPoset relabelP.
+Definition relabel := mklFsPoset relabelP.
 
 End Relabel.
 
