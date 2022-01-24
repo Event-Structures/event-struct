@@ -404,11 +404,11 @@ Context {T : identType}.
 Implicit Types (x : T) (s : seq T).
 
 Lemma ident_leE x y : 
-  x <=^i y = ident_le x y.
+  x <=^i y = (encode x <= encode y). 
 Proof. done. Qed.
 
 Lemma ident_ltE x y : 
-  x <^i y = ident_lt x y.
+  x <^i y = (encode x < encode y).
 Proof. done. Qed.
 
 Lemma fresh0 : 

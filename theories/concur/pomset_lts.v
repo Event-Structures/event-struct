@@ -429,6 +429,8 @@ Proof.
   by case/andP=> /fresh_seq_mem/ltW ??? /eqP->.
 Qed.
 
+(* TODO: invariant_conseq_num ? *)
+
 Lemma lfsp_trace_fresh tr p:
   let emp := lFsPoset.empty E L bot in
   p = lst_state emp tr ->
