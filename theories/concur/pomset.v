@@ -1888,6 +1888,7 @@ Proof.
   by move=> /negP + /eqP.
 Qed.
 
+(* TODO: fs_lab p e = nth bot (lfsp_labels p) (encode p e) ?? *)
 Lemma fs_lab_nthE p e :  
   fs_lab p e = nth bot (lfsp_labels p) (lfsp_idx p e).
 Proof. 
@@ -2883,9 +2884,7 @@ Proof.
     move=> e1In e2In Hca; apply/orP; right.
     rewrite !conseq_num_mem // /f !decodeK usz !lfsp_idx_lt_szE.
     apply/and3P; split=> //. 
-    (* TODO: make a lemma *)
-    rewrite /Order.le /= /Ident.Def.ident_le. 
-    rewrite !decodeK; exact/lfsp_idx_le.
+    rewrite ident_leE !decodeK; exact/lfsp_idx_le.
   - pose g : [Event of u] -> [Event of t] := 
       fun e => lfsp_event t \i0 (encode e).
     exists g=> e; rewrite !conseq_num_mem // /f /g !usz ?decodeK.
@@ -2894,8 +2893,7 @@ Proof.
   move=> e1 e2 e1In e2In; rewrite /f fs_caE /=.
   rewrite lFsPoset.of_seq_caE labD andbT //.
   rewrite !conseq_num_mem // !decodeK !usz !lfsp_idx_lt_szE.
-  rewrite /Order.le /= /Ident.Def.ident_le. 
-  rewrite !decodeK=> /orP[/eqP|].
+  rewrite ident_leE !decodeK=> /orP[/eqP|].
   - move=> /decode_inj /lfsp_idx_inj -> //; exact/fs_ca_refl.
   move=> /and3P[le12 ??].  
   move: (tomset_total_in e1In e2In).  
@@ -2905,79 +2903,6 @@ Proof.
   apply/(lfsp_idx_inj e1In e2In).
   by apply/le_anti/andP. 
 Qed.
-
-Lemma tomset_ihomE lt lu : 
-  let t := @of_seq E L bot lt in
-  let u := @of_seq E L bot lu in
-  ihom_le t u = subseq lu lt.
-Proof. 
-  rewrite /of_seq /Pomset.of_seq piE /=.
-  pose t := lFsPoset.of_seq E L bot lt. 
-  pose u := lFsPoset.of_seq E L bot lu. 
-  apply/idP/idP; first last.
-  - admit.
-  rewrite /of_seq /=.
-  move=> /ihom_leP [f] finj; apply/subseqP.
-  pose n := size lu.
-  pose m := size lt.
-  pose g : nat -> nat := fun i => encode (f (decode i)).
-  pose s := mkseq g n.
-  exists (mkmask s m)=> //.
-  - admit. (* rewrite size_mkmask ?size_nseq // all_map /=. *)
-  rewrite (@mask_mkmask _ bot)=> //.
-  - admit.
-  - rewrite /g=> /= i j. 
-    rewrite !mem_iota !add0n /=. 
-    move=> Hi Hj Hij.
-    apply/(@operational_sca E L bot t).
-    + exact/(lfsp_supp_closed t).
-    + exact/(lfsp_acyclic t).
-    + exact/lFsPoset.of_seq_operational.
-    rewrite -fs_scaE.
-    apply/sca_monotone_in=> /=. 
-    + exact/finj.
-    + admit.
-    + admit.
-      admit.
-  - move=> /= i j; rewrite !mem_iota !add0n /g /= => Hi Hj.
-    move=> /encode_inj/finj=> dinj.
-    apply/decode_inj/dinj.
-    + admit.
-    admit.
-  - admit.
-  admit.
-Admitted.
-
-
-(* TODO: use notation for ihom_le *)
-Lemma tomset_ihomE t u : 
-  ihom_le t u = subseq (lfsp_labels u) (lfsp_labels t).
-Proof. 
-  apply/idP/idP.
-  - move=> /ihom_leP [f] finj; apply/subseqP.
-    pose n := fs_size u.
-    pose m := fs_size t.
-    pose g : nat -> nat := fun i => 
-      (* TODO: set default for lfsp_event to fresh_seq? *)
-      let e := lfsp_event u (fresh_seq (finsupp u)) i in 
-      lfsp_idx t (f e).
-    pose s := mkseq g n.
-    exists (mkmask s m).
-    + rewrite size_mkmask ?size_nseq ?size_tuple // all_map /=.
-      subst g=> /=; apply/allP=> i /=.
-      rewrite mem_iota addnC addn0=> /andP[??]. 
-      by rewrite sub_liftT.
-    apply/esym; subst s. 
-    rewrite (@mkmask_mask L _ _ t)=> //.
-    + by move=> ???; apply (sca_monotone f).
-    + exact/ihom_inj.
-    by move=> ?; rewrite -tlabE -tlabE lab_preserving.
-  
-
-
-(* Lemma tomset_labelsK : 
-  cancel (@lfsp_labels E L bot) (@lFsPrePoset.of_seq E L bot).
-Proof. admit. Admitted. *)
 
 End Theory.
 End Theory.
