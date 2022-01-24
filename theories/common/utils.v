@@ -1513,3 +1513,83 @@ Proof.
 Qed.
 
 End QuotUtils.
+
+Section MaxSet.
+
+Section MaxDef.
+
+Context {disp} {T : porderType disp} (def : T).
+Local Open Scope order_scope.
+
+Definition is_sup (X : seq T) (x : T) := 
+  x \in X /\ {in X, forall y, y <= x}.
+
+Definition is_max (X : seq T) (x : T) := 
+  x \in X /\ {in X, forall y, ~ x < y}.
+
+End MaxDef.
+
+Local Open Scope order_scope.
+Context {disp} {T : orderType disp} (def : T).
+Implicit Type (X : seq T).
+Hypothesis def_min : forall t, def <= t.
+
+Definition max_seq (t : seq T) := 
+  foldr Order.max def t.
+
+Lemma is_sup_uniq X x y : 
+  is_sup X x -> is_sup X y -> x = y.
+Proof.
+  case=> i l [/l/[swap]/(_ _ i) lxy *]; apply/le_anti; by rewrite lxy.
+Qed.
+
+Lemma max_seq_in l : 
+  l <> [::] -> max_seq l \in l.
+Proof.
+  elim: l=> // ? l; case: (l =P [::])=> [->/=|].
+  - by rewrite max_l ?inE.
+  by move=> nl/(_ nl) /[swap] _ /=; case: leP; rewrite ?inE ?eqxx // => _->.
+Qed.
+
+
+Lemma max_seqP X x :
+  X != nil ->
+  reflect (is_sup X x) (max_seq X == x).
+Proof.
+  elim: X x=> //= x l; case: (l =P [::])=> [-> _ ? _|].
+  - rewrite max_l=> //; apply/(iffP eqP)=> [->|[]].
+    - split=>>; rewrite ?inE // => /eqP-> //.
+    by rewrite ?inE=> /eqP->.
+  move=> ? /(_ _ erefl) IHX ? _. apply/(iffP idP); case: leP.
+  - move=> /[swap] /[dup]/eqP{2}->/IHX [i im lx]; split=>>; rewrite ?inE ?i //.
+    by case/orP=> [/eqP->|/im].
+  - move/IHX: (eqxx (max_seq l))=> [? im /[swap]/eqP-> lx].
+    split=>>; rewrite ?inE ?eqxx //.
+    by case/orP=> [/eqP->|/im/le_lt_trans/(_ lx)/ltW].
+  - move=> /[swap]-[]; rewrite ?inE=> /orP[/eqP-> im ?|? im ?].
+    - by apply/eqP/le_anti/andP; split=> //; apply/im; rewrite inE max_seq_in.
+    by apply/IHX; split=>>// i; apply/im; rewrite ?inE i.
+  move=> /[swap]-[]; rewrite ?inE=> /orP[/eqP->|i /[dup]]//.
+  move/(_ x); rewrite ?inE eqxx /= =>/(_ erefl) lx.
+  case/IHX: (eqxx (max_seq l))=> ? /(_ _ i)/[swap]_ /le_lt_trans/[apply].
+  move/lt_le_trans/(_ lx); by rewrite ltxx.
+Qed.
+
+Lemma is_sup_eq (X Y : seq T) : 
+  X =i Y -> forall x, is_sup X x <-> is_sup Y x.
+Proof.
+  by move=> e ?; split=> -[] ? im; split=>>*; rewrite 1?e // ?im // -1?e // e.
+Qed.
+
+Lemma max_set_eq (X Y : seq T) :
+  X =i Y -> max_seq X = max_seq Y.
+Proof.
+  case: (X =P nil)=> [->|/eqP nx ex].
+  - by case: Y=> // x ? /(_ x); rewrite ?inE eqxx.
+  apply/eqP/max_seqP=> //; rewrite (is_sup_eq ex); apply/max_seqP=> //.
+  apply/eqP=> ny; move: ny ex nx=>->; case: X=>// x ? /(_ x).
+  by rewrite ?inE eqxx.
+Qed.
+
+End MaxSet.
+
