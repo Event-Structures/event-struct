@@ -283,15 +283,15 @@ Definition lfsp_add_event l es p : lfsposet E L bot :=
   let q := lfspre_add_event l es p in
   match (l != bot) && (es `<=` (finsupp p)) =P true with
   | ReflectF _  => lFsPoset.empty E L bot
-  | ReflectT pf => 
-    let: conj lD esSub := andP pf in
+  | ReflectT pf => lFsPoset
+    (let: conj lD esSub := andP pf in
     let labD  := add_event_lab_defined es lD (lfsp_lab_defined p) in
     let supcl := add_event_supp_closed lD esSub (lfsp_supp_closed p) in
     let acyc  := add_event_acyclic lD esSub 
                    (lfsp_supp_closed p) 
                    (lfsp_acyclic p) 
     in
-    lFsPoset (introT and3P (And3 labD supcl acyc))
+     (introT and3P (And3 labD supcl acyc)))
   end.
 
 End Def.
@@ -368,6 +368,66 @@ Proof.
   by exists (Sub es inPw).
 Qed.
 
+Section Step_from_del.
+
+Context (p : lfsposet E L bot) (n : nat).
+Hypothesis oper : operational p.
+Hypothesis ne0n : n != 0%N.
+Hypothesis fs_p : finsupp p = [fset e | e in nfresh \i1 n].
+
+Definition m : E := iter n.-1 fresh \i1.
+
+Lemma m_max : [forall y : finsupp p, ~~ fs_ica p m (val y)].
+Proof.
+  apply/forallP=> -[]/= ?; rewrite fs_p ?inE /= in_nfresh encode1=> ?.
+  apply/negP.
+  move/(operational_fs_sca (lfsp_supp_closed _) (lfsp_acyclic _)): oper.
+  move/[swap]/(@t_step E (fs_ica p)).
+  move/(fs_scaP _ _ (lfsp_supp_closed _) (lfsp_acyclic _)).
+  move/[swap]/[apply]; rewrite /(_ <^i _) /= /Ident.Def.ident_lt /m.
+  rewrite encode_iter encode1; lia.
+Qed.
+
+Hint Resolve m_max : core.
+
+Lemma fresh_del : lfsp_fresh (lFsPoset.del p m) = m.
+Proof.
+  case: (n =P 1%N) fs_p m_max=> [|?].
+  - rewrite /m=>-> /= fsp ?; rewrite /lfsp_fresh lFsPoset.lfsp_delE // fsp.
+    have: ([fset e | e in [:: \i1]] `\ \i1 =i ([::] : seq E)).
+    - by move=>>; rewrite ?inE; case: (_ =P _).
+    by rewrite /fresh_seq; move/(max_set_eq (@i0_min _))->.
+  rewrite /lfsp_fresh lFsPoset.lfsp_delE // fs_p.
+  have: [fset e | e in nfresh \i1 n] `\ m =i nfresh \i1 n.-1.
+  - move=>>; rewrite ?inE /= /m ?in_nfresh -(inj_eq encode_inj) encode_iter.
+    rewrite encode1; lia.
+  rewrite /fresh_seq=> /(max_set_eq (@i0_min _))->*.
+  apply/fresh_seq_nfresh; lia. 
+Qed.
+
+Lemma backward_step : 
+  exists q, q --[fs_lab p m]--> p.
+Proof.
+  exists (lFsPoset.del p m); apply/lfsp_ltransP.
+  have nb: (fs_lab p m != bot).
+  - rewrite fs_labNbot fs_p ?inE /= /m in_nfresh encode_iter encode1; lia.
+  split=> //.
+  have ess: (p m).2 `<=` finsupp (lFsPoset.del p m).
+  - rewrite lFsPoset.lfsp_delE //; apply/fsubsetP=> x /[dup]; rewrite ?inE.
+    move/supp_closedP/(_ x m): (lfsp_supp_closed p)=>/[apply]-[-> _].
+    have ic: (irreflexive (fin_ica p)) by apply/acyc_irrefl/lfsp_acyclic.
+    move/(_ m): (fs_ica_irrefl (lfsp_supp_closed p) ic).
+    rewrite /fs_ica/=/fs_rcov; by case: (_ =P _)=> [->->|].
+  exists (p m).2=> //; apply/val_inj; rewrite /lfsp_add_event /=.
+  case: eqP=> /= [_|]; last by rewrite nb.
+  rewrite /lfspre_add_event fresh_del /lFsPoset.del.
+  case: eqP=>//= [_|/(_ m_max)] //.
+  apply/fsfunP=>>; rewrite ?fsfun_withE /fs_lab; case: (_ =P _)=> //->.
+  by case: (p m). 
+Qed.
+
+End Step_from_del.
+
 Lemma lfsp_add_eventE l es p : 
   l != bot ->
   (es `<=` finsupp p) ->
@@ -382,14 +442,14 @@ Lemma lfsp_add_eventE l es p :
     (e1 \in lfsp_dw_clos p es) && (e2 == lfsp_fresh p) || (fs_ca p e1 e2)) * 
   (fs_size (lfsp_add_event l es p) = (fs_size p).+1).
 Proof.
-  rewrite ?/lfsp_add_event; do ? case: eqP=> //=.
-  move=> p0; case: (andP p0)=> //= *.
+  rewrite ?/lfsp_add_event; (do ? case: eqP=> //=)=>*.
   rewrite add_event_finsuppE //; do ? split=> //>;
-  rewrite (add_event_fs_labE,
-           add_event_fs_icaE,
-           add_event_fs_rcovE,
-           add_event_fs_caE,
-           add_event_fs_sizeE)//; case: (p)=> /=> /and3P[] //.
+  rewrite ?(add_event_fs_labE,
+            add_event_fs_icaE,
+            add_event_fs_rcovE,
+            add_event_fs_caE,
+            add_event_fs_sizeE)//; case: (p)=> /=> /and3P[] // *;
+  exact/eqP.
 Qed.
 
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
