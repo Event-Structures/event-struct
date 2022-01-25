@@ -2137,34 +2137,45 @@ Module Export Iso.
 Section Iso.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
-Implicit Types (f : {hom [Event of p] -> [Event of q]}).
+Implicit Types (f : [Event of p] -> [Event of q]).
 Implicit Types (ff : { ffun [FinEvent of p] -> [FinEvent of q] 
                      | lFinPoset.iso_pred }).
 
+Lemma hom_axiom ff :
+  Hom.axiom _ _ (Hom.lift ff).
+Proof.
+  pose f := 
+     lFinPoset.fhom_of_fihom 
+    (lFinPoset.fihom_of_fbhom 
+    (lFinPoset.fbhom_of_fiso ff)).
+  have->: Hom.lift ff = Hom.lift f by done.
+  exact(@Hom.hom_axiom _ _ _ _ _ _ f).
+Qed.
+
 Lemma bhom_axiom ff : 
-  bHom.axiom (Hom.lift ff).
+  bHom.axiom _ _ (Hom.lift ff).
 Proof. 
   pose fb := lFinPoset.fbhom_of_fiso ff.
-  have->: Hom.lift ff = Hom.lift fb by done. 
+  have->: Hom.lift ff = Hom.lift fb by done.
   exact(@bHom.bhom_axiom _ _ _ _ _ _ fb).
 Qed.
   
 Lemma emb_axiom ff : 
-  Emb.axiom (Hom.lift ff).
+  Emb.axiom p q (Hom.lift ff).
 Proof. 
   pose fe := lFinPoset.femb_of_fiso ff.
   have->: Hom.lift ff = Hom.lift fe by done. 
   exact(@Emb.emb_axiom _ _ _ _ _ _ fe).
 Qed.
 
-Lemma iso_pred_of_iso f : 
-  bHom.axiom f -> Emb.axiom f -> lFinPoset.iso_pred (Hom.restr f).
+Lemma iso_pred_of_iso f (ax : Hom.axiom p q f): 
+  bHom.axiom p q f -> Emb.axiom p q f -> lFinPoset.iso_pred (Hom.restr ax).
 Proof. 
   move=> bhom_ax emb_ax.
   rewrite /lFinPoset.iso_pred /=.
   apply/andP; split.
   - exact/bHom.bhom_pred_of_bhom. 
-  by move: (Emb.emb_pred_of_emb emb_ax)=> /andP[]. 
+  by move: (Emb.emb_pred_of_emb ax emb_ax) => /andP[]. 
 Qed.
 
 End Iso.
@@ -2181,19 +2192,19 @@ Definition iso_eqv p q :=
 
 Lemma iso_leP p q :
   reflect 
-    (exists (f : {hom [Event of q] -> [Event of p]}), 
-      bHom.axiom f /\ Emb.axiom f)
+    (exists (f : [Event of q] -> [Event of p]), 
+      [/\ Hom.axiom q p f, bHom.axiom q p f & Emb.axiom q p f])
     (iso_eqv p q).
 Proof. 
   rewrite /iso_eqv; apply/(equivP idP); split.
   - move=> /fin_inhP [] f. 
     pose fe := lFinPoset.femb_of_fiso f.
     pose fh := lFinPoset.fhom_of_femb fe.
-    exists (Hom.of_fhom fh).
-    split; [exact/bhom_axiom | exact/emb_axiom]. 
-  move=> [f] [] fbij femb; apply/fin_inhP. 
-  exists; exists (Hom.restr f).
-  exact/(iso_pred_of_iso fbij femb).
+    exists (Hom.lift fh).
+    split; [exact/hom_axiom| exact/bhom_axiom | exact/emb_axiom]. 
+  move=> [f] [] ax fbij femb; apply/fin_inhP. 
+  exists; exists (Hom.restr ax).
+  exact/(iso_pred_of_iso ax).
 Qed.
 
 Lemma iso_bhom_le p q : 
