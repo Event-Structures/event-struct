@@ -1245,6 +1245,39 @@ Canonical subFinfun_subCountType E (L : countType) bot :=
 End Instances.
 End Instances.
 
+Section BuildCov.
+Context (E : identType) (L : eqType) (bot : L). 
+Context (fE : {fset E}).
+Implicit Types (p : lfsposet E L bot).
+Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel E).
+
+Variables (lab : fE -> L) (ca : rel E).
+Hypothesis labD : forall e, lab e != bot.
+Hypothesis ca_refl  : reflexive ca.
+Hypothesis ca_anti  : antisymmetric ca.
+Hypothesis ca_trans : transitive ca.
+
+Lemma build_covP : 
+  let p := lFsPrePoset.build_cov bot lab ca in
+  [&& lab_defined p,
+      supp_closed p &
+      acyclic (fin_ica p)].
+Proof.
+  apply/and3P; split.
+  - apply/lab_definedP=>>.
+    rewrite lFsPrePoset.build_lab lFsPrePoset.build_finsupp // => ?.
+    by rewrite sub_liftT.
+  - apply/supp_closedP=>>.
+    rewrite  lFsPrePoset.build_ica lFsPrePoset.build_finsupp /sub_rel_lift //=.
+    by do 2 case: insubP=> //.
+  exact/lFsPrePoset.build_cov_acyclic.
+Qed.
+
+Definition build_cov := lFsPoset build_covP.
+
+End BuildCov.
+
+
 Section Empty.
 Context (E : identType) (L : eqType) (bot : L). 
 Implicit Types (p : lfspreposet E L bot).
