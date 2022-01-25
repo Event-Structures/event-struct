@@ -2231,16 +2231,61 @@ Lemma iso_eqv_size p q :
   iso_eqv p q -> fs_size p = fs_size q.
 Proof. by move=> /iso_bhom_le /bhom_le_size. Qed.
 
-(* TODO: *)
-(* Lemma bhom_factor p q : 
+Lemma bhom_factor p q : 
   bhom_le p q -> 
-    exists2 q', 
-      iso_eqv p q' &
-      bHom.axiom_explicit q q' id.
+    exists2 q' : lfsposet E1 L bot, 
+      iso_eqv q' q &
+      Hom.axiom q' p id.
 Proof.
-  
-Qed. *)
-
+  case/bhom_leP=> f [ax [g c1 c2]].
+  set fE := finsupp p.
+  set lab : fE -> L := fun e => lab (g (val e)).
+  set ca  : rel E1  := fun e1 e2 => 
+    (e1 == e2) || 
+    [&& fs_ca q (g e1) (g e2), e1 \in finsupp p & e2 \in finsupp p].
+  have [: a1 a2 a3 a4] @q' := 
+    @lFsPoset.build_cov E1 L bot fE lab ca a1 a2 a3 a4.
+  - by case=> ??; rewrite /lab /= -ax c2 // fs_labE fs_labNbot.
+  - by move=> ?; rewrite /ca eqxx.
+  - move=>> /andP[] /orP[/eqP-> //|/and3P[+ ??]].
+    move/ax.2; rewrite ?(bhom_pre_img ax) ?c2 // =>/(_ erefl erefl)/[swap].
+    case/orP=>[/eqP->//|/and3P[+??]].
+    move/ax.2; rewrite ?(bhom_pre_img ax) ?c2 // =>/(_ erefl erefl)/[swap].
+    move=> l1 l2; apply/(fs_ca_antisym (lfsp_supp_closed p) (lfsp_acyclic p)).
+    exact/andP.
+  - set ft := (fs_ca_trans (lfsp_supp_closed q)).
+    move=>>; rewrite /ca => /orP[/eqP->//|/and3P[/[dup] fc /ft tr i1 i2]].
+    move/orP=>[/eqP<-|]; rewrite ?fc ?i1 i2 //=.
+    by move/andP=> [/tr->]->.
+  exists q'.
+  - apply/iso_leP=> /=; exists f; split.
+    - split=> x; rewrite ?fs_labE ?/(_ <= _) /=.
+      - rewrite lFsPrePoset.build_lab /sub_lift.
+        case: insubP=> /=; rewrite /lab.
+        - by case=> /= ???->; rewrite c1.
+        move: (ax.1 x); rewrite -fs_labNbot ?fs_labE=>->.
+        by rewrite negbK=> /eqP. 
+      - move=>>??; rewrite ?/(_ <= _) /= lFsPrePoset.build_cov_ca // /ca.
+        rewrite ?c1 ?(bhom_img ax) // =>->; lattice.
+  - by exists g; rewrite lFsPrePoset.build_finsupp.
+  - move=> x y ??. 
+    have fxy: f x == f y -> x = y.
+    - move/eqP/(congr1 g); rewrite ?c1 ?(bhom_img ax) //.
+    rewrite ?/(_ <= _) /= lFsPrePoset.build_cov_ca // /ca.
+    case/orP=> [/fxy->|]; first exact/fs_ca_refl.
+    case/and3P=>/orP[/fxy->*|]; first exact/fs_ca_refl.
+    by case/and3P=>+??; rewrite ?c1.
+  split=>>.
+  - rewrite ?fs_labE lFsPrePoset.build_lab /sub_lift.
+    case: insubP=> /= [[/=>?]|].
+    - rewrite /lab -ax.1 fs_labE /= c2 // =>-> //.
+    by rewrite -fs_labNbot negbK=>/eqP->.
+  rewrite ?/(_ <= _) /= lFsPrePoset.build_cov_ca // /ca /fE.
+  rewrite lFsPrePoset.build_finsupp // => ??.
+  case/orP=> [/eqP->|]; first exact/fs_ca_refl.
+  case/and3P=> /orP[/eqP->*|]; first exact/fs_ca_refl.
+  by case/and3P=> /ax.2; rewrite ?(bhom_pre_img ax) ?c2 // /(_ <= _) /==>->.
+Qed.
 
 End hEquiv.
 
