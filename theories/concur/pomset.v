@@ -1777,12 +1777,15 @@ Module iHom.
 Section iHom.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
-Implicit Types (f : {hom [Event of p] -> [Event of q]}).
+Implicit Types (f : [Event of p] -> [Event of q]).
 Implicit Types (ff : { ffun [FinEvent of p] -> [FinEvent of q] 
                      | lFinPoset.ihom_pred }).
 
+Definition axiom f := 
+  { in (finsupp p) &, injective f }.
+
 Lemma fihom_inj ff : 
-  { in (finsupp p) &, injective (Hom.lift ff) }.
+  axiom (Hom.lift ff).
 Proof. 
   pose f := lFinPoset.ihom_of_fihom ff.  
   rewrite /Hom.lift => /= e1 e2 e1In e2In.
@@ -1790,8 +1793,8 @@ Proof.
   by move=> /val_inj/(@ihom_inj _ _ _ f)/sub_inj.
 Qed.
 
-Lemma ihom_pred_of_ihom f : 
-  { in (finsupp p) &, injective f } -> lFinPoset.ihom_pred (Hom.restr f).
+Lemma ihom_pred_of_ihom f (ax : Hom.axiom f): 
+  axiom f -> lFinPoset.ihom_pred (Hom.restr ax).
 Proof. 
   move=> finj.
   rewrite /lFinPoset.ihom_pred /=.
@@ -1816,18 +1819,18 @@ Definition ihom_le p q :=
 
 Lemma ihom_leP p q :
   reflect 
-    (exists (f : {hom [Event of q] -> [Event of p]}), 
-      {in (finsupp q) &, injective f})
+    (exists (f : [Event of q] -> [Event of p]), 
+     Hom.axiom f /\ iHom.axiom f)
     (ihom_le p q).
 Proof. 
   rewrite /ihom_le; apply/(equivP idP); split.
   - move=> /fin_inhP [] f. 
     pose fi := lFinPoset.fhom_of_fihom f.
-    exists (Hom.of_fhom fi).
+    exists (Hom.lift fi); split; first exact/Hom.hom_axiom.
     exact/fihom_inj. 
-  move=> [f] finj; apply/fin_inhP. 
-  exists; exists (Hom.restr f).
-  exact/(ihom_pred_of_ihom finj).
+  move=> [f] [ax finj]; apply/fin_inhP. 
+  exists; exists (Hom.restr ax).
+  exact/(ihom_pred_of_ihom ax finj).
 Qed.
 
 Lemma ihom_le_size p q :
