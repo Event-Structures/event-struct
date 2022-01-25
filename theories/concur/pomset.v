@@ -1760,8 +1760,8 @@ Proof.
 Qed.
 
 (* TODO: make canonical? *)
-Definition of_fhom ff : {hom [Event of p] -> [Event of q]} := 
-  lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin ff)).
+(* Definition of_fhom ff : {hom [Event of p] -> [Event of q]} := 
+  lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin ff)). *)
 
 Lemma hom_in_finsupp f e : 
   axiom f ->
