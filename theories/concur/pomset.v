@@ -816,7 +816,7 @@ Proof.
     (finsupp (of_seq ls) =i nfresh \i1 (size ls))=>>. 
   - by rewrite of_seq_finsupp ?inE.
   case: (boolP (size ls == 0%N))=> [|?].
-  - by rewrite size_eq0=> /eqP-> /=.
+  - by rewrite size_eq0=> /eqP-> /=; rewrite fresh0.
   by apply/fresh_seq_nfresh.
 Qed.
 

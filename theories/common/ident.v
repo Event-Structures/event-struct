@@ -150,11 +150,11 @@ Context {T : identType}.
 Definition ident0 : T := 
   decode 0%nat.
 
+Definition ident1 : T := 
+  decode 1%nat.
+
 Definition fresh : T -> T := 
   fun x => decode (1 + encode x).
-
-Definition ident1 : T := 
-  fresh ident0.
 
 Definition nfresh : T -> nat -> seq T := 
   fun i n => traject fresh i n.
@@ -175,6 +175,8 @@ End Def.
 End Def. 
 
 Prenex Implicits fresh ident_le ident_lt.
+
+Arguments nfresh : simpl never.
 
 (* basic properties required by canonical instances *)
 Module Export Props.
@@ -201,11 +203,11 @@ Proof. by apply/inj_can_sym; [exact/encodeK | exact/decode_inj]. Qed.
 
 Lemma encode0 : 
   encode (ident0 : T) = 0%nat.
-Proof. by rewrite /ident0; exact /decodeK. Qed.
+Proof. by rewrite /ident0; exact/decodeK. Qed.
 
 Lemma encode1 : 
   encode (ident1 : T) = 1%nat.
-Proof. by rewrite /ident1 /fresh decodeK encode0. Qed.
+Proof. by rewrite /ident1; exact/decodeK. Qed.
 
 Lemma encode_fresh (e : T) : encode (fresh e) = (encode e).+1.
 Proof. rewrite /fresh decodeK; lia. Qed.
@@ -217,10 +219,8 @@ Proof.
   rewrite encode_fresh; lia.
 Qed.
 
-
 Lemma encode_inj : injective (@encode T).
 Proof. exact/pickle_inj. Qed.
-
 
 End Props.
 End Props.
@@ -403,6 +403,10 @@ Proof. by move=> A L R; elim: s1=> //= ??; rewrite -A=>->. Qed.
 Context {T : identType}.
 Implicit Types (x : T) (s : seq T).
 
+Lemma fresh0 : 
+  fresh (\i0 : T) = \i1.
+Proof. by rewrite /fresh encode0. Qed.
+
 Lemma fresh_lt x : 
   x <^i fresh x.
 Proof. 
@@ -461,7 +465,7 @@ Definition fresh_seq : seq T -> T := fun t =>
 
 Lemma fresh_seq_nil : 
   fresh_seq [::] = (\i1 : T).
-Proof. by rewrite /fresh_seq /=. Qed.
+Proof. by rewrite /fresh_seq fresh0. Qed.
 
 Lemma fresh_seq0 s : 
   \i0 <^i fresh_seq s.
@@ -499,10 +503,6 @@ Qed.
 Lemma fresh_seq_nmem s : fresh_seq s \notin s.
 Proof. by apply/memPn => x /fresh_seq_mem; rewrite lt_neqAle=> /andP[]. Qed.
 
-Section fresh_seq_nfresh.
-
-Arguments nfresh : simpl never.
-
 Lemma fresh_seq_nfresh x n : 
   n != 0 -> fresh_seq (nfresh x n) = iter n fresh x.
 Proof.
@@ -510,8 +510,6 @@ Proof.
   split=>>; first by apply/path.trajectP; exists n.
   rewrite in_nfresh /(_ <=^i _) /= /Def.ident_le encode_iter; lia.
 Qed.
-
-End fresh_seq_nfresh.
 
 Lemma mem_le_max s x: 
   x \in s -> x <= foldr ident_max \i0 s.
