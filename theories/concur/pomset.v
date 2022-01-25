@@ -2027,7 +2027,7 @@ Module Emb.
 Section Emb.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
-Implicit Types (f : {hom [Event of p] -> [Event of q]}).
+Implicit Types (f : [Event of p] -> [Event of q]).
 Implicit Types (ff : { ffun [FinEvent of p] -> [FinEvent of q] 
                      | lFinPoset.emb_pred }).
 
@@ -2050,9 +2050,9 @@ Proof.
   exact/fin_ca_refl.
 Qed.
 
-Lemma emb_pred_of_emb f : 
-  axiom f -> lFinPoset.emb_pred (Hom.restr f).
-Proof. 
+Lemma emb_pred_of_emb f (ax : Hom.axiom p q f) : 
+  axiom f -> lFinPoset.emb_pred (Hom.restr ax).
+Proof.
   rewrite /axiom=> /= femb.
   rewrite /lFinPoset.emb_pred /=.
   apply/andP; split.
@@ -2066,6 +2066,8 @@ Qed.
 
 End Emb.
 
+Arguments Emb.axiom {_ _ _ _} _ _.
+
 Module PreOrder.
 Section hPreOrder.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
@@ -2078,17 +2080,17 @@ Definition emb_le p q :=
 
 Lemma emb_leP p q :
   reflect 
-    (exists (f : {hom [Event of q] -> [Event of p]}), axiom f)
+    (exists (f : [Event of q] -> [Event of p]), Hom.axiom q p f /\ axiom q p f)
     (emb_le p q).
 Proof. 
   rewrite /emb_le; apply/(equivP idP); split.
   - move=> /fin_inhP [] f. 
     pose fh := lFinPoset.fhom_of_femb f.
-    exists (Hom.of_fhom fh).
+    exists (Hom.lift fh); split; first exact/Hom.hom_axiom.
     exact/emb_axiom. 
-  move=> [f] femb; apply/fin_inhP. 
-  exists; exists (Hom.restr f).
-  exact/(emb_pred_of_emb femb).
+  move=> [f [ax ?]] ; apply/fin_inhP. 
+  exists; exists (Hom.restr ax).
+  exact/(emb_pred_of_emb ax).
 Qed.
 
 Lemma emb_ihom_le p q : 
