@@ -562,9 +562,8 @@ Proof.
   have labsD : bot \notin (map lbl tr).
   - apply/mapP=> -[[/=> /(allP (trace_steps _))/[swap]<-]].
     by case/lfsp_ltransP=> /eqP.
-  rewrite -/q /=; apply/bhom_leP=> /=. 
-  unshelve eexists; first (unshelve econstructor); first exact: id; last first.  
-  - by move=> /=; exists id.
+  rewrite -/q /=; apply/bhom_leP=> /=.
+  - exists id; split=> //; last by exists id.
   repeat constructor.
   - move=> e; rewrite !fs_labE.
     rewrite lFsPoset.of_seq_valE ?lFsPrePoset.of_seq_labE //=.
@@ -574,7 +573,7 @@ Proof.
   rewrite !lFsPrePoset.of_seq_finsupp //=.
   rewrite !in_fset /= !size_labels. 
   move: (lfsp_supp_closed p)=> supcl.
-  move: (lfsp_acyclic p)=> acyc.
+  move: (lfsp_acyclic p)=> acyc ??.
   move=> /[dup] + /(supp_closed_ca supcl acyc) /orP[->|/andP[]] //. 
   rewrite lfsp_trace_finsupp // !inE => ???.
   apply/orP; right; apply/and3P; split=> //.
@@ -658,7 +657,7 @@ Qed.
 Lemma lfsp_lin_lang p (ls : seq L) : 
   let emp := lFsPoset.empty E L bot in 
   bot \notin ls ->
-  lFsPoset.bHom.axiom_explicit p (of_seq ls) id ->
+  lFsPoset.Hom.axiom p (of_seq ls) id ->
   exists2 tr : trace _,
       lst_state p tr = p & 
       labels tr = ls.
@@ -666,9 +665,9 @@ Proof.
   elim/last_ind: ls p=>/=; first by exists [trace].
   move=> ls l IHl p nb ax.
   case: (@backward_step p (size ls).+1).
-  - exact/(bhom_operation ax)/operational_of_seq.
+  - exact/(lFsPoset.hom_operational ax)/operational_of_seq.
   - lia.
-  - rewrite -(finsupp_bhom_id ax) lFsPoset.of_seq_valE //.
+  - rewrite -(finsupp_hom_id ax) lFsPoset.of_seq_valE //.
     by rewrite lFsPrePoset.of_seq_finsupp // size_rcons.
   move=> q.
   have->: fs_lab p (m (size ls).+1) = l.
@@ -685,7 +684,7 @@ Proof.
     `<=` finsupp (lFsPoset.of_seq E L bot ls).
   - exact/max_of_seq.
   move: (str); case/lfsp_ltransP=> ?[es ?/[dup] pE->].
-  move/finsupp_bhom_id: (ax).
+  move/finsupp_hom_id: (ax).
   rewrite pE ?lfsp_add_eventE // => fE.
   have fqE: lfsp_fresh (of_seq ls) = lfsp_fresh q.
   - apply/(@is_sup_uniq _ _ (lfsp_fresh q |` finsupp q));
@@ -694,7 +693,7 @@ Proof.
   - apply/fsetP=> x; move/fsetP/(_ x): fE; rewrite ?inE fqE.
     case: (x =P _)=> //->_; by rewrite -{2}fqE ?(negbTE (fresh_seq_nmem _)).
   case: (IHl q)=> //.
-  - move: ax; rewrite /lFsPoset.bHom.axiom_explicit /lab /==> -[lf lc _].
+  - move: ax; rewrite /lFsPoset.Hom.axiom /lab ?fs_labE /==> -[lf lc].
     split.
     - move: lf=> /[swap] x /(_ x); rewrite pE ?lfsp_add_eventE // fqE.
       case: ifP=> // /eqP-> _.
@@ -705,7 +704,6 @@ Proof.
         by rewrite (negbTE (fresh_seq_nmem _)).
       rewrite ?/(_ <= _) /= pE ?lfsp_add_eventE // fqE nf ?andbF /= ?inE.
       rewrite in1 in2 ?orbT; exact.
-    by exists id.
   move=> tr lstE labE.
   have it: is_trace (rcons tr (mk_step l q p)).
   - rewrite is_trace_rcons; apply/and3P; split=> //.
