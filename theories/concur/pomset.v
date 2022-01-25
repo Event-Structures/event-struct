@@ -1692,19 +1692,21 @@ Module Hom.
 Section Hom.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
-Implicit Types (f : {hom [Event of p] -> [Event of q]}).
+Implicit Types (f : [Event of p] -> [Event of q]).
 Implicit Types (ff : { ffun [FinEvent of p] -> [FinEvent of q] 
                      | lFinPoset.hom_pred }).
 
 Definition lift (ff : [FinEvent of p] -> [FinEvent of q]) : 
   [Event of p] -> [Event of q] := 
-    sub_lift (fun e => fresh_seq (finsupp q)) (fun e => val (ff e)).
+    sub_lift (fun=> fresh_seq (finsupp q)) (fun e => val (ff e)).
+
+Definition axiom f := ({ mono f : e     / lab e    }  *
+    {in (finsupp p) &, { homo f : e1 e2 / e1 <= e2 }})%type.
 
 (* TODO: think about better naming convention for this 
  *   and the following lemmas 
  *)
-Lemma hom_mixin ff : 
-  lPoset.Hom.Hom.mixin_of (lift ff).
+Lemma hom_axiom ff : axiom (lift ff).
 Proof.
   pose f := lFinPoset.hom_of_fhom ff.
   rewrite /lift; constructor. 
@@ -1716,19 +1718,7 @@ Proof.
     have{2}->: e = val (Sub e eIn : [FinEvent of p]) by done.
     rewrite !fin_lab_mono -fin_labE -fin_labE.
     apply/(lab_preserving f).
-  move=> e1 e2; rewrite !fs_caE.
-  case: (e2 \in finsupp p)/idP=> [eIn2|/negP eNIn]; last first. 
-  - move=> /fs_ca_nsupp ->. 
-    + exact/fs_ca_refl.    
-    + exact/(lfsp_supp_closed p).
-    + exact/(lfsp_acyclic p).
-    by apply/orP; right.
-  move=> ca12.
-  have eIn1: e1 \in finsupp p.
-  - move: (lfsp_supp_closed p)=> supcl.
-    move: (lfsp_acyclic p)=> acyc.
-    move: (supp_closed_ca supcl acyc ca12). 
-    by move=> /orP[/eqP->|/andP[]].
+  move=> e1 e2; rewrite !fs_caE=> eIn1 eIn2 ca12.
   rewrite !sub_liftT /=; move: ca12.
   have {1}->: e1 = val (Sub e1 eIn1 : [FinEvent of p]) by done.  
   have {1}->: e2 = val (Sub e2 eIn2 : [FinEvent of p]) by done.  
@@ -1740,36 +1730,47 @@ Qed.
 Definition of_fhom ff : {hom [Event of p] -> [Event of q]} := 
   lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin ff)).
 
-Lemma hom_in_finsupp f e : e \in finsupp p -> (f e) \in finsupp q.
+Lemma hom_in_finsupp f e : 
+  axiom f ->
+  e \in finsupp p -> (f e) \in finsupp q.
 Proof. 
-  move=> /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
-  by move=> /eqP labD; apply/eqP; rewrite (lab_preserving f).
+  move=> ax /[dup] eIn; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
+  by rewrite ax.
 Qed.
 
 (* TODO: rename? *)
-Definition restr f : {ffun [FinEvent of p] -> [FinEvent of q]} :=
-  [ffun e => Sub (f (val e)) (hom_in_finsupp f (valP e))].  
+Definition restr f (ax : axiom f) :
+  {ffun [FinEvent of p] -> [FinEvent of q]} :=
+  [ffun e => [` hom_in_finsupp ax (valP e)] ].  
 
-Lemma hom_pred_of_hom f : 
-  lFinPoset.hom_pred (restr f).
+Lemma hom_pred_of_hom f (ax : axiom f) : 
+  lFinPoset.hom_pred (restr ax).
 Proof. 
   rewrite /restr /lFinPoset.hom_pred. 
   apply/andP; split.
   - apply/fin_lab_preservingP=> e.
     rewrite !fin_labE /fin_lab /= !ffunE -fs_labE -fs_labE //=. 
-    exact/(lab_preserving f).
+    by rewrite ax.
   apply/fin_ca_monotoneP=> e1 e2.
   rewrite !fin_caE -fin_ca_mono -fin_ca_mono !ffunE -fs_caE -fs_caE /=. 
-  exact/(ca_monotone f).
-Qed.  
+  by move=> ?; rewrite ax.
+Qed.
 
 (* TODO: make canonical? *)
-Definition fhom_of f : 
+Definition fhom_of f (ax : axiom f) : 
   {ffun [FinEvent of p] -> [FinEvent of q] | lFinPoset.hom_pred} := 
-    Sub (restr f) (hom_pred_of_hom f).
+    Sub (restr ax) (hom_pred_of_hom ax).
 
 End Hom.
 End Hom.
+
+Lemma hom_operational E L bot (p q : lfsposet E L bot) : 
+  @Hom.axiom _ _ _ _ p q id -> operational q -> operational p.
+Proof.
+  (do ? case)=> _ cm /(operationalP (lfsp_supp_closed _) (lfsp_acyclic _)) sb.
+  apply/forall2P=> -[/= ? {}/cm cm [/= ? {}/cm cm]].
+  by apply/implyP=> /cm/sb.
+Qed.
 
 
 Module iHom.
