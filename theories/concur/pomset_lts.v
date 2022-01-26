@@ -669,7 +669,7 @@ Proof.
   elim/last_ind: ls p=>/=; first by exists [trace].
   move=> ls l IHl p nb ax.
   case: (@backward_step p (size ls).+1).
-  - exact/(lFsPoset.hom_operational ax)/operational_of_seq.
+  - exact/(hom_operational ax)/operational_of_seq.
   - lia.
   - rewrite -(finsupp_hom_id ax) lFsPoset.of_seq_valE //.
     by rewrite lFsPrePoset.of_seq_finsupp // size_rcons.
