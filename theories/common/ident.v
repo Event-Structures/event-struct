@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import finmap choice eqtype order zify.
-From eventstruct Require Import utils wftype.
+From eventstruct Require Import utils order wftype.
 
 (******************************************************************************)
 (* This file contains a theory of types that can be used as identifiers.      *)
@@ -506,30 +506,24 @@ Proof. by apply/memPn => x /fresh_seq_mem; rewrite lt_neqAle=> /andP[]. Qed.
 Lemma fresh_seq_nfresh x n : 
   n != 0 -> fresh_seq (nfresh x n) = iter n fresh x.
 Proof.
-  case: n=> //= n _; rewrite /fresh_seq; apply/congr1/eqP/max_seqP=> //.
-  split=>>; first by apply/path.trajectP; exists n.
+  case: n=> //= n _; rewrite /fresh_seq; apply/congr1/eqP. 
+  rewrite -is_sup_NnilE=> //; apply/is_supP; split=>>.
+  - by apply/path.trajectP; exists n.
   rewrite in_nfresh /(_ <=^i _) /= /Def.ident_le encode_iter; lia.
 Qed.
 
-Lemma mem_le_max s x: 
-  x \in s -> x <= foldr ident_max \i0 s.
-Proof.
-  elim: s=> //= a l IH; rewrite ?inE le_maxr=> /orP[/eqP->|/IH->] //.
-  by rewrite lexx.
-Qed. 
-
-Lemma fresh_seq_subset s1 s2: {subset s1 <= s2} -> fresh_seq s1 <=^i fresh_seq s2.
+Lemma fresh_seq_subset s1 s2: 
+  {subset s1 <= s2} -> fresh_seq s1 <=^i fresh_seq s2.
 Proof.
   rewrite /fresh_seq -fresh_mon; elim: s1 s2=> //=a s1 IH s2 s.
   rewrite le_maxl; apply/andP; split.
-  - exact/mem_le_max/(s a)/mem_head.
+  - exact/max_seq_in_le/(s a)/mem_head.
   by apply/IH=> ? I; apply/s; rewrite inE I orbT.
 Qed.
 
-Lemma fresh_seq_eq s1 s2: s1 =i s2 -> fresh_seq s1 = fresh_seq s2.
-Proof.
-  by move=> I; apply/le_anti/andP; split; apply/fresh_seq_subset=> ? /[! I].
-Qed.
+Lemma fresh_seq_eq s1 s2: 
+  s1 =i s2 -> fresh_seq s1 = fresh_seq s2.
+Proof. by move=> eqm; rewrite /fresh_seq (max_set_eq _ eqm). Qed.
 
 Lemma fresh_seqU (s1 s2 : {fset T}): 
   fresh_seq (s1 `|` s2)%fset = Order.max (fresh_seq s1) (fresh_seq s2).

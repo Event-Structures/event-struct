@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils rel relalg inhtype ident.
+From eventstruct Require Import utils rel relalg inhtype order ident.
 From eventstruct Require Import lts lposet pomset.
 
 (******************************************************************************)
@@ -642,7 +642,8 @@ Qed.
 Lemma is_sup_fresh (X : {fset E}) : 
   is_sup (fresh_seq X |` X) (fresh_seq X).
 Proof.
-  by split=>>; rewrite ?inE ?eqxx // => /orP[/eqP->|/fresh_seq_mem/ltW].
+  apply/is_supP; split=>>; rewrite ?inE ?eqxx //.
+  by move=> /orP[/eqP->|/fresh_seq_mem/ltW].
 Qed.
 
 Lemma operational_of_seq ls : 
