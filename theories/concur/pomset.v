@@ -1341,35 +1341,45 @@ Proof. by rewrite of_seq_valE lFsPrePoset.of_seq_size. Qed.
 
 End OfSeq.
 
-Section Delete_max.
-
+(* TODO: move to pomset_lts.v (by analogy with add_event)? *)
+Section DeleteMax.
 Context (E : identType) (L : eqType) (bot : L).
 Context (p : lfsposet E L bot) (x : E).
 
-Section Delete_pre.
+(* TODO: rename remove_event (by analogy with add_event)? *)
+Definition delete_pre := [fsfun p without x].
 
+(* TODO: split to lFsPrePoset & lFsPoset? 
+ *   Current definition of delete_pre is defined on `lfsposet`
+ *   and thus saves us from tedious preconditions 
+ *   (lab_defined, supp_closed, etc). 
+ *   But on the other hand, it makes it non-applicable to `lfspreposet`
+ *   (i.e. cyclic graphs).
+ *)
+
+Section DeletePre.
+(* TODO: make `fs_maximal` definition *)
 Hypothesis x_max : [forall y : finsupp p, ~~ fs_ica p x (val y)].
 
+(* TODO: move to lFsPoset.Theory *)
 Lemma x_maximal : forall y, ~ fs_ica p x y.
 Proof.
   move=> ? /[dup] /(supp_closedP _ (lfsp_supp_closed _))[_ i].
   by move/forallP/(_ [`i])/negP: x_max.
 Qed.
 
-Definition delete := [fsfun p without x].
-
-Lemma delete_finsupp : finsupp delete = finsupp p `\ x.
+Lemma delete_finsupp : finsupp delete_pre = finsupp p `\ x.
 Proof. exact/finsupp_without. Qed.
 
 Lemma delete_fs_lab : 
-  fs_lab delete =1 fun e => if e == x then bot else fs_lab p e.
+  fs_lab delete_pre =1 fun e => if e == x then bot else fs_lab p e.
 Proof. move=>>; rewrite /fs_lab fsfun_withE; by case: ifP. Qed.
 
 Lemma delete_fs_ica : 
-  fs_ica delete =2 fun e1 e2 => if e2 != x then fs_ica p e1 e2 else false.
+  fs_ica delete_pre =2 fun e1 e2 => if e2 != x then fs_ica p e1 e2 else false.
 Proof. move=>>; rewrite /fs_ica /= /fs_rcov fsfun_withE; by case: ifP. Qed.
 
-Lemma delete_supp_closed : supp_closed delete.
+Lemma delete_supp_closed : supp_closed delete_pre.
 Proof.
   apply/supp_closedP=> e1 e2.
   move/supp_closedP/(_ e1 e2): (lfsp_supp_closed p).
@@ -1378,7 +1388,7 @@ Proof.
 Qed.
 
 Lemma delete_fs_ca : 
-  fs_ca delete =2 fun e1 e2 => if e2 != x then fs_ca p e1 e2 else e1 == e2.
+  fs_ca delete_pre =2 fun e1 e2 => if e2 != x then fs_ca p e1 e2 else e1 == e2.
 Proof.
   move=>>; apply/(fs_caP _ _ delete_supp_closed)/idP.
   - move/clos_rt_rtn1_iff; elim=> [|y ? + _].
@@ -1396,14 +1406,14 @@ Proof.
   econstructor; last exact/fi; rewrite delete_fs_ica; by case (_ =P _).
 Qed.
 
-Lemma delete_lab_defined : lab_defined delete.
+Lemma delete_lab_defined : lab_defined delete_pre.
 Proof.
   apply/lab_definedP=>>. 
   rewrite delete_finsupp delete_fs_lab ?inE; case: ifP=> //= _.
   exact/lab_definedP/lfsp_lab_defined.
 Qed.
 
-Lemma delete_acyclic : acyclic (fin_ica delete).
+Lemma delete_acyclic : acyclic (fin_ica delete_pre).
 Proof.
   apply/fin_ica_acyclic=>>. 
   - rewrite delete_fs_ica; case: ifP=> // *.
@@ -1414,29 +1424,29 @@ Proof.
 Qed.
 
 Lemma deleteP :  
-  [&& lab_defined delete,
-      supp_closed delete &
-      acyclic (fin_ica delete)].
+  [&& lab_defined delete_pre,
+      supp_closed delete_pre &
+      acyclic (fin_ica delete_pre)].
 Proof. by rewrite delete_lab_defined delete_supp_closed delete_acyclic. Qed.
 
-End Delete_pre.
+End DeletePre.
 
-Definition del :=
+Definition delete :=
   if eqP is ReflectT pf then lFsPoset (deleteP pf) else lFsPoset.empty E L bot.
 
 Definition lfsp_delE: 
   [forall y : finsupp p, ~~ fs_ica p x (val y)] ->
-  (finsupp del = finsupp p `\ x) *
-  (fs_lab del =1 fun e => if e == x then bot else fs_lab p e) *
-  (fs_ica del =2 fun e1 e2 => if e2 != x then fs_ica p e1 e2 else false) *
-  (fs_ca del =2 fun e1 e2 => if e2 != x then fs_ca p e1 e2 else e1 == e2).
+  (finsupp delete = finsupp p `\ x) *
+  (fs_lab delete =1 fun e => if e == x then bot else fs_lab p e) *
+  (fs_ica delete =2 fun e1 e2 => if e2 != x then fs_ica p e1 e2 else false) *
+  (fs_ca delete =2 fun e1 e2 => if e2 != x then fs_ca p e1 e2 else e1 == e2).
 Proof.
-  move=>*; rewrite /del; case: eqP=> //= ?.
+  move=>*; rewrite /delete; case: eqP=> //= ?.
   do ? split=>>; 
   by rewrite (delete_finsupp, delete_fs_ca, delete_fs_ica, delete_fs_lab).
 Qed.
 
-End Delete_max.
+End DeleteMax.
 
 Arguments of_seq E L bot : clear implicits.
 
