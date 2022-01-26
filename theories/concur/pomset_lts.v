@@ -618,7 +618,7 @@ Qed.
 (* TODO: remove hint? *)
 Hint Resolve emax : core.
 
-Lemma fresh_del : lfsp_fresh (lFsPoset.del p e) = e.
+Lemma fresh_del : lfsp_fresh (lFsPoset.delete p e) = e.
 Proof.
   case: (n =P 1%N) fs_p emax=> [|?].
   - rewrite /e=>-> /= fsp ?; rewrite /lfsp_fresh lFsPoset.lfsp_delE // fsp.
@@ -637,11 +637,11 @@ Qed.
 Lemma backward_step : 
   exists q, q --[fs_lab p e]--> p.
 Proof.
-  exists (lFsPoset.del p e); apply/lfsp_ltransP.
+  exists (lFsPoset.delete p e); apply/lfsp_ltransP.
   have nb: (fs_lab p e != bot).
   - rewrite fs_labNbot fs_p ?inE /= /e in_nfresh encode_iter encode1; lia.
   split=> //.
-  have ess: (p e).2 `<=` finsupp (lFsPoset.del p e).
+  have ess: (p e).2 `<=` finsupp (lFsPoset.delete p e).
   - rewrite lFsPoset.lfsp_delE //; apply/fsubsetP=> x /[dup]; rewrite ?inE.
     move/supp_closedP/(_ x e): (lfsp_supp_closed p)=>/[apply]-[-> _].
     have ic: (irreflexive (fin_ica p)) by apply/acyc_irrefl/lfsp_acyclic.
@@ -649,7 +649,7 @@ Proof.
     rewrite /fs_ica/=/fs_rcov; by case: (_ =P _)=> [->->|].
   exists (p e).2=> //; apply/val_inj; rewrite /lfsp_add_event /=.
   case: eqP=> /= [_|]; last by rewrite nb.
-  rewrite /lfspre_add_event fresh_del /lFsPoset.del.
+  rewrite /lfspre_add_event fresh_del /lFsPoset.delete.
   case: eqP=>//= [_|/(_ emax)] //.
   apply/fsfunP=>>; rewrite ?fsfun_withE /fs_lab. 
   case: (_ =P _)=> //->; by case: (p e). 
