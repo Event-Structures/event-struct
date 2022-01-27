@@ -2280,22 +2280,11 @@ Definition bhom_le p q :=
   let EQ := [FinEvent of q] in
   ??|{ffun EQ -> EP | lFinPoset.bhom_pred}|.
 
-Lemma bhom_img p q f : 
-  Hom.axiom p q f -> {in finsupp p, forall e, (f e) \in finsupp q}.
-Proof.
-  move=> ax e /[dup] eIn. 
-  rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
-  by move=> /eqP labD; apply/eqP; rewrite ax. 
-Qed.
+Context {E1 E2 : identType}.
+Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 
-Lemma bhom_pre_img p q f e : 
-  Hom.axiom p q f -> f e \in finsupp q -> e \in finsupp p.
-Proof.
-  move=> ax /[dup] eIn. 
-  by rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE ax.
-Qed. 
-
-Lemma bhom_leP p q :
+Lemma bhom_leP
+  (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   reflect 
     (exists (f : E2 -> E1), Hom.axiom q p f /\ bHom.axiom q p f)
     (bhom_le p q).
