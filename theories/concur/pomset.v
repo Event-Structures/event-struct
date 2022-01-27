@@ -1998,7 +1998,6 @@ End Theory.
 
 Import lPoset.Syntax.
 
-
 Module Hom.
 Section Hom.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
@@ -2039,56 +2038,17 @@ Proof.
   exact/(ca_monotone f).
 Qed.
 
-End Hom.
-
-(* TODO: make canonical? *)
-(* Definition of_fhom ff : {hom [Event of p] -> [Event of q]} := 
-  lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin ff)). *)
-Module Export Theory.
-Section Theory.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
-Implicit Types (f : [Event of p] -> [Event of q]).
-
-Lemma hom_img f e : 
-  axiom f ->
-  e \in finsupp p -> (f e) \in finsupp q.
+Lemma hom_in_finsupp f e : 
+  axiom f -> e \in finsupp p -> (f e) \in finsupp q.
 Proof. 
   move=> ax /[dup] eIn. 
   by rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE ax.
 Qed.
 
-Lemma hom_pre_img f e: 
-  axiom f -> 
-  f e \in finsupp q -> e \in finsupp p.
-Proof.
-  move=> ax /[dup] eIn. 
-  by rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE ax.
-Qed. 
-
-
-Lemma hom_finsupp f e : 
-  axiom f -> 
-  e \in finsupp p = (f e \in finsupp q).
-Proof.
-  move=> /[dup] /hom_img i1 /hom_pre_img i2.
-  by apply/idP/idP=>?; rewrite (i1, i2).
-Qed.
-End Theory.
-End Theory.
-
-Section Hom.
-
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
-Implicit Types (f : [Event of p] -> [Event of q]).
-Implicit Types (ff : { ffun [FinEvent of p] -> [FinEvent of q] 
-                     | lFinPoset.hom_pred }).
-
 (* TODO: rename? *)
 Definition restr f (ax : axiom f) : 
   {ffun [FinEvent of p] -> [FinEvent of q]} :=
-  [ffun e => [` hom_img ax (valP e)] ].  
+  [ffun e => [` hom_in_finsupp ax (valP e)] ].  
 
 Lemma hom_pred_of_hom f (ax : axiom f) : 
   lFinPoset.hom_pred (restr ax).
@@ -2110,9 +2070,40 @@ Definition fhom_of f (ax : axiom f) :
 
 End Hom.
 
-Arguments  Hom.axiom {_ _ _ _} _ _.
+Arguments Hom.axiom {_ _ _ _} _ _.
 
-Lemma hom_operational {E : identType} {L : eqType} {bot : L} (p q : lfsposet E L bot) : 
+Module PreOrder.
+Section hPreOrder.
+Context {E1 E2 : identType} {L : eqType} {bot : L}.
+Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+
+(* TODO: define hom_le ? *)
+
+Lemma hom_img p q f e : 
+  axiom p q f -> e \in finsupp p -> (f e) \in finsupp q.
+Proof. exact/hom_in_finsupp. Qed.
+
+Lemma hom_pre_img p q f e: 
+  axiom p q f -> f e \in finsupp q -> e \in finsupp p.
+Proof.
+  move=> ax /[dup] eIn. 
+  by rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE ax.
+Qed. 
+
+Lemma hom_finsupp p q f e : 
+  axiom p q f -> e \in finsupp p = (f e \in finsupp q).
+Proof.
+  move=> /[dup] /hom_img i1 /hom_pre_img i2.
+  by apply/idP/idP=>?; rewrite (i1, i2).
+Qed.
+
+End hPreOrder.
+
+Section PreOrder.
+Context {E : identType} {L : eqType} {bot : L}.
+Implicit Types (p q : lfsposet E L bot).
+
+Lemma hom_operational p q : 
   Hom.axiom p q id -> operational q -> operational p.
 Proof.
   (do ? case)=> _ cm /(operationalP (lfsp_supp_closed _) (lfsp_acyclic _)) sb.
@@ -2120,7 +2111,12 @@ Proof.
   by apply/implyP=> /cm/sb.
 Qed.
 
-Import Hom.Theory.
+End PreOrder.
+End PreOrder.
+
+End Hom.
+
+Export Hom.PreOrder.
 
 Module iHom.
 Section iHom.
@@ -2280,11 +2276,7 @@ Definition bhom_le p q :=
   let EQ := [FinEvent of q] in
   ??|{ffun EQ -> EP | lFinPoset.bhom_pred}|.
 
-Context {E1 E2 : identType}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
-
-Lemma bhom_leP
-  (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+Lemma bhom_leP p q :
   reflect 
     (exists (f : E2 -> E1), Hom.axiom q p f /\ bHom.axiom q p f)
     (bhom_le p q).
@@ -2330,7 +2322,7 @@ Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
 Lemma finsupp_hom_id p q : 
   Hom.axiom q p id -> finsupp p = finsupp q.
 Proof.
-  move=> /[dup] /bhom_img s1 /bhom_pre_img s2.
+  move=> /[dup] /hom_img s1 /hom_pre_img s2.
   apply/fsetP=>>; apply/idP/idP=> ?; by rewrite (s1, s2).
 Qed.
 
@@ -2640,7 +2632,7 @@ Proof.
       move: (ax.1 x); rewrite -fs_labNbot ?fs_labE=>->.
       by rewrite negbK=> /eqP. 
     move=>>??; rewrite ?/(_ <= _) /= lFsPrePoset.build_cov_ca // /ca.
-    by rewrite ?c1 ?(bhom_img ax) // =>->; lattice.
+    by rewrite ?c1 ?(hom_img ax) // =>->; lattice.
   - by exists g; rewrite lFsPrePoset.build_finsupp.
   - move=> x y ??. 
     have fxy: f x == f y -> x = y.
@@ -2658,6 +2650,43 @@ Proof.
   case/orP=> [/eqP->|]; first exact/fs_ca_refl.
   case/and3P=> /orP[/eqP->*|]; first exact/fs_ca_refl.
   by case/and3P=> /ax.2; rewrite ?(hom_pre_img ax) ?c2 // /(_ <= _) /==>->.
+Qed.
+
+Lemma update_iso q p x y : 
+  x \notin finsupp q -> 
+  y \notin finsupp p -> 
+  iso_eqv p q ->
+  exists2 g, forall e, g e == y = (e == x) &
+  [/\ lFsPoset.Hom .axiom q p g,
+      lFsPoset.bHom.axiom q p g &
+      lFsPoset.Emb .axiom q p g].
+Proof.
+  move=> xnf ynf /iso_eqvP [f] [] ax [h c1 c2] axe.
+  set fr := fresh_seq (y |` finsupp p).
+  have freq: ((fr == y = false) * (fr \notin finsupp p))%type.
+  - by split; move: (fresh_seq_nmem (y |` finsupp p)); 
+    rewrite ?inE negb_or=> /andP[/negbTE].    
+  set g := fun e => 
+      if e \in finsupp q then
+        f e
+      else if e == x then
+        y
+      else fr.
+  exists g.
+  - move=> ?; rewrite /g; case: ifP.
+    - move/[dup]/(hom_img ax)/(memPn ynf)/negbTE->.
+      by move/(memPn xnf)/negbTE->.
+    by case: ifP; rewrite (eqxx, freq).
+  (do ? split=>>); rewrite /g.
+  - rewrite /g; case: ifP; first by rewrite ax.
+    case: ifP=> [/eqP->*|*]; rewrite ?fs_labE ?fs_lab_bot ?freq //.
+    exact/negbT.
+  - by (do 2 case: ifP=> //)=> *; rewrite ax.
+  - exists h=> z.
+    - case: ifP=>[*|]; last case: ifP;
+      rewrite ?(c1, negbTE ynf, negbTE freq.2) //.
+    move=> /[dup] ?; rewrite -{1}[z]c2 // => /(hom_pre_img ax)->; exact/c2.
+  (do ? case: ifP=> //)=>*; exact/axe.
 Qed.
 
 End hEquiv.
@@ -2719,11 +2748,12 @@ Export lFsPoset.Def.
 Export lFsPoset.Instances.
 Export lFsPoset.Syntax.
 Export lFsPoset.Theory.
+
+Export lFsPoset.Hom.PreOrder.
 Export lFsPoset.iHom.PreOrder.
 Export lFsPoset.bHom.PreOrder.
 Export lFsPoset.Emb.PreOrder.
 Export lFsPoset.Iso.Equiv.
-Export lFsPoset.Hom.Theory.
 Export lFsPoset.Emb.Theory.
 
 Module Pomset.
