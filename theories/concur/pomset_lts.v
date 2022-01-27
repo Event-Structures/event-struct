@@ -728,10 +728,14 @@ Lemma lfsp_lin_lang p (ls : seq L) :
   bot \notin ls ->
   lFsPoset.Hom.axiom p (lFsPoset.of_seq E L bot ls) id ->
   exists2 tr : trace _,
-      lst_state p tr = p & 
+      lst_state emp tr = p & 
       labels tr = ls.
 Proof.
-  elim/last_ind: ls p=>/=; first by exists [trace].
+  elim/last_ind: ls p=>/=.
+  - move=> ? _ /finsupp_hom_id fE; exists [trace] => //=.
+    apply/esym/val_inj/lFsPrePoset.eq_emptyE.
+    rewrite /fs_size -fE lFsPoset.of_seq_valE //.
+    by move: lFsPrePoset.of_seq_size; rewrite /fs_size=>->.
   move=> ls l IHl p nb ax.
   case: (@backward_step p (size ls).+1).
   - exact/(hom_operational ax)/operational_of_seq.
@@ -775,8 +779,9 @@ Proof.
       rewrite in1 in2 ?orbT; exact.
   move=> tr lstE labE.
   have it: is_trace (rcons tr (mk_step l q p)).
-  - rewrite is_trace_rcons; apply/and3P; split=> //; first by case: (tr).
-    by rewrite adjoint_lastE /= lstE.
+  - rewrite is_trace_rcons; apply/and3P; split=> //.
+    + by case: (tr).
+    rewrite adjoint_lastE /=; apply/eqP; by case: (val tr) lstE.
   exists (Trace it)=> /=; rewrite ?lst_state_rcons // /labels map_rcons.
   exact/congr2.
 Qed.
