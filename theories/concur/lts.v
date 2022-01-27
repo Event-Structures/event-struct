@@ -1019,17 +1019,17 @@ Qed.
 Definition of_eqrel (R' : hrel S T) R : R' ≡ R -> {sim S -> T} := 
   fun eqf => Simulation.Pack (of_eqrel_class eqf).
 
-Lemma sim_lang R s t :
-  R s t -> lts_lang t ≦ lts_lang s.
+Fact sim_trace_aux R s t (tr: traceSeq T) :
+  is_trace tr ->
+  R s t ->
+  t = fst_state t tr ->
+  (exists (tr' : trace S), 
+  [/\ R (lst_state s tr') (lst_state t tr), 
+      labels tr = labels tr' 
+    & s == fst_state s tr'
+  ]).
 Proof.
-  move=> HR w [[tr Htr]] + ->; clear w.
-  rewrite /lts_lang /trace_lang /= => /eqP Hh. 
-  suff: (exists (tr' : trace S), 
-           [/\ R (lst_state s tr') (lst_state t tr), 
-               labels tr = labels tr' 
-             & s == fst_state s tr'
-           ]).
-  - by move=> [tr' []] ???; exists tr'.
+  move=> Htr HR Hh.
   move: Htr Hh; elim/last_ind: tr=> [|{}tr st IH] /=.
   - by exists [trace] => /=.
   rewrite is_trace_rcons=> /and3P[Hst Htr Hj].
@@ -1060,6 +1060,29 @@ Proof.
   - by rewrite labels_rcons Hlbl.
   rewrite fst_state_rcons Hfst -fst_state_src. 
   by apply/eqP/fst_stateNnil.
+Qed.
+
+Lemma sim_trace R s s' t' t (tr : trace T) : 
+  R s t -> R s' t' ->
+  tr \in trace_lang t -> 
+  lst_state t tr = t' ->
+  exists tr' : trace S,
+    [/\ labels tr' = labels tr,
+        tr' \in trace_lang s &
+        R (lst_state s tr') t'].
+Proof.
+  move=> HR rs't' tl <-.
+  case: (sim_trace_aux (valP tr) HR (eqP tl))=> [tr' [r /esym lE?]].
+  by exists tr'.
+Qed.
+
+Lemma sim_lang R s t :
+  R s t -> lts_lang t ≦ lts_lang s.
+Proof.
+  move=> HR w [[tr Htr]] + ->; clear w.
+  rewrite /lts_lang /trace_lang /= => /eqP Hh.
+  case: (sim_trace_aux Htr HR Hh).
+  by move=> tr' [] ???; exists tr'.
 Qed.
 
 End LTSTheory.
