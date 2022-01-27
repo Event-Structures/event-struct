@@ -856,5 +856,66 @@ End Exports.
 
 End LTS.
 
+Export LTS.Exports.
 
+Module Export Theory.
+Section Theory.  
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p q : pomset E L bot).
+Implicit Types (tr : trace (LTS.pomltsType E L bot)).
+
+Import lPoset.Syntax.
+Local Open Scope lts_scope.
+
+Export Simulation.Exports.
+Import Simulation.Syntax.
+
+Definition R : hrel (pomset E L bot) (lfsposet E L bot) := 
+  iso_eqv.
+
+Lemma ltransP l (p q : lfsposet E L bot) :
+  reflect (l != bot /\ exists2 es, 
+             es `<=` finsupp p & 
+             iso_eqv q (lfsp_add_event l es p))
+          (LTS.ltrans l p q).
+Proof.
+  rewrite /ltrans /= /LTS.ltrans.
+  apply: (andPP idP). 
+  apply/(equivP idP); split=> [/existsP|] /=.
+  - move=> [es]; exists (val es)=> //.
+    rewrite -fpowersetE; exact/(valP es). 
+  move=> [es] +; rewrite -fpowersetE.
+  move=> inPw ?; apply/existsP=> /=.
+  by exists (Sub es inPw).
+Qed.
+
+
+Lemma iso_sim_class_of : Simulation.class_of 
+  (iso_eqv : hrel (pomset E L bot) (lfsposet E L bot)).
+Proof.
+  do ? split; rewrite /ltrans /==> l s1 t1 t2 ?.
+  case/lfsp_ltransP=> ? [es ? t2E].
+  exists (pom t2); first by rewrite -eqquot_piE.
+  have->: s1 = pom t1.
+  - apply/eqP; by rewrite eqquot_piE.
+  rewrite piE t2E; apply/ltransP; split=>//; by exists es.
+Qed.
+
+Definition iso_sim := Simulation.Pack iso_sim_class_of.
+
+Lemma iso_sim_tr_class_of : Simulation.class_of 
+  (iso_eqv : hrel (lfsposet E L bot) (pomset E L bot)).
+Proof.
+  do ? split; rewrite /ltrans /==> l s1 t1 t2.
+  rewrite iso_eqv_sym -eqquot_piE=> /eqP->.
+  rewrite -{1}[t2]reprK piE=> /ltransP[? [es ??]].
+  exists (lfsp_add_event l es s1); first by rewrite iso_eqv_sym.
+  by apply/lfsp_ltransP; split=> //; exists es.
+Qed.
+
+Definition iso_sim_tr := Simulation.Pack iso_sim_tr_class_of.
+
+End Theory.
+End Theory.
 End pomsetLTS.
