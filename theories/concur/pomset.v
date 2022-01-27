@@ -2456,6 +2456,54 @@ Proof. move=> ??? /[swap]; exact/lFinPoset.emb_trans. Qed.
 End PreOrder.
 End PreOrder.
 
+Module Theory.
+Section Theory.
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p q : lfsposet E L bot).
+
+Lemma emb_fs_ca p q f (X : {fset E}) : 
+  lFsPoset.Hom.axiom p q f -> 
+  lFsPoset.Emb.axiom p q f -> 
+  {in X &, injective f} ->
+  {in X &, fs_ca p =2 fun e1 e2 => fs_ca q (f e1) (f e2)}.
+Proof.
+  move=> /[dup] ax [] ? /[swap] + /[dup] axe + inj e1 e2 in1 in2.
+  move/(_ e1 e2)=>+/(_ e1 e2); rewrite ?/(_ <= _) /==> i1 i2.
+  case: ((e1 \notin finsupp p) || (e2 \notin finsupp p))/idP=> [ns|].
+  - apply/idP/idP=> /(fs_ca_nsupp (lfsp_supp_closed _) (lfsp_acyclic _)).
+    - move=> /(_ ns) /=-> //; exact/fs_ca_refl.
+    rewrite -?(hom_finsupp _ ax) ns=> /(_ erefl)/(inj _ _ in1 in2)->.
+    exact/fs_ca_refl.
+  move/negP; rewrite negb_or ?negbK=> /andP[*].
+  by apply/idP/idP=>*; rewrite (i1,i2).
+Qed.
+
+Lemma emb_dw_clos p q f (X : {fset E}) es :  
+  lFsPoset.Hom.axiom p q f -> 
+  lFsPoset.Emb.axiom p q f -> 
+  {in X &, injective f} ->
+  es `<=` finsupp p -> f @` es `<=` finsupp q ->
+  finsupp p `<=` X ->
+  {in X, forall e,   e \in lfsp_dw_clos p es = 
+                  (f e \in lfsp_dw_clos q (f @` es))}.
+Proof.
+  move/emb_fs_ca/[apply]/[apply] => ce ess ? /fsubsetP s > ?.
+  have?: supp_closed p by apply/lfsp_supp_closed.
+  have?: acyclic (fin_ica p) by apply/lfsp_acyclic.
+  have?: supp_closed q by apply/lfsp_supp_closed.
+  have?: acyclic (fin_ica q) by apply/lfsp_acyclic.
+  apply/lfsp_dw_closP/lfsp_dw_closP=> // [[e]|[e']]/[swap].
+  - move=>/[dup] ? /(fsubsetP ess)/s; exists (f e); rewrite -?ce //.
+    by apply/imfsetP; exists e.
+  case/imfsetP=> /= e /[swap]->; exists e=> //.
+  rewrite ?ce //; exact/s/(fsubsetP ess).
+Qed.
+
+End Theory.
+End Theory.
+
+
 End Emb.
 
 Export Emb.PreOrder.
