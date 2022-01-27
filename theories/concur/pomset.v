@@ -2799,6 +2799,17 @@ Proof.
   exact/[bhom of lPoset.Iso.Build.inv g \o h \o f].
 Qed.
 
+Lemma pom_bhom_le1 E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+  bhom_le p (repr (pom q)) = bhom_le p q.
+Proof.
+  rewrite /bhom_le. 
+  case: pomP=> q' /eqmodP/lFinPoset.fisoP[f]. 
+  (* case: pomP=> p' /eqmodP/lFinPoset.fisoP[g]. *)
+  apply/lFinPoset.fbhomP/lFinPoset.fbhomP=> [][h]; exists.
+  - exact/[bhom of h \o lPoset.Iso.Build.inv f].
+  exact/[bhom of h \o f].
+Qed.
+
 Context {E : identType} {L : choiceType} {bot : L}.
 Implicit Types (p q : pomset E L bot). 
 
@@ -2806,7 +2817,12 @@ Lemma pom_bhom_mono :
   {mono (@pom E L bot) : p q / bhom_le p q >-> bhom_le (repr p) (repr q)}.
 Proof. exact/pom_bhom_le. Qed.
 
-Canonical bhom_le_quot_mono2 := PiMono2 pom_bhom_mono.
+Lemma pom_lin_mono l :
+  {mono (@pom E L bot) : p / l \in lin p >-> l \in lin (repr p)}.
+Proof. exact/pom_bhom_le1. Qed.
+
+Canonical bhom_le_quote_mono2 := PiMono2 pom_bhom_mono.
+Canonical lin_quote_mono2 l := PiMono1 (pom_lin_mono l).
 
 Lemma pom_bhom_le_refl : 
   reflexive (@bhom_le E E L bot : rel (pomset E L bot)). 
