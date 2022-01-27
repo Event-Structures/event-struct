@@ -1543,4 +1543,9 @@ Proof.
   by rewrite -(@eqquotE T e Q). 
 Qed.
 
+Lemma eqquot_piP (x : Q) (y : T) :
+  reflect (x = (\pi y)%qT) (e (repr x) y).
+Proof. apply/(equivP idP); rewrite -eqquot_piE; symmetry; exact/(rwP eqP). Qed.
+
+
 End QuotUtils.
