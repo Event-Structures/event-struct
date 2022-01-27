@@ -2073,22 +2073,13 @@ End Hom.
 
 Arguments  Hom.axiom {_ _ _ _} _ _.
 
-(* TODO: rename to PreOrder? *)
-Module Theory.
-Section Theory.
-Context {E : identType} {L : eqType} {bot : L}.
-Implicit Types (p q : lfsposet E L bot).
-
-Lemma hom_operational p q : 
+Lemma hom_operational {E : identType} {L : eqType} {bot : L} (p q : lfsposet E L bot) : 
   Hom.axiom p q id -> operational q -> operational p.
 Proof.
   (do ? case)=> _ cm /(operationalP (lfsp_supp_closed _) (lfsp_acyclic _)) sb.
   apply/forall2P=> -[/= ? {}/cm cm [/= ? {}/cm cm]].
   by apply/implyP=> /cm/sb.
 Qed.
-
-End Theory.
-End Theory.
 
 End Hom.
 
@@ -2652,7 +2643,6 @@ Export lFsPoset.Def.
 Export lFsPoset.Instances.
 Export lFsPoset.Syntax.
 Export lFsPoset.Theory.
-Export lFsPoset.Hom.Theory.
 Export lFsPoset.iHom.PreOrder.
 Export lFsPoset.bHom.PreOrder.
 Export lFsPoset.Emb.PreOrder.
