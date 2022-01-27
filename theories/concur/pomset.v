@@ -2048,7 +2048,7 @@ Qed.
 (* TODO: rename? *)
 Definition restr f (ax : axiom f) : 
   {ffun [FinEvent of p] -> [FinEvent of q]} :=
-  [ffun e => [` hom_in_finsupp ax (valP e)] ].  
+  [ffun e => [` hom_in_finsupp ax (valP e)] ].
 
 Lemma hom_pred_of_hom f (ax : axiom f) : 
   lFinPoset.hom_pred (restr ax).
@@ -2068,6 +2068,7 @@ Definition fhom_of f (ax : axiom f) :
   {ffun [FinEvent of p] -> [FinEvent of q] | lFinPoset.hom_pred} := 
     Sub (restr ax) (hom_pred_of_hom ax).
 
+End Hom.
 End Hom.
 
 Arguments Hom.axiom {_ _ _ _} _ _.
@@ -2456,7 +2457,7 @@ Implicit Types (p q : lfsposet E L bot).
 
 Lemma emb_fs_ca p q f (X : {fset E}) : 
   lFsPoset.Hom.axiom p q f -> 
-  lFsPoset.Emb.axiom p q f -> 
+  axiom p q f -> 
   {in X &, injective f} ->
   {in X &, fs_ca p =2 fun e1 e2 => fs_ca q (f e1) (f e2)}.
 Proof.
@@ -2473,7 +2474,7 @@ Qed.
 
 Lemma emb_dw_clos p q f (X : {fset E}) es :  
   lFsPoset.Hom.axiom p q f -> 
-  lFsPoset.Emb.axiom p q f -> 
+  axiom p q f -> 
   {in X &, injective f} ->
   es `<=` finsupp p -> f @` es `<=` finsupp q ->
   finsupp p `<=` X ->
@@ -2641,6 +2642,7 @@ Proof.
     case/orP=> [/fxy->|]; first exact/fs_ca_refl.
     case/and3P=>/orP[/fxy->*|]; first exact/fs_ca_refl.
     by case/and3P=>+??; rewrite ?c1.
+  split.
   - move=> e; rewrite ?fs_labE lFsPrePoset.build_lab /sub_lift.
     case: insubP=> /= [[/=>?]|].
     - rewrite /lab -ax.1 fs_labE /= c2 // =>-> //.
@@ -2657,9 +2659,9 @@ Lemma update_iso q p x y :
   y \notin finsupp p -> 
   iso_eqv p q ->
   exists2 g, forall e, g e == y = (e == x) &
-  [/\ lFsPoset.Hom .axiom q p g,
-      lFsPoset.bHom.axiom q p g &
-      lFsPoset.Emb .axiom q p g].
+  [/\ Hom .axiom q p g,
+      bHom.axiom q p g &
+      Emb .axiom q p g].
 Proof.
   move=> xnf ynf /iso_eqvP [f] [] ax [h c1 c2] axe.
   set fr := fresh_seq (y |` finsupp p).
