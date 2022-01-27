@@ -791,3 +791,70 @@ End Theory.
 
 End lFsPosetLTS.
 
+Module Export pomsetLTS.
+(* TODO: there is a lot of copypaste from lFsPrePosetLTS ... *)
+Module LTS.
+Section LTS.
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p q : pomset E L bot).
+
+Definition ltrans l (p q : lfsposet E L bot) := 
+  (l != bot) &&
+  [exists es : fpowerset (finsupp p),
+    iso_eqv q (lfsp_add_event l (val es) p) 
+  ]. 
+
+Lemma pom_ltrans_repr l : 
+  {mono pom : p q / ltrans l p q >-> ltrans l (repr p) (repr q)}.
+Proof.
+  move=>p>; case: pomP=> q /eqmodP /= eqv.
+  case: pomP=> ? /eqmodP /= e1.
+  apply/andP/andP=> -[/[dup]nl-> /existsP[[/= es /[! fpowersetE] s]]].
+  - move: eqv=> /(lfsp_ltrans_iso _)-/(_ _ _ nl s)[es' ?? e2]. 
+    split=> //; apply/existsP. 
+    have ines : es' \in fpowerset (finsupp p) by rewrite fpowersetE.
+    exists [`ines] => /=; apply/(iso_eqv_trans e1)/(iso_eqv_trans e2).
+    by rewrite iso_eqv_sym.
+  - rewrite -iso_eqv_sym in eqv.
+    move: eqv=> /(lfsp_ltrans_iso _)-/(_ _ _ nl s)[es' ? e3 e2]. 
+    split=> //; apply/existsP. 
+    have ines : es' \in fpowerset (finsupp q) by rewrite fpowersetE.
+    exists [`ines] => /=; rewrite iso_eqv_sym. 
+    by apply/(iso_eqv_trans _ e1)/(iso_eqv_trans e3); rewrite iso_eqv_sym.
+Qed.
+
+Canonical ltrans_quote_mono2 l := PiMono2 (pom_ltrans_repr l).
+
+Lemma enabledP l p :
+  reflect (exists q, ltrans l (repr p) (repr q)) (l != bot).
+Proof.
+  apply/(iffP (LTS.enabledP _ (repr p)))=> /= -[q].
+  - case/lfsp_ltransP=> ? [es ? eq]; exists (pom q).
+    rewrite -[p]reprK piE; apply/andP; split=> //.
+    have ines : es \in fpowerset (finsupp (repr p)) by rewrite fpowersetE.
+    apply/existsP; exists [`ines]; rewrite eq; exact/iso_eqv_refl.
+  case/andP=> ? /existsP[[/= es /[! fpowersetE] ??]].
+  exists (lfsp_add_event l es (repr p)).
+  by apply/lfsp_ltransP; split=> //; exists es.
+Qed.
+  
+Definition mixin := 
+  let S := pomset E L bot in
+  @LTS.LTS.Mixin S L _ _ _ enabledP. 
+Definition pomltsType := 
+  Eval hnf in let S := pomset E L bot in (LTSType S L mixin).
+
+End LTS.
+
+Arguments pomltsType E L bot : clear implicits.
+
+Module Export Exports.
+Canonical pomltsType.
+Canonical ltrans_quote_mono2.
+End Exports.
+
+End LTS.
+
+
+End pomsetLTS.
