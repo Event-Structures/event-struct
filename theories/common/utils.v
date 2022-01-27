@@ -723,6 +723,14 @@ Section SeqEqUtils.
 Context {T : eqType}. 
 Implicit Types (p : pred T) (r : rel T) (s : seq T) (n : nat).
 
+Lemma eq_mem0 s1 s2 :
+  s1 =i s2 -> (s1 == [::]) = (s2 == [::]).
+Proof.
+  case: s1; case s2=> //= x s eqm; rewrite eqxx; apply/idP/idP.
+  - by rewrite /= -(in_nil x) eqm inE eqxx.
+  by move: (eqm x); rewrite !inE in_nil eqxx /=.
+Qed.
+
 Lemma subseq_anti : 
   antisymmetric (@subseq T).
 Proof. 

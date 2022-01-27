@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import finmap choice eqtype order zify.
-From eventstruct Require Import utils wftype.
+From eventstruct Require Import utils order wftype.
 
 (******************************************************************************)
 (* This file contains a theory of types that can be used as identifiers.      *)
@@ -150,11 +150,11 @@ Context {T : identType}.
 Definition ident0 : T := 
   decode 0%nat.
 
+Definition ident1 : T := 
+  decode 1%nat.
+
 Definition fresh : T -> T := 
   fun x => decode (1 + encode x).
-
-Definition ident1 : T := 
-  fresh ident0.
 
 Definition nfresh : T -> nat -> seq T := 
   fun i n => traject fresh i n.
@@ -175,6 +175,8 @@ End Def.
 End Def. 
 
 Prenex Implicits fresh ident_le ident_lt.
+
+Arguments nfresh : simpl never.
 
 (* basic properties required by canonical instances *)
 Module Export Props.
@@ -201,11 +203,11 @@ Proof. by apply/inj_can_sym; [exact/encodeK | exact/decode_inj]. Qed.
 
 Lemma encode0 : 
   encode (ident0 : T) = 0%nat.
-Proof. by rewrite /ident0; exact /decodeK. Qed.
+Proof. by rewrite /ident0; exact/decodeK. Qed.
 
 Lemma encode1 : 
   encode (ident1 : T) = 1%nat.
-Proof. by rewrite /ident1 /fresh decodeK encode0. Qed.
+Proof. by rewrite /ident1; exact/decodeK. Qed.
 
 Lemma encode_fresh (e : T) : encode (fresh e) = (encode e).+1.
 Proof. rewrite /fresh decodeK; lia. Qed.
@@ -217,10 +219,8 @@ Proof.
   rewrite encode_fresh; lia.
 Qed.
 
-
 Lemma encode_inj : injective (@encode T).
 Proof. exact/pickle_inj. Qed.
-
 
 End Props.
 End Props.
@@ -311,7 +311,7 @@ Coercion bLatticeType : type >-> Order.BLattice.type.
 Coercion distrLatticeType : type >-> Order.DistrLattice.type.
 Coercion bDistrLatticeType : type >-> Order.BDistrLattice.type.
 Coercion wfType : type >-> WellFounded.type.
-(* Coercion orderType : type >-> Order.TOrder.type. *)
+Coercion orderType : type >-> Order.Total.type.
 
 End Exports.
 
@@ -403,6 +403,10 @@ Proof. by move=> A L R; elim: s1=> //= ??; rewrite -A=>->. Qed.
 Context {T : identType}.
 Implicit Types (x : T) (s : seq T).
 
+Lemma fresh0 : 
+  fresh (\i0 : T) = \i1.
+Proof. by rewrite /fresh encode0. Qed.
+
 Lemma fresh_lt x : 
   x <^i fresh x.
 Proof. 
@@ -454,14 +458,14 @@ Proof.
   move=>->; rewrite encode_fresh -(inj_eq encode_inj); lia.
 Qed.
 
-Import Order.
+Import Order.Exports.
 
 Definition fresh_seq : seq T -> T := fun t => 
-  fresh (foldr Order.max \i0 t).
+  fresh (max_seq (\i0 : T) t).
 
 Lemma fresh_seq_nil : 
   fresh_seq [::] = (\i1 : T).
-Proof. by rewrite /fresh_seq /=. Qed.
+Proof. by rewrite /fresh_seq fresh0. Qed.
 
 Lemma fresh_seq0 s : 
   \i0 <^i fresh_seq s.
@@ -484,7 +488,6 @@ Proof.
   rewrite ?maxEle -fresh_mon; by case: ifP.
 Qed.
 
-
 Lemma fresh_seq_mem x s : 
   x \in s -> x <^i fresh_seq s.
 Proof. 
@@ -500,37 +503,27 @@ Qed.
 Lemma fresh_seq_nmem s : fresh_seq s \notin s.
 Proof. by apply/memPn => x /fresh_seq_mem; rewrite lt_neqAle=> /andP[]. Qed.
 
-(* Lemma fresh_seq_nfresh x n : 
-  0 < n -> fresh_seq (nfresh x n) = iter n fresh x.
-Proof. 
-  rewrite /fresh_seq foldl_maxn_sorted; last first.
-  - rewrite sorted_map; apply /sub_sorted /nfresh_sorted.
-    rewrite /ident_lt /= /Def.ident_lt=> {}x y /=; exact /ltW.
-  have {2}->: 0%nat = @encode T \i0 by apply/esym/encode0.
-  rewrite last_map; case: n=> [|{}n].
-  - by rewrite encode0=> /=. 
-  by rewrite nfreshSr last_rcons iterS /fresh.
-Qed. *)
-
-Lemma mem_le_max s x: 
-  x \in s -> x <= foldr ident_max \i0 s.
+Lemma fresh_seq_nfresh x n : 
+  n != 0 -> fresh_seq (nfresh x n) = iter n fresh x.
 Proof.
-  elim: s=> //= a l IH; rewrite ?inE le_maxr=> /orP[/eqP->|/IH->] //.
-  by rewrite lexx.
-Qed. 
+  case: n=> //= n _; rewrite /fresh_seq; apply/congr1/eqP. 
+  rewrite -is_sup_NnilE=> //; apply/is_supP; split=>>.
+  - by apply/path.trajectP; exists n.
+  rewrite in_nfresh /(_ <=^i _) /= /Def.ident_le encode_iter; lia.
+Qed.
 
-Lemma fresh_seq_subset s1 s2: {subset s1 <= s2} -> fresh_seq s1 <=^i fresh_seq s2.
+Lemma fresh_seq_subset s1 s2: 
+  {subset s1 <= s2} -> fresh_seq s1 <=^i fresh_seq s2.
 Proof.
   rewrite /fresh_seq -fresh_mon; elim: s1 s2=> //=a s1 IH s2 s.
   rewrite le_maxl; apply/andP; split.
-  - exact/mem_le_max/(s a)/mem_head.
+  - exact/max_seq_in_le/(s a)/mem_head.
   by apply/IH=> ? I; apply/s; rewrite inE I orbT.
 Qed.
 
-Lemma fresh_seq_eq s1 s2: s1 =i s2 -> fresh_seq s1 = fresh_seq s2.
-Proof.
-  by move=> I; apply/le_anti/andP; split; apply/fresh_seq_subset=> ? /[! I].
-Qed.
+Lemma fresh_seq_eq s1 s2: 
+  s1 =i s2 -> fresh_seq s1 = fresh_seq s2.
+Proof. by move=> eqm; rewrite /fresh_seq (max_set_eq _ eqm). Qed.
 
 Lemma fresh_seqU (s1 s2 : {fset T}): 
   fresh_seq (s1 `|` s2)%fset = Order.max (fresh_seq s1) (fresh_seq s2).

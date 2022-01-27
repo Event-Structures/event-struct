@@ -1,3 +1,4 @@
+From RelationAlgebra Require Import lattice boolean.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple.
 From mathcomp Require Import fintype finfun fingraph finmap.
@@ -15,6 +16,174 @@ Local Open Scope order_scope.
 (* Auxiliary definitions and lemmas about partial orders.                     *)
 (*                                                                            *)
 (******************************************************************************)
+
+Module Export MaxSup.
+Section Def.
+Context {disp : unit} {T : porderType disp}.
+Implicit Type (s : seq T) (x : T).
+
+(* TODO: generalize to arbitary pred? *)
+Definition is_sup s x := 
+  (x \in s) && all (fun y => y <= x) s.
+
+(* TODO: generalize to arbitary pred? *)
+Definition is_max s x := 
+  (x \in s) && all (fun y => ~~ (x < y)) s.
+
+Definition max_seq x s := 
+  foldr Order.max x s.
+
+End Def.
+
+Section Theory.
+Context {disp : unit} {T : orderType disp}.
+Implicit Type (s : seq T) (x : T).
+
+Lemma is_supP s x : 
+  reflect (x \in s /\ {in s, forall y, y <= x}) (is_sup s x).
+Proof. exact/(andPP idP allP). Qed.
+
+Lemma is_maxP s x : 
+  reflect (x \in s /\ {in s, forall y, ~~ (x < y)}) (is_max s x).
+Proof. exact/(andPP idP allP). Qed.
+
+Lemma is_sup_in s x : 
+  is_sup s x -> x \in s.
+Proof. by move=> /is_supP[]. Qed.
+  
+Lemma is_sup_uniq X x y :
+  is_sup X x -> is_sup X y -> x = y.
+Proof.
+  case/is_supP=> i l.
+  case/is_supP=> /l /[swap]/(_ _ i) lxy *.
+  by apply/le_anti; rewrite lxy.
+Qed.
+
+Lemma is_sup0 x :
+  ~~ is_sup [::] x.
+Proof. done. Qed.
+
+Lemma is_sup_eq s1 s2 : 
+  s1 =i s2 -> is_sup s1 =1 is_sup s2.
+Proof. by move=> e x; rewrite /is_sup e (eq_all_r e). Qed.
+
+Lemma is_sup1 x y :
+  (is_sup [:: x] y) = (x == y).
+Proof.
+  rewrite /is_sup inE /= andbT andb_idr eq_sym //.
+  by move=> /eqP->; rewrite lexx.
+Qed.
+
+Lemma max_seq_in d s : 
+  max_seq d s \in d :: s.
+Proof.
+  elim: s=> [|x s] //=; rewrite !inE //.
+  by case: leP; rewrite ?eqxx //= => + /orP[|] ->. 
+Qed.
+
+Lemma max_seq_dflt_le d s : 
+  d <= max_seq d s.
+Proof. 
+  elim s=> //= x {}s IH.
+  apply/(le_trans IH).
+  by rewrite le_maxr lexx.
+Qed.
+
+Lemma max_seq_in_le d s x : 
+  x \in s -> x <= max_seq d s.
+Proof. 
+  elim s=> //= y {}s IH.
+  rewrite inE le_maxr=> /orP[/eqP->|/IH->] //=.
+  by rewrite lexx.
+Qed.
+
+Lemma max_seq_all d s x : 
+  d <= x -> all (<=%O^~ x) s = (max_seq d s <= x).
+Proof. 
+  move=> led; apply/idP/idP.
+  - move: (max_seq_in d s); rewrite inE=> /orP[/eqP->|] //. 
+    by move=> /[swap] /allP; apply.
+  elim s=> //= y {}s IH.
+  by rewrite le_maxl=> /andP[->] /IH ->.  
+Qed.
+
+Lemma max_seq_all_dflt d s :
+  all (<=%O^~ d) s = (max_seq d s == d).
+Proof.
+  rewrite (@max_seq_all d) le_eqVlt orb_idr //.
+  move=> /ltW ?; apply/eqP/le_anti/andP; split=> //.
+  exact/max_seq_dflt_le.
+Qed.
+
+Lemma is_sup_max_seqE d s x : 
+  is_sup s x -> max_seq d s = Order.max d x.
+Proof. 
+  move=> /is_supP[xin lex].
+  apply/le_anti/andP; split; case: (leP d)=> // xd; last 2 first.
+  - exact/max_seq_in_le.
+  - exact/max_seq_dflt_le.
+  - rewrite -max_seq_all //; exact/allP.
+  rewrite le_eqVlt -max_seq_all_dflt.
+  apply/orP; left; apply/allP=> y /lex. 
+  move=> /le_trans; apply; exact/ltW.
+Qed.
+
+Lemma is_sup_le_max_seqE d s x :
+  d <= x -> is_sup s x -> max_seq d s = x.
+Proof. move=> dx supx; rewrite -(max_r dx); exact/is_sup_max_seqE. Qed.
+
+Lemma max_seq_sup d s x : 
+  max_seq d s \in s -> is_sup s (max_seq d s).
+Proof. move=> max_in; apply/is_supP; split=> //; exact/max_seq_in_le. Qed.
+
+Lemma is_supE d s x : 
+  d <= x -> (is_sup s x) = (x \in s) && (max_seq d s == x).
+Proof.
+  move=> dx; apply/idP/idP; last first.
+  - move=> /andP[] /[swap] /eqP<-; exact/max_seq_sup.
+  move=> /[dup] /is_sup_in -> /(is_sup_max_seqE d) -> /=.
+  by rewrite max_r.    
+Qed.
+
+Section WithBottom.
+Context {d : T}.
+Hypothesis (dbot : forall x, d <= x).
+
+Lemma max_seq_inNnil s : 
+  s != [::] -> max_seq d s \in s.
+Proof.
+  elim: s=> // x s IH /= _. 
+  case: (s == [::])/eqP=> [->|/eqP nl] /=.
+  - rewrite max_l ?inE //.
+  by case: leP; rewrite ?inE ?eqxx ?IH.
+Qed.
+
+Lemma max_set_eq s1 s2 :
+  s1 =i s2 -> max_seq d s1 = max_seq d s2.
+Proof.
+  move=> eqm; case: (s1 == [::])/idP.
+  - move=> /[dup] + /eqP ->. 
+    by rewrite (eq_mem0 eqm)=> /eqP->.
+  move=> /negP; rewrite (eq_mem0 eqm)=> neq.
+  apply/is_sup_le_max_seqE=> //.
+  apply/is_supP; split.
+  - by rewrite eqm; apply/max_seq_inNnil. 
+  by move=> x; rewrite eqm=> /max_seq_in_le. 
+Qed.
+
+Lemma is_sup_NnilE s x :
+  s != [::] -> is_sup s x = (max_seq d s == x).
+Proof. 
+  rewrite (@is_supE d) // => neq.
+  apply/idP/idP=> [/andP[? ->]|/eqP<-] //.
+  rewrite eqxx andbT; exact/max_seq_inNnil.
+Qed.
+
+End WithBottom.
+
+End Theory.
+
+End MaxSup.
 
 Module DwFinPOrder.
 
