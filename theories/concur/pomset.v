@@ -5,6 +5,7 @@ From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 From eventstruct Require Import utils rel relalg inhtype order ident lposet.
+From eventstruct Require Import hal.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)
@@ -841,10 +842,10 @@ Lemma of_seq_nth_defined :
   forall (e : [fset e | e in nfresh \i0 (size ls)]),
     nth bot ls (@encode E (val e)) != bot.
 Proof.
-  move: lsD=> /negP nbl [/= e].
-  rewrite ?inE /= in_nfresh encode0 addn0 /= => He.
-  apply/negP; move: nbl=> /[swap]/eqP<-.  
-  apply; exact/mem_nth.
+  move: lsD=> /negP nbl [/= ?].
+  rewrite ?inE /=; encodify=> ?.
+  apply/negP; move: nbl=> /[swap]/eqP<-.
+  apply; apply/mem_nth; lia.
 Qed.
 
 Lemma of_seq_finsupp : 
@@ -880,10 +881,7 @@ Lemma of_seq_labE e :
 Proof.
   rewrite /of_seq build_lab /= /sub_lift.
   case: insubP=> /= [?? ->|] //.
-  rewrite !in_fset /mem_fin /=.
-  rewrite in_nfresh encode0 addn0 /=.
-  rewrite ltnNge negbK=> ?. 
-  by rewrite nth_default.
+  rewrite ?inE /==> ?; rewrite nth_default; hal.
 Qed.
 
 Lemma of_seq_fin_caE : 
@@ -914,27 +912,17 @@ Lemma of_seq_fin_icaE e1 e2 :
   fin_ica (of_seq ls) e1 e2 = (fresh (val e1) == val e2).
 Proof.
   rewrite /of_seq build_cov_fin_ica; first last.
-  - case=> /= e; rewrite ?inE /= in_nfresh encode0 addn0 /=.
-    move=> ?; apply/eqP; move: lsD=> /[swap]<-.
-    rewrite mem_nth=> //; lia.
+  - case=> /= ?; rewrite ?inE /==> ?.
+    apply/eqP; move: lsD=> /[swap]<-.
+    rewrite mem_nth=> //; hal.
   apply/covP/eqP=> /=; case: e1 e2=> /= e1 i1 [/= e2 i2].
-  - case=> _ /andP[ne le nex]; apply/encode_inj; rewrite encode_fresh.
-    case: ((encode e1).+1 =P encode e2)=> // ?; case: nex.
-    move: i1 i2 le ne; rewrite of_seq_finsupp ?inE ?in_nfresh encode0 addn0 /=.
-    rewrite /(_ <=^i _) /= /Ident.Def.ident_le -(inj_eq encode_inj)=>*.
+  - case=> _ /andP[?? nex]. 
+    case: (fresh e1 =P e2)=> // /eqP ?; case: nex.
+    move: i1 i2; rewrite of_seq_finsupp ?inE /==> *.
     have IN: (fresh e1 \in [fset e | e in nfresh \i0 (size ls)]).
-    - rewrite ?inE in_nfresh encode0 encode_fresh; lia.
-    exists [`IN] => /=. 
-    rewrite ?/(_ <=^i _) /= ?/Ident.Def.ident_le -(inj_eq encode_inj).
-    rewrite -[_ == fresh _](inj_eq encode_inj) ?encode_fresh; lia.
-  move=> fE.
-  have: e1 <^i e2 by rewrite -fE fresh_lt.
-  move=> /[dup]; rewrite {1}lt_neqAle=> /andP[*]; split.
-  - move/(congr1 val)=> /=; exact/eqP.
-  - rewrite eq_sym; exact/andP.
-  case=> -[/= e _]; rewrite -fE ?/(_ <=^i _) /= ?/Ident.Def.ident_le.
-  rewrite -(inj_eq encode_inj) -[fresh _ == _](inj_eq encode_inj) encode_fresh.
-  lia.
+    - rewrite ?inE /=; hal.
+    exists [`IN] => /=; hal.
+  split=> [/(congr1 val)||[[/= ? _]]]; hal.
 Qed.
 
 Lemma of_seq_lab_defined : 
