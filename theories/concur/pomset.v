@@ -2039,17 +2039,56 @@ Proof.
   exact/(ca_monotone f).
 Qed.
 
-Lemma hom_in_finsupp f e : 
-  axiom f -> e \in finsupp p -> (f e) \in finsupp q.
+End Hom.
+
+(* TODO: make canonical? *)
+(* Definition of_fhom ff : {hom [Event of p] -> [Event of q]} := 
+  lPoset.Hom.Hom.Pack (lPoset.Hom.Hom.Class (hom_mixin ff)). *)
+Module Export Theory.
+Section Theory.
+Context {E1 E2 : identType} {L : eqType} {bot : L}.
+Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Implicit Types (f : [Event of p] -> [Event of q]).
+
+Lemma hom_img f e : 
+  axiom f ->
+  e \in finsupp p -> (f e) \in finsupp q.
 Proof. 
   move=> ax /[dup] eIn. 
   by rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE ax.
 Qed.
 
+Lemma hom_pre_img f e: 
+  axiom f -> 
+  f e \in finsupp q -> e \in finsupp p.
+Proof.
+  move=> ax /[dup] eIn. 
+  by rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE ax.
+Qed. 
+
+
+Lemma hom_finsupp f e : 
+  axiom f -> 
+  e \in finsupp p = (f e \in finsupp q).
+Proof.
+  move=> /[dup] /hom_img i1 /hom_pre_img i2.
+  by apply/idP/idP=>?; rewrite (i1, i2).
+Qed.
+End Theory.
+End Theory.
+
+Section Hom.
+
+Context {E1 E2 : identType} {L : eqType} {bot : L}.
+Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Implicit Types (f : [Event of p] -> [Event of q]).
+Implicit Types (ff : { ffun [FinEvent of p] -> [FinEvent of q] 
+                     | lFinPoset.hom_pred }).
+
 (* TODO: rename? *)
 Definition restr f (ax : axiom f) : 
   {ffun [FinEvent of p] -> [FinEvent of q]} :=
-    [ffun e => [` hom_in_finsupp ax (valP e)] ].  
+  [ffun e => [` hom_img ax (valP e)] ].  
 
 Lemma hom_pred_of_hom f (ax : axiom f) : 
   lFinPoset.hom_pred (restr ax).
@@ -2081,7 +2120,7 @@ Proof.
   by apply/implyP=> /cm/sb.
 Qed.
 
-End Hom.
+Import Hom.Theory.
 
 Module iHom.
 Section iHom.
@@ -2222,8 +2261,8 @@ Proof.
   pose gf : [FinEvent of q] -> [FinEvent of p] := 
     fun e => Sub (g (val e)) (suppg (val e) (valP e)). 
   exists gf=> e; rewrite /gf /Hom.restr ffunE /=. 
-  all: apply/val_inj=> //=; rewrite ?K ?K'=> //. 
-  exact/Hom.hom_in_finsupp.
+  all: apply/val_inj=> //=; rewrite ?K ?K'=> //.
+  exact/hom_img.
 Qed.  
 
 End bHom.
@@ -2547,9 +2586,9 @@ Proof.
   - by case=> ??; rewrite /lab /= -ax c2 // fs_labE fs_labNbot.
   - by move=> ?; rewrite /ca eqxx.
   - move=>> /andP[] /orP[/eqP-> //|/and3P[+ ??]].
-    move/ax.2; rewrite ?(bhom_pre_img ax) ?c2 // =>/(_ erefl erefl)/[swap].
+    move/ax.2; rewrite ?(hom_pre_img ax) ?c2 // =>/(_ erefl erefl)/[swap].
     case/orP=>[/eqP->//|/and3P[+??]].
-    move/ax.2; rewrite ?(bhom_pre_img ax) ?c2 // =>/(_ erefl erefl)/[swap].
+    move/ax.2; rewrite ?(hom_pre_img ax) ?c2 // =>/(_ erefl erefl)/[swap].
     move=> l1 l2; apply/(fs_ca_antisym (lfsp_supp_closed p) (lfsp_acyclic p)).
     exact/andP.
   - set ft := (fs_ca_trans (lfsp_supp_closed q)).
@@ -2568,7 +2607,7 @@ Proof.
   - by exists g; rewrite lFsPrePoset.build_finsupp.
   - move=> x y ??. 
     have fxy: f x == f y -> x = y.
-    + move/eqP/(congr1 g); rewrite ?c1 ?(bhom_img ax) //.
+    - move/eqP/(congr1 g); rewrite ?c1 ?(hom_img ax) //.
     rewrite ?/(_ <= _) /= lFsPrePoset.build_cov_ca // /ca.
     case/orP=> [/fxy->|]; first exact/fs_ca_refl.
     case/and3P=>/orP[/fxy->*|]; first exact/fs_ca_refl.
@@ -2581,7 +2620,7 @@ Proof.
   rewrite lFsPrePoset.build_finsupp // => ??.
   case/orP=> [/eqP->|]; first exact/fs_ca_refl.
   case/and3P=> /orP[/eqP->*|]; first exact/fs_ca_refl.
-  by case/and3P=> /ax.2; rewrite ?(bhom_pre_img ax) ?c2 // /(_ <= _) /==>->.
+  by case/and3P=> /ax.2; rewrite ?(hom_pre_img ax) ?c2 // /(_ <= _) /==>->.
 Qed.
 
 End hEquiv.
@@ -2647,6 +2686,8 @@ Export lFsPoset.iHom.PreOrder.
 Export lFsPoset.bHom.PreOrder.
 Export lFsPoset.Emb.PreOrder.
 Export lFsPoset.Iso.Equiv.
+Export lFsPoset.Hom.Theory.
+Export lFsPoset.Emb.Theory.
 
 Module Pomset.
 
