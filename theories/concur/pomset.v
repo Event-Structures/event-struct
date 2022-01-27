@@ -485,6 +485,7 @@ Lemma fs_ica_fin_icaE p :
 Proof.
   move=> sc>; rewrite /fin_ica sub_rel_lift_downK=> //=>.
   by case/(supp_closedP _ sc)=> /=->.
+Qed.
 
 Lemma conseq_num_mem p e : 
   conseq_num p -> (e \in finsupp p) = (encode e < fs_size p)%N.
@@ -852,15 +853,15 @@ Proof. rewrite build_finsupp //; exact/of_seq_nth_defined. Qed.
 
 (* TODO: derie from conseq_num *)
 Lemma of_seq_fresh :
-  lfsp_fresh (of_seq ls) = iter (size ls) fresh \i1.
+  lfsp_fresh (of_seq ls) = iter (size ls) fresh \i0.
 Proof.
-  rewrite /lfsp_fresh /fresh_seq.
-  have /(max_set_eq (@i0_min _))->: 
-    (finsupp (of_seq ls) =i nfresh \i1 (size ls))=>>. 
-  - by rewrite of_seq_finsupp ?inE.
-  case: (boolP (size ls == 0%N))=> [|?].
-  - by rewrite size_eq0=> /eqP-> /=; rewrite fresh0.
-  by apply/fresh_seq_nfresh.
+  rewrite /lfsp_fresh /fresh_seq of_seq_finsupp.
+  case: (boolP (size ls == 0%N))=> [|neq].
+  - rewrite size_eq0=> /eqP-> /=.
+    by rewrite nfresh0 fset_nil /=.
+  rewrite -fresh_seq_nfresh //.
+  apply/max_set_eq; first exact/le0x.
+  by apply/eq_mem_map=> x; rewrite !inE. 
 Qed.
 
 Lemma of_seq_size : 
@@ -913,16 +914,16 @@ Lemma of_seq_fin_icaE e1 e2 :
   fin_ica (of_seq ls) e1 e2 = (fresh (val e1) == val e2).
 Proof.
   rewrite /of_seq build_cov_fin_ica; first last.
-  - case=> /= ?; rewrite ?inE /= in_nfresh encode1.
-    case: (encode _)=> //= ??; apply/eqP; move: lsD=> /[swap]<-.
+  - case=> /= e; rewrite ?inE /= in_nfresh encode0 addn0 /=.
+    move=> ?; apply/eqP; move: lsD=> /[swap]<-.
     rewrite mem_nth=> //; lia.
   apply/covP/eqP=> /=; case: e1 e2=> /= e1 i1 [/= e2 i2].
   - case=> _ /andP[ne le nex]; apply/encode_inj; rewrite encode_fresh.
     case: ((encode e1).+1 =P encode e2)=> // ?; case: nex.
-    move: i1 i2 le ne; rewrite of_seq_finsupp ?inE ?in_nfresh encode1.
+    move: i1 i2 le ne; rewrite of_seq_finsupp ?inE ?in_nfresh encode0 addn0 /=.
     rewrite /(_ <=^i _) /= /Ident.Def.ident_le -(inj_eq encode_inj)=>*.
-    have IN: (fresh e1 \in [fset e | e in nfresh \i1 (size ls)]).
-    - rewrite ?inE in_nfresh encode1 encode_fresh; lia.
+    have IN: (fresh e1 \in [fset e | e in nfresh \i0 (size ls)]).
+    - rewrite ?inE in_nfresh encode0 encode_fresh; lia.
     exists [`IN] => /=. 
     rewrite ?/(_ <=^i _) /= ?/Ident.Def.ident_le -(inj_eq encode_inj).
     rewrite -[_ == fresh _](inj_eq encode_inj) ?encode_fresh; lia.
@@ -1341,7 +1342,7 @@ Proof.
   exact/lFsPrePoset.build_cov_acyclic.
 Qed.
 
-Definition build_cov := lFsPoset build_covP.
+Definition build_cov := mklFsPoset build_covP.
 
 End BuildCov.
 
@@ -1547,7 +1548,7 @@ Proof. by rewrite delete_lab_defined delete_supp_closed delete_acyclic. Qed.
 End DeletePre.
 
 Definition delete :=
-  if eqP is ReflectT pf then lFsPoset (deleteP pf) else lFsPoset.empty E L bot.
+  if eqP is ReflectT pf then mklFsPoset (deleteP pf) else lFsPoset.empty E L bot.
 
 Definition lfsp_delE: 
   [forall y : finsupp p, ~~ fs_ica p x (val y)] ->
@@ -2472,7 +2473,7 @@ Proof.
     move=>>; rewrite /ca => /orP[/eqP->//|/and3P[/[dup] fc /ft tr i1 i2]].
     move/orP=>[/eqP<-|]; rewrite ?fc ?i1 i2 //=.
     by move/andP=> [/tr->]->.
-  exists q'; first (apply/iso_leP=> /=; exists f); repeat split.
+  exists q'; first (apply/iso_eqvP=> /=; exists f); repeat split.
   - move=> x; rewrite ?fs_labE ?/(_ <= _) /=.
     rewrite lFsPrePoset.build_lab /sub_lift.
     case: insubP=> /=; rewrite /lab.
@@ -2872,16 +2873,13 @@ Proof.
   - by rewrite lFsPoset.of_seq_size labD lfsp_labels_size. 
   have uconseq: (conseq_num u).
   - exact/lFsPoset.of_seq_conseq_num.
-  unshelve eexists; first unshelve eexists; first exact/f. 
-  all: try split=> /=; try constructor=> //=.
+  exists f; split; try constructor=> //=.
   - move=> e; rewrite !fs_labE /=. 
     rewrite lFsPoset.of_seq_labE labD.
     by rewrite decodeK fs_lab_nthE.
-  - move=> e1 e2; rewrite !fs_caE /=.
+  - move=> e1 e2 e1In e2In; rewrite !fs_caE /=.
     rewrite lFsPoset.of_seq_caE labD andbT. 
-    move=> /[dup] /(supp_closed_ca (lfsp_supp_closed t) (lfsp_acyclic t)).
-    move=> /orP[/eqP->|/andP[]]; rewrite ?eq_refl //.
-    move=> e1In e2In Hca; apply/orP; right.
+    move=> Hca; apply/orP; right.
     rewrite !conseq_num_mem // /f !decodeK usz !lfsp_idx_lt_szE.
     apply/and3P; split=> //. 
     rewrite ident_leE !decodeK; exact/lfsp_idx_le.

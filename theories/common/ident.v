@@ -422,14 +422,13 @@ Proof.
   exact /ltnSn.
 Qed.
 
-Lemma fresh_mon x y : x <=^i y = (fresh x <=^i fresh y).
-Proof.
-  rewrite ?/(_ <=^i _) /= /Def.ident_le /fresh ?decodeK; lia.
-Qed.
-
 Lemma fresh_inj : 
   injective (@fresh T).
 Proof. by rewrite /fresh=> x y /decode_inj [] /pickle_inj. Qed.
+
+Lemma fresh_mon : 
+  { mono (fresh : T -> T) : x y / x <=^i y }.
+Proof. move=> x y; rewrite !ident_leE /fresh !decodeK; lia. Qed.
 
 Lemma size_nfresh x n : 
   size (nfresh x n) = n.
@@ -450,6 +449,10 @@ Proof.
   apply /sub_path; last exact/fpath_traject.
   move=> ?? /= /eqP <-; exact/fresh_lt.
 Qed.  
+
+Lemma nfresh0 x : 
+  nfresh x 0 = [::].
+Proof. by rewrite /nfresh. Qed.
 
 Lemma nfreshS x n : 
   nfresh x n.+1 = x :: nfresh (fresh x) n.
@@ -481,7 +484,7 @@ Proof. exact/max_idPr/le0x. Qed.
 
 Lemma max_fresh x y: 
   Order.max (fresh x) (fresh y) = fresh (Order.max x y).
-Proof. rewrite ?maxEle -fresh_mon; by case: ifP. Qed.
+Proof. rewrite ?maxEle fresh_mon; by case: ifP. Qed.
 
 Lemma fresh_seq_mem x s : 
   x \in s -> x <^i fresh_seq s.
@@ -502,10 +505,14 @@ Proof. by apply/memPn => x /fresh_seq_mem; rewrite lt_neqAle=> /andP[]. Qed.
 Lemma fresh_seq_nfresh x n : 
   n != 0 -> fresh_seq (nfresh x n) = iter n fresh x.
 Proof.
-  case: n=> //= n _; rewrite /fresh_seq; apply/congr1/eqP. 
-  rewrite -is_sup_NnilE=> //; apply/is_supP; split=>>.
-  - by apply/path.trajectP; exists n.
-  rewrite in_nfresh /(_ <=^i _) /= /Def.ident_le encode_iter; lia.
+  case: n=> //= n _; rewrite /fresh_seq; apply/eqP. 
+  rewrite -is_sup_NnilE=> //; last exact/le0x.
+  rewrite is_sup_mon; last first.
+  - exact/fresh_mon.
+  - exact/fresh_inj.
+  apply/is_supP; split=>>.
+  - by apply/path.trajectP; exists n. 
+  rewrite in_nfresh ident_leE encode_iter; lia.
 Qed.
 
 Lemma fresh_seq_subset s1 s2 : 
@@ -515,13 +522,18 @@ Proof.
   elim: s1 s2=> [??|] //=; first exact/le0x. 
   move=> a s1 IH s2 subs.
   rewrite le_maxl; apply/andP; split.
-  - exact/max_seq_in_le/(s a)/mem_head.
-  by apply/IH=> ? I; apply/s; rewrite inE I orbT.
+  - apply/max_seq_in_le; rewrite (mem_map fresh_inj). 
+    exact/(subs a)/mem_head.
+  by apply/IH=> ? I; apply/subs; rewrite inE I orbT.
 Qed.
 
 Lemma fresh_seq_eq s1 s2 : 
   s1 =i s2 -> fresh_seq s1 = fresh_seq s2.
-Proof. by move=> eqm; rewrite /fresh_seq (max_set_eq _ eqm). Qed.
+Proof. 
+  rewrite /fresh_seq=> eqm. 
+  apply/(max_set_eq); first exact/le0x.
+  by apply/eq_mem_map.
+Qed.
 
 Lemma fresh_seqU (s1 s2 : {fset T}): 
   fresh_seq (s1 `|` s2)%fset = Order.max (fresh_seq s1) (fresh_seq s2).

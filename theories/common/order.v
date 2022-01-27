@@ -43,7 +43,7 @@ End POrderUtils.
 Module Export MaxSup.
 Section Def.
 Context {disp : unit} {T : porderType disp}.
-Implicit Type (s : seq T) (x : T).
+Implicit Types (s : seq T) (x : T).
 
 (* TODO: generalize to arbitary pred? *)
 Definition is_sup s x := 
@@ -60,7 +60,7 @@ End Def.
 
 Section Theory.
 Context {disp : unit} {T : orderType disp}.
-Implicit Type (s : seq T) (x : T).
+Implicit Types (s : seq T) (x : T).
 
 Lemma is_supP s x : 
   reflect (x \in s /\ {in s, forall y, y <= x}) (is_sup s x).
@@ -95,7 +95,7 @@ Lemma is_sup1 x y :
 Proof.
   rewrite /is_sup inE /= andbT andb_idr eq_sym //.
   by move=> /eqP->; rewrite lexx.
-Qed.
+Qed.    
 
 Lemma max_seq_in d s : 
   max_seq d s \in d :: s.
@@ -203,6 +203,22 @@ Proof.
 Qed.
 
 End WithBottom.
+
+Section Monotone.
+Variables (f : T -> T) (s : seq T) (x : T).
+
+Hypothesis (finj : injective f).
+Hypothesis (fmon : {mono f : x y / x <= y}).
+
+Lemma is_sup_mon : 
+  is_sup [seq f y | y <- s] (f x) = is_sup s x.
+Proof. 
+  rewrite /is_sup mem_map // all_map.
+  apply/andb_id2l=> _; apply/eq_all.
+  move=> y /=; exact/fmon. 
+Qed.
+
+End Monotone.
 
 End Theory.
 
