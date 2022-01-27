@@ -242,6 +242,13 @@ Lemma ca_monotone f :
   { homo f : e1 e2 / e1 <= e2 }.
 Proof. by case: f => ? [[]]. Qed.
 
+Lemma sca_monotone_in f (D : pred E1) :
+  {in D &, injective f} -> {in D &, { homo f : e1 e2 / e1 < e2 }}.
+Proof. 
+  move=> ?; apply/inj_homo_lt_in=> //.
+  move=> ????; exact/ca_monotone.
+Qed.
+
 Lemma sca_img f e1 e2 : (f e1 < f e2) -> (e1 < e2) || (e1 >< e2).
 Proof.
   case H: (e1 < e2)=> //= Hf.
@@ -436,8 +443,8 @@ End Exports.
 
 End Build.
 
-
 End iHom.
+
 
 Module Export bHom.
 
@@ -714,6 +721,15 @@ Proof.
   by case: f=> ? [[? []]] => /= /[apply]. 
 Qed.
 
+Lemma sca_reflecting :
+  { mono f : e1 e2 / e1 < e2 }.
+Proof.
+  move=> e1 e2; apply/idP/idP; last exact/(sca_monotone f).
+  rewrite !lt_def ca_reflecting=> /andP[] neq ->.
+  rewrite andbT; apply/negP=> /eqP. 
+  by move: neq=> /[swap] ->; rewrite eq_refl.
+Qed.
+
 End Theory.
 End Theory.
 
@@ -943,6 +959,9 @@ Definition homType  := Hom.Pack class.
 Definition bhomType := bHom.Pack class.
 Definition embType  := Emb.Pack (Emb.Class class (mixin class)).
 
+(* TODO: perhaps ihomType instance is defined incorretly *)
+Definition ihomType := bHom.ihomType bhomType.
+
 Lemma prefMixin : Pref.mixin_of cT.
 Proof.
   case: cT=> f [[? [g *]]] /=.
@@ -963,10 +982,12 @@ Coercion base : class_of >-> bHom.class_of.
 Coercion mixin : class_of >-> Emb.mixin_of.
 Coercion apply : type >-> Funclass.
 Coercion homType  : type >-> Hom.type.
+Coercion ihomType : type >-> iHom.type.
 Coercion bhomType : type >-> bHom.type.
 Coercion embType  : type >-> Emb.type.
 Coercion prefType  : type >-> Pref.type.
 Canonical homType.
+Canonical ihomType.
 Canonical bhomType.
 Canonical embType.
 Canonical prefType.
@@ -983,6 +1004,20 @@ Notation "[ 'iso' 'of' f ]" :=
   (Iso.mk (fun hCls => @Iso.Pack _ _ _ f hCls))
   (at level 0, format "[ 'iso'  'of'  f ]") : lposet_scope.
 End Syntax. 
+
+Module Export Theory.
+Section Theory. 
+Context {L : Type} {E1 E2 : eventType L} (f : {iso  E1 -> E2}).
+
+Lemma ca_incomp_reflecting :
+  { mono f : e1 e2 / e1 >< e2 }.
+Proof.
+  move=> e1 e2; apply: negbLR. 
+  by rewrite !negbK /comparable !(ca_reflecting f).
+Qed.
+
+End Theory.
+End Theory.
 
 Module Build.
 Section Build.
@@ -1309,6 +1344,7 @@ Export lPoset.iHom.Theory.
 Export lPoset.bHom.Theory.
 Export lPoset.Emb.Theory.
 Export lPoset.Pref.Theory.
+Export lPoset.Iso.Theory.
 
 Export lPoset.Ext.Theory.
 
@@ -2023,19 +2059,19 @@ End Iso.
 Section HomP. 
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
-Lemma homP : 
+Lemma homP :
   reflect ?|{ihom eventType t -> eventType u}| (subseq t u).
-Proof. 
+Proof.
   apply/(iffP idP); last first.
   - move=> [f]; apply/subseqP.
-    pose g := sub_lift (fun i => (m + i)%N) (fun i => val (f i)) : nat -> nat.  
+    pose g := sub_lift (fun i => (m + i)%N) (fun i => val (f i)) : nat -> nat.
     pose s := mkseq g n.
     exists (mkmask s m).
     + rewrite size_mkmask ?size_nseq ?size_tuple // all_map /=.
       subst g=> /=; apply/allP=> i /=.
-      rewrite mem_iota addnC addn0=> /andP[??]. 
+      rewrite mem_iota addnC addn0=> /andP[??].
       by rewrite sub_liftT.
-    apply/esym; subst s. 
+    apply/esym; subst s.
     rewrite (@mkmask_mask L _ _ t)=> //.
     + by move=> ???; apply (sca_monotone f).
     + exact/ihom_inj.
@@ -2045,10 +2081,10 @@ Proof.
   - move: (tuple0 u)=> /= -> /=.
     rewrite -size_eq0 size_tuple=> /eqP Hn.
     have efalse: (forall e : eventType t, False).
-    + by rewrite /eventType /= Hn => [[i]]; rewrite ltn0. 
+    + by rewrite /eventType /= Hn => [[i]]; rewrite ltn0.
     have f: ({hom eventType t -> eventType ([tuple] : 0.-tuple L)}).
     + by exists (fun e => match efalse e with end).
-    constructor; exists f; repeat constructor; by move=> ?. 
+    constructor; exists f; repeat constructor; by move=> ?.
   move=> /subseqP=> [[b Hsz Hb]].
   pose g := (fun => ord_max) : eventType t -> eventType u.
   pose f := sub_down g (find_nth id b).
@@ -2056,15 +2092,15 @@ Proof.
   have He: forall (e : eventType t), (find_nth id b e < m.+1)%N.
   - move=> e; rewrite -[m.+1](size_tuple u) -Hsz.
     by rewrite (mask_size_find_nth Hsz) // -Hb (size_tuple t).
-  constructor; unshelve eexists; [exact/f |]. 
+  constructor; unshelve eexists; [exact/f |].
   repeat constructor; move=>/=.
-  - move=> e; rewrite !tlabE. 
+  - move=> e; rewrite !tlabE.
     rewrite !(tnth_nth l) Hb (nth_mask l e Hsz).
-    by rewrite val_sub_downT //. 
+    by rewrite val_sub_downT //.
   - move=> e1 e2; rewrite !tleE !val_sub_downT //; exact/find_nth_leq.
   move=> e1 e2=> /=; subst f.
   apply/sub_down_inj_inT; rewrite ?/in_mem //=.
-  by move=>?? /find_nth_inj/val_inj. 
+  by move=>?? /find_nth_inj/val_inj.
 Qed.
 
 End HomP.
@@ -2072,18 +2108,18 @@ End HomP.
 Section IsoP.
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
-Lemma isoP : 
+Lemma isoP :
   reflect ?|{iso eventType t -> eventType u}| (t == u :> seq L).
-Proof. 
-  apply/(iffP idP); last first.  
+Proof.
+  apply/(iffP idP); last first.
   - move=> [f]; move: (lPoset.Iso.Build.inv f)=> g.
-    apply/eqP/subseq_anti/andP. 
-    split; apply/homP; eexists; [exact/f | exact/g]. 
-  move=> /eqP H; have Hn: n = m. 
+    apply/eqP/subseq_anti/andP.
+    split; apply/homP; eexists; [exact/f | exact/g].
+  move=> /eqP H; have Hn: n = m.
   - by rewrite -(size_tuple t) -(size_tuple u) H.
   move: u H; clear u; case Hn=> u.
   move=> /val_inj ->.
-  constructor; exact/[iso of idfun]. 
+  constructor; exact/[iso of idfun].
 Qed.
 
 End IsoP. 

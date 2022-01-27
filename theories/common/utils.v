@@ -327,11 +327,19 @@ Qed.
 End FoldUtils. 
 
 Section FSetUtils.
-Context {T U : choiceType}.
+Context {key : unit} {T U : choiceType}.
 Implicit Types (s : {fset T}) (p : pred T) (r : rel T).
 Implicit Types (f : T -> U).
 
 Local Open Scope fset_scope.
+
+Lemma in_fset1 (x : T) a :
+  (a \in [fset[key] x in [:: x]]) = (a == x).
+Proof. by rewrite !mem_imfset //= inE. Qed.
+
+Lemma fset_singl (x : T) : 
+  [fset[key] x in [:: x]] = [fset x].
+Proof. by apply/fsetP=> y; rewrite in_fset1 inE. Qed.
 
 Lemma imfset1 f x : 
   f @` ([fset x]) = [fset (f x)].
@@ -751,6 +759,10 @@ Proof.
   case: ifP=> [/eqP->|]; case: ifP=> [/eqP->|] //.
   by move=> ?? [] /IH H; apply/H. 
 Qed.
+
+Lemma mkseq_in_uniq (f : nat -> T) n : 
+  { in iota 0 n &, injective f } -> uniq (mkseq f n).
+Proof. by move/map_inj_in_uniq ->; apply: iota_uniq. Qed.
 
 End SeqEqUtils.
 

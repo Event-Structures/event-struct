@@ -699,6 +699,11 @@ Lemma fst_state_rcons s ts st :
   fst_state s (rcons ts st) = src (head st ts).
 Proof. by case: ts. Qed.
 
+(* TODO: rename to avoid confusion with belast from seq.v ? *)
+Lemma fst_state_rcons_belast s ts st :
+  fst_state s (rcons ts st) = s -> fst_state s ts = s.
+Proof. by case: ts. Qed.
+
 Lemma fst_stateNnil s s' ts : ts <> [::] ->
   fst_state s' ts = fst_state s ts.
 Proof. by case: ts. Qed.
@@ -748,6 +753,18 @@ Proof. by case: ts=> //=; rewrite /adjoint eq_refl. Qed.
 Lemma adjoint_lastE ts st : 
   adjoint ts [:: st] = (lst_state (src st) ts == src st).
 Proof. done. Qed.
+
+(* TODO: refactor, use trace_lang? *)
+Lemma fst_state_rcons_adj s ts st : 
+  s = fst_state s (rcons ts st) -> adjoint ts [:: st] -> 
+  s = fst_state s ts.
+Proof. by rewrite fst_state_rcons adjoint_lastE; case: ts=> //= ??? /eqP. Qed.
+
+(* TODO: refactor, use trace_lang? *)
+Lemma lst_state_rcons_adj s ts st : 
+  s = fst_state s (rcons ts st) -> adjoint ts [:: st] -> 
+  lst_state s ts = src st.
+Proof. by rewrite fst_state_rcons adjoint_lastE; case: ts=> //= ??? /eqP. Qed.
 
 Lemma is_trace_cons st ts : 
   is_trace (st :: ts) = [&& is_step st, is_trace ts & adjoint [:: st] ts].
@@ -834,7 +851,6 @@ Proof. exact/eqxx. Qed.
 Lemma lts_lang0 s : lts_lang s [::].
 Proof. (exists [trace])=> //; exact/trace_lang0. Qed.
 
-
 Section Measure.
 Context {M : Type}.
 Context (m : S -> M) (delta : M -> M).
@@ -866,7 +882,7 @@ Proof.
   rewrite -E; apply/IHt; by case: (t) pf.
 Qed.
 
-Lemma invariant_trace_lan p s tr : 
+Lemma invariant_trace_lang p s tr : 
   invariant p -> tr \in trace_lang s -> p s -> p (lst_state s tr).
 Proof.
   by move/trace_invariant=> /(_ s tr)/[swap]/eqP<-/[apply].
