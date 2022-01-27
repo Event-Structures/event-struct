@@ -427,6 +427,45 @@ Proof.
   case/lfsp_ltransP=> /eqP + ?; exact.
 Qed.
 
+Lemma lfsp_ltrans_iso p q l es : 
+  l != bot -> 
+  es `<=` finsupp p -> 
+  iso_eqv q p -> 
+  exists2 es', es' `<=` finsupp q &
+  iso_eqv (lfsp_add_event l es' q) (lfsp_add_event l es p).
+Proof.
+  move=> ? s /(update_iso (fresh_seq_nmem _) (fresh_seq_nmem _))[g gf].
+  case=> ax axb axe.
+  have?: g @` es `<=` finsupp q.
+  - by apply/fsubsetP=>> /imfsetP[/= ?/(fsubsetP s)/(hom_img ax)/[swap]->].
+  exists (g @` es)=> //; apply/iso_eqvP.
+  have bh: 
+    lFsPoset.bHom.axiom (lfsp_add_event l es p)
+      (lfsp_add_event l (g @` es) q) g.
+  - case: axb=> h c1 c2.
+    set f := fun e => 
+      if e == fresh_seq (finsupp q) then
+        fresh_seq (finsupp p)
+      else h e.
+    exists f=>>; rewrite ?lfsp_add_eventE // ?inE /f ?gf; case: ifP=> /=.
+    - by move/eqP->.
+    - by move=>*; rewrite c1.
+    - by move=>/eqP->_; apply/eqP; rewrite gf.
+    by move=>*; rewrite c2.
+  have inj: {in lfsp_fresh p |` finsupp p &, injective g}.
+  - move=>>; rewrite ?inE /lfsp_fresh -?gf ?(hom_finsupp _ ax).
+    case: bh=> h c1 c2 ?? /(congr1 h).
+    by rewrite ?c1 // ?lfsp_add_eventE // ?inE.
+  exists g; do ? split=>> //.
+  - rewrite ?fs_labE ?lfsp_add_eventE /lfsp_fresh // gf. 
+    case: ifP=>// *; exact/ax.1.
+  all: rewrite ?/(_ <= _) /= ?lfsp_add_eventE // ?/lfsp_fresh gf=> ??.
+  all: rewrite (emb_fs_ca ax axe inj) //.
+  all: by rewrite (emb_dw_clos ax axe inj) // fsubsetU1.
+Qed.
+
+Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
+
 Lemma invariant_operational : 
   @invariant L (LTS.ltsType E L bot) (@operational _ _ _).
 Proof.
