@@ -916,6 +916,37 @@ Qed.
 
 Definition iso_sim_tr := Simulation.Pack iso_sim_tr_class_of.
 
+Notation of_seq := (lFsPoset.of_seq E L bot).
+
+Lemma pomset_linP p (ls : seq L) :
+  let emp := lFsPoset.empty E L bot in 
+  bot \notin ls ->
+    reflect 
+      (exists tr : trace _,
+          [/\ labels tr = ls,
+              tr \in trace_lang (pom emp) &
+              lst_state (pom emp) tr = p])
+      (ls \in lin p).
+Proof.
+  move=> emp nl.
+  have ise: iso_sim (pom emp) emp by rewrite /= -eqquot_piE.
+  apply/(iffP idP)=> [/[dup] lsl |].
+  - rewrite inE=> /bhom_factor[q eqv] /(lfsp_lin_lang nl)[tr].
+    move=> /[swap]/[dup] lsE <- lE.
+    have ispq: iso_sim p q by rewrite /= iso_eqv_sym.
+    have tr_lang: tr \in trace_lang emp.
+    - apply/lfsp_lin_trace_lang; rewrite /= in ispq.
+      by rewrite (eqquot_piP _ _ ispq) piE -lE -lsE in lsl.
+    case: (sim_trace ise ispq tr_lang lE)=> tr' [??/=].
+    move=> /(iso_eqv_trans)-/(_ _ eqv) /[-! eqquot_eqE]/eqP?.
+    by exists tr'.
+  case=> tr [<-] tl lt. 
+  have ise': iso_sim_tr emp (pom emp) by rewrite /= iso_eqv_sym in ise.
+  have isp: iso_sim_tr (repr p) p by rewrite /= iso_eqv_refl.
+  case: (sim_trace ise' isp tl lt)=> tr' [<- /lfsp_lang_lin /[swap] /=].
+  by rewrite iso_eqv_sym -eqquot_piE=> /eqP->; rewrite piE.
+Qed.
+
 End Theory.
 End Theory.
 End pomsetLTS.
