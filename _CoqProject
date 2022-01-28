@@ -25,10 +25,10 @@ theories/concur/pomset.v
 theories/concur/pomset_lts.v
 theories/concur/prop_pomlang.v
 theories/concur/prime_eventstruct.v
-theories/concur/relaxed.v
 theories/concur/porf_eventstruct.v
 theories/concur/transitionsystem.v
 
+theories/lang/relaxed.v
 theories/lang/sharedmem.v
 theories/lang/regmachine.v
 
