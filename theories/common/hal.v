@@ -36,6 +36,10 @@ Ltac encode_indets :=
     | nat => fail
     | _ => try rewrite -[x == y](inj_eq encode_inj) in H
     end
+  | E : identType, e := _ |- _ => 
+    lazymatch type of e with 
+    | ?E => rewrite ?/e
+    end
   end.
 
 Ltac encodify_once :=

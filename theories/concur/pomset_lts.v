@@ -615,7 +615,7 @@ Proof.
   move/(operational_sca (lfsp_supp_closed _) (lfsp_acyclic _)): oper.
   move/[swap]/(@t_step E (fs_ica p)).
   move/(fs_scaP _ _ (lfsp_supp_closed _) (lfsp_acyclic _)).
-  move/[swap]/[apply]; rewrite /e; hal.
+  move/[swap]/[apply]; hal.
 Qed.
 
 (* TODO: remove hint? *)
@@ -634,7 +634,7 @@ Proof.
     done.
   rewrite /lfsp_fresh lFsPoset.lfsp_delE // fs_p.
   have: [fset e' | e' in nfresh \i0 n] `\ e =i nfresh \i0 n.-1.
-  - move=>>; rewrite ?inE /= /e; hal.
+  - move=>>; rewrite ?inE /=; hal.
   rewrite /fresh_seq=> eqm eqs emax. 
   under (max_set_eq i0x)=> x.
   - exact/eq_mem_map/eqm.
@@ -646,7 +646,7 @@ Lemma backward_step :
 Proof.
   exists (lFsPoset.delete p e); apply/lfsp_ltransP.
   have nb: (fs_lab p e != bot).
-  - rewrite fs_labNbot fs_p ?inE /= /e; hal.
+  - rewrite fs_labNbot fs_p ?inE /=; hal.
   split=> //.
   have ess: (p e).2 `<=` finsupp (lFsPoset.delete p e).
   - rewrite lFsPoset.lfsp_delE //; apply/fsubsetP=> x /[dup]; rewrite ?inE.
@@ -685,7 +685,7 @@ Proof.
   have->: fs_lab p e = l.
   - case: ax=> /(_ e); rewrite ?fs_labE /=.
     rewrite lFsPoset.of_seq_labE nb //.
-    rewrite /e; encodify; rewrite nth_rcons.
+    encodify; rewrite nth_rcons.
     case: ifP; first lia; by rewrite eqxx.
   move=> str; move: nb ax.
   rewrite mem_rcons ?inE negb_or=> /andP[/[1! eq_sym]??].
