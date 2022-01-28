@@ -361,7 +361,6 @@ End EDescrEq.
 (* ************************************************************************* *)
 
 Section PORFEventStructureDef.
-
 Context (E : identType) (L : labType).
 
 Local Notation edescr := (edescr E L).
@@ -460,11 +459,11 @@ Defined.
 
 End PORFEventStructInh. 
 
-Canonical es_inhMixin {E V} := 
-  @Inhabitant.Mixin (@porf_eventstruct E V) _ 
-    inh_exec_eventstructure.
-Canonical es_inhType E V := 
-  Eval hnf in Inhabitant (@porf_eventstruct E V) es_inhMixin.
+(* Canonical es_inhMixin {E V} :=  *)
+(*   @Inhabited.Mixin (@porf_eventstruct E V) _  *)
+(*     inh_exec_eventstructure. *)
+(* Canonical es_inhType E V :=  *)
+(*   Eval hnf in Inhabitant (@porf_eventstruct E V) es_inhMixin. *)
 
 (* ************************************************************************* *)
 (*     Label related functions, predicates and relations on events           *)

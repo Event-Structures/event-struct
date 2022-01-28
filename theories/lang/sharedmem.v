@@ -13,7 +13,13 @@ Local Open Scope ident_scope.
 Module SharedMem.
 
 Section Def.
-Context {Addr Val : Type}.
+Context {Addr Val : inhType}.
+
+Local Notation null := (inh : Addr).
+Local Notation v0   := (inh : Val).
+
+Definition state := 
+  { fsfun Addr -> Val for fun x => v0 }.
 
 Variant label := 
   | Read  of Addr & Val 
@@ -28,12 +34,18 @@ Definition typ : label -> Lab.typ :=
   | Bot       => Lab.Undef
   end.
 
-(* TODO: define non-option version? *)
-Definition oaddr : label -> option Addr :=
+Definition addr : label -> Addr :=
   fun l => match l with
-  | Read  x _ => Some x
-  | Write x _ => Some x
-  | Bot       => None
+  | Read  x _ => x
+  | Write x _ => x
+  | Bot       => null
+  end.
+
+Definition value : label -> Val :=
+  fun l => match l with
+  | Read  _ v => v
+  | Write _ v => v
+  | Bot       => v0
   end.
 
 End Def.
@@ -41,7 +53,7 @@ End Def.
 Arguments label _ _ : clear implicits.
 
 Section Encode. 
-Context {Addr Val : Type}.
+Context {Addr Val : inhType}.
 
 Definition enc_lab : (label Addr Val) -> Addr * Val + Addr * Val + unit := 
   fun l => match l with 
@@ -64,22 +76,23 @@ Proof. by case. Qed.
 End Encode.
 
 Module Export Exports.
+Implicit Types (A V : inhType).
 
-Definition label_eqMixin (A V : eqType) := 
+Definition label_eqMixin A V := 
   CanEqMixin (@enc_dec_labK A V).
-Canonical label_eqType (A V : eqType) := 
+Canonical label_eqType A V := 
   Eval hnf in EqType _ (label_eqMixin A V).
 
-Definition label_choiceMixin (A V : choiceType) := 
+Definition label_choiceMixin A V := 
   CanChoiceMixin (@enc_dec_labK A V).
-Canonical label_choiceType (A V : choiceType) := 
+Canonical label_choiceType A V := 
   Eval hnf in ChoiceType _ (label_choiceMixin A V).
 
 End Exports.
 
 Module Export LabType.
 Section LabType.
-Context {Addr Val : choiceType}.
+Context {Addr Val : inhType}.
 Local Notation label := (label Addr Val).
 Implicit Types (ls : {fset label}) (l : label).
 
@@ -102,7 +115,7 @@ Definition cf_typ l1 l2 :=
   end.
 
 Definition cf l1 l2 := 
-  (cf_typ l1 l2) && (oaddr l1 == oaddr l2). 
+  (cf_typ l1 l2) && (addr l1 == addr l2). 
 
 Definition is_write l := 
   typ l == Lab.Write.
@@ -147,7 +160,7 @@ End LabType.
 
 Module Export Exports.
 Section Exports.
-Implicit Types (A V : choiceType).
+Implicit Types (A V : inhType).
 
 Definition labMixin A V := 
   @Lab.Lab.Mixin (label A V) _ Bot com cf is_write is_read
