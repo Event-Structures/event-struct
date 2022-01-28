@@ -29,5 +29,6 @@ theories/concur/relaxed.v
 theories/concur/porf_eventstruct.v
 theories/concur/transitionsystem.v
 
+theories/lang/sharedmem.v
 theories/lang/regmachine.v
 
