@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice finfun finmap tuple.
-From eventstruct Require Import utils inhtype ident relaxed.
+From eventstruct Require Import utils inhtype ident lts relaxed.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -50,6 +50,7 @@ Definition value : label -> Val :=
 
 End Def.
 
+Arguments state _ _ : clear implicits.
 Arguments label _ _ : clear implicits.
 
 Section Encode. 
@@ -90,8 +91,65 @@ Canonical label_choiceType A V :=
 
 End Exports.
 
-Module Export LabType.
-Section LabType.
+
+Module Export LTS.
+Section LTS.
+Context {Addr Val : inhType}.
+Local Notation state := (state Addr Val).
+Local Notation label := (label Addr Val).
+Implicit Types (m : state) (l : label).
+
+Definition read_trans l m m' := 
+  let x := addr l in 
+  let v := value l in 
+  (typ l == Lab.Read) && (m x == v) && (m' == m).
+
+Definition write_trans l m m' := 
+  let x := addr l in 
+  let v := value l in 
+  (typ l == Lab.Write) && (m' == [fsfun m with x |-> v]).
+
+Definition ltrans l m m' := 
+  (read_trans l m m') || (write_trans l m m').
+
+Definition enabled l m := 
+  match l with 
+  | Read  x v => m x == v
+  | Write x v => true
+  | Bot       => false
+  end.
+
+Lemma enabledP l m :
+  reflect (exists m', ltrans l m m') (enabled l m).
+Proof. 
+  rewrite /ltrans /read_trans /write_trans /enabled.
+  case: l=> [x v | x v |]; try constructor=> //=; last first.
+  - by move=> [[]]. 
+  - by exists ([fsfun m with x |-> v]).
+  case: (m x == v)=> //=; constructor; last by move=> [].
+  by exists m; rewrite eqxx. 
+Qed.
+
+End LTS.
+
+Module Export Exports.
+Implicit Types (A V : inhType).
+
+Definition ltsMixin A V := 
+  let S := (state A V) in
+  let L := (label A V) in
+  @LTS.LTS.Mixin S L _ _ _ enabledP. 
+Definition ltsType A V := 
+  Eval hnf in (LTSType _ _ (ltsMixin A V)).
+
+End Exports.
+End LTS.
+
+Export LTS.Exports.
+
+
+Module Export Label.
+Section Label.
 Context {Addr Val : inhType}.
 Local Notation label := (label Addr Val).
 Implicit Types (ls : {fset label}) (l : label).
@@ -156,7 +214,7 @@ Lemma bot_nread :
   ~~ is_read Bot.
 Proof. done. Qed. 
 
-End LabType.
+End Label.
 
 Module Export Exports.
 Section Exports.
@@ -171,9 +229,10 @@ Canonical labType A V :=
 End Exports.
 End Exports.
 
-End LabType.
+End Label.
 
 End SharedMem.
 
 Export SharedMem.Exports.
-Export SharedMem.LabType.Exports.
+Export SharedMem.LTS.Exports.
+Export SharedMem.Label.Exports.
