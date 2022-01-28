@@ -200,6 +200,10 @@ Definition respects_com d : thrd_pomlang E L Tid :=
       & forall e', e' \in es -> e' <= e :> [Event of p]
     ].
 
+Definition cf_commute d := forall (u v : seq L) (a b : L), 
+  let Dlang := lts_lang d in
+  ~ (a \# b) -> (Dlang (u ++ [:: a ; b] ++ v) <-> Dlang (u ++ [:: b ; a] ++ v)).
+
 Lemma lab_prj_bot :
   lab_prj (\i0, bot) = bot.
 Proof. done. Qed.
