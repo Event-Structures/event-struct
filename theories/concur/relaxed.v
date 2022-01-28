@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From eventstruct Require Import utils rel relalg inhtype ident order.
-From eventstruct Require Import lts lposet pomset.
+From eventstruct Require Import lts lposet pomset pomset_lts.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
