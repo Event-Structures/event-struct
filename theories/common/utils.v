@@ -328,10 +328,21 @@ End FoldUtils.
 
 Section FSetUtils.
 Context {key : unit} {T U : choiceType}.
-Implicit Types (s : {fset T}) (p : pred T) (r : rel T).
-Implicit Types (f : T -> U).
+Implicit Types (p : pred T) (r : rel T) (f : T -> U).
+Implicit Types (s : {fset T}) (x : T).
 
 Local Open Scope fset_scope.
+
+Definition fset_pick s : option T := 
+  omap val [pick x : s].
+
+Lemma fset_pick1 x : 
+  fset_pick [fset x] = Some x.
+Proof. 
+  rewrite /fset_pick; case: pickP=> /= [y _|]. 
+  - by move: (valP y); rewrite inE => /eqP->.
+  by move=>/(_ (Sub x (fset11 x))) /=. 
+Qed.
 
 Lemma in_fset1 (x : T) a :
   (a \in [fset[key] x in [:: x]]) = (a == x).

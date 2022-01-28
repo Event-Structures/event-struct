@@ -27,8 +27,8 @@ Record mixin_of (T0 : Type) (b : Choice.class_of T0)
   cf  : rel T;
   is_write : pred T;
   is_read  : pred T;
-  _ : forall w, reflect (exists ws r, w \in ws /\ com ws r) (is_write w);
-  _ : forall r, reflect (exists ws, com ws r) (is_read r);
+  _ : forall w, reflect (exists ws r, com ws r /\ w \in ws) (is_write w);
+  _ : forall r, reflect (exists ws,   com ws r            ) (is_read  r);
   _ : ~~ is_write bot;
   _ : ~~ is_read  bot;
 }.
@@ -83,7 +83,7 @@ Definition eq_typ : rel typ :=
   | Read     , Read      => true
   | Write    , Write     => true
   | ReadWrite, ReadWrite => true
-  | Undef, Undef         => true
+  | Undef    , Undef     => true
   | _ , _                => false
   end.
 
@@ -130,7 +130,7 @@ Context (L : labType).
 Implicit Types (l r w: L).
 
 Lemma is_writeP w : 
-  reflect (exists ws r, w \in ws /\ com ws r) (is_write w).
+  reflect (exists ws r, com ws r /\ w \in ws) (is_write w).
 Proof. by move: w; case L=> ? [? []]. Qed.
 
 Lemma is_readP r : 
