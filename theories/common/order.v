@@ -231,6 +231,7 @@ Section ClassDef.
 
 Record mixin_of (T0 : Type) 
                 (b : Order.POrder.class_of T0)
+                (* TODO: parametrize by disp? *)
                 (T := Order.POrder.Pack tt b) := Mixin {
   pideal : T -> {fset T};
   _ : forall x y : T, x \in (pideal y) = (x <= y);
@@ -299,6 +300,11 @@ Implicit Types (x y : T) (P Q : pred T).
 Lemma pidealE x y :
   x \in (pideal y) = (x <= y).
 Proof. by move: x y; case: T=> [? [? []]]. Qed.
+
+(* TODO: rename? *)
+Lemma pidealx x : 
+  x \in pideal x.
+Proof. by rewrite pidealE. Qed.
 
 Lemma up_closP P x : 
   reflect (exists2 y, y <= x & y \in P) (x \in up_clos P). 
