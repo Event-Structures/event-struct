@@ -4,35 +4,34 @@ From eventstruct Require Import utils order wftype ident.
 
 Open Scope ident_scope.
 
-Lemma ecnode_prop_eq {E : identType} (x y : E): 
+Lemma ecnode_prop_eq {E : identType} (x y : E) :
   x = y <-> encode x = encode y.
 Proof. by split=> [-> //|/encode_inj->]. Qed.
 
-
 Ltac encode_indets :=
   multimatch goal with
-  | E : identType |- context [ ?x == ?y :> ?E ] => 
+  | E : identType |- context [@eq_op ?E ?x ?y ] => 
     lazymatch type of x with 
     | nat => fail
     | _ => rewrite -[x == y](inj_eq encode_inj)
     end
   (* | E : identType *)
-  | E : identType |- (?x = _ :> ?E) => 
+  | E : identType |- (@eq ?E ?x _) => 
     lazymatch type of x with 
       | nat => fail
       | _ => try apply/encode_inj
       end
-  | E : identType |- context [?x = ?y :> ?E] => 
+  | E : identType |- context [@eq ?E ?x ?y] => 
     lazymatch type of x with 
       | nat => fail
       | _ => rewrite [x = y]ecnode_prop_eq
       end
-  | E : identType, H : context [?x = ?y] |- _ => 
+  | E : identType, H : context [@eq ?E ?x ?y] |- _ => 
     lazymatch type of x with 
       | nat => fail
       | _ => move: H; rewrite [x = y]ecnode_prop_eq=> H
       end
-  | E : identType, H : context [?x == ?y :> ?E] |- _ => 
+  | E : identType, H : context [@eq_op ?E ?x ?y] |- _ => 
     lazymatch type of x with 
     | nat => fail
     | _ => try rewrite -[x == y](inj_eq encode_inj) in H
