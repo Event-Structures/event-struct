@@ -4,7 +4,7 @@
 
 [github-actions-badge]: https://github.com/event-structures/event-struct/workflows/CI/badge.svg
 
-A Coq library with the formalized theory of event structures and non-interleaving concurrency.
+A Coq library with the formalized theory of event structures and non-interleaving concurrency.  
 Currently includes a theory of the following semantic domains and their relationships:
 
 - labelled transition systems
@@ -14,17 +14,14 @@ Currently includes a theory of the following semantic domains and their relation
 Also features several applications of the theory. 
 
 - Formalization of several basic consistency models 
-  parametrized by the abstract datatype, 
-  defined according to the paper 
-   ["Causal Consistency: Beyond Memory" by Matthieu Perrin, Achour Mostefaoui, Claude Jard (PPoPP 2016)]
-   (https://core.ac.uk/download/pdf/52993336.pdf)
+  parametrized by the abstract datatype, defined according to the paper 
+   ["Causal Consistency: Beyond Memory" by Matthieu Perrin, Achour Mostefaoui, Claude Jard (PPoPP 2016)](https://core.ac.uk/download/pdf/52993336.pdf)
 
 - Incremental construction of prime event structures 
   build from program-order and reads-from relations.
 
 The library is under active development.
-Therefore the API is unstable and might be  
-subject to further modifications.
+Therefore the API is unstable and might be subject to further modifications.
 
 ## Description of Files
 
