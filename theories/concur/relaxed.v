@@ -23,14 +23,14 @@ Section ClassDef.
 Record mixin_of (T0 : Type) (b : Choice.class_of T0)
                 (T := Choice.Pack b) := Mixin {
   bot : T;
-  com : rel T;
+  com : {fset T} -> T -> bool;
+  cf  : rel T;
   is_write : pred T;
   is_read  : pred T;
-  _ : forall w, reflect (exists r, com w r) (is_write w);
-  _ : forall r, reflect (exists w, com w r) (is_read  r);
+  _ : forall w, reflect (exists ws r, w \in ws /\ com ws r) (is_write w);
+  _ : forall r, reflect (exists ws, com ws r) (is_read r);
   _ : ~~ is_write bot;
   _ : ~~ is_read  bot;
-  (* TODO: add requirement that com is functional? *)
 }.
 
 Set Primitive Projections.
@@ -76,14 +76,15 @@ End Lab.
 
 Export Lab.Exports.
 
-Variant typ := Read | Write | Undef.
+Variant typ := Read | Write | ReadWrite | Undef.
 
 Definition eq_typ : rel typ := 
   fun t1 t2 => match t1, t2 with
-  | Read , Read  => true
-  | Write, Write => true
-  | Undef, Undef => true
-  | _ , _        => false
+  | Read     , Read      => true
+  | Write    , Write     => true
+  | ReadWrite, ReadWrite => true
+  | Undef, Undef         => true
+  | _ , _                => false
   end.
 
 Lemma eq_typP : Equality.axiom eq_typ.
@@ -96,7 +97,9 @@ Implicit Types (l : L).
 
 Definition bot : L := Lab.bot (Lab.class L).
 
-Definition com : rel L := Lab.com (Lab.class L).
+Definition com : {fset L} -> L -> bool := Lab.com (Lab.class L).
+
+Definition cf : rel L := Lab.cf (Lab.class L).
 
 Definition is_write : pred L := Lab.is_write (Lab.class L).
 Definition is_read  : pred L := Lab.is_read  (Lab.class L).
@@ -105,17 +108,20 @@ Canonical typ_eqMixin := EqMixin eq_typP.
 Canonical typ_eqType  := Eval hnf in EqType typ typ_eqMixin.
 
 Definition lab_typ l : typ := 
-  if is_read l then 
+  if is_read l && ~~ is_write l then 
     Read 
-  else if is_write l then 
+  else if is_write l && ~~ is_read l then 
     Write
+  else if is_read l && is_write l then 
+    ReadWrite
   else Undef.
 
 End Def.
 End Def.
 
 Module Export Syntax.
-Notation "l1 '\>>' l2" := (com l1 l2) (at level 90).
+Notation "ls '|-' l"  := (com ls l) (at level 90).
+Notation "l1 '\#' l2" := (cf l1 l2) (at level 90).
 End Syntax.
 
 Module Export Theory.
@@ -124,11 +130,11 @@ Context (L : labType).
 Implicit Types (l r w: L).
 
 Lemma is_writeP w : 
-  reflect (exists r, com w r) (is_write w).
+  reflect (exists ws r, w \in ws /\ com ws r) (is_write w).
 Proof. by move: w; case L=> ? [? []]. Qed.
 
 Lemma is_readP r : 
-  reflect (exists w, com w r) (is_read r).
+  reflect (exists ws, com ws r) (is_read r).
 Proof. by move: r; case L=> ? [? []]. Qed.
 
 Lemma bot_nwrite : 
@@ -176,6 +182,9 @@ Definition fs_tids p :=
 
 Definition fs_dlab p e := 
   snd (fs_lab p e).
+
+Definition fs_typ p e := 
+  lab_typ (fs_dlab p e).
 
 Definition dlab_defined p := 
   [forall e : finsupp p, fs_dlab p (val e) != bot].
@@ -254,13 +263,17 @@ Context (TS : ltsType L).
 Implicit Types (p : @thrd_pomset E L Tid).
 
 (* checks that f is a value-relabeling of pomset p w.r.t. set of events es *)
-Definition is_val_relab p (es : {fset E}) (f : Tid * L -> L) := 
+Definition relab_mod p (es : {fset E}) (f : Tid * L -> L) := 
   let lab e  := fs_lab  p (val e) in
   let dlab e := fs_dlab p (val e) in
-  [&& (* labels of all events in es are preserved *)
-      [forall e : finsupp p, (val e \in es) ==> (f (lab e) == dlab e)]
-      (* types of all events are preserved (i.e. reads/writes are preserved) *)
-    & [forall e : finsupp p, lab_typ (f (lab e)) == lab_typ (dlab e)]
+  [&& (* types of all events are preserved (i.e. reads/writes are preserved) *)
+      [forall e : finsupp p, lab_typ (f (lab e)) == lab_typ (dlab e)]
+    , (* conflict relation is preserved *)
+      [forall e1 : finsupp p, forall e2 : finsupp p, 
+        (f (lab e1) \# f (lab e2)) == ((dlab e1) \# (dlab e2)) 
+      ]
+    & (* labels of all events not in es are preserved *)
+      [forall e : finsupp p, (val e \notin es) ==> (f (lab e) == dlab e)]
   ].
 
 End ValueRelab. 
@@ -288,12 +301,12 @@ Implicit Types (p : @thrd_pomset E L Tid).
 Definition causal d p := 
   {in (finsupp p), forall e, exists f,
     let rst := pideal (e : [Event of p]) in
-    let prv := 
-      [fset e' in finsupp p | eq_tid p e e' || ~~ is_read (fs_dlab p e')]
+    let ro := 
+      [fset e' in finsupp p | (fs_typ p e' == Lab.Read) && ~~ (eq_tid p e e')]
     in
     let p_rlb := Pomset.relabel f p in  
     let p_rst := Pomset.restrict (mem rst) p_rlb in
-    [/\ is_val_relab p prv f
+    [/\ relab_mod p ro f
       & eq (p_rst) \supports (lts_pomlang d : pomlang E L bot)
     ]
   }.
@@ -322,7 +335,7 @@ Definition pipe_cst d p :=
       [fset e' in finsupp p | (fs_tid p e' == t) || ~~ is_read (fs_dlab p e')]
     in
     let po_rlb := Pomset.relabel f (po p) in  
-    [/\ is_val_relab p prv f
+    [/\ relab_mod p prv f
       & eq po_rlb \supports (lts_pomlang d : pomlang E L bot)
     ]
   }.
