@@ -194,6 +194,12 @@ Definition lab_prj : Tid * L -> L := snd.
 Definition lts_thrd_pomlang d : thrd_pomlang E L Tid := 
   fun p => (lts_pomlang d : pomlang E L bot) (Pomset.relabel lab_prj p).
 
+Definition respects_com d : thrd_pomlang E L Tid := 
+  fun p => forall e, exists (es : {fset E}), 
+    [/\ (fs_dlab p) @` es |- (fs_dlab p e)
+      & forall e', e' \in es -> e' <= e :> [Event of p]
+    ].
+
 Lemma lab_prj_bot :
   lab_prj (\i0, bot) = bot.
 Proof. done. Qed.
