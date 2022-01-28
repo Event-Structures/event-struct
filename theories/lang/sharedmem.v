@@ -59,7 +59,7 @@ Definition dec_lab : Addr * Val + Addr * Val + unit -> (label Addr Val) :=
 
 Lemma enc_dec_labK : 
   cancel enc_lab dec_lab.
-Proof. admit. Admitted.
+Proof. by case. Qed. 
 
 End Encode.
 
@@ -144,6 +144,23 @@ Lemma bot_nread :
 Proof. done. Qed. 
 
 End LabType.
+
+Module Export Exports.
+Section Exports.
+Implicit Types (A V : choiceType).
+
+Definition labMixin A V := 
+  @Lab.Lab.Mixin (label A V) _ Bot com cf is_write is_read
+    is_writeP is_readP bot_nwrite bot_nread.
+Canonical labType A V := 
+  Lab.Lab.Pack (Lab.Lab.Class (labMixin A V)).
+
+End Exports.
+End Exports.
+
 End LabType.
 
 End SharedMem.
+
+Export SharedMem.Exports.
+Export SharedMem.LabType.Exports.
