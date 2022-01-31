@@ -5,7 +5,7 @@ From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 From eventstruct Require Import utils rel relalg inhtype order ident lposet.
-From eventstruct Require Import hal.
+From eventstruct Require Import ilia.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)
@@ -881,7 +881,7 @@ Lemma of_seq_labE e :
 Proof.
   rewrite /of_seq build_lab /= /sub_lift.
   case: insubP=> /= [?? ->|] //.
-  rewrite ?inE /==> ?; rewrite nth_default; hal.
+  rewrite ?inE /==> ?; rewrite nth_default; ilia.
 Qed.
 
 Lemma of_seq_fin_caE : 
@@ -914,15 +914,15 @@ Proof.
   rewrite /of_seq build_cov_fin_ica; first last.
   - case=> /= ?; rewrite ?inE /==> ?.
     apply/eqP; move: lsD=> /[swap]<-.
-    rewrite mem_nth=> //; hal.
+    rewrite mem_nth=> //; ilia.
   apply/covP/eqP=> /=; case: e1 e2=> /= e1 i1 [/= e2 i2].
   - case=> _ /andP[?? nex]. 
     case: (fresh e1 =P e2)=> // /eqP ?; case: nex.
-    move: i1 i2; rewrite of_seq_finsupp ?inE /==> *.
+    move: i1 i2; rewrite of_seq_finsupp ?inE /==> ??.
     have IN: (fresh e1 \in [fset e | e in nfresh \i0 (size ls)]).
-    - rewrite ?inE /=; hal.
-    exists [`IN] => /=; hal.
-  split=> [/(congr1 val)||[[/= ? _]]]; hal.
+    - rewrite ?inE /=; ilia.
+    exists [`IN] => /=; ilia.
+  split=> [/(congr1 val)||[[/= ? _]]]; ilia.
 Qed.
 
 Lemma of_seq_lab_defined : 
