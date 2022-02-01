@@ -2069,7 +2069,6 @@ Definition fhom_of f (ax : axiom f) :
     Sub (restr ax) (hom_pred_of_hom ax).
 
 End Hom.
-End Hom.
 
 Arguments Hom.axiom {_ _ _ _} _ _.
 
@@ -2642,7 +2641,6 @@ Proof.
     case/orP=> [/fxy->|]; first exact/fs_ca_refl.
     case/and3P=>/orP[/fxy->*|]; first exact/fs_ca_refl.
     by case/and3P=>+??; rewrite ?c1.
-  split.
   - move=> e; rewrite ?fs_labE lFsPrePoset.build_lab /sub_lift.
     case: insubP=> /= [[/=>?]|].
     - rewrite /lab -ax.1 fs_labE /= c2 // =>-> //.
@@ -3117,3 +3115,4 @@ End Tomset.
 
 Export Tomset.Def.
 Export Tomset.Theory.
+
