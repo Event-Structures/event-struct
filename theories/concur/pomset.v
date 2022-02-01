@@ -2048,7 +2048,7 @@ Qed.
 (* TODO: rename? *)
 Definition restr f (ax : axiom f) : 
   {ffun [FinEvent of p] -> [FinEvent of q]} :=
-  [ffun e => [` hom_in_finsupp ax (valP e)] ].
+    [ffun e => [` hom_in_finsupp ax (valP e)] ].
 
 Lemma hom_pred_of_hom f (ax : axiom f) : 
   lFinPoset.hom_pred (restr ax).
@@ -2454,6 +2454,7 @@ Context (E : identType) (L : choiceType) (bot : L).
 Implicit Types (l : L) (es : {fset E}).
 Implicit Types (p q : lfsposet E L bot).
 
+(* TODO: this one should be subsumed by `ca_reflecting` *)
 Lemma emb_fs_ca p q f (X : {fset E}) : 
   lFsPoset.Hom.axiom p q f -> 
   axiom p q f -> 
@@ -2471,6 +2472,7 @@ Proof.
   by apply/idP/idP=>*; rewrite (i1,i2).
 Qed.
 
+(* TODO: this one should be reproven for lPoset.Emb *)
 Lemma emb_dw_clos p q f (X : {fset E}) es :  
   lFsPoset.Hom.axiom p q f -> 
   axiom p q f -> 
@@ -2652,6 +2654,9 @@ Proof.
   by case/and3P=> /ax.2; rewrite ?(hom_pre_img ax) ?c2 // /(_ <= _) /==>->.
 Qed.
 
+(* TODO: fix this once we will have `iso_eqv f p q` 
+ * (i.e. isomorphism check for function) 
+ *)
 Lemma update_iso q p x y : 
   x \notin finsupp q -> 
   y \notin finsupp p -> 

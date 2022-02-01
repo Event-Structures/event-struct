@@ -435,6 +435,8 @@ Lemma lfsp_ltrans_iso p q l es :
   iso_eqv (lfsp_add_event l es' q) (lfsp_add_event l es p).
 Proof.
   move=> ? s /(update_iso (fresh_seq_nmem _) (fresh_seq_nmem _))[g gf].
+  
+
   case=> ax axb axe.
   have?: g @` es `<=` finsupp q.
   - by apply/fsubsetP=>> /imfsetP[/= ?/(fsubsetP s)/(hom_img ax)/[swap]->].
@@ -733,7 +735,7 @@ Lemma lfsp_lin_lang p (ls : seq L) :
 Proof.
   elim/last_ind: ls p=>/=.
   - move=> ? _ /finsupp_hom_id fE; exists [trace] => //=.
-    apply/esym/val_inj/lFsPrePoset.eq_emptyE.
+    apply/esym/val_inj/lFsPrePoset.empty_eqP. 
     rewrite /fs_size -fE lFsPoset.of_seq_valE //.
     by move: lFsPrePoset.of_seq_size; rewrite /fs_size=>->.
   move=> ls l IHl p nb ax.
@@ -791,7 +793,7 @@ End Theory.
 
 End lFsPosetLTS.
 
-Module Export pomsetLTS.
+Module Export PomsetLTS.
 (* TODO: there is a lot of copypaste from lFsPrePosetLTS ... *)
 Module LTS.
 Section LTS.
@@ -937,16 +939,17 @@ Proof.
     have tr_lang: tr \in trace_lang emp.
     - apply/lfsp_lin_trace_lang; rewrite /= in ispq.
       by rewrite (eqquot_piP _ _ ispq) piE -lE -lsE in lsl.
-    case: (sim_trace ise ispq tr_lang lE)=> tr' [??/=].
+    case: (sim_trace ise tr_lang lE)=> tr' [??/=].
     move=> /(iso_eqv_trans)-/(_ _ eqv) /[-! eqquot_eqE]/eqP?.
     by exists tr'.
   case=> tr [<-] tl lt. 
   have ise': iso_sim_tr emp (pom emp) by rewrite /= iso_eqv_sym in ise.
   have isp: iso_sim_tr (repr p) p by rewrite /= iso_eqv_refl.
-  case: (sim_trace ise' isp tl lt)=> tr' [<- /lfsp_lang_lin /[swap] /=].
+  case: (sim_trace ise' tl lt)=> tr' [<- /lfsp_lang_lin /[swap] /=].
   by rewrite iso_eqv_sym -eqquot_piE=> /eqP->; rewrite piE.
 Qed.
 
 End Theory.
 End Theory.
-End pomsetLTS.
+
+End PomsetLTS.
