@@ -427,6 +427,47 @@ Proof.
   case/lfsp_ltransP=> /eqP + ?; exact.
 Qed.
 
+Lemma lfsp_ltrans_iso p q l es : 
+  l != bot -> 
+  es `<=` finsupp p -> 
+  iso_eqv q p -> 
+  exists2 es', es' `<=` finsupp q &
+  iso_eqv (lfsp_add_event l es' q) (lfsp_add_event l es p).
+Proof.
+  move=> ? s /(update_iso (fresh_seq_nmem _) (fresh_seq_nmem _))[g gf].
+  
+
+  case=> ax axb axe.
+  have?: g @` es `<=` finsupp q.
+  - by apply/fsubsetP=>> /imfsetP[/= ?/(fsubsetP s)/(hom_img ax)/[swap]->].
+  exists (g @` es)=> //; apply/iso_eqvP.
+  have bh: 
+    lFsPoset.bHom.axiom (lfsp_add_event l es p)
+      (lfsp_add_event l (g @` es) q) g.
+  - case: axb=> h c1 c2.
+    set f := fun e => 
+      if e == fresh_seq (finsupp q) then
+        fresh_seq (finsupp p)
+      else h e.
+    exists f=>>; rewrite ?lfsp_add_eventE // ?inE /f ?gf; case: ifP=> /=.
+    - by move/eqP->.
+    - by move=>*; rewrite c1.
+    - by move=>/eqP->_; apply/eqP; rewrite gf.
+    by move=>*; rewrite c2.
+  have inj: {in lfsp_fresh p |` finsupp p &, injective g}.
+  - move=>>; rewrite ?inE /lfsp_fresh -?gf ?(hom_finsupp _ ax).
+    case: bh=> h c1 c2 ?? /(congr1 h).
+    by rewrite ?c1 // ?lfsp_add_eventE // ?inE.
+  exists g; do ? split=>> //.
+  - rewrite ?fs_labE ?lfsp_add_eventE /lfsp_fresh // gf. 
+    case: ifP=>// *; exact/ax.1.
+  all: rewrite ?/(_ <= _) /= ?lfsp_add_eventE // ?/lfsp_fresh gf=> ??.
+  all: rewrite (emb_fs_ca ax axe inj) //.
+  all: by rewrite (emb_dw_clos ax axe inj) // fsubsetU1.
+Qed.
+
+Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
+
 Lemma invariant_operational : 
   @invariant L (LTS.ltsType E L bot) (@operational _ _ _).
 Proof.
@@ -689,10 +730,14 @@ Lemma lfsp_lin_lang p (ls : seq L) :
   bot \notin ls ->
   lFsPoset.Hom.axiom p (lFsPoset.of_seq E L bot ls) id ->
   exists2 tr : trace _,
-      lst_state p tr = p & 
+      lst_state emp tr = p & 
       labels tr = ls.
 Proof.
-  elim/last_ind: ls p=>/=; first by exists [trace].
+  elim/last_ind: ls p=>/=.
+  - move=> ? _ /finsupp_hom_id fE; exists [trace] => //=.
+    apply/esym/val_inj/lFsPrePoset.empty_eqP. 
+    rewrite /fs_size -fE lFsPoset.of_seq_valE //.
+    by move: lFsPrePoset.of_seq_size; rewrite /fs_size=>->.
   move=> ls l IHl p nb ax.
   case: (@backward_step p (size ls).+1).
   - exact/(hom_operational ax)/operational_of_seq.
@@ -736,8 +781,9 @@ Proof.
       rewrite in1 in2 ?orbT; exact.
   move=> tr lstE labE.
   have it: is_trace (rcons tr (mk_step l q p)).
-  - rewrite is_trace_rcons; apply/and3P; split=> //; first by case: (tr).
-    by rewrite adjoint_lastE /= lstE.
+  - rewrite is_trace_rcons; apply/and3P; split=> //.
+    + by case: (tr).
+    rewrite adjoint_lastE /=; apply/eqP; by case: (val tr) lstE.
   exists (Trace it)=> /=; rewrite ?lst_state_rcons // /labels map_rcons.
   exact/congr2.
 Qed.
@@ -747,3 +793,163 @@ End Theory.
 
 End lFsPosetLTS.
 
+Module Export PomsetLTS.
+(* TODO: there is a lot of copypaste from lFsPrePosetLTS ... *)
+Module LTS.
+Section LTS.
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p q : pomset E L bot).
+
+Definition ltrans l (p q : lfsposet E L bot) := 
+  (l != bot) &&
+  [exists es : fpowerset (finsupp p),
+    iso_eqv q (lfsp_add_event l (val es) p) 
+  ]. 
+
+Lemma pom_ltrans_repr l : 
+  {mono pom : p q / ltrans l p q >-> ltrans l (repr p) (repr q)}.
+Proof.
+  move=>p>; case: pomP=> q /eqmodP /= eqv.
+  case: pomP=> ? /eqmodP /= e1.
+  apply/andP/andP=> -[/[dup]nl-> /existsP[[/= es /[! fpowersetE] s]]].
+  - move: eqv=> /(lfsp_ltrans_iso _)-/(_ _ _ nl s)[es' ?? e2]. 
+    split=> //; apply/existsP. 
+    have ines : es' \in fpowerset (finsupp p) by rewrite fpowersetE.
+    exists [`ines] => /=; apply/(iso_eqv_trans e1)/(iso_eqv_trans e2).
+    by rewrite iso_eqv_sym.
+  - rewrite -iso_eqv_sym in eqv.
+    move: eqv=> /(lfsp_ltrans_iso _)-/(_ _ _ nl s)[es' ? e3 e2]. 
+    split=> //; apply/existsP. 
+    have ines : es' \in fpowerset (finsupp q) by rewrite fpowersetE.
+    exists [`ines] => /=; rewrite iso_eqv_sym. 
+    by apply/(iso_eqv_trans _ e1)/(iso_eqv_trans e3); rewrite iso_eqv_sym.
+Qed.
+
+Canonical ltrans_quote_mono2 l := PiMono2 (pom_ltrans_repr l).
+
+Lemma enabledP l p :
+  reflect (exists q, ltrans l (repr p) (repr q)) (l != bot).
+Proof.
+  apply/(iffP (LTS.enabledP _ (repr p)))=> /= -[q].
+  - case/lfsp_ltransP=> ? [es ? eq]; exists (pom q).
+    rewrite -[p]reprK piE; apply/andP; split=> //.
+    have ines : es \in fpowerset (finsupp (repr p)) by rewrite fpowersetE.
+    apply/existsP; exists [`ines]; rewrite eq; exact/iso_eqv_refl.
+  case/andP=> ? /existsP[[/= es /[! fpowersetE] ??]].
+  exists (lfsp_add_event l es (repr p)).
+  by apply/lfsp_ltransP; split=> //; exists es.
+Qed.
+  
+Definition mixin := 
+  let S := pomset E L bot in
+  @LTS.LTS.Mixin S L _ _ _ enabledP. 
+Definition pomltsType := 
+  Eval hnf in let S := pomset E L bot in (LTSType S L mixin).
+
+End LTS.
+
+Arguments pomltsType E L bot : clear implicits.
+
+Module Export Exports.
+Canonical pomltsType.
+Canonical ltrans_quote_mono2.
+End Exports.
+
+End LTS.
+
+Export LTS.Exports.
+
+Module Export Theory.
+Section Theory.  
+Context (E : identType) (L : choiceType) (bot : L).
+Implicit Types (l : L) (es : {fset E}).
+Implicit Types (p q : pomset E L bot).
+Implicit Types (tr : trace (LTS.pomltsType E L bot)).
+
+Import lPoset.Syntax.
+Local Open Scope lts_scope.
+
+Export Simulation.Exports.
+Import Simulation.Syntax.
+
+Definition R : hrel (pomset E L bot) (lfsposet E L bot) := 
+  iso_eqv.
+
+Lemma ltransP l (p q : lfsposet E L bot) :
+  reflect (l != bot /\ exists2 es, 
+             es `<=` finsupp p & 
+             iso_eqv q (lfsp_add_event l es p))
+          (LTS.ltrans l p q).
+Proof.
+  rewrite /ltrans /= /LTS.ltrans.
+  apply: (andPP idP). 
+  apply/(equivP idP); split=> [/existsP|] /=.
+  - move=> [es]; exists (val es)=> //.
+    rewrite -fpowersetE; exact/(valP es). 
+  move=> [es] +; rewrite -fpowersetE.
+  move=> inPw ?; apply/existsP=> /=.
+  by exists (Sub es inPw).
+Qed.
+
+
+Lemma iso_sim_class_of : Simulation.class_of 
+  (iso_eqv : hrel (pomset E L bot) (lfsposet E L bot)).
+Proof.
+  do ? split; rewrite /ltrans /==> l s1 t1 t2 ?.
+  case/lfsp_ltransP=> ? [es ? t2E].
+  exists (pom t2); first by rewrite -eqquot_piE.
+  have->: s1 = pom t1.
+  - apply/eqP; by rewrite eqquot_piE.
+  rewrite piE t2E; apply/ltransP; split=>//; by exists es.
+Qed.
+
+Definition iso_sim := Simulation.Pack iso_sim_class_of.
+
+Lemma iso_sim_tr_class_of : Simulation.class_of 
+  (iso_eqv : hrel (lfsposet E L bot) (pomset E L bot)).
+Proof.
+  do ? split; rewrite /ltrans /==> l s1 t1 t2.
+  rewrite iso_eqv_sym -eqquot_piE=> /eqP->.
+  rewrite -{1}[t2]reprK piE=> /ltransP[? [es ??]].
+  exists (lfsp_add_event l es s1); first by rewrite iso_eqv_sym.
+  by apply/lfsp_ltransP; split=> //; exists es.
+Qed.
+
+Definition iso_sim_tr := Simulation.Pack iso_sim_tr_class_of.
+
+Notation of_seq := (lFsPoset.of_seq E L bot).
+
+Lemma pomset_linP p (ls : seq L) :
+  let emp := lFsPoset.empty E L bot in 
+  bot \notin ls ->
+    reflect 
+      (exists tr : trace _,
+          [/\ labels tr = ls,
+              tr \in trace_lang (pom emp) &
+              lst_state (pom emp) tr = p])
+      (ls \in lin p).
+Proof.
+  move=> emp nl.
+  have ise: iso_sim (pom emp) emp by rewrite /= -eqquot_piE.
+  apply/(iffP idP)=> [/[dup] lsl |].
+  - rewrite inE=> /bhom_factor[q eqv] /(lfsp_lin_lang nl)[tr].
+    move=> /[swap]/[dup] lsE <- lE.
+    have ispq: iso_sim p q by rewrite /= iso_eqv_sym.
+    have tr_lang: tr \in trace_lang emp.
+    - apply/lfsp_lin_trace_lang; rewrite /= in ispq.
+      by rewrite (eqquot_piP _ _ ispq) piE -lE -lsE in lsl.
+    case: (sim_trace ise tr_lang lE)=> tr' [??/=].
+    move=> /(iso_eqv_trans)-/(_ _ eqv) /[-! eqquot_eqE]/eqP?.
+    by exists tr'.
+  case=> tr [<-] tl lt. 
+  have ise': iso_sim_tr emp (pom emp) by rewrite /= iso_eqv_sym in ise.
+  have isp: iso_sim_tr (repr p) p by rewrite /= iso_eqv_refl.
+  case: (sim_trace ise' tl lt)=> tr' [<- /lfsp_lang_lin /[swap] /=].
+  by rewrite iso_eqv_sym -eqquot_piE=> /eqP->; rewrite piE.
+Qed.
+
+End Theory.
+End Theory.
+
+End PomsetLTS.
