@@ -24,7 +24,6 @@ theories/concur/lts.v
 theories/concur/lposet.v
 theories/concur/pomset.v
 theories/concur/pomset_lts.v
-theories/concur/prop_pomlang.v
 theories/concur/prime_eventstruct.v
 theories/concur/porf_eventstruct.v
 theories/concur/transitionsystem.v
