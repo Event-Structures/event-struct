@@ -10,6 +10,7 @@ Unset Printing Implicit Defensive.
 
 Import Order.Theory.
 
+Local Open Scope fset_scope.
 Local Open Scope order_scope.
 
 (******************************************************************************)
@@ -47,6 +48,10 @@ Implicit Types (x y z : T) (X : pred T).
 Definition dw_closed (X : pred T) : Prop :=
   (* ca · [X] ≦ [X] · ca; *)
   forall x y, x <= y -> X y -> X x.
+
+Lemma eq_dw_closed X Y : 
+  X =1 Y -> dw_closed X <-> dw_closed Y. 
+Proof. move=> e; split=> dw ??; [rewrite -?e | rewrite ?e]; exact/dw. Qed.
 
 End Closure.
 
@@ -379,12 +384,19 @@ End Exports.
 Module Export Def.
 Section Def.
 Context {T : dwFinPOrderType}.
+Implicit Types (x : T) (X : {fset T}).
 
 Definition pideal : T -> {fset T} := 
   DwFinPOrder.pideal (DwFinPOrder.class T).
 
+Definition fin_ideal X : {fset T} := 
+  \bigcup_(x <- X) (pideal x).
+
 Definition up_clos : pred T -> pred T :=
   fun P x => [exists y : pideal x, P (val y)].
+
+Definition dw_closedb X := 
+  [forall x : fin_ideal X, val x \in X].
 
 End Def.
 End Def.
@@ -392,7 +404,8 @@ End Def.
 Module Export Theory.
 Section Theory.
 Context {T : dwFinPOrderType}.
-Implicit Types (x y : T) (P Q : pred T).
+Implicit Types (x y : T) (X : {fset T}).
+Implicit Types (P Q : pred T).
 
 Lemma pidealE x y :
   x \in (pideal y) = (x <= y).
@@ -402,6 +415,22 @@ Proof. by move: x y; case: T=> [? [? []]]. Qed.
 Lemma pidealx x : 
   x \in pideal x.
 Proof. by rewrite pidealE. Qed.
+
+Lemma fin_idealP X x : 
+  reflect (exists2 y, y \in X & x <= y) (x \in fin_ideal X).
+Proof.
+  apply/equivP; first exact/bigfcupP.
+  by apply/exists2_equiv=> y; rewrite ?andbT ?pidealE.
+Qed.  
+
+Lemma dw_closedP X : 
+  reflect (dw_closed (mem X)) (dw_closedb X).
+Proof. 
+  apply/equivP; first apply/(fset_forallP); split.
+  - move=> inX x y le_xy Xy. 
+    by apply/inX/fin_idealP; exists y.
+  by move=> dwX x /fin_idealP [y] /dwX; apply.
+Qed.
 
 Lemma up_closP P x : 
   reflect (exists2 y, y <= x & y \in P) (x \in up_clos P). 
@@ -462,8 +491,31 @@ Qed.
 End Theory.
 End Theory.
 
+(* TODO: better naming convention *)
+Module Export AuxTheory.
+Section AuxTheory.
+Context {T U : dwFinPOrderType}.
+Implicit Types (f : T -> U).
+
+Lemma dw_closedb_imfsetE f X : {mono f : x y / x <= y} -> dw_surjective f -> 
+  dw_closedb (f @` X) = dw_closedb X.
+Proof. 
+  move=> /[dup] /inc_inj finj femb fdw. 
+  move: (imfset_preim_eq X finj)=> /eq_dw_closed dw_preim. 
+  apply/idP/idP=> /dw_closedP dw; apply/dw_closedP.
+  - apply/dw_preim/dw_surjective_preim=> //; exact/mono2W.
+  apply/(dw_surjective_closed _ fdw)=> //. 
+  - exact/mono2aW.
+  - by move=> x /imfsetP [y] /= _ ->; exists y.
+  exact/dw_preim.
+Qed.   
+
+End AuxTheory.
+End AuxTheory.
+
 End DwFinPOrder.
 
 Export DwFinPOrder.Exports.
 Export DwFinPOrder.Def.
 Export DwFinPOrder.Theory.
+Export DwFinPOrder.AuxTheory.
