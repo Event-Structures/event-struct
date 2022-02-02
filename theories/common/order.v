@@ -40,6 +40,80 @@ Qed.
 End POrderUtils.
 
 
+Section Closure.
+Context {disp : unit} {T : porderType disp}.
+Implicit Types (x y z : T) (X : pred T).
+
+Definition dw_closed (X : pred T) : Prop :=
+  (* ca · [X] ≦ [X] · ca; *)
+  forall x y, x <= y -> X y -> X x.
+
+End Closure.
+
+Section POrderMorph.
+Context {dispT : unit} {dispU : unit}. 
+Context {T : porderType dispT} {U : porderType dispU}.
+Implicit Types (f : T -> U).
+Implicit Types (x y z : T).
+
+Lemma le_homo_lt_img f x y : 
+  {homo f : x y / x <= y} -> (f x < f y) -> (x < y) || (x >< y).
+Proof.
+  case lt_xy: (x < y)=> //= fmon lt_fxy.
+  apply/negP=> /orP [].
+  - rewrite le_eqVlt lt_xy orbF.
+    by move: lt_fxy=> /[swap] /eqP<-; rewrite ltxx.
+  move=> /fmon le_fyx.
+  move: (lt_le_asym (f x) (f y)).
+  by move=> /andP; apply; split=> //.
+Qed.
+
+Lemma lt_homo_le_img f x y : 
+  {homo f : x y / x < y} -> (f x <= f y) -> (x <= y) || (x >< y).
+Proof.
+  move=> fmon le_fxy.
+  move: (le_gt_incomp x y)=> /or3P[-> | | ->] //.
+  move=> /fmon lt_fyx; exfalso.
+  move: (lt_le_asym (f y) (f x)).
+  by move=> /andP; apply; split=> //.
+Qed.
+
+Lemma le_homo_mono f : 
+  {homo f : x y / x <= y} -> {ahomo f : x y / x <= y} -> 
+  {mono f : x y / x <= y}.
+Proof. 
+  move=> fmon frefl x y. 
+  apply/idP/idP; [exact/frefl | exact/fmon]. 
+Qed.
+
+Lemma cancel_le_ahomo_homo f g : cancel g f ->
+  {ahomo f : x y / x <= y} -> {homo g : x y / x <= y}.
+Proof. by move=> K fmon x y le_xy; apply/fmon; rewrite !K. Qed.
+
+Lemma le_homo_bij_total f : bijective f -> {homo f : x y / x <= y} ->
+  total (<=%O : rel T) -> total (<=%O : rel U).
+Proof. 
+  case=> g Kf Kg fmon tot x y.
+  by move: (tot (g x) (g y))=> /orP[] /fmon; rewrite !Kg=> ->. 
+Qed.  
+
+(* TODO: equivalent to mathcomp.ssreflect.order.le_mono *)
+Lemma lt_homo_total_mono f : {homo f : x y / x < y} -> total (<=%O : rel T) ->
+  { mono f : e1 e2 / e1 <= e2 }.
+Proof.
+  move=> fmon tot x y. 
+  apply/idP/idP; last exact/ltW_homo. 
+  move=> /(lt_homo_le_img fmon)=> /orP[] //.
+  by rewrite /Order.comparable; move: (tot x y) ->.  
+Qed.
+
+Lemma dw_surjective_preim f P : 
+  {homo f : x y / x <= y} -> dw_closed P -> dw_closed (preim f P).
+Proof. move=> fmon dw_clos=> x y /fmon; exact/dw_clos. Qed.
+
+End POrderMorph.
+
+
 Module Export MaxSup.
 Section Def.
 Context {disp : unit} {T : porderType disp}.
