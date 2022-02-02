@@ -293,10 +293,33 @@ Proof.
 Qed.
 
 End Monotone.
-
 End Theory.
 
 End MaxSup.
+
+
+Section DwSurjective.
+Context {dispT : unit} {dispU : unit}.
+Context {T : porderType dispT} {U : porderType dispU}.
+Implicit Types (f : T -> U).
+Implicit Types (x y z : T).
+
+(* TODO: consult literature to find relevant theory *)
+Definition dw_surjective f := 
+  forall x, {in (<= f x), surjective f}.
+
+Lemma dw_surjective_closed f (X : pred T) (Y : pred U) : 
+  {ahomo f : x y / x <= y} -> dw_surjective f -> {in Y, surjective f} -> 
+  (preim f Y) =1 X -> dw_closed X -> dw_closed Y.
+Proof. 
+  move=> fmon fdw fsurj fpreim dwX x y. 
+  move=> /[swap] /[dup] /fsurj [y'] <-.
+  move=> /[swap] /[dup] /fdw=> [[x']] <-. 
+  by move=> /fmon /dwX; rewrite -fpreim -fpreim. 
+Qed.
+
+End DwSurjective.
+
 
 Module DwFinPOrder.
 
