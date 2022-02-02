@@ -43,11 +43,25 @@ Proof. by rewrite !orbT. Qed.
 Lemma orbbbbT a b c d: [|| a, b, c, d | true].
 Proof. by rewrite !orbT. Qed.
 
+#[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
+
 Lemma andb_iff (a b c d : bool) : 
   (a <-> c) -> (b <-> d) -> (a && b <-> c && d).
 Proof. by move=> ??; split=> /andP[??]; apply/andP; split; firstorder. Qed.
 
-#[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
+Lemma iff_eqP (a b : bool) : 
+  reflect (a <-> b) (a == b).
+Proof. 
+  apply/(equivP idP); split=> [/eqP->|] //.
+  case a; case b=> //; intuition.
+Qed.
+
+Lemma forall_iff_eqP {T U : Type} P (p : pred T) x y : 
+  (forall x, reflect (P x) (p x)) -> (P x <-> P y) -> (p x = p y).
+Proof.
+  move=> /[dup] /(_ x) /rwP[??] /(_ y) /rwP[??] [??].
+  apply: eqP; apply/iff_eqP; intuition.
+Qed.
 
 (* ************************************************************************** *)
 (*     Anti-homomorphism (i.e. homomorphism with reversed direction)          *)
@@ -88,6 +102,18 @@ Notation "{ 'ahomo' f : x y /~ a }" :=
   (antihomomorphism_2 f (fun y x => a) (fun x y => a))
   (at level 0, f at level 99, x name, y name,
    format "{ 'ahomo'  f  :  x  y  /~  a }") : type_scope.
+
+
+Section AntiHomomorphismTheory.
+Context (aT rT : Type) (f : aT -> rT).
+Context (aR : rel aT) (rR : rel rT).
+
+Lemma mono2aW : 
+  {mono f : x y / aR x y >-> rR x y} -> {ahomo f : x y / aR x y >-> rR x y}.
+Proof. by move=> hf x y axy; rewrite -hf. Qed.
+
+End AntiHomomorphismTheory.
+
 
 (* ************************************************************************** *)
 (*     Surjective function                                                    *)
@@ -169,6 +195,11 @@ End SeqIn.
 Lemma exists_equiv {T} {A B : T -> Prop} :
   (forall x, A x <-> B x) -> (exists x, A x) <-> (exists x, B x).
 Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
+
+Lemma exists2_equiv {T} {A B C D : T -> Prop} :
+  (forall x, A x <-> C x) -> (forall x, B x <-> D x) -> 
+  (exists2 x, A x & B x) <-> (exists2 x, C x & D x).
+Proof. move=> H1 H2; split=> [][] x /H1 ? /H2 ?; by exists x. Qed.
 
 Inductive and6 (P1 P2 P3 P4 P5 P6 : Prop) : Prop :=
   And6 of P1 & P2 & P3 & P4 & P5 & P6.
@@ -448,6 +479,17 @@ Proof.
     rewrite inE; apply/orP; [left|right].
 Qed.
 
+Lemma imfset_preim_subs f s : 
+  {subset s <= preim f (mem (f @` s))}. 
+Proof. by move=> x xin; rewrite inE /=; apply/imfsetP; exists x. Qed.
+
+Lemma imfset_preim_eq f s :
+  injective f -> preim f (mem (f @` s)) =1 (mem s).
+Proof.
+  move=> finj x /=; apply/idP/idP; last exact/imfset_preim_subs.
+  by move=> /imfsetP [y] /= /[swap] /finj ->.
+Qed.
+
 Lemma fset_existsP s p :
   reflect (exists x, x \in s /\ p x) [exists x : s, p (val x)].
 Proof.
@@ -468,13 +510,18 @@ Proof.
   by apply /fset_existsP; exists y.
 Qed.  
 
+Lemma fset_forallPP s pp p :
+  (forall x, reflect (pp x) (p x)) -> 
+  reflect {in s, forall x, pp x} [forall x : s, p (val x)].
+Proof.
+  move=> refl; apply /equivP; first (by apply /forallP); split.
+  - move=> H x inX; move: (H (Sub x inX)); exact/refl.  
+  move=> H x; exact/refl/H/(valP x).
+Qed.  
+
 Lemma fset_forallP s p :
   reflect {in s, forall x, p x} [forall x : s, p (val x)].
-Proof.
-  apply /equivP; first (by apply /forallP); split.
-  - by move=> H x inX; move: (H (Sub x inX)).  
-  move=> H x; exact/H/(valP x).
-Qed.  
+Proof. apply/fset_forallPP=> x; exact/idP. Qed.
 
 (* TODO: use `rst s r` (restriction of relation) ? *)
 Lemma fset_forall2P s r :
@@ -486,7 +533,7 @@ Proof.
   - move=> H x y inX inY; move: (H x inX). 
     by move=> /forallP=> Hy; move: (Hy (Sub y inY)).
   move=> H x Hx /=; apply/forallP=> y; exact/H.
-Qed.    
+Qed. 
 
 End FSetUtils.
 
