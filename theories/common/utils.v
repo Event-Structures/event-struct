@@ -90,6 +90,42 @@ Notation "{ 'ahomo' f : x y /~ a }" :=
    format "{ 'ahomo'  f  :  x  y  /~  a }") : type_scope.
 
 (* ************************************************************************** *)
+(*     Surjective function                                                    *)
+(* ************************************************************************** *)
+
+Section Surjective.
+Context {rT aT : Type}.
+Implicit Types (f : aT -> rT).
+
+Definition surjective f := 
+  forall (x : rT), exists y, f y = x.
+
+Lemma bij_surj f : 
+  bijective f -> surjective f.
+Proof. by case=> g Kf Kg x; exists (g x); rewrite Kg. Qed.
+
+End Surjective.
+
+Section SurjectiveChoice.
+Context {rT : eqType} {aT : choiceType}.
+Implicit Types (f : aT -> rT).
+
+Lemma inj_surj_bij f : 
+  injective f -> surjective f -> bijective f.
+Proof. 
+  move=> finj fsurj.
+  have fsurj_eq : forall (x : rT), exists y, f y == x.
+  - by move=> x; case (fsurj x)=> [y] <-; exists y.
+  pose g := fun x => xchoose (fsurj_eq x). 
+  exists g=> x; rewrite /g. 
+  - apply/finj=> //; apply/eqP. 
+    exact/(xchooseP (fsurj_eq (f x))).
+  exact/eqP/(xchooseP (fsurj_eq x)).  
+Qed.
+
+End SurjectiveChoice.
+
+(* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
 (* ************************************************************************** *)
 
