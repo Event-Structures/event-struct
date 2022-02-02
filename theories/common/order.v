@@ -95,6 +95,13 @@ Lemma cancel_le_ahomo_homo f g : cancel g f ->
   {ahomo f : x y / x <= y} -> {homo g : x y / x <= y}.
 Proof. by move=> K fmon x y le_xy; apply/fmon; rewrite !K. Qed.
 
+Lemma le_mono_incomp f :
+  {mono f : x y / x <= y} -> { mono f : x y / x >< y }.
+Proof.
+  move=> femb x y; apply: negbLR.  
+  by rewrite !negbK /Order.comparable !femb.
+Qed.
+
 Lemma le_homo_bij_total f : bijective f -> {homo f : x y / x <= y} ->
   total (<=%O : rel T) -> total (<=%O : rel U).
 Proof. 
@@ -112,7 +119,7 @@ Proof.
   by rewrite /Order.comparable; move: (tot x y) ->.  
 Qed.
 
-Lemma dw_surjective_preim f P : 
+Lemma dw_closed_preim f P : 
   {homo f : x y / x <= y} -> dw_closed P -> dw_closed (preim f P).
 Proof. move=> fmon dw_clos=> x y /fmon; exact/dw_clos. Qed.
 
@@ -313,7 +320,11 @@ Implicit Types (x y z : T).
 Definition dw_surjective f := 
   forall x, {in (<= f x), surjective f}.
 
-Lemma dw_surjective_closed f (X : pred T) (Y : pred U) : 
+Lemma surj_dw_surj f : 
+  surjective f -> dw_surjective f.
+Proof. by move=> fsurj x y _; move: (fsurj y)=> [z] <-; exists z. Qed.
+
+Lemma dw_surj_closed f (X : pred T) (Y : pred U) : 
   {ahomo f : x y / x <= y} -> dw_surjective f -> {in Y, surjective f} -> 
   (preim f Y) =1 X -> dw_closed X -> dw_closed Y.
 Proof. 
@@ -503,8 +514,8 @@ Proof.
   move=> /[dup] /inc_inj finj femb fdw. 
   move: (imfset_preim_eq X finj)=> /eq_dw_closed dw_preim. 
   apply/idP/idP=> /dw_closedP dw; apply/dw_closedP.
-  - apply/dw_preim/dw_surjective_preim=> //; exact/mono2W.
-  apply/(dw_surjective_closed _ fdw)=> //. 
+  - apply/dw_preim/dw_closed_preim=> //; exact/mono2W.
+  apply/(dw_surj_closed _ fdw)=> //. 
   - exact/mono2aW.
   - by move=> x /imfsetP [y] /= _ ->; exists y.
   exact/dw_preim.
