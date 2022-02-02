@@ -114,6 +114,61 @@ Proof. by move=> hf x y axy; rewrite -hf. Qed.
 
 End AntiHomomorphismTheory.
 
+(* ************************************************************************** *)
+(*     Decidable morphisms on finite types                                    *)
+(* ************************************************************************** *)
+
+Section FinTypeMorphism.
+Context (aT : finType) (rT : eqType) (f : aT -> rT).
+Implicit Types (aF : aT -> aT) (rF : rT -> rT).
+Implicit Types (aOp : aT -> aT -> aT) (rOp : rT -> rT -> rT).
+
+Lemma morphism_1P aF rF : 
+  reflect (morphism_1 f aF rF) 
+          ([forall x, f (aF x) == rF (f x)]).
+Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
+
+Lemma morphism_2P aOp rOp : 
+  reflect (morphism_2 f aOp rOp) 
+          ([forall x, forall y, f (aOp x y) == rOp (f x) (f y)]).
+Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
+
+End FinTypeMorphism.
+
+Section FinTypeHomomorphism.
+Context (aT : finType) (rT : Type) (f : aT -> rT).
+Implicit Types (aP : pred aT) (rP : pred rT).
+Implicit Types (aR : rel aT) (rR : rel rT).
+
+Lemma homomorphism_1P aP rP : 
+  reflect (homomorphism_1 f aP rP) 
+          ([forall x, aP x ==> rP (f x)]).
+Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
+
+Lemma homomorphism_2P aR rR : 
+  reflect (homomorphism_2 f aR rR) 
+          ([forall x, forall y, aR x y ==> rR (f x) (f y)]).
+Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
+
+End FinTypeHomomorphism.
+
+Section FinTypeMonomorphism.
+Context (aT : finType) (rT : Type) (sT : eqType) (f : aT -> rT).
+Implicit Types (aP : aT -> sT) (rP : rT -> sT).
+Implicit Types (aR : aT -> aT -> sT) (rR : rT -> rT -> sT).
+
+Lemma monomorphism_1P aP rP : 
+  reflect (monomorphism_1 f aP rP) 
+          ([forall x, rP (f x) == aP x]).
+Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
+
+Lemma monomorphism_2P aR rR : 
+  reflect (monomorphism_2 f aR rR) 
+          ([forall x, forall y, rR (f x) (f y) == aR x y]).
+Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
+
+End FinTypeMonomorphism.
+
 
 (* ************************************************************************** *)
 (*     Surjective function                                                    *)
