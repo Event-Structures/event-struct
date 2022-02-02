@@ -50,6 +50,46 @@ Proof. by move=> ??; split=> /andP[??]; apply/andP; split; firstorder. Qed.
 #[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
 (* ************************************************************************** *)
+(*     Anti-homomorphism (i.e. homomorphism with reversed direction)          *)
+(* ************************************************************************** *)
+
+(* TODO: recheck the name (antihomomorphism) in the literature *)
+
+Section AntiHomomorphism.
+Context (aT rT : Type) (f : aT -> rT).
+
+Definition antihomomorphism_1 (aP rP : _ -> Prop) := forall x, rP (f x) -> aP x.
+Definition antihomomorphism_2 (aR rR : _ -> _ -> Prop) :=
+  forall x y, rR (f x) (f y) -> aR x y.
+
+End AntiHomomorphism.
+
+Notation "{ 'ahomo' f : x / a >-> r }" :=
+  (antihomomorphism_1 f (fun x => a) (fun x => r))
+  (at level 0, f at level 99, x name,
+   format "{ 'ahomo'  f  :  x  /  a  >->  r }") : type_scope.
+
+Notation "{ 'ahomo' f : x / a }" :=
+  (antihomomorphism_1 f (fun x => a) (fun x => a))
+  (at level 0, f at level 99, x name,
+   format "{ 'ahomo'  f  :  x  /  a }") : type_scope.
+
+Notation "{ 'ahomo' f : x y / a >-> r }" :=
+  (antihomomorphism_2 f (fun x y => a) (fun x y => r))
+  (at level 0, f at level 99, x name, y name,
+   format "{ 'ahomo'  f  :  x  y  /  a  >->  r }") : type_scope.
+
+Notation "{ 'ahomo' f : x y / a }" :=
+  (antihomomorphism_2 f (fun x y => a) (fun x y => a))
+  (at level 0, f at level 99, x name, y name,
+   format "{ 'ahomo'  f  :  x  y  /  a }") : type_scope.
+
+Notation "{ 'ahomo' f : x y /~ a }" :=
+  (antihomomorphism_2 f (fun y x => a) (fun x y => a))
+  (at level 0, f at level 99, x name, y name,
+   format "{ 'ahomo'  f  :  x  y  /~  a }") : type_scope.
+
+(* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
 (* ************************************************************************** *)
 
