@@ -150,7 +150,6 @@ Notation eventStruct := lPoset.class_of.
 
 Module Export Def.
 Section Def.
-
 Context {L : Type} {E : eventType L}.
 
 (* labeling function *)
@@ -162,10 +161,6 @@ Definition ca : rel E := le.
 (* strict causality alias *)
 Definition sca : rel E := lt.
 
-Definition ca_closed (X : pred E) : Prop :=
-  (* ca · [X] ≦ [X] · ca; *)
-  forall x y, x <= y -> X y -> X x.  
-
 End Def.
 End Def.
 
@@ -175,44 +170,27 @@ Module Export Hom.
 
 Module Hom.
 Section ClassDef. 
-
 (* TODO: homomorphism between pomsets labelled by different labels? *)
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Record mixin_of f := Mixin {
-  _ : forall e, lab (f e) = lab e;
-  _ : forall e1 e2, e1 <= e2 -> f e1 <= f e2;
-}.
+Definition axiom f := 
+  [/\ { mono f : e / lab e }
+    & { homo f : e1 e2 / e1 <= e2 }
+  ].
 
-Set Primitive Projections.
-Record class_of f := Class {
-  mixin : mixin_of f;
-}.
-Unset Primitive Projections.
-
-Structure type := Pack { apply ; _ : class_of apply }.
+Structure type := Pack { apply ; _ : axiom apply }.
 
 Local Coercion apply : type >-> Funclass.
 
-Variables (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
-Definition clone f c of phant_id class c := @Pack f c.
-
-(* Definition pack := *)
-(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
-(*   fun m => Pack (@Class E L b m). *)
-
 Definition mk h mkH : type :=
-  mkH (let: Pack _ c := h return @class_of h in c).
+  mkH (let: Pack _ c := h return @axiom h in c).
 
 Definition type_of (_ : phant (E1 -> E2)) := type.
 
 End ClassDef.
 
 Module Export Exports.
-Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 End Exports.
 
@@ -233,75 +211,41 @@ Section Theory.
 Context {L : Type} {E1 E2 : eventType L}. 
 Implicit Types (f : {hom E1 -> E2}).
 
-(* TODO: rename `lab_preserving`  *)
 Lemma lab_preserving f :
   { mono f : e / lab e }.
-Proof. by case: f => ? [[]]. Qed.
+Proof. by case: f=> ? []. Qed.
 
 Lemma ca_monotone f :
   { homo f : e1 e2 / e1 <= e2 }.
-Proof. by case: f => ? [[]]. Qed.
-
-Lemma sca_monotone_in f (D : pred E1) :
-  {in D &, injective f} -> {in D &, { homo f : e1 e2 / e1 < e2 }}.
-Proof. 
-  move=> ?; apply/inj_homo_lt_in=> //.
-  move=> ????; exact/ca_monotone.
-Qed.
-
-Lemma sca_img f e1 e2 : (f e1 < f e2) -> (e1 < e2) || (e1 >< e2).
-Proof.
-  case H: (e1 < e2)=> //= Hf.
-  apply/negP=> /orP [].
-  - rewrite le_eqVlt H orbF.
-    by move: Hf=> /[swap] /eqP<-; rewrite ltxx.
-  move=> /ca_monotone; move: H Hf=> _.
-  move: (lt_le_asym (f e1) (f e2))=> /andP H ??. 
-  by apply/H.
-Qed.
+Proof. by case: f=> ? []. Qed.
 
 End Theory.
 End Theory.
 
 Module Build.
 Section Build.
-Context {L : Type}.
-Implicit Types (E : eventType L).
-Context {E : eventType L}.
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {hom E2 -> E3}) (g : {hom E1 -> E2}).
 
-Lemma id_class : Hom.class_of (@idfun E).
-Proof. done. Qed.
+Lemma id_axiom : Hom.axiom (@idfun E).
+Proof. by split; done. Qed.
 
-Lemma comp_class {E1 E2 E3} (f : {hom  E2 -> E3}) (g : {hom E1 -> E2}) : 
-  Hom.class_of (comp f g).
+Lemma comp_axiom f g : Hom.axiom (comp f g).
 Proof. 
   repeat constructor=> /=.
   - by move=> e; rewrite !lab_preserving.
   by move=> e1 e2 /(ca_monotone g) /(ca_monotone f).
 Qed.
 
-Lemma of_eqfun_class {E1 E2} (f : {hom  E1 -> E2}) g : 
-  g =1 f -> Hom.class_of g.
-Proof. 
-  move=> H; repeat constructor.
-  - move=> ?; rewrite !H; exact/lab_preserving.
-  move=> ??; rewrite !H; exact/ca_monotone.
-Qed.
-
-Definition of_eqfun {E1 E2} (f : {hom  E1 -> E2}) g : g =1 f -> {hom  E1 -> E2} := 
-  fun eqf => Hom.Pack (of_eqfun_class eqf).
-
 End Build.
 
 Module Export Exports.
 Section Exports.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {hom E2 -> E3}) (g : {hom E1 -> E2}).
 
-Canonical id_hom E : {hom E -> E} := Hom.Pack id_class.
-
-Canonical comp_hom E1 E2 E3 : {hom E2 -> E3} -> {hom E1 -> E2} -> {hom E1 -> E3} :=
-  fun f g => Hom.Pack (comp_class f g).
+Canonical id_hom := Hom.Pack (@id_axiom L E).
+Canonical comp_hom f g := Hom.Pack (comp_axiom f g).
 
 End Exports.
 End Exports. 
@@ -314,48 +258,40 @@ Module Export iHom.
 
 Module iHom.
 Section ClassDef. 
-
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Record mixin_of f := Mixin {
-  _ : injective f;
-}.
+Definition axiom f := 
+  [/\ { mono f : e / lab e }
+    , { homo f : e1 e2 / e1 <= e2 }
+    & injective f
+  ].
 
-Set Primitive Projections.
-Record class_of f := Class {
-  base  : Hom.class_of f; 
-  mixin : mixin_of f;
-}.
-Unset Primitive Projections.
-
-Local Coercion base : class_of >-> Hom.class_of.
-
-Structure type := Pack { apply ; _ : class_of apply }.
+Structure type := Pack { apply ; _ : axiom apply }.
 
 Local Coercion apply : type >-> Funclass.
 
-Variables (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
-Definition clone f c of phant_id class c := @Pack f c.
-
-(* Definition pack := *)
-(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
-(*   fun m => Pack (@Class E L b m). *)
-
-Definition homType := Hom.Pack class.
-
 Definition mk h mkH : type :=
-  mkH (let: Pack _ c := h return @class_of h in c).
+  mkH (let: Pack _ c := h return @axiom h in c).
 
 Definition type_of (_ : phant (E1 -> E2)) := type.
+
+Lemma hom_axiom_of f : axiom f -> Hom.axiom f.
+Proof. by move=> []. Qed.
+
+Lemma ihom_axiom_of f : Hom.axiom f -> injective f -> axiom f.
+Proof. by move=> []. Qed.
+
+Variables (cT : type).
+
+Lemma homAxiom : Hom.axiom cT.
+Proof. by case: cT=> /= ? /hom_axiom_of. Qed.
+
+Definition homType := Hom.Pack homAxiom.
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Hom.class_of.
-Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 Coercion homType : type >-> Hom.type.
 Canonical homType.
@@ -375,13 +311,14 @@ End Syntax.
 
 Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : {ihom  E1 -> E2}).
+Context {L : Type} {E1 E2 : eventType L}.
+Implicit Types (f : {ihom  E1 -> E2}).
 
-Lemma ihom_inj : 
+Lemma ihom_inj f : 
   injective f.
-Proof. by case: f => ? [[? []]]. Qed.
+Proof. by case: f => ? []. Qed.
 
-Lemma sca_monotone :
+Lemma sca_monotone f :
   { homo f : e1 e2 / e1 < e2 }.
 Proof. 
   move=> ?; apply/inj_homo_lt=> //. 
@@ -389,54 +326,32 @@ Proof.
   exact/ca_monotone.
 Qed.
 
-Lemma ca_img e1 e2 : 
-  (f e1 <= f e2) -> (e1 <= e2) || (e1 >< e2).
-Proof.
-  rewrite le_eqVlt=> /orP[].
-  - by move=> /eqP /ihom_inj <-; rewrite lexx.
-  move=> /sca_img /orP[|->] //.
-  by move=> /ltW ->.
-Qed.
-
 End Theory.
 End Theory.
 
 Module Build.
 Section Build.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {ihom E2 -> E3}) (g : {ihom E1 -> E2}).
 
-Lemma id_class {E} : iHom.class_of (@idfun E).
+Lemma id_axiom : iHom.axiom (@idfun E).
 Proof. by repeat constructor=> //. Qed.
 
-Lemma comp_class {E1 E2 E3} (f : {ihom E2 -> E3}) (g : {ihom E1 -> E2}) :
-  iHom.class_of (f \o g).
+Lemma comp_axiom f g : iHom.axiom (f \o g).
 Proof. 
-  constructor; first exact/(Hom.Build.comp_class f g).
-  by constructor=> x y /= /ihom_inj/ihom_inj.
+  apply/iHom.ihom_axiom_of.
+  - exact/(Hom.Build.comp_axiom f g).
+  by move=> x y /= /ihom_inj /ihom_inj.
 Qed.
-
-Lemma of_eqfun_class {E1 E2} (f : {ihom  E1 -> E2}) g : 
-  g =1 f -> iHom.class_of g.
-Proof.
-  move=> H; constructor; first exact/(Hom.Build.of_eqfun_class H).
-  constructor=> /=; apply/eq_inj; first exact/ihom_inj.
-  exact/fsym.
-Qed.
-
-Definition of_eqfun {E1 E2} (f : {ihom  E1 -> E2}) g : g =1 f -> {ihom  E1 -> E2} := 
-  fun eqf => iHom.Pack (of_eqfun_class eqf).
 
 End Build.
 Module Export Exports.
 Section Exports.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {ihom E2 -> E3}) (g : {ihom E1 -> E2}).
 
-Canonical id_ihom E : {ihom E -> E} := iHom.Pack id_class.
-
-Canonical comp_ihom E1 E2 E3 : {ihom E2 -> E3} -> {ihom E1 -> E2} -> {ihom E1 -> E3} :=
-  fun f g => iHom.Pack (comp_class f g).
+Canonical id_hom := iHom.Pack (@id_axiom L E).
+Canonical comp_hom f g := iHom.Pack (comp_axiom f g).
 
 End Exports.
 End Exports. 
@@ -450,74 +365,57 @@ Module Export bHom.
 
 Module bHom.
 Section ClassDef. 
-
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Record mixin_of f := Mixin {
-  g : E2 -> E1;
-  _ : cancel f g;
-  _ : cancel g f;
-}.
+Definition axiom f := 
+  [/\ { mono f : e / lab e }
+    , { homo f : e1 e2 / e1 <= e2 }
+    & bijective f
+  ].
 
-Set Primitive Projections.
-Record class_of f := Class {
-  base  : Hom.class_of f; 
-  mixin : mixin_of f;
-}.
-Unset Primitive Projections.
-
-Local Coercion base : class_of >-> Hom.class_of.
-
-Structure type := Pack { apply ; _ : class_of apply }.
+Structure type := Pack { apply ; _ : axiom apply }.
 
 Local Coercion apply : type >-> Funclass.
 
-Variables (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
-Definition clone f c of phant_id class c := @Pack f c.
-
-(* Definition pack := *)
-(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
-(*   fun m => Pack (@Class E L b m). *)
-
-Definition homType := Hom.Pack class.
-
-Lemma ihomMixin : iHom.mixin_of cT.
-Proof. 
-  constructor; apply/bij_inj.
-  by case cT=> [? [? [g]]]; exists g.
-Qed.
-Definition ihomType := iHom.Pack (iHom.Class class ihomMixin).
-
 Definition mk h mkH : type :=
-  mkH (let: Pack _ c := h return @class_of h in c).
+  mkH (let: Pack _ c := h return @axiom h in c).
 
 Definition type_of (_ : phant (E1 -> E2)) := type.
+
+Lemma hom_axiom_of f : axiom f -> Hom.axiom f.
+Proof. by move=> []. Qed.
+
+Lemma ihom_axiom_of f : axiom f -> iHom.axiom f.
+Proof. by move=> [] ?? /bij_inj. Qed.
+
+Lemma bhom_axiom_of f : Hom.axiom f -> bijective f -> axiom f.
+Proof. by move=> []. Qed.
+
+Variables (cT : type).
+
+Lemma homAxiom : Hom.axiom cT.
+Proof. by case: cT=> /= ? /hom_axiom_of. Qed.
+
+Lemma ihomAxiom : iHom.axiom cT.
+Proof. by case: cT=> /= ? /ihom_axiom_of. Qed.
+
+Definition homType  :=  Hom.Pack  homAxiom.
+Definition ihomType := iHom.Pack ihomAxiom.
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Hom.class_of.
-Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
-Coercion homType : type >-> Hom.type.
+Coercion  homType : type >-> Hom.type.
 Coercion ihomType : type >-> iHom.type.
-Canonical homType.
+Canonical  homType.
 Canonical ihomType.
 End Exports.
 
 End bHom.
 
 Export bHom.Exports.
-
-Section Def.
-Context {L : Type} {E1 E2 : eventType L} (f : bHom.type E1 E2).
-
-Definition invF : E2 -> E1 := bHom.g (bHom.class f).
-
-End Def.
 
 Module Export Syntax. 
 Notation bhom := bHom.type.
@@ -529,107 +427,45 @@ End Syntax.
 
 Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : {bhom  E1 -> E2}).
+Context {L : Type} {E1 E2 : eventType L}.
+Implicit Types (f : {bhom  E1 -> E2}).
 
-Lemma inv_can : 
-  cancel f (invF f).
-Proof. by case: f => ? [[? []]] ???. Qed.
-
-Lemma can_inv : 
-  cancel (invF f) f.
-Proof. by case: f => ? [[? []]] ???. Qed.
-
-Lemma bhom_bij :
+Lemma bhom_bij f :
   bijective f.
-Proof. by case: f => ? [[? []]] g ? ?; exists g. Qed.
-
-Lemma inv_lab : 
-  { mono (invF f) : e / lab e }.
-Proof. by move=> e /=; rewrite -{2}[e]can_inv (lab_preserving f). Qed.
-
-Lemma ca_img_inv e1 e2 : 
-  (e1 <= e2) -> (invF f e1 <= invF f e2) || (invF f e1 >< invF f e2).
-Proof. by rewrite -{1}[e1]can_inv -{1}[e2]can_inv=> /ca_img. Qed.
-
-Lemma bhom_total : 
-  total (<=%O : rel E1) -> total (<=%O : rel E2).
-Proof. 
-  move=> Ht e1 e2.
-  rewrite -[e1]can_inv -[e2]can_inv.
-  move: (Ht (invF f e1) (invF f e2)). 
-  by move=> /orP[] /(ca_monotone f) ->.
-Qed.  
-
-Lemma bhom_ca_reflecting : total (<=%O : rel E1) ->
-  { mono f : e1 e2 / e1 <= e2 }.
-Proof.
-  move=> Ht e1 e2; apply/idP/idP; last exact/(ca_monotone f).
-  move=> /ca_img /orP[] //. 
-  by rewrite /comparable; move: (Ht e1 e2) ->.
-Qed.
+Proof. by case: f => ? []. Qed.
 
 End Theory.
 End Theory.
 
 Module Build.
 Section Build.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {bhom E2 -> E3}) (g : {bhom E1 -> E2}).
 
-Lemma id_class {E} : bHom.class_of (@idfun E).
+Lemma id_axiom : bHom.axiom (@idfun E).
 Proof. by constructor=> //; exists id. Qed.
 
-Lemma of_anti_bhom_class {E1 E2 : eventType L}
-  (f : E1 -> E2) (g : E2 -> E1) : 
-  cancel f g -> cancel g f ->
-  (forall e, lab e = lab (f e)) ->
-  (forall x y, f x <= f y -> x <= y) ->
-  bHom.class_of g.
-Proof.
-  move=> ? c /pair/[apply] ah; do ? split=> *; rewrite ?ah ?c //; by exists f.
-Qed.
-
-Lemma of_anti_bhom_ex {E1 E2 : eventType L}
-  (f : E1 -> E2) :
-  bijective f ->
-  (forall e, lab e = lab (f e)) ->
-  (forall x y, f x <= f y -> x <= y) ->
-  ?|{bhom E2 -> E1}|.
-Proof. case=> g *; exists; exists g; exact/of_anti_bhom_class. Qed.
-
-
-Lemma comp_class {E1 E2 E3} (f : {bhom  E2 -> E3}) (g : {bhom E1 -> E2}) :
-  bHom.class_of (f \o g).
+Lemma comp_axiom f g : bHom.axiom (f \o g).
 Proof. 
-  constructor; first exact/(Hom.Build.comp_class f g).
-  by exists ((invF g) \o (invF f))=> /=; apply/can_comp; 
-    try exact/inv_can; try exact/can_inv.
+  apply/bHom.bhom_axiom_of.
+  - exact/Hom.Build.comp_axiom.
+  apply/bij_comp; exact/bhom_bij.  
 Qed.
-
-Lemma of_eqfun_class {E1 E2} (f : {bhom  E1 -> E2}) g : 
-  g =1 f -> bHom.class_of g.
-Proof.
-  move=> H; constructor; first exact/(Hom.Build.of_eqfun_class H).
-  exists (invF f)=> ? /=; rewrite !H; [exact/inv_can | exact/can_inv]. 
-Qed.
-
-Definition of_eqfun {E1 E2} (f : {bhom  E1 -> E2}) g : g =1 f -> {bhom  E1 -> E2} := 
-  fun eqf => bHom.Pack (of_eqfun_class eqf).
 
 End Build.
+
 Module Export Exports.
 Section Exports.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {bhom E2 -> E3}) (g : {bhom E1 -> E2}).
 
-Canonical id_bhom E : {bhom E -> E} := bHom.Pack id_class.
-
-Canonical comp_bhom E1 E2 E3 : {bhom E2 -> E3} -> {bhom E1 -> E2} -> {bhom E1 -> E3} :=
-  fun f g => bHom.Pack (comp_class f g).
+Canonical id_bhom := bHom.Pack (@id_axiom L E).
+Canonical comp_bhom f g := bHom.Pack (comp_axiom f g).
 
 End Exports.
 End Exports. 
 End Build.
+
 End bHom.
 
 
@@ -637,64 +473,50 @@ Module Export Emb.
 
 Module Emb.
 Section ClassDef. 
-
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
 Definition axiom f := 
-  forall e1 e2, f e1 <= f e2 -> e1 <= e2.
+  [/\ { mono f : e / lab e }
+    & { mono f : e1 e2 / e1 <= e2 }
+  ].
 
-Record mixin_of f := Mixin {
-  _ : axiom f;
-}.
-
-Set Primitive Projections.
-Record class_of f := Class {
-  base  : Hom.class_of f; 
-  mixin : mixin_of f;
-}.
-Unset Primitive Projections.
-
-Local Coercion base : class_of >-> Hom.class_of.
-
-Structure type := Pack { apply ; _ : class_of apply }.
+Structure type := Pack { apply ; _ : axiom apply }.
 
 Local Coercion apply : type >-> Funclass.
 
-Variables (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
-Definition clone f c of phant_id class c := @Pack f c.
-
-(* Definition pack := *)
-(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
-(*   fun m => Pack (@Class E L b m). *)
-
-Definition homType := Hom.Pack class.
-
-Lemma ihomMixin : iHom.mixin_of cT.
-Proof. 
-  case: cT=> [f] /= [_ [ca_refl]]. 
-  constructor=> x y /= f_eq.
-  apply/le_anti/andP. 
-  by split; apply/ca_refl; rewrite f_eq. 
-Qed.
-Definition ihomType := iHom.Pack (iHom.Class class ihomMixin).
-
 Definition mk h mkH : type :=
-  mkH (let: Pack _ c := h return @class_of h in c).
+  mkH (let: Pack _ c := h return @axiom h in c).
 
 Definition type_of (_ : phant (E1 -> E2)) := type.
+
+Lemma hom_axiom_of f : axiom f -> Hom.axiom f.
+Proof. by move=> [] ? /mono2W. Qed.
+
+Lemma ihom_axiom_of f : axiom f -> iHom.axiom f.
+Proof. by move=> [] ? /[dup] /mono2W ? /inc_inj. Qed.
+
+Lemma emb_axiom_of f : Hom.axiom f -> {ahomo f : e1 e2 / e1 <= e2} -> axiom f.
+Proof. move=> [] ???; split=> //; exact/le_homo_mono. Qed.
+
+Variables (cT : type).
+
+Lemma homAxiom : Hom.axiom cT.
+Proof. by case: cT=> /= ? /hom_axiom_of. Qed.
+
+Lemma ihomAxiom : iHom.axiom cT.
+Proof. by case: cT=> /= ? /ihom_axiom_of. Qed.
+
+Definition homType  :=  Hom.Pack  homAxiom.
+Definition ihomType := iHom.Pack ihomAxiom.
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Hom.class_of.
-Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
-Coercion homType : type >-> Hom.type.
+Coercion  homType : type >-> Hom.type.
 Coercion ihomType : type >-> iHom.type.
-Canonical homType.
+Canonical  homType.
 Canonical ihomType.
 End Exports.
 
@@ -712,127 +534,106 @@ End Syntax.
 
 Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : {emb  E1 -> E2}).
+Context {L : Type} {E1 E2 : eventType L}.
+Implicit Types (f : {emb  E1 -> E2}).
 
-Lemma ca_reflecting :
+Lemma ca_reflecting f :
   { mono f : e1 e2 / e1 <= e2 }.
-Proof.
-  move=> e1 e2; apply/idP/idP; last exact/(ca_monotone f).
-  by case: f=> ? [[? []]] => /= /[apply]. 
-Qed.
-
-Lemma sca_reflecting :
-  { mono f : e1 e2 / e1 < e2 }.
-Proof.
-  move=> e1 e2; apply/idP/idP; last exact/(sca_monotone f).
-  rewrite !lt_def ca_reflecting=> /andP[] neq ->.
-  rewrite andbT; apply/negP=> /eqP. 
-  by move: neq=> /[swap] ->; rewrite eq_refl.
-Qed.
+Proof. by case: f=> ? []. Qed.
 
 End Theory.
 End Theory.
 
 Module Build.
 Section Build.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {emb E2 -> E3}) (g : {emb E1 -> E2}).
 
-Lemma id_class {E} : Emb.class_of (@idfun E).
+Lemma id_axiom : Emb.axiom (@idfun E).
 Proof. by repeat constructor. Qed.
 
-Lemma comp_mixin {E1 E2 E3} (f : {emb  E1 -> E2}) (g : {emb E2 -> E3}) : 
-  Emb.mixin_of (g \o f).
-Proof. by constructor=> ??; rewrite -(ca_reflecting f) -(ca_reflecting g). Qed.
-
-Lemma comp_class {E1 E2 E3} (f : {emb  E2 -> E3}) (g : {emb E1 -> E2}) : 
-  Emb.class_of (f \o g).
+Lemma comp_axiom f g : Emb.axiom (f \o g).
 Proof. 
-  constructor; first exact/(Hom.Build.comp_class f g). 
-  exact/(comp_mixin g f).
+  apply/Emb.emb_axiom_of.
+  - exact/Hom.Build.comp_axiom.
+  by move=> x y /=; rewrite (ca_reflecting f) (ca_reflecting g).
 Qed.
-
-Lemma of_eqfun_class {E1 E2} (f : {emb  E1 -> E2}) g :
-  g =1 f -> Emb.class_of g.
-Proof.
-  move=> H; constructor; first exact/(Hom.Build.of_eqfun_class H).
-  by constructor=> ??; rewrite !H (ca_reflecting f).
-Qed.
-
-Definition of_eqfun {E1 E2} (f : {emb  E1 -> E2}) g : g =1 f -> {emb  E1 -> E2} := 
-  fun eqf => Emb.Pack (of_eqfun_class eqf).
 
 End Build.
+
 Module Export Exports.
 Section Exports.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {emb E2 -> E3}) (g : {emb E1 -> E2}).
 
-Canonical id_emb E : {emb E -> E} := Emb.Pack id_class.
-
-Canonical comp_emb E1 E2 E3 : {emb E2 -> E3} -> {emb E1 -> E2} -> {emb E1 -> E3} :=
-  fun f g => Emb.Pack (comp_class f g).
+Canonical id_emb := Emb.Pack (@id_axiom L E).
+Canonical comp_emb f g := Emb.Pack (comp_axiom f g).
 
 End Exports.
 End Exports.
 End Build.
+
 End Emb.
 
 Module Export Pref.
 
 Module Pref.
 Section ClassDef. 
-
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Record mixin_of f := Mixin {
-  _ : forall e1 e2, e1 <= f e2 -> exists e, f e = e1;
-}.
+Definition axiom f := 
+  [/\ { mono f : e / lab e }
+    , { mono f : e1 e2 / e1 <= e2 }
+    & dw_surjective f
+  ].
 
-Set Primitive Projections.
-Record class_of f := Class {
-  base  : Emb.class_of f; 
-  mixin : mixin_of f;
-}.
-Unset Primitive Projections.
-
-Local Coercion base : class_of >-> Emb.class_of.
-
-Structure type := Pack { apply ; _ : class_of apply }.
+Structure type := Pack { apply ; _ : axiom apply }.
 
 Local Coercion apply : type >-> Funclass.
 
-Variables (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
-Definition clone f c of phant_id class c := @Pack f c.
-
-(* Definition pack := *)
-(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
-(*   fun m => Pack (@Class E L b m). *)
-
-Definition homType  := Hom.Pack class.
-Definition embType  := Emb.Pack class.
-Definition ihomType : iHom.type E1 E2 := embType.
-
 Definition mk h mkH : type :=
-  mkH (let: Pack _ c := h return @class_of h in c).
+  mkH (let: Pack _ c := h return @axiom h in c).
 
 Definition type_of (_ : phant (E1 -> E2)) := type.
+
+Lemma hom_axiom_of f : axiom f -> Hom.axiom f.
+Proof. by move=> [] ? /mono2W. Qed.
+
+Lemma ihom_axiom_of f : axiom f -> iHom.axiom f.
+Proof. by move=> [] ? /[dup] /mono2W ? /inc_inj. Qed.
+
+Lemma emb_axiom_of f : axiom f -> Emb.axiom f.
+Proof. by move=> [] ?. Qed.
+
+Lemma pref_axiom_of f : Emb.axiom f -> dw_surjective f -> axiom f.
+Proof. by move=> []. Qed.
+
+Variables (cT : type).
+
+Lemma homAxiom : Hom.axiom cT.
+Proof. by case: cT=> /= ? /hom_axiom_of. Qed.
+
+Lemma ihomAxiom : iHom.axiom cT.
+Proof. by case: cT=> /= ? /ihom_axiom_of. Qed.
+
+Lemma embAxiom : Emb.axiom cT.
+Proof. by case: cT=> /= ? /emb_axiom_of. Qed.
+
+Definition  homType :=  Hom.Pack  homAxiom.
+Definition ihomType := iHom.Pack ihomAxiom.
+Definition  embType :=  Emb.Pack  embAxiom.
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> Emb.class_of.
-Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
-Coercion homType : type >-> Hom.type.
+Coercion  homType : type >-> Hom.type.
 Coercion ihomType : type >-> iHom.type.
-Coercion embType : type >-> Emb.type.
-Canonical homType.
+Coercion  embType : type >-> Emb.type.
+Canonical  homType.
 Canonical ihomType.
-Canonical embType.
+Canonical  embType.
 End Exports.
 
 End Pref.
@@ -849,137 +650,114 @@ End Syntax.
 
 Module Export Theory.
 Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : {pref E1 -> E2}).
+Context {L : Type} {E1 E2 : eventType L}.
+Implicit Types (f : {pref E1 -> E2}).
 
-Lemma ca_prefix (e1 : E2) (e2 : E1) :
-  e1 <= f e2 -> exists2 e, e1 = f e & e <= e2.
-Proof.
-  move/[dup]; case: f=> /= ? [[? [E]] [/[apply][[e <-]]]].
-  exists e=> //; exact/E.
-Qed.
-
-Lemma pref_ca_closed (C1 : pred E1) (C2 : pred E2) : 
-  (forall e, C2 e <-> exists2 e', C1 e' & e = f e') ->
-  ca_closed C1 <-> ca_closed C2.
-Proof.
-  move=> CE; split=> ca e1 e2.
-  - move=> /[swap]/CE [e2']. 
-    move=> /[swap]-> /[swap]/ca_prefix[e1' ->].
-    move=> /ca/[apply] ?.
-    by apply/CE; exists e1'.
-  move=> /(ca_monotone f)/ca i ?.
-  case: (CE (f e1))=> [[|e1' ?]]. 
-  - by apply/i/CE; exists e2.
-  by move=> /(@ihom_inj _ _ _ f) -> //.
-Qed.
-
-Lemma pref_ca_closed_fset (C1 : {fset E1}) : 
-  ca_closed (mem C1) <-> ca_closed (mem (f @` C1)%fset).
-Proof. apply/pref_ca_closed=> ?; split=> I; exact/imfsetP/I. Qed.
+Lemma ca_surjective f :
+  dw_surjective f.
+Proof. by case f=> ? []. Qed.
 
 End Theory.
 End Theory.
 
 Module Build.
 Section Build.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {pref E2 -> E3}) (g : {pref E1 -> E2}).
 
-Lemma id_class {E} : Pref.class_of (@idfun E).
-Proof. by (do ? split=> //)=> e; exists e. Qed.
+Lemma id_axiom : Pref.axiom (@idfun E).
+Proof. by split=> // e e' /= _; exists e'. Qed.
 
-Lemma comp_mixin {E1 E2 E3} (f : {pref  E1 -> E2}) (g : {pref E2 -> E3}) : 
-  Pref.mixin_of (g \o f).
-Proof. (do ? split)=> ?? /ca_prefix[? ->/ca_prefix[e ->]]; by exists e. Qed.
-
-Lemma comp_class {E1 E2 E3} (f : {pref E2 -> E3}) (g : {pref E1 -> E2}) : 
-  Pref.class_of (f \o g).
+Lemma comp_axiom f g : Pref.axiom (f \o g).
 Proof. 
-  constructor; first exact (Emb.Build.comp_class f g). 
-  exact/(comp_mixin g f).
+  apply/Pref.pref_axiom_of.
+  - exact/Emb.Build.comp_axiom.
+  move=> e e' /= /[dup] /ca_surjective[x] <-.
+  rewrite inE (ca_reflecting f)=> /ca_surjective[y] <-.
+  by exists y.
 Qed.
-
-Lemma of_eqfun_class {E1 E2} (f : {pref  E1 -> E2}) g :
-  g =1 f -> Pref.class_of g.
-Proof.
-  move=> H; constructor; first exact/(Emb.Build.of_eqfun_class H).
-  constructor=> ??; rewrite !H=> /ca_prefix[e ->]; by exists e.
-Qed.
-
-Definition of_eqfun {E1 E2} (f : {pref  E1 -> E2}) g : g =1 f -> {pref  E1 -> E2} := 
-  fun eqf => Pref.Pack (of_eqfun_class eqf).
 
 End Build.
 Module Export Exports.
 Section Exports.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {pref E2 -> E3}) (g : {pref E1 -> E2}).
 
-Canonical id_pref E : {pref E -> E} := Pref.Pack id_class.
-
-Canonical comp_pref E1 E2 E3 : {pref E2 -> E3} -> {pref E1 -> E2} -> {pref E1 -> E3} :=
-  fun f g => Pref.Pack (comp_class f g).
+Canonical id_pref := Pref.Pack (@id_axiom L E).
+Canonical comp_pref f g := Pref.Pack (comp_axiom f g).
 
 End Exports.
 End Exports.
 End Build.
+
 End Pref.
 
 Module Export Iso.
 
 Module Iso.
 Section ClassDef. 
-
 Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Set Primitive Projections.
-Record class_of f := Class {
-  base  : bHom.class_of f; 
-  mixin : Emb.mixin_of f;
-}.
-Unset Primitive Projections.
+Definition axiom f := 
+  [/\ { mono f : e / lab e }
+    , { mono f : e1 e2 / e1 <= e2 }
+    & bijective f
+  ].
 
-Local Coercion base : class_of >-> bHom.class_of.
-
-Structure type := Pack { apply ; _ : class_of apply }.
+Structure type := Pack { apply ; _ : axiom apply }.
 
 Local Coercion apply : type >-> Funclass.
 
-Variables (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
-Definition clone f c of phant_id class c := @Pack f c.
-
-(* Definition pack := *)
-(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
-(*   fun m => Pack (@Class E L b m). *)
-
-Definition homType  := Hom.Pack class.
-Definition bhomType := bHom.Pack class.
-Definition embType  := Emb.Pack (Emb.Class class (mixin class)).
-
-(* TODO: perhaps ihomType instance is defined incorretly *)
-Definition ihomType := bHom.ihomType bhomType.
-
-Lemma prefMixin : Pref.mixin_of cT.
-Proof.
-  case: cT=> f [[? [g *]]] /=.
-  by split=> e1 e2; exists (g e1).
-Qed.
-Definition prefType := 
-  Pref.Pack (Pref.Class (Emb.Class class (mixin class)) prefMixin).
-
 Definition mk h mkH : type :=
-  mkH (let: Pack _ c := h return @class_of h in c).
+  mkH (let: Pack _ c := h return @axiom h in c).
 
 Definition type_of (_ : phant (E1 -> E2)) := type.
+
+Lemma hom_axiom_of f : axiom f -> Hom.axiom f.
+Proof. by move=> [] ? /mono2W. Qed.
+
+Lemma ihom_axiom_of f : axiom f -> iHom.axiom f.
+Proof. by move=> [] ? /[dup] /mono2W ? /inc_inj. Qed.
+
+Lemma bhom_axiom_of f : axiom f -> bHom.axiom f.
+Proof. by move=> [] ? /mono2W. Qed.
+
+Lemma emb_axiom_of f : axiom f -> Emb.axiom f.
+Proof. by move=> [] ?. Qed.
+
+Lemma pref_axiom_of f : axiom f -> Pref.axiom f.
+Proof. by move=> [] ?? /bij_surj /surj_dw_surj. Qed.
+
+Lemma iso_axiom_of f : bHom.axiom f -> {ahomo f : e1 e2 / e1 <= e2} -> axiom f.
+Proof. move=> [] ???; split=> //; exact/le_homo_mono. Qed.
+
+Variables (cT : type).
+
+Lemma homAxiom : Hom.axiom cT.
+Proof. by case: cT=> /= ? /hom_axiom_of. Qed.
+
+Lemma ihomAxiom : iHom.axiom cT.
+Proof. by case: cT=> /= ? /ihom_axiom_of. Qed.
+
+Lemma bhomAxiom : bHom.axiom cT.
+Proof. by case: cT=> /= ? /bhom_axiom_of. Qed.
+
+Lemma embAxiom : Emb.axiom cT.
+Proof. by case: cT=> /= ? /emb_axiom_of. Qed.
+
+Lemma prefAxiom : Pref.axiom cT.
+Proof. by case: cT=> /= ? /pref_axiom_of. Qed.
+
+Definition  homType :=  Hom.Pack  homAxiom.
+Definition ihomType := iHom.Pack ihomAxiom.
+Definition bhomType := bHom.Pack bhomAxiom.
+Definition  embType :=  Emb.Pack  embAxiom.
+Definition prefType := Pref.Pack prefAxiom.
 
 End ClassDef.
 
 Module Export Exports.
-Coercion base : class_of >-> bHom.class_of.
-Coercion mixin : class_of >-> Emb.mixin_of.
 Coercion apply : type >-> Funclass.
 Coercion homType  : type >-> Hom.type.
 Coercion ihomType : type >-> iHom.type.
@@ -1005,111 +783,30 @@ Notation "[ 'iso' 'of' f ]" :=
   (at level 0, format "[ 'iso'  'of'  f ]") : lposet_scope.
 End Syntax. 
 
-Module Export Theory.
-Section Theory. 
-Context {L : Type} {E1 E2 : eventType L} (f : {iso  E1 -> E2}).
-
-Lemma ca_incomp_reflecting :
-  { mono f : e1 e2 / e1 >< e2 }.
-Proof.
-  move=> e1 e2; apply: negbLR. 
-  by rewrite !negbK /comparable !(ca_reflecting f).
-Qed.
-
-End Theory.
-End Theory.
-
 Module Build.
 Section Build.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {iso E2 -> E3}) (g : {iso E1 -> E2}).
 
-Lemma id_class {E} : Iso.class_of (@idfun E).
-Proof. by repeat constructor=> //; exact/bHom.Build.id_class. Qed.
+Lemma id_axiom : Iso.axiom (@idfun E).
+Proof. by repeat constructor=> //; exists id. Qed.
 
-Lemma inv_class {E1 E2} (f : {iso E1 -> E2}) :
-  Iso.class_of (invF f).
+Lemma comp_axiom f g : Iso.axiom (f \o g).
 Proof. 
-  repeat constructor.
-  - by move=> ?; rewrite inv_lab. 
-  - move=> e1 e2. 
-    rewrite -[e1 in e1 <= e2](can_inv f). 
-    rewrite -[e2 in _  <= e2](can_inv f).
-    by rewrite (ca_reflecting f).
-  - exists f; [exact/can_inv|exact/inv_can].
-  move=> e1 e2. 
-  rewrite -[e1 in e1 <= e2](can_inv f). 
-  rewrite -[e2 in f (invF f e1) <= e2](can_inv f).
-  exact/ca_monotone.
-Qed.  
-
-Definition inv {E1 E2} : {iso E1 -> E2} -> {iso E2 -> E1} := 
-  fun f => Iso.Pack (inv_class f).
-
-Lemma comp_class {E1 E2 E3} (f : {iso E2 -> E3}) (g : {iso E1 -> E2}) : 
-  Iso.class_of (f \o g).
-Proof. 
-  constructor; first exact/(bHom.Build.comp_class f g).
-  exact/(Emb.Build.comp_mixin g f).
+  apply/Iso.iso_axiom_of.
+  - exact/(bHom.Build.comp_axiom f g).
+  by move=> x y /=; rewrite (ca_reflecting f) (ca_reflecting g).
 Qed.
-
-Lemma of_eqfun_class {E1 E2} (f : {iso  E1 -> E2}) g :
-  g =1 f -> Iso.class_of g.
-Proof.
-  move=> H; constructor; first exact/(bHom.Build.of_eqfun_class H).
-  by constructor=> ??; rewrite !H (ca_reflecting f).
-Qed.
-
-Definition of_eqfun {E1 E2} (f : {iso  E1 -> E2}) g : g =1 f -> {iso  E1 -> E2} := 
-  fun eqf => Iso.Pack (of_eqfun_class eqf).
-
-Lemma of_homs_class {E1 E2} (f : {hom  E1 -> E2}) (g : {hom E2 -> E1}) : 
-  cancel f g -> cancel g f -> Iso.class_of f.
-Proof.
-  move=> HK HK'; repeat constructor. 
-  - exact/(lab_preserving f).
-  - exact/(ca_monotone f).
-  - by exists g.
-  move=> e1 e2. 
-  rewrite -[e1 in e1 <= e2]HK.
-  rewrite -[e2 in g (f e1) <= e2]HK.
-  exact/(ca_monotone g).
-  (* We need of_homs_class to be transparent temporarily to prove some lemmas *)
-Defined.
-
-Definition of_homs {E1 E2} (f : {hom  E1 -> E2}) (g : {hom E2 -> E1}) : 
-  cancel f g -> cancel g f -> ({iso  E1 -> E2}) := 
-    fun HK HK' => Iso.Pack (of_homs_class HK HK').
-
-Lemma of_homs_invE {E1 E2} (f : {hom  E1 -> E2}) (g : {iso E2 -> E1}) 
-                   (K : cancel f g) (K' : cancel g f) : 
-   bHom.invF (of_homs K K') = g.
-Proof. done. Qed.
-
-(* Now we can make of_homs_class opaque *)
-Global Opaque of_homs_class.
-
-Lemma of_tot_bij_class {E1 E2} (f : {bhom  E1 -> E2}) : 
-  total (<=%O : rel E1) -> Iso.class_of f.
-Proof. 
-  move=> Ht; constructor; first exact/(bHom.class f).
-  by constructor=> ??; rewrite bhom_ca_reflecting.
-Qed.
-
-Definition of_tot_bij {E1 E2 : eventType L} (f : {bhom  E1 -> E2}) : 
-  total (<=%O : rel E1) -> {iso  E1 -> E2} := 
-    fun Ht => Iso.Pack (of_tot_bij_class f Ht).
 
 End Build.
+
 Module Export Exports.
 Section Exports.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {iso E2 -> E3}) (g : {iso E1 -> E2}).
 
-Canonical id_iso E : {iso E -> E} := Iso.Pack id_class.
-
-Canonical comp_iso E1 E2 E3 : {iso E2 -> E3} -> {iso E1 -> E2} -> {iso E1 -> E3} :=
-  fun f g => Iso.Pack (comp_class f g).
+Canonical id_iso := Iso.Pack (@id_axiom L E).
+Canonical comp_iso f g := Iso.Pack (comp_axiom f g).
 
 End Exports.
 End Exports.
@@ -1157,8 +854,7 @@ Export lPoset.iHom.Theory.
 Export lPoset.bHom.Theory.
 Export lPoset.Emb.Theory.
 Export lPoset.Pref.Theory.
-Export lPoset.Iso.Theory.
-
+(* Export lPoset.Iso.Theory. *)
 
 Notation lposet := (lPoset.eventStruct).
 
