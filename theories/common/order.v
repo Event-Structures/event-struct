@@ -358,6 +358,10 @@ Implicit Types (x y z : T).
 Definition dw_surjective f := 
   forall x, {in (<= f x), surjective f}.
 
+Lemma eq_dw_surj f : 
+  dw_surjective f -> forall g, f =1 g -> dw_surjective g.
+Proof. by move=> fdw g eqf x y; rewrite -?eqf=> /fdw [z] <-; exists z. Qed.
+
 Lemma surj_dw_surj f : 
   surjective f -> dw_surjective f.
 Proof. by move=> fsurj x y _; move: (fsurj y)=> [z] <-; exists z. Qed.
