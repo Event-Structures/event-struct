@@ -653,15 +653,29 @@ End FSetUtils.
 
 
 Section FinTypeUtils.
-
-Context {T T' : finType}. 
-Implicit Types (r : rel T) (f : T -> T').
+Context {T U : finType}. 
+Implicit Types (r : rel T) (f : T -> U).
 
 (* TODO: migrate to `mathcomp` once 
  *   https://github.com/math-comp/math-comp/pull/771 is merged 
  *)
-Lemma bij_eq_card f : bijective f -> #|T| = #|T'|.
+Lemma bij_eq_card f : bijective f -> #|T| = #|U|.
 Proof. by move=> [g /can_inj/leq_card + /can_inj/leq_card]; case: ltngtP. Qed.
+
+Lemma inj_inj_bij f (g : U -> T) : 
+  injective f -> injective g -> bijective f.
+Proof. move=> + /leq_card; exact/inj_card_bij. Qed.
+
+Definition bijectiveb f := 
+  injectiveb f && (#|U| <= #|T|)%N.
+
+Lemma bijectiveP f : 
+  reflect (bijective f) (bijectiveb f).
+Proof. 
+  apply/(equivP idP); split; rewrite /bijectiveb. 
+  - move=> /andP[/injectiveP]; exact/inj_card_bij.  
+  by move=> /[dup] /bij_inj /injectiveP -> /= /bij_eq_card ->. 
+Qed.
 
 (* TODO: use `forallPP` instead? *)
 Lemma forall2P r : 
@@ -681,6 +695,32 @@ Proof.
 Qed.
 
 End FinTypeUtils.
+
+(* TODO: better name? (h stands for heterogeneous) *)
+Section InvFh.
+Context {T U : finType}. 
+Variable (f : T -> U).
+Hypothesis (fbij : bijective f).
+
+Lemma injFh_onto y : 
+  y \in codom f. 
+Proof. 
+  apply/(inj_card_onto (bij_inj fbij)). 
+  by rewrite (bij_eq_card fbij).  
+Qed.
+
+Definition invFh y := iinv (injFh_onto y).
+
+Lemma invFh_f : cancel f invFh. 
+Proof. move=> x; apply: iinv_f; exact/bij_inj. Qed.
+
+Lemma f_invFh : cancel invFh f. 
+Proof. by move=> y; apply: f_iinv. Qed.
+
+Lemma injFh_bij : bijective invFh. 
+Proof. exists f; [exact/f_invFh | exact/invFh_f]. Qed.
+  
+End InvFh.  
 
 
 Section SubTypeUtils.
