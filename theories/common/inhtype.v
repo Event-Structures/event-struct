@@ -53,12 +53,16 @@ Qed.
 
 
 Variables (T : Type) (R : T -> T -> Type) (r : rel T).
-Hypothesis (InhP : forall x y, reflect ?|R x y| (r x y)).
-Hypothesis (Refl : forall x, R x x).
+Hypothesis (InhP  : forall x y, reflect ?|R x y| (r x y)).
+Hypothesis (Refl  : forall x, R x x).
+Hypothesis (Sym   : forall x y, R x y -> R y x).
 Hypothesis (Trans : forall x y z, R x y -> R y z -> R x z).
 
 Lemma is_inh_refl : reflexive r. 
 Proof. move=> ?; apply/InhP; exists; exact/Refl. Qed.
+
+Lemma is_inh_sym : symmetric r. 
+Proof. move=> ??; apply/idP/idP=> /InhP[A]; apply/InhP; exists; exact/Sym. Qed.
   
 Lemma is_inh_trans : transitive r. 
 Proof. move=> ??? /InhP[A] /InhP[B]; apply/InhP; exists; exact/(Trans A B). Qed.
