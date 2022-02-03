@@ -123,12 +123,12 @@ Context (aT : finType) (rT : eqType) (f : aT -> rT).
 Implicit Types (aF : aT -> aT) (rF : rT -> rT).
 Implicit Types (aOp : aT -> aT -> aT) (rOp : rT -> rT -> rT).
 
-Lemma morphism_1P aF rF : 
+Lemma morph1P aF rF : 
   reflect (morphism_1 f aF rF) 
           ([forall x, f (aF x) == rF (f x)]).
 Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
 
-Lemma morphism_2P aOp rOp : 
+Lemma morph2P aOp rOp : 
   reflect (morphism_2 f aOp rOp) 
           ([forall x, forall y, f (aOp x y) == rOp (f x) (f y)]).
 Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
@@ -140,12 +140,12 @@ Context (aT : finType) (rT : Type) (f : aT -> rT).
 Implicit Types (aP : pred aT) (rP : pred rT).
 Implicit Types (aR : rel aT) (rR : rel rT).
 
-Lemma homomorphism_1P aP rP : 
+Lemma homo1P aP rP : 
   reflect (homomorphism_1 f aP rP) 
           ([forall x, aP x ==> rP (f x)]).
 Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
 
-Lemma homomorphism_2P aR rR : 
+Lemma homo2P aR rR : 
   reflect (homomorphism_2 f aR rR) 
           ([forall x, forall y, aR x y ==> rR (f x) (f y)]).
 Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
@@ -157,17 +157,72 @@ Context (aT : finType) (rT : Type) (sT : eqType) (f : aT -> rT).
 Implicit Types (aP : aT -> sT) (rP : rT -> sT).
 Implicit Types (aR : aT -> aT -> sT) (rR : rT -> rT -> sT).
 
-Lemma monomorphism_1P aP rP : 
+Lemma mono1P aP rP : 
   reflect (monomorphism_1 f aP rP) 
           ([forall x, rP (f x) == aP x]).
 Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
 
-Lemma monomorphism_2P aR rR : 
+Lemma mono2P aR rR : 
   reflect (monomorphism_2 f aR rR) 
           ([forall x, forall y, rR (f x) (f y) == aR x y]).
 Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
 
 End FinTypeMonomorphism.
+
+(* ************************************************************************** *)
+(*     Morphisms of extensionally equal functions                             *)
+(* ************************************************************************** *)
+
+Section MorphismEq.
+Context (aT rT : Type) (f : aT -> rT) (g : aT -> rT).
+Implicit Types (aF : aT -> aT) (rF : rT -> rT).
+Implicit Types (aOp : aT -> aT -> aT) (rOp : rT -> rT -> rT).
+
+Hypothesis (eqf : f =1 g).
+
+Lemma eq_morph1 aF rF : 
+  (morphism_1 f aF rF) <-> (morphism_1 g aF rF).
+Proof. split=> mor x; [rewrite -?eqf | rewrite ?eqf]; exact/mor. Qed.
+
+Lemma eq_morph2 aOp rOp : 
+  (morphism_2 f aOp rOp) <-> (morphism_2 g aOp rOp).
+Proof. split=> mor x y; [rewrite -?eqf | rewrite ?eqf]; exact/mor. Qed.
+
+End MorphismEq.
+
+Section HomomorphismEq.
+Context (aT rT : Type) (f : aT -> rT) (g : aT -> rT).
+Implicit Types (aP : aT -> Prop) (rP : rT -> Prop).
+Implicit Types (aR : rel aT) (rR : rel rT).
+
+Hypothesis (eqf : f =1 g).
+
+Lemma eq_homo1 aP rP : 
+  (homomorphism_1 f aP rP) <-> (homomorphism_1 g aP rP). 
+Proof. split=> hom x; [rewrite -?eqf | rewrite ?eqf]; exact/hom. Qed.
+
+Lemma eq_homo2 aR rR : 
+  (homomorphism_2 f aR rR) <-> (homomorphism_2 g aR rR). 
+Proof. split=> hom x y; [rewrite -?eqf | rewrite ?eqf]; try exact/hom. Qed.
+
+End HomomorphismEq.
+
+Section MonomorphismEq.
+Context (aT rT : Type) (sT : Type) (f : aT -> rT) (g : aT -> rT).
+Implicit Types (aP : aT -> sT) (rP : rT -> sT).
+Implicit Types (aR : aT -> aT -> sT) (rR : rT -> rT -> sT).
+
+Hypothesis (eqf : f =1 g).
+
+Lemma eq_mono1 aP rP : 
+  (monomorphism_1 f aP rP) <-> (monomorphism_1 g aP rP).
+Proof. split=> mon x; [rewrite -?eqf | rewrite ?eqf]; exact/mon. Qed.
+
+Lemma eq_mono2 aR rR : 
+  (monomorphism_2 f aR rR) <-> (monomorphism_2 g aR rR).
+Proof. split=> mon x y; [rewrite -?eqf | rewrite ?eqf]; exact/mon. Qed.
+
+End MonomorphismEq.
 
 
 (* ************************************************************************** *)
