@@ -1445,20 +1445,6 @@ Proof. rewrite tcaE; exact/leq_total. Qed.
 End Theory.
 End Theory.
 
-
-Module Iso.
-
-Section Def.
-Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
-
-(* Definition of_bij :  *)
-(*   ({bhom eventType t -> eventType u}) -> ({emb eventType t -> eventType u}) :=  *)
-(*     fun f => lPoset.Iso.Build.of_tot_bij f (@tca_total L n t). *)
-
-End Def.
-
-End Iso. 
-
 Section HomP. 
 Context {L : eqType} {n m : nat} (t : n.-tuple L) (u : m.-tuple L).
 
@@ -1486,7 +1472,7 @@ Proof.
     have efalse: (forall e : eventType t, False).
     + by rewrite /eventType /= Hn => [[i]]; rewrite ltn0.
     have f: ({hom eventType t -> eventType ([tuple] : 0.-tuple L)}).
-    + by exists (fun e => match efalse e with end).
+    + by exists (fun e => match efalse e with end); repeat constructor. 
     constructor; exists f; repeat constructor; by move=> ?.
   move=> /subseqP=> [[b Hsz Hb]].
   pose g := (fun => ord_max) : eventType t -> eventType u.
@@ -1515,7 +1501,7 @@ Lemma isoP :
   reflect ?|{iso eventType t -> eventType u}| (t == u :> seq L).
 Proof.
   apply/(iffP idP); last first.
-  - move=> [f]; move: (lPoset.Iso.Build.inv f)=> g.
+  - move=> [f]; pose g := [iso of invFh (bhom_bij f)].
     apply/eqP/subseq_anti/andP.
     split; apply/homP; eexists; [exact/f | exact/g].
   move=> /eqP H; have Hn: n = m.
