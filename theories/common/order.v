@@ -1,6 +1,6 @@
 From RelationAlgebra Require Import lattice boolean.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
-From mathcomp Require Import eqtype choice order seq tuple.
+From mathcomp Require Import eqtype choice order seq tuple path div.
 From mathcomp Require Import fintype finfun fingraph finmap.
 From eventstruct Require Import utils.
 
@@ -125,6 +125,44 @@ Proof. move=> fmon dw_clos=> x y /fmon; exact/dw_clos. Qed.
 
 End POrderMorph.
 
+Section FinPOrderMorph.
+Context {dispT : unit} {dispU : unit}. 
+Context {T : finPOrderType dispT} {U : finPOrderType dispU}.
+Implicit Types (f : T -> U) (g : U -> T).
+Implicit Types (x y z : T).
+
+Lemma inj_le_homo_mono f g : injective f -> injective g ->
+  {homo f : x y / x <= y} -> {homo g : x y / x <= y} -> {mono f : x y / x <= y}.
+Proof. 
+  move=> finj ginj fmon gmon.
+  move=> e1 e2; apply/idP/idP; last exact/fmon.
+  pose h := g \o f. 
+  have hmon: {homo h : x y / x <= y}.
+  - by move=> ?? /fmon /gmon. 
+  have : injective h by exact/inj_comp. 
+  move=> /cycle_orbit cyc.
+  pose o1 := order h e1.
+  pose o2 := order h e2.
+  pose o  := lcmn o1 o2.
+  have {2}<-: iter ((o %/ o1) * o1) h e1 = e1.
+  - rewrite iter_mul_eq /o1 //.
+    apply/(iter_order_cycle (cyc e1)); exact/in_orbit.
+  have {2}<-: iter ((o %/ o2) * o2) h e2 = e2.
+  - rewrite iter_mul_eq /o2 //.
+    apply/(iter_order_cycle (cyc e2)); exact/in_orbit.
+  rewrite !divnK; last first. 
+  - exact/dvdn_lcml.
+  - exact/dvdn_lcmr.
+  have: o = lcmn o1 o2 by done.
+  case o=> [|{}o]; last first.
+  - rewrite !iterSr=> ??; apply/homo_iter=> //; exact/gmon.
+  move=> /esym /eqP. 
+  rewrite eqn0Ngt lcmn_gt0 negb_and ?/o1 ?/o2.
+  move: (order_gt0 h e1) (order_gt0 h e2).
+  by move=> ++ /orP[/negP|/negP]. 
+Qed.
+
+End FinPOrderMorph.
 
 Module Export MaxSup.
 Section Def.
