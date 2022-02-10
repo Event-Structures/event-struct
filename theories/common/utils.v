@@ -228,6 +228,42 @@ Proof. split=> mon x y; [rewrite -?eqf | rewrite ?eqf]; exact/mon. Qed.
 
 End MonomorphismEq.
 
+(* ************************************************************************** *)
+(*     Restriction of the function to subType                                 *)
+(* ************************************************************************** *)
+
+Section RstDef.
+Context {T U : Type} {P : pred T} {S : subType P}.
+Implicit Types  (f : T -> U).
+
+Definition rst f : S -> U := f \o val.
+ 
+End RstDef.
+
+Notation "[ 'rst' f 'to' S ]" := (rst f : S -> _)
+  (at level 0, f at level 99,
+   format "[ 'rst'  f  'to'  S ]") : form_scope.
+
+Notation "[ 'rst' f | P ]" := (rst f : (sig P) -> _)
+  (at level 0, f at level 99,
+   format "[ 'rst'  f  |  P ]") : form_scope.
+
+Section SubFunTheory.
+Context {T U : Type} {P : pred T} {S : subType P}.
+Implicit Types  (f : T -> U).
+
+Lemma rst_existsE f (PU : U -> Prop) : 
+  (exists x, PU ([rst f to S] x)) <-> (exists2 x, P x & PU (f x)).
+Proof. 
+  split=> [[x] pux | [x] px pux]. 
+  - exists (val x)=> //; exact/valP.
+  by exists (Sub x px); rewrite /rst /= SubK. 
+Qed.
+ 
+End SubFunTheory.
+
+(* Variables (T U : Type) (P : pred T) (f : T -> U). *)
+(* Check ([rst f | P]). *)
 
 (* ************************************************************************** *)
 (*     Surjective function                                                    *)
@@ -264,6 +300,17 @@ Proof.
 Qed.
 
 End SurjectiveChoice.
+
+Section SurjectiveSub.
+Context {rT aT : Type}.
+Implicit Types (f : aT -> rT).
+Implicit Types (rP : pred rT) (aP : pred aT).
+
+Lemma surj_subE rP aP f : 
+  {in rP, surjective [rst f | aP]} <-> (forall y, rP y -> exists2 x, aP x & f x = y).
+Proof. by split=> surjf y py; apply/(rst_existsE f (eq^~ y))/surjf. Qed.
+
+End SurjectiveSub.
 
 (* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
