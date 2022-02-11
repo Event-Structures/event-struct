@@ -281,6 +281,18 @@ Proof.
   exact/ltW/fresh_lt.
 Qed. 
 
+Lemma add_event_ca_freshE e : supp_closed p -> acyclic (fin_ica p) ->
+  fs_ca (lfspre_add_event l es p) e (lfsp_fresh p) = 
+    (e == lfsp_fresh p) || (e \in lfsp_dw_clos p es).
+Proof.
+  move=> supcl acyc; rewrite add_event_fs_caE ?eqxx ?andbT=> //. 
+  suff->: fs_ca p e (lfsp_fresh p) = (e == lfsp_fresh p) by rewrite orbC.
+  apply/idP/idP=> [|/eqP->]; last exact/fs_ca_refl.
+  move=> /(supp_closed_ca supcl acyc)=> /orP[|] //. 
+  move: (fresh_seq_nmem (finsupp p))=> /negPf->. 
+  by rewrite andbF.
+Qed.
+
 End Theory.
 End Theory.  
 
@@ -403,6 +415,11 @@ Proof.
     //; by case: (p)=> /=> /and3P[] //.
 Qed.
 
+Lemma add_event_ca_freshE l es p e : 
+  fs_ca (lfsp_add_event l es p) e (lfsp_fresh p) = 
+    (e == lfsp_fresh p) || (e \in lfsp_dw_clos p es).
+Proof. admit. Admitted.
+
 Lemma lfsp_ltransP l p q :
   reflect (l != bot /\ exists2 es, 
              es `<=` finsupp p & 
@@ -428,42 +445,61 @@ Proof.
 Qed.
 
 Lemma lfsp_ltrans_iso p q l es : 
-  l != bot -> 
-  es `<=` finsupp p -> 
-  iso_eqv q p -> 
-  exists2 es', es' `<=` finsupp q &
-  iso_eqv (lfsp_add_event l es' q) (lfsp_add_event l es p).
+  l != bot -> es `<=` finsupp p -> iso_eqv q p -> 
+    exists2 es', es' `<=` finsupp q &
+      iso_eqv (lfsp_add_event l es' q) (lfsp_add_event l es p).
 Proof.
-  move=> ? s /(update_iso (fresh_seq_nmem _) (fresh_seq_nmem _))[g gf].
-  
-
-  case=> ax axb axe.
-  have?: g @` es `<=` finsupp q.
-  - by apply/fsubsetP=>> /imfsetP[/= ?/(fsubsetP s)/(hom_img ax)/[swap]->].
+  pose e' := fresh_seq (fresh_seq (finsupp q) |` finsupp q). 
+  have ensup : e' \notin (finsupp q).
+  - move: (fresh_seq_nmem (fresh_seq (finsupp q) |` finsupp q)).
+    by rewrite !inE negb_or=> /andP[]. 
+  have eneq : e' != lfsp_fresh q.
+  - move: (fresh_seq_nmem (fresh_seq (finsupp q) |` finsupp q)).
+    by rewrite !inE negb_or=> /andP[]. 
+  have qnsup: lfsp_fresh q \notin finsupp q.
+  - exact/fresh_seq_nmem.
+  move=> lD subs /iso_eqvP[f] /[dup] [[]] labf monf bijf.
+  move=> /(update_iso (lfsp_fresh p) ensup qnsup).
+  pose g := upd_iso f p q e' (lfsp_fresh p) (lfsp_fresh q). 
+  rewrite -/g; case=> labg homg bijg.  
+  have gsubs: g @` es `<=` finsupp q.
+  - apply/fsubsetP=> x /imfsetP[/=] y /(fsubsetP subs). 
+    (* TODO: simplify this lemma! *)
+    rewrite (lFsPoset.Hom.mono_lab_finsupp _ labg).
+    by move=> /[swap] ->; rewrite /g /=.
+  have injg: {in lfsp_fresh p |` finsupp p &, injective g}.
+  - move=> e1 e2; rewrite ?inE /lfsp_fresh.
+    move=> /orP[/eqP->| in1] /orP[/eqP->| in2]. 
+    all: rewrite /g ?upd_iso_delta ?upd_iso_supp //.
+    all: try exact/fresh_seq_nmem.
+    all: try move: in2; try move: in1.
+    all: rewrite ?(lFsPoset.Hom.mono_lab_finsupp _ labf).
+    all: move: (fresh_seq_nmem (finsupp q))=> /negP ?.
+    - by move => /[swap] <-.
+    - by move => /[swap] ->.
+    suff: {on finsupp q &, injective f}.
+    - by move=> /[apply] /[apply] /[apply].
+    case bijf=> ? K ?; exact/on_can_inj/K.
   exists (g @` es)=> //; apply/iso_eqvP.
-  have bh: 
-    lFsPoset.bHom.axiom (lfsp_add_event l es p)
-      (lfsp_add_event l (g @` es) q) g.
-  - case: axb=> h c1 c2.
-    set f := fun e => 
-      if e == fresh_seq (finsupp q) then
-        fresh_seq (finsupp p)
-      else h e.
-    exists f=>>; rewrite ?lfsp_add_eventE // ?inE /f ?gf; case: ifP=> /=.
-    - by move/eqP->.
-    - by move=>*; rewrite c1.
-    - by move=>/eqP->_; apply/eqP; rewrite gf.
-    by move=>*; rewrite c2.
-  have inj: {in lfsp_fresh p |` finsupp p &, injective g}.
-  - move=>>; rewrite ?inE /lfsp_fresh -?gf ?(hom_finsupp _ ax).
-    case: bh=> h c1 c2 ?? /(congr1 h).
-    by rewrite ?c1 // ?lfsp_add_eventE // ?inE.
-  exists g; do ? split=>> //.
-  - rewrite ?fs_labE ?lfsp_add_eventE /lfsp_fresh // gf. 
-    case: ifP=>// *; exact/ax.1.
-  all: rewrite ?/(_ <= _) /= ?lfsp_add_eventE // ?/lfsp_fresh gf=> ??.
-  all: rewrite (emb_fs_ca ax axe inj) //.
-  all: by rewrite (emb_dw_clos ax axe inj) // fsubsetU1.
+  exists g; do ? split=> // [e | e1 e2 |].
+  - rewrite !fs_labE ?lfsp_add_eventE /lfsp_fresh //.
+    rewrite upd_iso_delta_eq /lfsp_fresh //; last exact/fresh_seq_nmem.
+    case: ifP=> // _; exact/labg.
+  - rewrite !fs_caE !lfsp_add_eventE // => in1 in2.
+    rewrite -fs_caE (@emb_fs_ca _ _ _ _ _ p q _ _ injg) //.
+    rewrite upd_iso_delta_eq //; last exact/fresh_seq_nmem.
+    by rewrite -(@emb_dw_clos _ _ _ _ g p q) //.
+  case bijf=> h K K'.  
+  exists [eta h with lfsp_fresh q |-> lfsp_fresh p] => e.
+  all: rewrite lfsp_add_eventE // !inE /=; case: ifP=> //= [+ _|?]. 
+  - rewrite ?upd_iso_delta_eq // => [/eqP|] //; exact/fresh_seq_nmem.
+  - rewrite -?(lFsPoset.Hom.mono_lab_finsupp _ labg)=> ein. 
+    rewrite /g upd_iso_supp // K //.
+    by rewrite -(lFsPoset.Hom.mono_lab_finsupp _ labf).
+  - move=> /eqP->; rewrite /g upd_iso_delta //; exact/fresh_seq_nmem.
+  rewrite /g /upd_iso; case: ifP=> [?? |]; rewrite ?K' //.
+  move=> /[swap] /[dup] ?; rewrite -fs_labNbot.
+  by rewrite -{1}[e]K' // -fs_labE labf fs_labNbot=> ->.
 Qed.
 
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.

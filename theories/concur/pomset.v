@@ -2496,6 +2496,46 @@ Lemma emb_le_size p q :
   emb_le p q -> fs_size q <= fs_size p.
 Proof. by move=> /emb_ihom_le /ihom_le_size. Qed.
 
+Lemma emb_fs_ca f p q (X : {fset E1}) : axiom f p q -> {in X &, injective f} ->
+  let f : [Event of p] -> [Event of q] := f in
+  {in X &, {mono f : e1 e2 / e1 <= e2}}.
+Proof.
+  move=> [] labf monf injf /= e1 e2 in1 in2 /=; apply/esym.
+  case: ((e1 \notin finsupp p) || (e2 \notin finsupp p))/idP=> [ns|].
+  - apply/idP/idP=> /(fs_ca_nsupp (lfsp_supp_closed _) (lfsp_acyclic _)). 
+    + move=> /(_ ns) /=-> //; exact/fs_ca_refl.
+    rewrite -?(Hom.mono_lab_finsupp _ labf) ns. 
+    move=> /(_ erefl)/(injf _ _ in1 in2)->.
+    exact/fs_ca_refl.
+  move/negP; rewrite negb_or ?negbK=> /andP[*].
+  by rewrite -?fs_caE monf.
+Qed.
+
+(* TODO: this one should be reproven for lPoset.Emb *)
+Lemma emb_dw_clos f p q es e :  
+  axiom f p q -> es `<=` finsupp p -> f @` es `<=` finsupp q ->
+  e \in lfsp_dw_clos p es = (f e \in lfsp_dw_clos q (f @` es)).
+Proof.
+  case=> labf monf subs subsf.
+  have psupcl : supp_closed p by apply/lfsp_supp_closed.
+  have qsupcl : supp_closed q by apply/lfsp_supp_closed.
+  have pacyc : acyclic (fin_ica p) by apply/lfsp_acyclic.
+  have qacyc : acyclic (fin_ica q) by apply/lfsp_acyclic.
+  apply/lfsp_dw_closP/lfsp_dw_closP=> // [[e']|[e']]/[swap].
+  - move=>/[dup] ? /(fsubsetP subs) ? ca. 
+    exists (f e'); rewrite -?fs_caE ?monf //.
+    + move: ca=> /(supp_closed_ca psupcl pacyc) /orP[/eqP->|/andP[]] //.
+    by apply/imfsetP; exists e'.
+  case/imfsetP=> /= {}e' /[swap]->. 
+  move=> /[dup] ? /(fsubsetP subs) ein ca; exists e'=> //.
+  rewrite -fs_caE -monf //. 
+  move: ca=> /(supp_closed_ca qsupcl qacyc). 
+  rewrite -?(Hom.mono_lab_finsupp _ labf). 
+  move=> /orP[/eqP|/andP[]] //.
+  rewrite (Hom.mono_lab_finsupp _ labf)=> ->.   
+  by rewrite -(Hom.mono_lab_finsupp _ labf). 
+Qed.
+
 End hPreOrder.
 
 Section PreOrder.
@@ -2672,24 +2712,62 @@ Proof.
   by case/and3P=> /homf; rewrite !(Hom.mono_lab_finsupp _ labf) ?K' //. 
 Qed.
 
-(* TODO: fix this once we will have `iso_eqv f p q` 
- * (i.e. isomorphism check for function) 
- *)
-Lemma update_iso f q p x y : x \notin finsupp q -> y \notin finsupp p -> 
-  Iso.axiom f p q -> Iso.axiom [eta f with y |-> x] p q.
-Proof.
-  move=> /negP xn /negP yn [] labf homf [/= g] K K'; split.
-  - move=> e /=; case: ifP=> [/eqP->|?]; last exact/labf. 
-    rewrite !fs_labE !fs_lab_bot //; exact/negP. 
-  - move=> e1 e2 /=; do 2 (case: ifP=> [/eqP->|] //). 
-    move=> ??; exact/homf.
-  exists g=> z /=. 
-  - case: ifP=>[|] // ?; exact/K. 
-  case: ifP=> [|_]; last exact/K'. 
-  move=> /[swap] /[dup] ?.
-  rewrite -{1}[z]K' // => /[swap] /eqP->. 
-  by rewrite -(Hom.mono_lab_finsupp _ labf). 
+Definition upd_iso (f : E1 -> E2) p q e' x y e := 
+ if e \in finsupp p then f e else if e == x then y else e'.
+
+Section Update.
+Variables (f : E1 -> E2) (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Variables (e' : E2) (x : E1) (y : E2).
+
+Hypothesis (en' : e' \notin finsupp q).
+Hypothesis (xn  : x  \notin finsupp p).
+Hypothesis (yn  : y  \notin finsupp q).
+Hypothesis (neq : e' != y).
+
+Local Notation upd_iso f := (upd_iso f p q e' x y).
+
+Lemma upd_iso_supp e : 
+  e \in finsupp p -> upd_iso f e = f e.  
+Proof. by rewrite /(upd_iso f); move=> ->. Qed.
+
+Lemma upd_iso_delta : 
+  upd_iso f x = y.  
+Proof. by rewrite /(upd_iso f) eqxx; move: (negP xn); case: ifP=> //. Qed.
+
+Lemma upd_iso_delta_eq e : 
+  let f : [Event of p] -> [Event of q] := f in
+  {mono f : e / lab e} -> (upd_iso f e == y) = (e == x).
+Proof. 
+  move=> /= labf.
+  apply/idP/idP=> [|/eqP->]; rewrite ?upd_iso_delta //.
+  rewrite /(upd_iso f); repeat case: ifP=> //.
+  - move=> /[swap]; move: yn=> /[swap] /eqP <-.  
+    by rewrite -(Hom.mono_lab_finsupp _ labf)=> /negP.
+  by move: (negP neq).
 Qed.
+
+(* TODO: this should be simplified 
+ * (perhaps, using normalized posets?) 
+ *)
+Lemma update_iso : 
+  Iso.axiom f p q -> Iso.axiom (upd_iso f) p q.
+Proof.
+  move=> [] labf monof [/= g] K K'; split; rewrite /(upd_iso f).
+  - move=> e /=; case: ifP=> [? | /negP en]; first exact/labf. 
+    rewrite !fs_labE !fs_lab_bot //; first exact/negP. 
+    by case: ifP.
+  - move=> e1 e2 /= /[dup] ? -> /[dup] ? ->; exact/monof.
+  exists g=> z /=. 
+  - case: ifP=>[?? |]; first exact/K. 
+    move: en'=> /negP ?; move: yn=> /negP ?.
+    by case: ifP. 
+  case: ifP=> [?? |]; first exact/K'.
+  move=> /[swap] /[dup] ?.
+  rewrite -{1}[z]K' //. 
+  by rewrite -(Hom.mono_lab_finsupp _ labf) => ->. 
+Qed.
+
+End Update.
 
 End hEquiv.
 
