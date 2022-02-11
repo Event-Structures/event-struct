@@ -547,6 +547,13 @@ Qed.
 
 End FoldUtils. 
 
+
+Notation "@! f" := (fun A => f @` A)%fset 
+  (at level 10, f at level 8, no associativity, format "@!  f") : fset_scope.
+
+(* Context {T U : choiceType} (f : T -> U) {A : {fset T}}. *)
+(* Check (@!f : {fset T} -> {fset U})%fset. *)
+
 Section FSetUtils.
 Context {key : unit} {T U : choiceType}.
 Implicit Types (p : pred T) (r : rel T) (f : T -> U).

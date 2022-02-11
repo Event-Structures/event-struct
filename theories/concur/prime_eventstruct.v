@@ -397,46 +397,28 @@ Module Export Hom.
 
 Module Hom.
 Section ClassDef. 
-
 (* TODO: homomorphism between pomsets labelled by different labels? *)
-Context {L : Type} (E1 E2 : PrimeC.eventType L).
+Context {L : Type} (E1 E2 : eventType L).
 Implicit Types (f : E1 -> E2).
 
-Record mixin_of f := Mixin {
-  _ : forall e, lab (f e) = lab e;
-  _ : forall e1 e2, e1 <= f e2 -> exists2 e, e1 = f e & e <= e2;
-  _ : forall X : {fset E1}, wcons X -> wcons (f @` X)
-}.
+Definition axiom f := 
+  [/\ { mono f : e / lab e }
+    , homo_pideal f
+    & { homo (@!f) : X / wcons X } 
+  ].
 
-Set Primitive Projections.
-Record class_of f := Class {
-  mixin : mixin_of f;
-}.
-Unset Primitive Projections.
-
-Structure type := Pack { apply ; _ : class_of apply }.
+Structure type := Pack { apply ; _ : axiom apply }.
 
 Local Coercion apply : type >-> Funclass.
 
-Variables (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
-Definition clone f c of phant_id class c := @Pack f c.
-
-
 Definition mk h mkH : type :=
-  mkH (let: Pack _ c := h return @class_of h in c).
+  mkH (let: Pack _ c := h return @axiom h in c).
 
 Definition type_of (_ : phant (E1 -> E2)) := type.
-
-(* Definition pack := *)
-(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
-(*   fun m => Pack (@Class E L b m). *)
 
 End ClassDef.
 
 Module Export Exports.
-Coercion mixin : class_of >-> mixin_of.
 Coercion apply : type >-> Funclass.
 End Exports.
 
@@ -446,50 +428,92 @@ Export Hom.Exports.
 
 Module Export Syntax. 
 Notation hom := Hom.type.
-Notation "{ 'hom' T }" := (@Hom.type_of _ _ _ (Phant T)) : prime_eventstruct_scope.
+Notation "{ 'hom' T }" := 
+  (@Hom.type_of _ _ _ (Phant T)) : prime_eventstruct_scope.
 Notation "[ 'hom' 'of' f ]" := 
   (Hom.mk (fun hCls => @Hom.Pack _ _ _ f hCls))
   (at level 0, format "[ 'hom'  'of'  f ]") : prime_eventstruct_scope.
-End Syntax. 
+End Syntax.
+
+Module Build.
+Section Build.
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {hom E2 -> E3}) (g : {hom E1 -> E2}).
+
+Lemma id_axiom : Hom.axiom (@idfun E).
+Proof. split=> //= e; rewrite ?imfset_id //. Qed.
+
+Lemma comp_axiom f g : Hom.axiom (comp f g).
+Proof.
+  case f=> {}f [] labf idlf consf.
+  case g=> {}g [] labg idlg consg.
+  split=> //=.
+  - by move=> e; rewrite labf labg.
+  - exact/homo_pideal_comp.
+  by move=> X; rewrite imfset_comp=> /consg /consf.
+Qed.
+
+End Build.
+
+Module Export Exports.
+Section Exports.
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {hom E2 -> E3}) (g : {hom E1 -> E2}).
+
+Canonical id_hom := Hom.Pack (@id_axiom L E).
+Canonical comp_hom f g := Hom.Pack (comp_axiom f g).
+
+End Exports.
+End Exports. 
+
+End Build.
 
 Module Export Theory.
 Section Theory. 
-Context {L : choiceType} {E1 E2 : eventType L} (f : {hom E1 -> E2}) (bot : L).
+Context {L : choiceType} {E1 E2 : eventType L} (bot : L). 
+Implicit Types (f : {hom E1 -> E2}).
+Implicit Types (X : {fset E1}).
 
-Lemma lab_preserving :
+Lemma lab_preserving f :
   { mono f : e / lab e }.
-Proof. by case: f => ? [[]]. Qed.
+Proof. by case: f=> ? [] /=. Qed.
 
-Lemma wcons_mon (X : {fset E1}) : 
+Lemma wcons_mon f X : 
   wcons X -> wcons (f @` X).
-Proof. case: f=> ? [[??+?]]; exact. Qed.
+Proof. case: f=> ? [] /= ??; exact. Qed.
 
-Lemma cons_mon (X : {fset E1}): 
+Lemma cons_mon f X : 
   cons X -> cons (f @` X).
 Proof.
-  move=> c; case: (boolP (wcons X))=> [/wcons_mon/andP[]|] //.
+  move=> c; case: (boolP (wcons X))=> [/(wcons_mon f)/andP[]|] //.
   rewrite /wcons /= negb_and c /= negbK=>/cardfs1P[?->].
   by rewrite imfset1 cons_self.
 Qed.
 
-Lemma gcf_mon (X : {fset E1}) (e : E2) : 
+Lemma gcf_mon f X : 
   gcf (f @` X) -> gcf X.
 Proof. exact/contra/cons_mon. Qed.
 
-Lemma cf_mon e1 e2 :
+Lemma cf_mon f e1 e2 :
   f e1 \# f e2 -> e1 \# e2.
 Proof. 
-  rewrite /cf=> ?; apply/(gcf_mon (f e1)).
+  rewrite /cf=> ?; apply/(@gcf_mon f).
   by rewrite imfsetU !imfset1=> /=.
 Qed.
 
-Lemma hom_prefix e1 e2 : e1 <= f e2 -> exists2 e, e1 = f e & e <= e2.
-Proof. case: f=> ? [[/= ?+?]]; exact. Qed.
+(* TODO: refactor, use homo_pideal *)
+Lemma hom_prefix f e1 e2 : 
+  e1 <= f e2 -> exists2 e, e1 = f e & e <= e2.
+Proof. 
+  case: f=> {}f [] ? + ? /=. 
+  by rewrite homo_pidealE=> /[apply].
+Qed.   
 
-Lemma hom_cons_inj X : cons X -> {in X & X, injective f}.
+Lemma hom_cons_inj f X : 
+  cons X -> {in X & X, injective f}.
 Proof.
   move=> c e1 e2 ??.
-  case: (boolP (wcons [fset e1; e2]))=> [/wcons_mon/[swap] Ef|].
+  case: (boolP (wcons [fset e1; e2]))=> [/(wcons_mon f)/[swap] Ef|].
   - by rewrite imfsetU ?imfset1 /wcons /= cardfs2 Ef eqxx /= andbF.
   rewrite /wcons /= negb_and negbK cardfs2.
   case: (e1 =P e2)=> //= ? /orP[]// /negP[].
@@ -497,10 +521,10 @@ Proof.
 Qed.
 
 (* TODO: try to change direction of arrows/morphisms to get rid of anti? *)
-Lemma in_cons_ca_anti X :
+Lemma in_cons_ca_anti f X :
   cons X -> {in X & X, forall e1 e2, f e1 <= f e2 -> e1 <= e2}.
 Proof.
-  move=> c e1 e2 i ? /hom_prefix[x /[swap] l /(@hom_cons_inj (x |` X))-> //].
+  move=> c e1 e2 i ? /hom_prefix[x /[swap] l /(@hom_cons_inj f (x |` X))-> //].
   - by apply/(cons_prop l); rewrite mem_fset1U.
   all: by rewrite ?inE (i, eqxx).
 Qed.
@@ -508,7 +532,7 @@ Qed.
 (* TODO: prove first on the level of `lfsposet_of`, 
  *   use subsumption notation
  *)
-Lemma pomset_lang_sub (p : pomset E1 L bot) :
+Lemma pomset_lang_sub f (p : pomset E1 L bot) :
   (forall x : E2, lab x != bot) ->
   pomset_lang p -> 
   exists2 q : pomset E2 L bot, pomset_lang q & bhom_le p q.
@@ -567,63 +591,12 @@ Proof.
   rewrite {1 2}lfsposet_of_finsupp // => ??.
   rewrite /g ?/(_ <= _) /=.
   rewrite !lfsposet_of_fin_ca //.
-  move=> /(@in_cons_ca_anti X). 
+  move=> /(@in_cons_ca_anti f X). 
   apply=> //; exact/cfX.
 Qed.
 
 End Theory.
 End Theory.
-
-Module Build.
-Section Build.
-Context {L : choiceType}.
-Implicit Types (E : eventType L).
-
-Definition mk_hom {E1 E2 : eventType L} h mkH : {hom E1 -> E2} :=
-  mkH (let: Hom.Pack _ c := h return @Hom.class_of L E1 E2 h in c).
-
-Lemma id_class {E} : Hom.class_of (@idfun E).
-Proof.
-  (do 2 split)=> //= e; rewrite ?imfset_id //.
-  by exists e. 
-Qed.
-
-Lemma comp_class {E1 E2 E3} (f : {hom E2 -> E3}) (g : {hom E1 -> E2}) : 
-  Hom.class_of (comp f g).
-Proof. 
-  (do 2 split)=> /= >.
-  - by rewrite ?lab_preserving.
-  - case/hom_prefix=> ?-> /hom_prefix[e->]; by exists e.
-  by rewrite imfset_comp=> *; do 2 apply/wcons_mon.
-Qed.
-
-Lemma of_eqfun_class {E1 E2} (f : {hom E1 -> E2}) g : 
-  g =1 f -> Hom.class_of g.
-Proof. 
-  move=> H; (do 2 split); move=>>.
-  - rewrite !H; exact/lab_preserving.
-  - move=> /[!H]/hom_prefix[e]/[-!H]; by exists e.
-  move/(wcons_mon f); by under eq_imfset do [rewrite -H|by[]].
-Qed.
-
-Definition of_eqfun {E1 E2} (f : {hom E1 -> E2}) g : g =1 f -> {hom E1 -> E2} := 
-  fun eqf => Hom.Pack (of_eqfun_class eqf).
-
-End Build.
-
-Module Export Exports.
-Section Exports.
-Context {L : choiceType}.
-Implicit Types (E : eventType L).
-
-Canonical id_hom E : {hom E -> E} := Hom.Pack id_class.
-
-Canonical comp_hom E1 E2 E3 : {hom E2 -> E3} -> {hom E1 -> E2} -> {hom E1 -> E3} :=
-  fun f g => Hom.Pack (comp_class f g).
-
-End Exports.
-End Exports.
-End Build.
 
 End Hom.
 

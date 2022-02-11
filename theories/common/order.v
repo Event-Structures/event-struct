@@ -349,8 +349,8 @@ End MaxSup.
 
 
 Section DwSurjective.
-Context {dispT : unit} {dispU : unit}.
-Context {T : porderType dispT} {U : porderType dispU}.
+Context {dispT : unit} {T : porderType dispT}.
+Context {dispU : unit} {U : porderType dispU}.
 Implicit Types (f : T -> U).
 Implicit Types (x y z : T).
 
@@ -452,6 +452,15 @@ Definition dw_closedb X :=
   [forall x : fin_ideal X, val x \in X].
 
 End Def.
+
+Section Homo.
+Context {T : dwFinPOrderType} {U : dwFinPOrderType}.
+Implicit Types (f : T -> U).
+
+Definition homo_pideal f := 
+ forall x, pideal (f x) `<=` f @` (pideal x).
+
+End Homo.
 End Def.
 
 Module Export Theory.
@@ -540,15 +549,39 @@ Proof.
   apply/up_closP; move: (subs y Py)=> [z] z_in le_zy.
   exists z=> //; exact/(le_trans le_zy).
 Qed.
-
+  
 End Theory.
 End Theory.
 
 (* TODO: better naming convention *)
 Module Export AuxTheory.
 Section AuxTheory.
-Context {T U : dwFinPOrderType}.
-Implicit Types (f : T -> U).
+Context {T U V : dwFinPOrderType}.
+Implicit Types (f : T -> U) (g : U -> V).
+
+Lemma homo_pidealE {T1 U1 : dwFinPOrderType} (f : T1 -> U1) : 
+  (* TODO: reformulate in terms of dw_surjective *)
+  homo_pideal f <-> (forall x y, y <= f x -> exists2 z, y = f z & z <= x).
+Proof. 
+  split=> [homf x y | subs].
+  - rewrite -pidealE=> yin. 
+    move: (homf x)=> /fsubsetP /(_ y yin). 
+    move=> /imfsetP=> [[]] z /= + ->.
+    by rewrite pidealE; exists z.
+  move=> x; apply/fsubsetP=> y.
+  rewrite pidealE=> yle.
+  move: (subs x y yle)=> [z] -> zle.
+  apply/imfsetP; exists z=> //=.
+  by rewrite pidealE.
+Qed.
+
+Lemma homo_pideal_comp g f : 
+  homo_pideal g -> homo_pideal f -> homo_pideal (g \o f).
+Proof. 
+  rewrite !homo_pidealE=> hg hf x y /=.
+  move=> /hg [a] -> /hf [b] -> ?. 
+  by exists b.
+Qed.
 
 Lemma dw_closedb_imfsetE f X : {mono f : x y / x <= y} -> dw_surjective f -> 
   dw_closedb (f @` X) = dw_closedb X.
