@@ -1187,6 +1187,19 @@ End iHom.
 End iHom.
 
 Module bHom.
+
+Module Build.
+Module Export Exports.
+Section Exports.
+Context {L : Type} {E1 E2 : eventType L}.
+Variable (f : {bhom E1 -> E2}).
+
+Definition bhom_inv := invFh (bhom_bij f).
+
+End Exports.
+End Exports.
+End Build.
+
 Section bHom.
 Context {L : eqType}.
 Implicit Types (E : eventType L).
@@ -1225,6 +1238,8 @@ Proof. apply/(is_inh_trans bhom_leP)=> ??? f g; exact/[bhom of g \o f]. Qed.
 
 End bHom.
 End bHom.
+
+Export bHom.Build.Exports.
 
 Module Emb.
 Section Emb.
@@ -1271,15 +1286,14 @@ Module Build.
 Section Build.
 Context {L : Type} {E1 E2 : eventType L}.
 Variable (f : {iso E1 -> E2}).
-Hypothesis (fbij : bijective f).
 
-Lemma invFh_axiom : lPoset.Iso.Iso.axiom (invFh fbij).
+Lemma inv_axiom : lPoset.Iso.Iso.axiom (bhom_inv f).
 Proof. 
   repeat constructor=> //; last exact/injFh_bij.
   - by move=> e; rewrite -(lab_preserving f) f_invFh. 
   apply/inj_le_homo_mono.
   - exact/bij_inj/injFh_bij.
-  - exact/bij_inj/fbij.
+  - exact/bij_inj/bhom_bij/f.
   - apply/cancel_le_ahomo_homo; first exact/f_invFh.
     exact/mono2aW/(ca_reflecting f).
   exact/(ca_monotone f).
@@ -1291,9 +1305,8 @@ Module Export Exports.
 Section Exports.
 Context {L : Type} {E1 E2 : eventType L}.
 Variable (f : {iso E1 -> E2}).
-Hypothesis (fbij : bijective f).
 
-Canonical invFh_iso := lPoset.Iso.Iso.Pack (@invFh_axiom L E1 E2 f fbij).
+Canonical invFh_iso := lPoset.Iso.Iso.Pack (@inv_axiom L E1 E2 f).
 
 End Exports.
 End Exports.
@@ -1338,7 +1351,7 @@ Proof. apply/(is_inh_refl iso_eqvP)=> E; exact/[iso of idfun : E -> E]. Qed.
 Lemma iso_eqv_sym : symmetric iso_eqv.
 Proof. 
   apply/(is_inh_sym iso_eqvP)=> ?? f. 
-  exact/[iso of invFh (bhom_bij f)]. 
+  exact/[iso of bhom_inv f]. 
 Qed.
 
 Lemma iso_eqv_trans : transitive iso_eqv.
@@ -1350,6 +1363,7 @@ End Iso.
 End lFinPoset.
 
 Export lFinPoset.lFinPoset.Exports.
+Export lFinPoset.bHom.Build.Exports.
 Export lFinPoset.Iso.Build.Exports.
 
 
@@ -1501,7 +1515,7 @@ Lemma isoP :
   reflect ?|{iso eventType t -> eventType u}| (t == u :> seq L).
 Proof.
   apply/(iffP idP); last first.
-  - move=> [f]; pose g := [iso of invFh (bhom_bij f)].
+  - move=> [f]; pose g := [iso of bhom_inv f].
     apply/eqP/subseq_anti/andP.
     split; apply/homP; eexists; [exact/f | exact/g].
   move=> /eqP H; have Hn: n = m.
