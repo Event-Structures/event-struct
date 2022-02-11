@@ -2865,17 +2865,11 @@ Lemma pom_ihom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   ihom_le (repr (pom p)) (repr (pom q)) = ihom_le p q.
 Proof.
   rewrite /ihom_le. 
-  case: pomP=> q' /eqmodP/lFinPoset.fisoP[f]. 
-  case: pomP=> p' /eqmodP/lFinPoset.fisoP[g].
-  apply/lFinPoset.fihomP/lFinPoset.fihomP=> [][h]; exists. 
-  - (* TODO: fix bug with canonical instance inference *)
-    pose f' := lPoset.Iso.Build.inv f : {ihom _ -> _}.
-    pose g' := g : {ihom _ -> _}.
-    exact/[ihom of g' \o h \o f'].
-  (* TODO: fix bug with canonical instance inference *)
-  pose f' := f : {ihom _ -> _}.
-  pose g' := lPoset.Iso.Build.inv g : {ihom _ -> _}. 
-  exact/[ihom of g' \o h \o f'].
+  case: pomP=> q' /eqmodP/lFinPoset.Iso.iso_eqvP[f]. 
+  case: pomP=> p' /eqmodP/lFinPoset.Iso.iso_eqvP[g].
+  apply/lFinPoset.iHom.ihom_leP/lFinPoset.iHom.ihom_leP=> [][h]; exists. 
+  - exact/[ihom of g \o h \o [iso of (bhom_inv f)]].
+  exact/[ihom of [iso of (bhom_inv g)] \o h \o f].
 Qed.
 
 Context {E : identType} {L : choiceType} {bot : L}.
@@ -2902,21 +2896,21 @@ Lemma pom_bhom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   bhom_le (repr (pom p)) (repr (pom q)) = bhom_le p q.
 Proof.
   rewrite /bhom_le. 
-  case: pomP=> q' /eqmodP/lFinPoset.fisoP[f]. 
-  case: pomP=> p' /eqmodP/lFinPoset.fisoP[g].
-  apply/lFinPoset.fbhomP/lFinPoset.fbhomP=> [][h]; exists.
-  - exact/[bhom of g \o h \o lPoset.Iso.Build.inv f].
-  exact/[bhom of lPoset.Iso.Build.inv g \o h \o f].
+  case: pomP=> q' /eqmodP/lFinPoset.Iso.iso_eqvP[f]. 
+  case: pomP=> p' /eqmodP/lFinPoset.Iso.iso_eqvP[g].
+  apply/lFinPoset.bHom.bhom_leP/lFinPoset.bHom.bhom_leP=> [][h]; exists.
+  - exact/[bhom of g \o h \o [iso of bhom_inv f]].
+  exact/[bhom of [iso of bhom_inv g] \o h \o f].
 Qed.
 
 Lemma pom_bhom_le1 E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
   bhom_le p (repr (pom q)) = bhom_le p q.
 Proof.
   rewrite /bhom_le. 
-  case: pomP=> q' /eqmodP/lFinPoset.fisoP[f]. 
+  case: pomP=> q' /eqmodP/lFinPoset.Iso.iso_eqvP[f]. 
   (* case: pomP=> p' /eqmodP/lFinPoset.fisoP[g]. *)
-  apply/lFinPoset.fbhomP/lFinPoset.fbhomP=> [][h]; exists.
-  - exact/[bhom of h \o lPoset.Iso.Build.inv f].
+  apply/lFinPoset.bHom.bhom_leP/lFinPoset.bHom.bhom_leP=> [][h]; exists.
+  - exact/[bhom of h \o [iso of (bhom_inv f)]].
   exact/[bhom of h \o f].
 Qed.
 
@@ -3051,7 +3045,7 @@ Lemma of_seq_total ls :
 Proof. 
   pose p := @lFsPoset.of_seq E L bot ls.
   rewrite /Pomset.of_seq=> /= e1 e2.
-  move: (iso_eqv_pom p)=> /lFinPoset.fisoP [f]. 
+  move: (iso_eqv_pom p)=> /lFinPoset.Iso.iso_eqvP [f]. 
   move: (lFsPoset.of_seq_total (f e1) (f e2)).
   repeat rewrite -fin_caE.
   by rewrite !(ca_reflecting f).
@@ -3087,27 +3081,21 @@ Proof.
     by rewrite decodeK fs_lab_nthE.
   - move=> e1 e2 e1In e2In; rewrite !fs_caE /=.
     rewrite lFsPoset.of_seq_caE labD andbT. 
-    move=> Hca; apply/orP; right.
-    rewrite !conseq_num_mem // /f !decodeK usz !lfsp_idx_lt_szE.
-    apply/and3P; split=> //. 
-    rewrite ident_leE !decodeK; exact/lfsp_idx_le.
-  - pose g : [Event of u] -> [Event of t] := 
-      fun e => lfsp_event t \i0 (encode e).
-    exists g=> e; rewrite !conseq_num_mem // /f /g !usz ?decodeK.
-    + rewrite lfsp_idx_lt_szE; exact/lfsp_idxK. 
-    by move=> ?; rewrite lfsp_eventK ?encodeK //. 
-  move=> e1 e2 e1In e2In; rewrite /f fs_caE /=.
-  rewrite lFsPoset.of_seq_caE labD andbT //.
-  rewrite !conseq_num_mem // !decodeK !usz !lfsp_idx_lt_szE.
-  rewrite ident_leE !decodeK=> /orP[/eqP|].
-  - move=> /decode_inj /lfsp_idx_inj -> //; exact/fs_ca_refl.
-  move=> /and3P[le12 ??].  
-  move: (tomset_total_in e1In e2In).  
-  rewrite !fs_caE=> /orP[|] //.
-  move=> /lfsp_idx_le le21.
-  suff->: e1 = e2 by exact/fs_ca_refl.
-  apply/(lfsp_idx_inj e1In e2In).
-  by apply/le_anti/andP. 
+    rewrite !conseq_num_mem // !decodeK !usz !lfsp_idx_lt_szE.
+    rewrite ident_leE /f !decodeK. 
+    apply/idP/idP=> [/orP[|] |]; last 1 first.
+    + by rewrite e1In e2In leEnat=> /lfsp_idx_le ->. 
+    + move=> /eqP /decode_inj /lfsp_idx_inj -> //; exact/fs_ca_refl.
+    move=> /and3P[le12 ??].  
+    move: (tomset_total_in e1In e2In).  
+    rewrite !fs_caE=> /orP[|] // => /lfsp_idx_le le21.
+    suff->: e1 = e2 by exact/fs_ca_refl.
+    exact/(lfsp_idx_inj e1In e2In)/le_anti/andP. 
+  pose g : [Event of u] -> [Event of t] := 
+    fun e => lfsp_event t \i0 (encode e).
+  exists g=> e; rewrite !conseq_num_mem // /f /g !usz ?decodeK.
+  - rewrite lfsp_idx_lt_szE; exact/lfsp_idxK. 
+  by move=> ?; rewrite lfsp_eventK ?encodeK //. 
 Qed.
 
 End Theory.
