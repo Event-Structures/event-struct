@@ -171,7 +171,7 @@ Definition cf_free (p : pred E) :=
   forall (s : {fset E}), {subset s <= p} -> cons s.
 
 Definition cfg (p : pred E) := 
-  ca_closed p /\ cf_free p.
+  dw_closed p /\ cf_free p.
 
 (* TODO: rename? *)
 Definition wcons : pred {fset E} := 
@@ -263,7 +263,7 @@ Proof.
   by rewrite fsetDv ?fset0U mem_fsetD1.
 Qed.
 
-Lemma prefix_ca_closed (e : E) : ca_closed (<= e).
+Lemma prefix_ca_closed (e : E) : dw_closed (<= e).
 Proof. move=> e1 e2 /=; exact: le_trans. Qed.
 
 Lemma prefix_cf_free e : cf_free (<= e).
@@ -518,7 +518,7 @@ Proof.
   - move/lfsposet_of_emp=>->->.
     exists (\pi (lFsPoset.empty E2 L bot)).
     + exists fset0; first exact/cfg0; by rewrite lfsposet_of0.
-    rewrite pom_bhom_le -?lfsposet_of0; apply/lFinPoset.fbhomP.
+    rewrite pom_bhom_le -?lfsposet_of0; apply/lFinPoset.bHom.bhom_leP.
     (* have g: forall E E' : eventType L, *)
     (*         [FinEvent of @lfsposet_of L bot E  fset0] -> *)
     (*         [FinEvent of @lfsposet_of L bot E' fset0]. *)
@@ -544,20 +544,31 @@ Proof.
     [FinEvent of (@lfsposet_of L bot E1 X)] -> 
     [FinEvent of (@lfsposet_of L bot E2 (f @` X))] := fun x => [` (In x)].
   (* TODO: use bhom_leP lemma? *)
-  apply/lFinPoset.fbhomP/(@lPoset.bHom.Build.of_anti_bhom_ex _ _ _ g)=> /=.
-  - apply/inj_card_bij=> /=.
+  apply/lFinPoset.bHom.bhom_leP; exists=> /=. 
+  have bijg : bijective g.
+  - apply/inj_card_bij=> /=; last first.
+    + rewrite -?cardfE !lfsposet_of_finsupp //.
+      exact/(leq_trans (leq_imfset_card _ _ _)).
     rewrite /g; case=> ? in1 [? in2 /=] /(congr1 val) /= /hom_cons_inj.
     move/(_ _ _ in1 in2)=> ev; apply/val_inj/ev/cfX=> ?.
     by rewrite lfsposet_of_finsupp.
-  - rewrite ?lfsposet_of_finsupp // -?cardfE.
-    exact/(leq_trans (leq_imfset_card _ _ _)).
-  - case=> /= ? /[dup]; rewrite {1}lfsposet_of_finsupp // => ?.
-    rewrite /g /lab /= /fin_lab /= ?lfsposet_of_lab ?lab_preserving //.
-    by rewrite ?in_imfset //.
-  case=> ? /[dup] + ? [? /[dup]+?]; rewrite {1 2}lfsposet_of_finsupp // => ??.
+  exists (invFh bijg); split=> //; last exact/injFh_bij. 
+  - case=> /= e /[dup]; rewrite {1}lfsposet_of_finsupp // => ef ein.
+    rewrite /g !fin_labE -?fin_lab_mono.
+    move: ef=> /imfsetP[e'] /= ein' eqe'. 
+    have ein'': e' \in finsupp (lfsposet_of X : lfsposet E1 L bot).
+    + by rewrite @lfsposet_of_finsupp.
+    have->: [` ein] = g [` ein''].
+    + by rewrite /g; apply/val_inj. 
+    rewrite invFh_f /= !lfsposet_of_lab ?eqe' ?lab_preserving //.
+    by apply/imfsetP; exists e'.
+  apply/(cancel_le_ahomo_homo (f_invFh _)). 
+  case=> ? /[dup] + ? [? /[dup]+?]. 
+  rewrite {1 2}lfsposet_of_finsupp // => ??.
   rewrite /g ?/(_ <= _) /=.
   rewrite !lfsposet_of_fin_ca //.
-  move => /(@in_cons_ca_anti X); apply=> //; exact/cfX.
+  move=> /(@in_cons_ca_anti X). 
+  apply=> //; exact/cfX.
 Qed.
 
 End Theory.

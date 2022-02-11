@@ -753,7 +753,7 @@ End BackwardStep.
 Lemma lfsp_lin_lang p (ls : seq L) : 
   let emp := lFsPoset.empty E L bot in 
   bot \notin ls ->
-  lFsPoset.Hom.axiom p (lFsPoset.of_seq E L bot ls) id ->
+  lFsPoset.Hom.axiom id p (lFsPoset.of_seq E L bot ls) ->
   exists2 tr : trace _,
       lst_state emp tr = p & 
       labels tr = ls.
