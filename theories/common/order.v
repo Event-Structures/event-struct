@@ -61,6 +61,10 @@ Context {T : porderType dispT} {U : porderType dispU}.
 Implicit Types (f : T -> U).
 Implicit Types (x y z : T).
 
+(* Definition monotone     f := { homo f : x y / x <= y}. *)
+(* Definition antimonotone f := {ahomo f : x y / x <= y}. *)
+(* Definition reflecting   f := { mono f : x y / x <= y}. *)
+
 Lemma le_homo_lt_img f x y : 
   {homo f : x y / x <= y} -> (f x < f y) -> (x < y) || (x >< y).
 Proof.
@@ -83,8 +87,7 @@ Proof.
   by move=> /andP; apply; split=> //.
 Qed.
 
-Lemma le_homo_mono f : 
-  {homo f : x y / x <= y} -> {ahomo f : x y / x <= y} -> 
+Lemma le_homo_mono f : {homo f : x y / x <= y} -> {ahomo f : x y / x <= y} -> 
   {mono f : x y / x <= y}.
 Proof. 
   move=> fmon frefl x y. 
@@ -351,12 +354,15 @@ End MaxSup.
 Section DwSurjective.
 Context {dispT : unit} {T : porderType dispT}.
 Context {dispU : unit} {U : porderType dispU}.
-Implicit Types (f : T -> U).
+Implicit Types (f : T -> U) (pT : pred T) (pU : pred U).
 Implicit Types (x y z : T).
 
 (* TODO: consult literature to find relevant theory *)
 Definition dw_surjective f := 
   forall x, {in (<= f x), surjective f}.
+
+Definition dw_surjective_le f := 
+  forall x, {in (<= f x), surjective [rst f | (<= x) : pred T] }.
 
 Lemma eq_dw_surj f : 
   dw_surjective f -> forall g, f =1 g -> dw_surjective g.
@@ -366,14 +372,42 @@ Lemma surj_dw_surj f :
   surjective f -> dw_surjective f.
 Proof. by move=> fsurj x y _; move: (fsurj y)=> [z] <-; exists z. Qed.
 
-Lemma dw_surj_closed f (X : pred T) (Y : pred U) : 
-  {ahomo f : x y / x <= y} -> dw_surjective f -> {in Y, surjective f} -> 
-  (preim f Y) =1 X -> dw_closed X -> dw_closed Y.
+Lemma eq_dw_surj_le f : 
+  dw_surjective_le f -> forall g, f =1 g -> dw_surjective_le g.
 Proof. 
-  move=> fmon fdw fsurj fpreim dwX x y. 
+  move=> fdw g eqf x y; rewrite -?eqf=> /fdw [z] <-; exists z. 
+  by rewrite /rst /= eqf.
+Qed.
+
+Lemma dw_surj_leW f : 
+  dw_surjective_le f -> dw_surjective f.
+Proof. by move=> dwf x y /dwf[z] <-; rewrite /rst /=; exists (val z). Qed.
+
+Lemma ahomo_dw_surj_le f : 
+  {ahomo f : x y / x <= y} -> dw_surjective f -> dw_surjective_le f.
+Proof. 
+  move=> lef dwf x y /=. 
+  rewrite inE=> /[dup] /dwf[z] <-.
+  by move=> /lef lez; exists (Sub z lez).
+Qed.
+
+Lemma inj_dw_surj_le_ahomo f : 
+  injective f -> dw_surjective_le f -> {ahomo f : x y / x <= y}. 
+Proof. 
+  move=> injf dwf x y. 
+  move=> /dwf[[z]] /= zin.
+  by rewrite /rst /= => /injf <-.
+Qed. 
+
+Lemma dw_surj_le_closed f (X : pred T) (Y : pred U) : 
+  dw_surjective_le f -> {in Y, surjective f} -> (preim f Y) =1 X -> 
+    dw_closed X -> dw_closed Y.
+Proof. 
+  move=> fdw fsurj fpreim dwX x y. 
   move=> /[swap] /[dup] /fsurj [y'] <-.
-  move=> /[swap] /[dup] /fdw=> [[x']] <-. 
-  by move=> /fmon /dwX; rewrite -fpreim -fpreim. 
+  move=> /[swap] /fdw=> [[]] [x'] /= + <-. 
+  rewrite /rst /= => /dwX.
+  by rewrite -fpreim -fpreim. 
 Qed.
 
 End DwSurjective.
@@ -588,15 +622,14 @@ Proof.
   by exists b.
 Qed.
 
-Lemma dw_closedb_imfsetE f X : {mono f : x y / x <= y} -> dw_surjective f -> 
-  dw_closedb (f @` X) = dw_closedb X.
+Lemma dw_closedb_imfsetE f X : injective f -> {homo f : x y / x <= y} -> 
+  dw_surjective_le f -> dw_closedb (f @` X) = dw_closedb X.
 Proof. 
-  move=> /[dup] /inc_inj finj femb fdw. 
+  move=> finj lef fdw. 
   move: (imfset_preim_eq X finj)=> /eq_dw_closed dw_preim. 
   apply/idP/idP=> /dw_closedP dw; apply/dw_closedP.
-  - apply/dw_preim/dw_closed_preim=> //; exact/mono2W.
-  apply/(dw_surj_closed _ fdw)=> //. 
-  - exact/mono2aW.
+  - apply/dw_preim/dw_closed_preim=> //. 
+  apply/(dw_surj_le_closed fdw)=> //. 
   - by move=> x /imfsetP [y] /= _ ->; exists y.
   exact/dw_preim.
 Qed.   
