@@ -403,7 +403,7 @@ Implicit Types (f : E1 -> E2).
 
 Definition axiom f := 
   [/\ { mono f : e / lab e }
-    , homo_pideal f
+    , { homo pideal f }
     & { homo (@!f) : X / wcons X } 
   ].
 
@@ -604,9 +604,55 @@ Module Export Iso.
 
 Module Iso.
 Section ClassDef. 
-
 Context {L : Type} (E1 E2 : PrimeC.eventType L).
 Implicit Types (f : E1 -> E2).
+
+Definition axiom f := 
+  [/\ { mono f : e / lab e }
+    , { mono f : e1 e2 / e1 <= e2 }
+    & { mono (@!f) : X / wcons X } 
+  ].
+
+Structure type := Pack { apply ; _ : axiom apply }.
+
+Local Coercion apply : type >-> Funclass.
+
+Definition mk h mkH : type :=
+  mkH (let: Pack _ c := h return @axiom h in c).
+
+Definition type_of (_ : phant (E1 -> E2)) := type.
+
+Lemma hom_axiom_of f : axiom f -> Hom.axiom f.
+Proof. 
+  move=> [] labf lef consf; split=> //.
+  - 
+
+Lemma ihom_axiom_of f : axiom f -> iHom.axiom f.
+Proof. by move=> [] ?? /bij_inj. Qed.
+
+Lemma bhom_axiom_of f : Hom.axiom f -> bijective f -> axiom f.
+Proof. by move=> []. Qed.
+
+Variables (cT : type).
+
+Lemma homAxiom : Hom.axiom cT.
+Proof. by case: cT=> /= ? /hom_axiom_of. Qed.
+
+Lemma ihomAxiom : iHom.axiom cT.
+Proof. by case: cT=> /= ? /ihom_axiom_of. Qed.
+
+Definition homType  :=  Hom.Pack  homAxiom.
+Definition ihomType := iHom.Pack ihomAxiom.
+
+End ClassDef.
+
+Module Export Exports.
+Coercion apply : type >-> Funclass.
+Coercion  homType : type >-> Hom.type.
+Coercion ihomType : type >-> iHom.type.
+Canonical  homType.
+Canonical ihomType.
+End Exports.
 
 Record mixin_of f := Mixin {
   _ : forall X : {fset E1}, cons X <-> cons (f @` X)

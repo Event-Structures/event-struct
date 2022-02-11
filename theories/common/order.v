@@ -463,6 +463,11 @@ Definition homo_pideal f :=
 End Homo.
 End Def.
 
+Module Export Syntax.
+Notation "{ 'homo' 'pideal' f }" := (homo_pideal f)
+  (at level 0, f at level 99, format "{ 'homo'  'pideal'  f }") : order_scope.
+End Syntax.
+
 Module Export Theory.
 Section Theory.
 Context {T : dwFinPOrderType}.
@@ -560,8 +565,8 @@ Context {T U V : dwFinPOrderType}.
 Implicit Types (f : T -> U) (g : U -> V).
 
 Lemma homo_pidealE {T1 U1 : dwFinPOrderType} (f : T1 -> U1) : 
-  (* TODO: reformulate in terms of dw_surjective *)
-  homo_pideal f <-> (forall x y, y <= f x -> exists2 z, y = f z & z <= x).
+  (* TODO: reformulate in terms of surjective *)
+  { homo pideal f } <-> (forall x y, y <= f x -> exists2 z, y = f z & z <= x).
 Proof. 
   split=> [homf x y | subs].
   - rewrite -pidealE=> yin. 
@@ -576,7 +581,7 @@ Proof.
 Qed.
 
 Lemma homo_pideal_comp g f : 
-  homo_pideal g -> homo_pideal f -> homo_pideal (g \o f).
+  {homo pideal g} -> {homo pideal f} -> {homo pideal (g \o f)}.
 Proof. 
   rewrite !homo_pidealE=> hg hf x y /=.
   move=> /hg [a] -> /hf [b] -> ?. 
@@ -603,5 +608,6 @@ End DwFinPOrder.
 
 Export DwFinPOrder.Exports.
 Export DwFinPOrder.Def.
+Export DwFinPOrder.Syntax.
 Export DwFinPOrder.Theory.
 Export DwFinPOrder.AuxTheory.
