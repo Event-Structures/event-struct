@@ -1790,17 +1790,18 @@ Definition lfsposet_fin_porderMixin :=
 Definition lfsposet_fin_porderType := 
   POrderType fin_disp _ lfsposet_fin_porderMixin.
 
-Definition lfsposet_FinPOrderType :=
+Definition lfsposet_finPOrderType :=
   [finPOrderType of lfsposet_fin_porderType].
 
 Definition lfsposet_fin_lposetMixin := 
   @lPoset.lPoset.Mixin _ L (Order.POrder.class lfsposet_fin_porderType) (fin_lab p).
 
 Definition lfsposet_fin_lposetType := 
-  @lPoset.lPoset.Pack L (lfsposet_FinPOrderType) (lPoset.lPoset.Class lfsposet_fin_lposetMixin).
+  let cls := lPoset.lPoset.Class lfsposet_fin_lposetMixin in
+  @lPoset.lPoset.Pack L lfsposet_finPOrderType cls.
 
 Definition lfsposet_lfinposetType :=
-  let finCls := Order.FinPOrder.class lfsposet_FinPOrderType in
+  let finCls := Order.FinPOrder.class lfsposet_finPOrderType in
   let cls := @lFinPoset.lFinPoset.Class _ L finCls lfsposet_fin_lposetMixin in
   @lFinPoset.lFinPoset.Pack L _ cls.
 
@@ -1986,13 +1987,13 @@ End Theory.
 
 Import lPoset.Syntax.
 
-Module Hom.
+Module Export Hom.
 Section Hom.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 Implicit Types (f : E1 -> E2).
 
-Definition axiom f p q := 
+Definition is_hom f p q := 
   let f : [Event of p] -> [Event of q] := f in
   [/\                    {mono f : e / lab e}  
     & {in (finsupp p) &, {homo f : e1 e2 / e1 <= e2}}
@@ -2038,8 +2039,8 @@ Proof.
   by rewrite ?feq ?fs_caE ?fin_ca_mono -?fin_caE fmon. 
 Qed.
 
-Lemma axiom_fin : 
-  axiom f p q -> lFinPoset.Hom.axiom ff.
+Lemma is_hom_fin : 
+  is_hom f p q -> lFinPoset.Hom.axiom ff.
 Proof. move=> [??]; apply/andP; split; [exact/mono_labW | exact/homo_caP]. Qed.
 
 Hypothesis (fsup : forall e, e \notin finsupp p -> f e \notin finsupp q).
@@ -2062,8 +2063,8 @@ Lemma mono_lab_finsupp e :
   {mono f : e / lab e} -> (e \in finsupp p) = (f e \in finsupp q). 
 Proof. by move=> /= labf; rewrite -?fs_labNbot -?fs_labE labf. Qed.
 
-Lemma fin_axiom : 
-  lFinPoset.Hom.axiom ff -> axiom f p q.
+Lemma fin_is_hom : 
+  lFinPoset.Hom.axiom ff -> is_hom f p q.
 Proof. move=> /andP[??]; split; [exact/mono_labS | exact/homo_caP]. Qed.
 
 Definition hom_lift : E1 -> E2 :=
@@ -2083,14 +2084,14 @@ Proof.
   exact/fresh_seq_nmem.
 Qed.
 
-Hypothesis (ax : axiom f p q).
+Hypothesis (homf : is_hom f p q).
 
-Lemma axiom_finsupp e : 
+Lemma is_hom_finsupp e : 
   e \in finsupp p -> (f e) \in finsupp q.
-Proof. by rewrite mono_lab_finsupp; case ax. Qed.
+Proof. by rewrite mono_lab_finsupp; case homf. Qed.
 
 Definition hom_down : {ffun [FinEvent of p] -> [FinEvent of q]} := 
-  [ffun e => [` axiom_finsupp (valP e)] ].
+  [ffun e => [` is_hom_finsupp (valP e)] ].
 
 Lemma hom_down_eq (e : finsupp p) : 
   f (val e) = val (hom_down e).
@@ -2098,9 +2099,8 @@ Proof. by rewrite ffunE. Qed.
 
 End Hom.
 
-Arguments Hom.axiom {_ _ _ _} _ _.
+Arguments is_hom {_ _ _ _} _ _.
 
-Module PreOrder.
 Section hPreOrder.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
@@ -2111,18 +2111,18 @@ Definition hom_le p q :=
   ??|{ffun EQ -> EP | lFinPoset.Hom.axiom}|.
 
 Lemma hom_leP p q :
-  reflect (exists f, axiom f q p) (hom_le p q).
+  reflect (exists f, is_hom f q p) (hom_le p q).
 Proof. 
   apply/(equivP (fin_inhP _)); split; last first.
   - move=> [] f ax; exists; exists (hom_down ax).
-    apply/(axiom_fin _ ax); exact/hom_down_eq. 
+    apply/(is_hom_fin _ ax); exact/hom_down_eq. 
   move=> [] [] ff ax; exists (hom_lift ff). 
-  apply/(fin_axiom _ _ ax); first exact/hom_lift_eq.
+  apply/(fin_is_hom _ _ ax); first exact/hom_lift_eq.
   exact/hom_lift_Nfinsupp.
 Qed.
 
-Lemma hom_finsupp p q f e : 
-  axiom f p q -> (e \in finsupp p) = (f e \in finsupp q).
+Lemma is_hom_in_finsuppE p q f e : 
+  is_hom f p q -> (e \in finsupp p) = (f e \in finsupp q).
 Proof. move=> [] fmon ?; by rewrite -?fs_labNbot -?fs_labE fmon. Qed.
 
 End hPreOrder.
@@ -2144,8 +2144,12 @@ Proof. move=> ?; exact/lFinPoset.Hom.hom_le_refl. Qed.
 Lemma hom_le_trans : transitive (@hom_le E E L bot). 
 Proof. move=> ??? /[swap]; exact/lFinPoset.Hom.hom_le_trans. Qed.
 
-Lemma hom_operational p q : 
-  Hom.axiom id p q -> operational q -> operational p.
+Lemma is_hom_id_finsuppE p q : 
+  is_hom id p q -> finsupp p = finsupp q.
+Proof. by move=> hf; apply/fsetP=> e; rewrite (is_hom_in_finsuppE _ hf). Qed.
+
+Lemma is_hom_operational p q : 
+  is_hom id p q -> operational q -> operational p.
 Proof.
   (do ? case)=> _ cm /(operationalP (lfsp_supp_closed _) (lfsp_acyclic _)) sb.
   apply/forall2P=> -[/= ? {}/cm cm [/= ? {}/cm cm]].
@@ -2153,19 +2157,16 @@ Proof.
 Qed.
 
 End PreOrder.
-End PreOrder.
 
 End Hom.
 
-Export Hom.PreOrder.
-
-Module iHom.
+Module Export iHom.
 Section iHom.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 Implicit Types (f : E1 -> E2).
 
-Definition axiom f p q := 
+Definition is_ihom f p q := 
   let f : [Event of p] -> [Event of q] := f in
   [/\                    {mono f : e / lab e}  
     , {in (finsupp p) &, {homo f : e1 e2 / e1 <= e2}}
@@ -2188,12 +2189,12 @@ Proof.
   by congr val; apply/injf/val_inj; rewrite -?feq. 
 Qed.
 
-Lemma hom_axiom : 
-  axiom f p q -> Hom.axiom f p q.
+Lemma is_ihom_hom : 
+  is_ihom f p q -> is_hom f p q.
 Proof. by move=> []. Qed.
 
-Lemma axiom_fin : 
-  axiom f p q -> lFinPoset.iHom.axiom ff.
+Lemma is_ihom_fin : 
+  is_ihom f p q -> lFinPoset.iHom.axiom ff.
 Proof. 
   move=> [???]; apply/and3P; split; 
     [ exact/Hom.mono_labW 
@@ -2204,8 +2205,8 @@ Qed.
 
 Hypothesis (fsup : forall e, e \notin finsupp p -> f e \notin finsupp q).
 
-Lemma fin_axiom : 
-  lFinPoset.iHom.axiom ff -> axiom f p q.
+Lemma fin_is_ihom : 
+  lFinPoset.iHom.axiom ff -> is_ihom f p q.
 Proof. 
   move=> /and3P[???]; split; 
     [ exact/Hom.mono_labS 
@@ -2216,9 +2217,8 @@ Qed.
 
 End iHom.
 
-Arguments iHom.axiom {_ _ _ _} _ _.
+Arguments is_ihom {_ _ _ _} _ _.
 
-Module PreOrder.
 Section hPreOrder.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
@@ -2230,13 +2230,13 @@ Definition ihom_le p q :=
   ??|{ffun EQ -> EP | lFinPoset.iHom.axiom}|.
 
 Lemma ihom_leP p q :
-  reflect (exists f, iHom.axiom f q p) (ihom_le p q).
+  reflect (exists f, is_ihom f q p) (ihom_le p q).
 Proof. 
   apply/(equivP (fin_inhP _)); split; last first.
-  - move=> [] f ax; exists; exists (Hom.hom_down (hom_axiom ax)).
-    apply/(axiom_fin _ ax); exact/Hom.hom_down_eq. 
+  - move=> [] f ax; exists; exists (hom_down (is_ihom_hom ax)).
+    apply/(is_ihom_fin _ ax); exact/Hom.hom_down_eq. 
   move=> [] [] ff ax; exists (Hom.hom_lift ff). 
-  apply/(fin_axiom _ _ ax); first exact/Hom.hom_lift_eq.
+  apply/(fin_is_ihom _ _ ax); first exact/Hom.hom_lift_eq.
   exact/Hom.hom_lift_Nfinsupp.
 Qed.
 
@@ -2267,19 +2267,17 @@ Lemma ihom_le_trans : transitive (@ihom_le E E L bot).
 Proof. move=> ??? /[swap]; exact/lFinPoset.iHom.ihom_le_trans. Qed.
 
 End PreOrder.
-End PreOrder.
 
 End iHom.
 
-Export iHom.PreOrder.
 
-Module bHom.
+Module Export bHom.
 Section bHom.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 Implicit Types (f : E1 -> E2).
 
-Definition axiom f p q := 
+Definition is_bhom f p q := 
   let f : [Event of p] -> [Event of q] := f in
   [/\                    {mono f : e / lab e}  
     , {in (finsupp p) &, {homo f : e1 e2 / e1 <= e2}}
@@ -2304,12 +2302,12 @@ Proof.
   rewrite -(Hom.mono_lab_finsupp _ labf); exact/valP.
 Qed.
 
-Lemma hom_axiom : 
-  axiom f p q -> Hom.axiom f p q.
+Lemma is_bhom_hom : 
+  is_bhom f p q -> is_hom f p q.
 Proof. by move=> []. Qed.
 
-Lemma axiom_fin : 
-  axiom f p q -> lFinPoset.bHom.axiom ff.
+Lemma is_bhom_fin : 
+  is_bhom f p q -> lFinPoset.bHom.axiom ff.
 Proof. 
   move=> [???]; apply/and3P; split; 
     [ exact/Hom.mono_labW 
@@ -2337,8 +2335,8 @@ Proof.
   by rewrite feq geq K.  
 Qed.  
 
-Lemma fin_axiom : 
-  lFinPoset.bHom.axiom ff -> axiom f p q.
+Lemma fin_is_bhom : 
+  lFinPoset.bHom.axiom ff -> is_bhom f p q.
 Proof. 
   move=> /and3P[???]; split; 
     [ exact/Hom.mono_labS 
@@ -2349,9 +2347,8 @@ Qed.
 
 End bHom.
 
-Arguments bHom.axiom {_ _ _ _} _ _.
+Arguments is_bhom {_ _ _ _} _ _.
 
-Module PreOrder.
 Section hPreOrder.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
@@ -2363,13 +2360,13 @@ Definition bhom_le p q :=
   ??|{ffun EQ -> EP | lFinPoset.bHom.axiom}|.
 
 Lemma bhom_leP p q :
-  reflect (exists (f : E2 -> E1), axiom f q p) (bhom_le p q).
+  reflect (exists (f : E2 -> E1), is_bhom f q p) (bhom_le p q).
 Proof. 
   apply/(equivP (fin_inhP _)); split; last first.
-  - move=> [] f ax; exists; exists (Hom.hom_down (hom_axiom ax)).
-    apply/(axiom_fin _ ax); exact/Hom.hom_down_eq. 
+  - move=> [] f ax; exists; exists (hom_down (is_bhom_hom ax)).
+    apply/(is_bhom_fin _ ax); exact/Hom.hom_down_eq. 
   move=> [] [] ff ax; exists (Hom.hom_lift ff). 
-  apply/(fin_axiom _ _ ax); first exact/Hom.hom_lift_eq.
+  apply/(fin_is_bhom _ _ ax); first exact/Hom.hom_lift_eq.
   exact/Hom.hom_lift_Nfinsupp.
 Qed.
 
@@ -2400,10 +2397,6 @@ Definition bhom_lt : rel (lfsposet E L bot) :=
 Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
   [pred ls | bhom_le (lFsPoset.of_seq E L bot ls) p].
 
-Lemma finsupp_hom_id p q : 
-  Hom.axiom id q p -> finsupp p = finsupp q.
-Proof. by move=> ax; apply/fsetP=> e; rewrite (hom_finsupp _ ax). Qed.
-
 Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
 Proof. done. Qed.
 
@@ -2413,20 +2406,25 @@ Proof. move=> ?; exact/lFinPoset.bHom.bhom_le_refl. Qed.
 Lemma bhom_le_trans : transitive (@bhom_le E E L bot). 
 Proof. move=> ??? /[swap]; exact/lFinPoset.bHom.bhom_le_trans. Qed.
 
-End PreOrder.
+Lemma is_bhom_idE p q  : 
+  is_bhom id p q <-> is_hom id p q.
+Proof. 
+  split; first exact/is_bhom_hom.  
+  move=> [] *; split=> //; by exists id.
+Qed.
+
 End PreOrder.
 
 End bHom.
 
-Export bHom.PreOrder.
 
-Module Emb.
+Module Export Emb.
 Section Emb.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 Implicit Types (f : E1 -> E2).
 
-Definition axiom f p q := 
+Definition is_emb f p q := 
   let f : [Event of p] -> [Event of q] := f in
   [/\                    {mono f : e / lab e}  
     & {in (finsupp p) &, {mono f : e1 e2 / e1 <= e2}}
@@ -2436,12 +2434,12 @@ Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 Variables (f : E1 -> E2) (ff : {ffun [FinEvent of p] -> [FinEvent of q]}).
 Hypothesis (feq : forall e : finsupp p, f (val e) = val (ff e)).
 
-Lemma hom_axiom : 
-  axiom f p q -> Hom.axiom f p q.
+Lemma is_emb_hom : 
+  is_emb f p q -> is_hom f p q.
 Proof. by move=> [? fmon]; split=> // ????; rewrite fmon. Qed.
 
-Lemma axiom_fin : 
-  axiom f p q -> lFinPoset.Emb.axiom ff.
+Lemma is_emb_fin : 
+  is_emb f p q -> lFinPoset.Emb.axiom ff.
 Proof. 
   move=> [??]; apply/andP; split; 
     [ exact/Hom.mono_labW 
@@ -2451,8 +2449,8 @@ Qed.
 
 Hypothesis (fsup : forall e, e \notin finsupp p -> f e \notin finsupp q).
 
-Lemma fin_axiom : 
-  lFinPoset.Emb.axiom ff -> axiom f p q.
+Lemma fin_is_emb : 
+  lFinPoset.Emb.axiom ff -> is_emb f p q.
 Proof. 
   move=> /andP[???]; split; 
     [ exact/Hom.mono_labS 
@@ -2462,9 +2460,8 @@ Qed.
 
 End Emb.
 
-Arguments Emb.axiom {_ _ _ _} _ _.
+Arguments is_emb {_ _ _ _} _ _.
 
-Module PreOrder.
 Section hPreOrder.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
@@ -2475,13 +2472,13 @@ Definition emb_le p q :=
   ??|{ffun EQ -> EP | lFinPoset.Emb.axiom}|.
 
 Lemma emb_leP p q :
-  reflect (exists (f : E2 -> E1), axiom f q p) (emb_le p q).
+  reflect (exists (f : E2 -> E1), is_emb f q p) (emb_le p q).
 Proof. 
   apply/(equivP (fin_inhP _)); split; last first.
-  - move=> [] f ax; exists; exists (Hom.hom_down (hom_axiom ax)).
-    apply/(axiom_fin _ ax); exact/Hom.hom_down_eq. 
+  - move=> [] f ax; exists; exists (hom_down (is_emb_hom ax)).
+    apply/(is_emb_fin _ ax); exact/Hom.hom_down_eq. 
   move=> [] [] ff ax; exists (Hom.hom_lift ff). 
-  apply/(fin_axiom _ _ ax); first exact/Hom.hom_lift_eq.
+  apply/(fin_is_emb _ _ ax); first exact/Hom.hom_lift_eq.
   exact/Hom.hom_lift_Nfinsupp.
 Qed.
 
@@ -2496,7 +2493,7 @@ Lemma emb_le_size p q :
   emb_le p q -> fs_size q <= fs_size p.
 Proof. by move=> /emb_ihom_le /ihom_le_size. Qed.
 
-Lemma emb_fs_ca f p q (X : {fset E1}) : axiom f p q -> {in X &, injective f} ->
+Lemma emb_fs_ca f p q (X : {fset E1}) : is_emb f p q -> {in X &, injective f} ->
   let f : [Event of p] -> [Event of q] := f in
   {in X &, {mono f : e1 e2 / e1 <= e2}}.
 Proof.
@@ -2511,9 +2508,8 @@ Proof.
   by rewrite -?fs_caE monf.
 Qed.
 
-(* TODO: this one should be reproven for lPoset.Emb *)
 Lemma emb_dw_clos f p q es e :  
-  axiom f p q -> es `<=` finsupp p -> f @` es `<=` finsupp q ->
+  is_emb f p q -> es `<=` finsupp p -> f @` es `<=` finsupp q ->
   e \in lfsp_dw_clos p es = (f e \in lfsp_dw_clos q (f @` es)).
 Proof.
   case=> labf monf subs subsf.
@@ -2556,19 +2552,17 @@ Lemma emb_le_trans : transitive (@emb_le E E L bot).
 Proof. move=> ??? /[swap]; exact/lFinPoset.Emb.emb_le_trans. Qed.
 
 End PreOrder.
-End PreOrder.
 
 End Emb.
 
-Export Emb.PreOrder.
 
-Module Iso.
+Module Export Iso.
 Section Iso.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 Implicit Types (f : E1 -> E2).
 
-Definition axiom f p q := 
+Definition is_iso f p q := 
   let f : [Event of p] -> [Event of q] := f in
   [/\                    {mono f : e / lab e}  
     , {in (finsupp p) &, {mono f : e1 e2 / e1 <= e2}}
@@ -2579,20 +2573,20 @@ Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
 Variables (f : E1 -> E2) (ff : {ffun [FinEvent of p] -> [FinEvent of q]}).
 Hypothesis (feq : forall e : finsupp p, f (val e) = val (ff e)).
 
-Lemma hom_axiom : 
-  axiom f p q -> Hom.axiom f p q.
+Lemma is_iso_hom : 
+  is_iso f p q -> is_hom f p q.
 Proof. by move=> [? fmon ?]; split=> // ????; rewrite fmon. Qed.
 
-Lemma bhom_axiom : 
-  axiom f p q -> bHom.axiom f p q.
+Lemma is_iso_bhom : 
+  is_iso f p q -> is_bhom f p q.
 Proof. by move=> [? fmon ?]; split=> // ????; rewrite fmon. Qed.
 
-Lemma emb_axiom : 
-  axiom f p q -> Emb.axiom f p q.
+Lemma is_iso_emb : 
+  is_iso f p q -> is_emb f p q.
 Proof. by move=> []. Qed.
 
-Lemma axiom_fin : 
-  axiom f p q -> lFinPoset.Iso.axiom ff.
+Lemma is_iso_fin : 
+  is_iso f p q -> lFinPoset.Iso.axiom ff.
 Proof. 
   move=> [???]; apply/and3P; split; 
     [ exact/Hom.mono_labW 
@@ -2603,8 +2597,8 @@ Qed.
 
 Hypothesis (fsup : forall e, e \notin finsupp p -> f e \notin finsupp q).
 
-Lemma fin_axiom : 
-  lFinPoset.Iso.axiom ff -> axiom f p q.
+Lemma fin_is_iso : 
+  lFinPoset.Iso.axiom ff -> is_iso f p q.
 Proof. 
   move=> /and3P[???]; split; 
     [ exact/Hom.mono_labS 
@@ -2615,7 +2609,6 @@ Qed.
 
 End Iso.
 
-Module Equiv.
 Section hEquiv.
 Context {E1 E2 : identType} {L : eqType} {bot : L}.
 Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
@@ -2627,13 +2620,13 @@ Definition iso_eqv p q :=
 
 Lemma iso_eqvP p q :
   reflect 
-    (exists (f : E2 -> E1), axiom f q p) (iso_eqv p q).
+    (exists (f : E2 -> E1), is_iso f q p) (iso_eqv p q).
 Proof. 
   apply/(equivP (fin_inhP _)); split; last first.
-  - move=> [] f ax; exists; exists (Hom.hom_down (hom_axiom ax)).
-    apply/(axiom_fin _ ax); exact/Hom.hom_down_eq. 
+  - move=> [] f ax; exists; exists (hom_down (is_iso_hom ax)).
+    apply/(is_iso_fin _ ax); exact/Hom.hom_down_eq. 
   move=> [] [] ff ax; exists (Hom.hom_lift ff). 
-  apply/(fin_axiom _ _ ax); first exact/Hom.hom_lift_eq.
+  apply/(fin_is_iso _ _ ax); first exact/Hom.hom_lift_eq.
   exact/Hom.hom_lift_Nfinsupp.
 Qed.
 
@@ -2660,7 +2653,7 @@ Lemma iso_eqv_size p q :
 Proof. by move=> /iso_bhom_le /bhom_le_size. Qed.
 
 Lemma bhom_factor p q : bhom_le p q -> 
-  exists2 q' : lfsposet E1 L bot, iso_eqv q' q & Hom.axiom id q' p.
+  exists2 q' : lfsposet E1 L bot, iso_eqv q' q & is_hom id q' p.
 Proof.
   case/bhom_leP=> f [labf homf [/= g K K']]. 
   set fE := finsupp p.
@@ -2684,7 +2677,7 @@ Proof.
     move=>>; rewrite /ca => /orP[/eqP->//|/and3P[/[dup] fc /ft tr i1 i2]].
     move/orP=>[/eqP<-|]; rewrite ?fc ?i1 i2 //=.
     by move/andP=> [/tr->]->.
-  exists q'; first (apply/iso_eqvP=> /=; exists f); repeat split.
+  exists q'; first (apply/iso_eqvP=> /=; exists f); repeat split. 
   - move=> x; rewrite ?fs_labE ?/(_ <= _) /=.
     rewrite lFsPrePoset.build_lab /sub_lift.
     case: insubP=> /=; rewrite /fl.
@@ -2750,7 +2743,7 @@ Qed.
  * (perhaps, using normalized posets?) 
  *)
 Lemma update_iso : 
-  Iso.axiom f p q -> Iso.axiom (upd_iso f) p q.
+  is_iso f p q -> is_iso (upd_iso f) p q.
 Proof.
   move=> [] labf monof [/= g] K K'; split; rewrite /(upd_iso f).
   - move=> e /=; case: ifP=> [? | /negP en]; first exact/labf. 
@@ -2817,11 +2810,8 @@ Lemma iso_emb_le_antisym p q :
 Proof. move=> /emb_ihom_le + /emb_ihom_le; exact/iso_ihom_le_antisym. Qed.
 
 End Equiv.
-End Equiv.
 
 End Iso.
-
-Export Iso.Equiv.
 
 End lFsPoset.
 
@@ -2830,11 +2820,11 @@ Export lFsPoset.Instances.
 Export lFsPoset.Syntax.
 Export lFsPoset.Theory.
 
-Export lFsPoset.Hom.PreOrder.
-Export lFsPoset.iHom.PreOrder.
-Export lFsPoset.bHom.PreOrder.
-Export lFsPoset.Emb.PreOrder.
-Export lFsPoset.Iso.Equiv.
+Export lFsPoset.Hom.
+Export lFsPoset.iHom.
+Export lFsPoset.bHom.
+Export lFsPoset.Emb.
+Export lFsPoset.Iso.
 
 Module Pomset.
 

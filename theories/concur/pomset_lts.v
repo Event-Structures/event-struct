@@ -753,48 +753,50 @@ End BackwardStep.
 Lemma lfsp_lin_lang p (ls : seq L) : 
   let emp := lFsPoset.empty E L bot in 
   bot \notin ls ->
-  lFsPoset.Hom.axiom id p (lFsPoset.of_seq E L bot ls) ->
+  is_hom id p (lFsPoset.of_seq E L bot ls) ->
   exists2 tr : trace _,
       lst_state emp tr = p & 
       labels tr = ls.
 Proof.
-  elim/last_ind: ls p=>/=.
-  - move=> ? _ /finsupp_hom_id fE; exists [trace] => //=.
+  elim/last_ind: ls p=>/=.    
+  - move=> ? _ homf; exists [trace] => //=.
     apply/esym/val_inj/lFsPrePoset.empty_eqP. 
-    rewrite /fs_size -fE lFsPoset.of_seq_valE //.
+    rewrite /fs_size (is_hom_id_finsuppE homf).
+    rewrite lFsPoset.of_seq_valE //.
     by move: lFsPrePoset.of_seq_size; rewrite /fs_size=>->.
-  move=> ls l IHl p nb ax.
+  move=> ls l IHl p nb homf.
   case: (@backward_step p (size ls).+1).
-  - exact/(hom_operational ax)/operational_of_seq.
-  - rewrite -(finsupp_hom_id ax) lFsPoset.of_seq_valE nb //.
+  - exact/(is_hom_operational homf)/operational_of_seq.
+  - rewrite (is_hom_id_finsuppE homf) lFsPoset.of_seq_valE nb //.
     by rewrite lFsPrePoset.of_seq_finsupp // size_rcons.
   - lia.
   move=> q.
   pose n := (size ls).+1.
   pose e : E := iter n.-1 fresh \i0.
   have->: fs_lab p e = l.
-  - case: ax=> /(_ e); rewrite ?fs_labE /=.
+  - case: homf=> /(_ e); rewrite ?fs_labE /=.
     rewrite lFsPoset.of_seq_labE nb //.
     encodify; rewrite nth_rcons.
     case: ifP; first lia; by rewrite eqxx.
-  move=> str; move: nb ax.
+  move=> str; move: nb homf.
   rewrite mem_rcons ?inE negb_or=> /andP[/[1! eq_sym]??].
-  rewrite of_seq_rcons // => ax.
+  rewrite of_seq_rcons // => homf.
   have?: 
     (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i0])
     `<=` finsupp (lFsPoset.of_seq E L bot ls).
   - exact/max_of_seq.
   move: (str); case/lfsp_ltransP=> ?[es ?/[dup] pE->].
-  move/finsupp_hom_id: (ax).
+  move: homf=> /[dup] homf /is_hom_id_finsuppE.
   rewrite pE ?lfsp_add_eventE // => fE.
   have fqE: lfsp_fresh (lFsPoset.of_seq E L bot ls) = lfsp_fresh q.
-  - apply/(@is_sup_uniq _ _ (lfsp_fresh q |` finsupp q));
-    first rewrite -?fE; exact/is_sup_fresh.
+  - apply/(@is_sup_uniq _ _ (lfsp_fresh q |` finsupp q)).
+    + rewrite fE; exact/is_sup_fresh.
+    exact/is_sup_fresh.
   have fsE: finsupp q = finsupp (lFsPoset.of_seq E L bot ls).
   - apply/fsetP=> x; move/fsetP/(_ x): fE; rewrite ?inE fqE.
     case: (x =P _)=> //->_; by rewrite -{2}fqE ?(negbTE (fresh_seq_nmem _)).
   case: (IHl q)=> //.
-  - move: ax; rewrite /lFsPoset.Hom.axiom /lab ?fs_labE /==> -[lf lc]; split.
+  - move: homf; rewrite /is_hom /lab ?fs_labE /==> -[lf lc]; split.
     + move: lf=> /[swap] x /(_ x); rewrite pE ?lfsp_add_eventE // fqE.
       case: ifP=> // /eqP-> _.
       by rewrite ?fs_lab_bot // -?fsE /lfsp_fresh fresh_seq_nmem.
