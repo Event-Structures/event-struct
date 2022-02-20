@@ -83,7 +83,67 @@ Proof.
   rewrite !eqr; exact/anti.
 Qed.
 
-End Rel. 
+Lemma eq_trans r1 r2 : 
+  r1 =2 r2 -> transitive r1 <-> transitive r2.
+Proof. 
+  move=> eqr; split=> trans z x y.
+  - rewrite -?eqr; exact/trans.
+  rewrite ?eqr; exact/trans.
+Qed.
+
+End Rel.
+
+Section ClosRefl.
+Context {T : eqType}.
+Implicit Types (r : {dhrel T & T}). 
+
+Lemma dhrel_qmkE r :
+  r^? =2 [rel x y | (x == y) || (r x y)].
+Proof. done. Qed.
+
+Lemma qmk_refl r :
+  reflexive r^?.
+Proof. by move=> x; rewrite dhrel_qmkE /= eqxx. Qed.
+
+Lemma qmk_antisym r :
+  antisymmetric r -> antisymmetric r^?.
+Proof. 
+  move=> asym x y; rewrite !dhrel_qmkE /=.
+  move=> /andP[] /orP[/eqP->|?] // /orP[/eqP->|?] //.
+  by apply/asym/andP.  
+Qed.
+  
+Lemma qmk_trans r :
+  transitive r -> transitive r^?.
+Proof.
+  move=> trans z x y; rewrite !dhrel_qmkE /=.
+  move=> /orP[/eqP<-|rxz] // /orP[/eqP<-|rzy] //.
+  apply/orP; right; apply/trans; [exact/rxz|exact/rzy]. 
+Qed.
+
+End ClosRefl.
+
+Section SubRelLift.
+Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
+
+Lemma sub_rel_lift_qmk (r : {dhrel S & S}) :
+  (sub_rel_lift r : {dhrel T & T})^? =2 (sub_rel_lift r^? : {dhrel T & T})^?. 
+Proof. 
+  move=> x y; rewrite !dhrel_qmkE /=.
+  apply/idP/idP=> [/orP[|]|].
+  - by move=> /eqP->; rewrite eqxx. 
+  - move=> /sub_rel_liftP[] x' [] y' [] ? <- <-.
+    apply/orP; right; apply/sub_rel_liftP. 
+    exists x', y'; split=> //=.
+    by apply/orP; right. 
+  move=> /orP[/eqP->|]; rewrite ?eqxx //.
+  move=> /sub_rel_liftP[] x' [] y' [] /= + <- <-.
+  move=> /orP[/eqP->|]; rewrite ?eqxx //.
+  move=> ?; apply/orP; right; apply/sub_rel_liftP.
+  by exists x', y'.
+Qed.
+
+End SubRelLift.
 
 Section FinGraph. 
 Context {T : finType}.

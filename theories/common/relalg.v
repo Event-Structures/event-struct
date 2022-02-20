@@ -56,6 +56,10 @@ Lemma qmk_weq `{laws} `{CUP ≪ l} n (x y : X n n):
   x ≡ y -> x^? ≡ y^?.
 Proof. by move => ->. Qed.
 
+Lemma qmk_str `{laws} `{BKA ≪ l} n (x : X n n) :
+  x^*^? ≡ x^*.
+Proof. ka. Qed.
+
 (* ************************************************************************** *)
 (*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
 (* ************************************************************************** *)
@@ -474,6 +478,10 @@ End RelClos.
 Section FinRel.
 Context {T : finType}.
 Implicit Types (R : hrel T T) (r : rel T).
+
+Lemma connect_strE r : 
+  (r : {fhrel T & T})^* ≡ (connect r).
+Proof. done. Qed.
 
 Lemma connect_strP r x y : 
   reflect ((r : hrel T T)^* x y) (connect r x y).
