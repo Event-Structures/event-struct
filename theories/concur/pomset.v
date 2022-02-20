@@ -120,23 +120,25 @@ Definition fs_ca p : rel E :=
 Definition fs_sca p : rel E := 
   fun e1 e2 => (e2 != e1) && (fs_ca p e1 e2).
 
-(* TODO: rename lfsp_size? *)
-Definition fs_size p : nat := #|` finsupp p|.
+Definition lfsp_events p : {fset E} := 
+  [fset e in finsupp p | fs_lab p e != bot].
 
-Definition lab_defined p := 
-  [forall e : finsupp p, fs_lab p (val e) != bot].
+(* TODO: rename lfsp_size? *)
+Definition fs_size p : nat := #|` lfsp_events p|.
 
 Definition supp_closed p := 
-  [forall e : finsupp p, fs_rcov p (val e) `<=` finsupp p].
+  [forall e : finsupp p, forall e' : fs_rcov p (val e), 
+    (val e \in lfsp_events p) && (val e' \in lfsp_events p) 
+  ].
 
 (* TODO: better name? *)
 Definition operational p := 
-  [forall e1 : finsupp p, forall e2 : finsupp p, 
+  [forall e1 : lfsp_events p, forall e2 : lfsp_events p, 
     (fs_ca p (val e1) (val e2)) ==> (val e1 <=^i val e2)
   ].
 
 Definition conseq_num p :=
-  finsupp p == [fset e | e in nfresh \i0 (fs_size p)].
+  lfsp_events p == [fset e | e in nfresh \i0 (fs_size p)].
 
 Definition lfsp_tseq p : seq E := 
   map val (tseq (rgraph (@fin_ica p))).
@@ -151,26 +153,26 @@ Definition lfsp_labels p : seq L :=
   map (fs_lab p) (lfsp_tseq p).
 
 Definition lfsp_fresh p : E := 
-  fresh_seq (finsupp p).
+  fresh_seq (lfsp_events p).
 
 Definition lfsp_pideal p e : {fset E} := 
-  [fset e' in (e |` finsupp p) | fs_ca p e' e].
+  [fset e' in (e |` lfsp_events p) | fs_ca p e' e].
 
 (* TODO: unify with UpFinPOrder *)
 Definition lfsp_dw_clos p es := 
-  [seq e <- finsupp p | [exists e' : es, fs_ca p e (val e')]].
+  [seq e <- lfsp_events p | [exists e' : es, fs_ca p e (val e')]].
 
 (* TODO: unify with UpFinPOrder *)
 Definition lfsp_is_maximal p e := 
-  [forall e' : finsupp p, (fs_ca p e (val e')) ==> (fs_ca p (val e') e)].
+  [forall e' : lfsp_events p, (fs_ca p e (val e')) ==> (fs_ca p (val e') e)].
 
 (* TODO: unify with UpFinPOrder *)
 Definition lfsp_is_greatest p e := 
-  [forall e' : finsupp p, fs_ca p (val e') e].
+  [forall e' : lfsp_events p, fs_ca p (val e') e].
 
 Definition lfsp_equiv_partition p r : {fset {fset E}} := 
-  let part := equivalence_partition r [set: finsupp p] in
-  [fset [fset (val e) | e : finsupp p & (e \in (P : {set _}))] | P in part].
+  let part := equivalence_partition r [set: lfsp_events p] in
+  [fset [fset (val e) | e : lfsp_events p & (e \in (P : {set _}))] | P in part].
 
 (* TODO: move/restructure *)
 Context (L' : eqType) (bot' : L').
@@ -181,7 +183,7 @@ Definition bot_preserving f :=
   f bot == bot'.
 
 Definition finsupp_preserving p f := 
-  [forall e : finsupp p, f (fs_lab p (val e)) != bot'].
+  [forall e : lfsp_events p, f (fs_lab p (val e)) != bot'].
 
 End Def.
 
@@ -228,29 +230,29 @@ Proof.
   exact/connect0.
 Qed.
 
-Lemma lab_definedP p : 
-  reflect {in finsupp p, forall e, fs_lab p e != bot} (lab_defined p).
-Proof. 
-  rewrite /lab_defined /fs_lab. 
-  apply/equivP; first exact/forallP.
-  split=> H e /=.
-  - case: finsuppP=> //= inP _.
-    by rewrite (H (Sub e inP)).
-  by rewrite (H (val e) (valP e)).
-Qed.
+(* Lemma lfsp_events_finsupp p :  *)
+(*   lfsp_events p `<=` finsupp p *)
 
 Lemma supp_closedP p : 
   reflect (forall e1 e2, fs_ica p e1 e2 -> 
-            (e1 \in finsupp p) * (e2 \in finsupp p))
+            (e1 \in lfsp_events p) * (e2 \in lfsp_events p))
           (supp_closed p).
 Proof. 
-  rewrite /supp_closed /fs_ica /fs_rcov. 
-  apply/(equivP forallP); split=> /=; last first.
-  - move=> ica_supp; case=> e2 in_supp /=. 
-    by apply/fsubsetP=> e1 /ica_supp [].
-  move=> all_supp e1 e2 /=.
-  case: (in_fsetP (finsupp p) e2)=> [e2'|].
-  - by move: (all_supp e2')=> /fsubsetP /[swap] /= <- /[apply] ->.
+  rewrite /supp_closed /fs_ica.
+  apply/(equivP (forallPP _)). 
+  - move=> ?; exact/forallP.
+  split=> /=; last first.
+  - move=> ica_supp; case=> e2 in_supp /=; case=> e1 in1 /=.
+    by move: (ica_supp e1 e2 in1)=> [-> ->].
+  move=> all_supp e1 e2 in1 /=.
+  case: (in_fsetP (finsupp p) e2)=> [e2'|]; last first.
+  - move: in1=> + /fsfun_dflt. 
+    by rewrite /fs_rcov=> /[swap] -> /= //.
+  move: in1=> /[swap] -> in1.
+  move: (all_supp e2' (Sub e1 in1))=> /=. 
+  case: (val e2' \in lfsp_events p)=> /=.
+  move=> /implyP.  
+  - move: (all_supp e2')=> /fsubsetP /[swap] /= <- /[apply] ->. *)
   by move=> /fsfun_dflt -> //.
 Qed.
 
