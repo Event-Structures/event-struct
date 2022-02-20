@@ -301,16 +301,16 @@ Qed.
 
 End SurjectiveChoice.
 
-Section SurjectiveSub.
+Section SurjectiveRst.
 Context {rT aT : Type}.
 Implicit Types (f : aT -> rT).
 Implicit Types (rP : pred rT) (aP : pred aT).
 
-Lemma surj_subE rP aP f : 
+Lemma surj_rstE rP aP f : 
   {in rP, surjective [rst f | aP]} <-> (forall y, rP y -> exists2 x, aP x & f x = y).
 Proof. by split=> surjf y py; apply/(rst_existsE f (eq^~ y))/surjf. Qed.
 
-End SurjectiveSub.
+End SurjectiveRst.
 
 (* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
