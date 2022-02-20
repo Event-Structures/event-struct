@@ -501,13 +501,15 @@ Proof.
   by rewrite imfsetU !imfset1=> /=.
 Qed.
 
-(* TODO: refactor, use homo_pideal *)
+(* TODO: move to order.v *)
 Lemma hom_prefix f e1 e2 : 
   e1 <= f e2 -> exists2 e, e1 = f e & e <= e2.
 Proof. 
   case: f=> {}f [] ? + ? /=. 
-  by rewrite homo_pidealE=> /[apply].
-Qed.   
+  rewrite homo_pidealE=> /(_ e2).
+  rewrite /dw_surjective_le surj_rstE. 
+  by move=> /[apply] [[]] /= e ??; exists e.
+Qed. 
 
 Lemma hom_cons_inj f X : 
   cons X -> {in X & X, injective f}.
@@ -524,6 +526,7 @@ Qed.
 Lemma in_cons_ca_anti f X :
   cons X -> {in X & X, forall e1 e2, f e1 <= f e2 -> e1 <= e2}.
 Proof.
+  (* TODO: use dw_surj_le_in_ahomo_in lemma *)
   move=> c e1 e2 i ? /hom_prefix[x /[swap] l /(@hom_cons_inj f (x |` X))-> //].
   - by apply/(cons_prop l); rewrite mem_fset1U.
   all: by rewrite ?inE (i, eqxx).
@@ -610,7 +613,8 @@ Implicit Types (f : E1 -> E2).
 Definition axiom f := 
   [/\ { mono f : e / lab e }
     , { mono f : e1 e2 / e1 <= e2 }
-    & { mono (@!f) : X / wcons X } 
+    , { mono (@!f) : X / wcons X } 
+    & bijective f
   ].
 
 Structure type := Pack { apply ; _ : axiom apply }.
@@ -624,95 +628,74 @@ Definition type_of (_ : phant (E1 -> E2)) := type.
 
 Lemma hom_axiom_of f : axiom f -> Hom.axiom f.
 Proof. 
-  move=> [] labf lef consf; split=> //.
-  - 
+  move=> [] labf lef consf bijf; split=> //; last exact/monoW.
+  apply/homo_pidealE/ahomo_dw_surj_le.
+  - exact/mono2aW.
+  exact/surj_dw_surj/bij_surj.
+Qed.
 
-Lemma ihom_axiom_of f : axiom f -> iHom.axiom f.
-Proof. by move=> [] ?? /bij_inj. Qed.
-
-Lemma bhom_axiom_of f : Hom.axiom f -> bijective f -> axiom f.
+Lemma lposet_iso_axiom_of f : axiom f -> lPoset.Iso.Iso.axiom f.
 Proof. by move=> []. Qed.
+
+Lemma iso_axiom_of f : lPoset.Iso.Iso.axiom f -> 
+  { mono (@!f) : X / wcons X } -> axiom f.
+Proof. by move=> [] *; split=> //. Qed.
 
 Variables (cT : type).
 
 Lemma homAxiom : Hom.axiom cT.
 Proof. by case: cT=> /= ? /hom_axiom_of. Qed.
 
-Lemma ihomAxiom : iHom.axiom cT.
-Proof. by case: cT=> /= ? /ihom_axiom_of. Qed.
+Lemma lposet_homAxiom : lPoset.Hom.Hom.axiom cT.
+Proof. 
+  case: cT=> /= ? /lposet_iso_axiom_of.
+  exact/lPoset.Iso.Iso.hom_axiom_of. 
+Qed.
 
-Definition homType  :=  Hom.Pack  homAxiom.
-Definition ihomType := iHom.Pack ihomAxiom.
+Lemma lposet_ihomAxiom : lPoset.iHom.iHom.axiom cT.
+Proof. 
+  case: cT=> /= ? /lposet_iso_axiom_of.
+  exact/lPoset.Iso.Iso.ihom_axiom_of. 
+Qed.
+
+Lemma lposet_bhomAxiom : lPoset.bHom.bHom.axiom cT.
+Proof. 
+  case: cT=> /= ? /lposet_iso_axiom_of.
+  exact/lPoset.Iso.Iso.bhom_axiom_of. 
+Qed.
+
+Lemma lposet_embAxiom : lPoset.Emb.Emb.axiom cT.
+Proof. 
+  case: cT=> /= ? /lposet_iso_axiom_of.
+  exact/lPoset.Iso.Iso.emb_axiom_of. 
+Qed.
+
+Lemma lposet_isoAxiom : lPoset.Iso.Iso.axiom cT.
+Proof. by case: cT=> /= ? /lposet_iso_axiom_of. Qed.
+
+Definition homType         := Hom.Pack homAxiom.
+Definition lposet_homType  := lPoset.Hom.Hom.Pack lposet_homAxiom.
+Definition lposet_ihomType := lPoset.iHom.iHom.Pack lposet_ihomAxiom.
+Definition lposet_bhomType := lPoset.bHom.bHom.Pack lposet_bhomAxiom.
+Definition lposet_embType  := lPoset.Emb.Emb.Pack lposet_embAxiom.
+Definition lposet_isoType  := lPoset.Iso.Iso.Pack lposet_isoAxiom.
 
 End ClassDef.
 
 Module Export Exports.
 Coercion apply : type >-> Funclass.
 Coercion  homType : type >-> Hom.type.
-Coercion ihomType : type >-> iHom.type.
+Coercion lposet_homType  : type >-> lPoset.Hom.Hom.type.
+Coercion lposet_ihomType : type >-> lPoset.iHom.iHom.type.
+Coercion lposet_bhomType : type >-> lPoset.bHom.bHom.type.
+Coercion lposet_embType  : type >-> lPoset.Emb.Emb.type.
+Coercion lposet_isoType  : type >-> lPoset.Iso.Iso.type.
 Canonical  homType.
-Canonical ihomType.
-End Exports.
-
-Record mixin_of f := Mixin {
-  _ : forall X : {fset E1}, cons X <-> cons (f @` X)
-}.
-
-Set Primitive Projections.
-Record class_of f := Class {
-  base  : lPoset.Iso.Iso.class_of f;
-  mixin : mixin_of f
-}.
-Unset Primitive Projections.
-
-Local Coercion base : class_of >-> lPoset.Iso.Iso.class_of.
-
-Structure type := Pack { apply ; _ : class_of apply }.
-
-Local Coercion apply : type >-> Funclass.
-
-Variables (cT : type).
-
-Definition class := let: Pack _ c as cT' := cT return class_of (apply cT') in c.
-Definition clone f c of phant_id class c := @Pack f c.
-
-(* Definition pack := *)
-(*   fun bE b & phant_id (@Order.POrder.class tt bE) b => *)
-(*   fun m => Pack (@Class E L b m). *)
-
-Definition lposetIsoType  := lPoset.Iso.Iso.Pack class.
-Definition lposetHomType := lPoset.Hom.Hom.Pack class.
-Definition lposetbHomType := lPoset.bHom.bHom.Pack class.  
-
-Lemma hom_class_of : Hom.class_of cT.
-Proof.
-  case: cT=> f [/= [[[[/= lp cm [g c1 c2 [cam [ce]]]]]]]].
-  do ? split=> //.
-  - move=> e1 ?; exists (g e1)=> //; apply/cam; by rewrite c2.
-  - move=> X /andP[/ce ??]; apply/andP; split=> //.
-    rewrite card_in_imfset=> //>??; exact/(can_inj c1).
-Qed.
-
-Definition homType := Hom.Pack hom_class_of.
-
-Definition mk h mkH : type :=
-  mkH (let: Pack _ c := h return @class_of h in c).
-
-Definition type_of (_ : phant (E1 -> E2)) := type.
-
-End ClassDef.
-
-Module Export Exports.
-Coercion base : class_of >-> lPoset.Iso.Iso.class_of.
-Coercion apply : type >-> Funclass.
-Coercion homType  : type >-> Hom.type.
-Coercion lposetIsoType : type >-> lPoset.Iso.Iso.type.
-Coercion lposetHomType : type >-> lPoset.Hom.Hom.type.
-Coercion lposetbHomType : type >-> lPoset.bHom.bHom.type.
-Canonical homType.
-Canonical lposetHomType.
-Canonical lposetbHomType.
-Canonical lposetIsoType.
+Canonical lposet_homType.
+Canonical lposet_ihomType.
+Canonical lposet_bhomType.
+Canonical lposet_embType.
+Canonical lposet_isoType.
 End Exports.
 
 End Iso.
@@ -731,8 +714,9 @@ Module Export Theory.
 Section Theory.
 Context {L : Type} {E1 E2 : PrimeC.eventType L} (f : {iso E1 -> E2}).
 
-Lemma cons_fE (X : {fset E1}) : cons X <-> cons (f @` X).
-Proof. by case: f=> ? [? []]. Qed.
+Lemma wcons_mono : 
+  { mono (@!f) : X / wcons X }.
+Proof. by case: f=> ? []. Qed.
 
 End Theory.
 End Theory.
@@ -740,56 +724,31 @@ End Theory.
 
 Module Build.
 Section Build.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {iso E2 -> E3}) (g : {iso E1 -> E2}).
 
-Lemma id_class {E} : Iso.class_of (@idfun E).
-Proof.
-  split; first exact/lPoset.Iso.Build.id_class.
-  by split=> ?; rewrite imfset_id. 
+Lemma id_axiom : Iso.axiom (@idfun E).
+Proof. 
+  constructor=> //=; last by exists id. 
+  by move=> X; rewrite imfset_id.
 Qed.
 
-Lemma inv_class {E1 E2} (f : {iso E1 -> E2}) :
-  Iso.class_of (lPoset.bHom.invF f).
-Proof.
-  case: (lPoset.Iso.Build.inv_class [iso of f]%pomset)=> [[[[??[g ??[?]]]]]].
-  do ? split=> //; [by exists g| |].
-  - move=> ?; rewrite (cons_fE f) -imfset_comp.
-    by under eq_imfset do [rewrite /= can_inv|by []]; rewrite imfset_id.
-  move/(cons_fE f); rewrite -imfset_comp.
-  by under eq_imfset do [rewrite /= can_inv|by []]; rewrite imfset_id.
+Lemma comp_axiom f g : Iso.axiom (f \o g).
+Proof. 
+  apply/Iso.iso_axiom_of.
+  - exact/lPoset.Iso.Build.comp_axiom.
+  by move=> X /=; rewrite imfset_comp !wcons_mono.
 Qed.
-
-Lemma comp_class {E1 E2 E3} (f : {iso E2 -> E3}) (g : {iso E1 -> E2}) : 
-  Iso.class_of (f \o g).
-Proof.
-  split; first exact/lPoset.Iso.Build.comp_class.
-  by split=> X; rewrite imfset_comp -?cons_fE.
-Qed.
-
-Lemma of_eqfun_class {E1 E2} (f : {iso  E1 -> E2}) g :
-  g =1 f -> Iso.class_of g.
-Proof.
-  move=> E; split; first exact/(lPoset.Iso.Build.of_eqfun_class E).
-  split; move=> ?; under eq_imfset do [rewrite E|by []]; exact/cons_fE.
-Qed.
-
-Definition of_eqfun {E1 E2} (f : {iso  E1 -> E2}) g : g =1 f -> {iso  E1 -> E2} := 
-  fun eqf => Iso.Pack (of_eqfun_class eqf).
 
 End Build.
+
 Module Export Exports.
 Section Exports.
-Context {L : Type}.
-Implicit Types (E : eventType L).
+Context {L : Type} {E E1 E2 E3 : eventType L}.
+Implicit Types (f : {iso E2 -> E3}) (g : {iso E1 -> E2}).
 
-Canonical id_iso E : {iso E -> E} := Iso.Pack id_class.
-
-Canonical comp_iso E1 E2 E3 : {iso E2 -> E3} -> {iso E1 -> E2} -> {iso E1 -> E3} :=
-  fun f g => Iso.Pack (comp_class f g).
-
-Canonical inv {E1 E2} : {iso E1 -> E2} -> {iso E2 -> E1} := 
-  fun f => Iso.Pack (inv_class f).
+Canonical id_bhom := Iso.Pack (@id_axiom L E).
+Canonical comp_bhom f g := Iso.Pack (comp_axiom f g).
 
 End Exports.
 End Exports.
