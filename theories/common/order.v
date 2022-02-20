@@ -354,7 +354,7 @@ End MaxSup.
 Section DwSurjective.
 Context {dispT : unit} {T : porderType dispT}.
 Context {dispU : unit} {U : porderType dispU}.
-Implicit Types (f : T -> U) (pT : pred T) (pU : pred U).
+Implicit Types (f : T -> U) (P : pred T) (Q : pred U).
 Implicit Types (x y z : T).
 
 (* TODO: consult literature to find relevant theory *)
@@ -391,12 +391,21 @@ Proof.
   by move=> /lef lez; exists (Sub z lez).
 Qed.
 
-Lemma inj_dw_surj_le_ahomo f : 
-  injective f -> dw_surjective_le f -> {ahomo f : x y / x <= y}. 
+Lemma dw_surj_le_in_ahomo_in f P : dw_surjective_le f -> dw_closed P ->
+  {in P &, injective f} -> {in P &, {ahomo f : x y / x <= y}}. 
 Proof. 
-  move=> injf dwf x y. 
+  move=> dwf dwX injf x y xin yin. 
   move=> /dwf[[z]] /= zin.
-  by rewrite /rst /= => /injf <-.
+  rewrite /rst /= => /injf <- //.
+  by apply/dwX/yin.
+Qed. 
+
+Lemma dw_surj_le_inj_ahomo f : 
+  dw_surjective_le f -> injective f -> {ahomo f : x y / x <= y}. 
+Proof. 
+  move=> dwf injf x y.
+  apply/(@dw_surj_le_in_ahomo_in f predT)=> //.
+  move=>> ??; exact/injf. 
 Qed. 
 
 Lemma dw_surj_le_closed f (X : pred T) (Y : pred U) : 
@@ -599,17 +608,17 @@ Context {T U V : dwFinPOrderType}.
 Implicit Types (f : T -> U) (g : U -> V).
 
 Lemma homo_pidealE {T1 U1 : dwFinPOrderType} (f : T1 -> U1) : 
-  (* TODO: reformulate in terms of surjective *)
-  { homo pideal f } <-> (forall x y, y <= f x -> exists2 z, y = f z & z <= x).
+  { homo pideal f } <-> dw_surjective_le f.
 Proof. 
   split=> [homf x y | subs].
-  - rewrite -pidealE=> yin. 
+  - rewrite inE -pidealE=> yin. 
     move: (homf x)=> /fsubsetP /(_ y yin). 
     move=> /imfsetP=> [[]] z /= + ->.
-    by rewrite pidealE; exists z.
+    by rewrite pidealE=> zle; exists (Sub z zle).
   move=> x; apply/fsubsetP=> y.
   rewrite pidealE=> yle.
-  move: (subs x y yle)=> [z] -> zle.
+  move: (subs x y yle)=> [[z]] /= zle.
+  rewrite /rst /= => <-.
   apply/imfsetP; exists z=> //=.
   by rewrite pidealE.
 Qed.
@@ -618,8 +627,9 @@ Lemma homo_pideal_comp g f :
   {homo pideal g} -> {homo pideal f} -> {homo pideal (g \o f)}.
 Proof. 
   rewrite !homo_pidealE=> hg hf x y /=.
-  move=> /hg [a] -> /hf [b] -> ?. 
-  by exists b.
+  move=> /hg [[a]] /=; rewrite /rst /= => +   <-. 
+  move=> /hf [[b]] /=; rewrite /rst /= => bin <-.  
+  by exists (Sub b bin).
 Qed.
 
 Lemma dw_closedb_imfsetE f X : injective f -> {homo f : x y / x <= y} -> 
