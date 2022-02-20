@@ -415,10 +415,14 @@ Proof.
     //; by case: (p)=> /=> /and3P[] //.
 Qed.
 
-Lemma add_event_ca_freshE l es p e : 
+Lemma add_event_ca_freshE l es p e : l != bot -> (es `<=` finsupp p) ->
   fs_ca (lfsp_add_event l es p) e (lfsp_fresh p) = 
     (e == lfsp_fresh p) || (e \in lfsp_dw_clos p es).
-Proof. admit. Admitted.
+Proof.
+  rewrite ?/lfsp_add_event; case: eqP=> //=; last first. 
+  - by move=> /negP; rewrite negb_and=> /orP[|] /negP.  
+  by move=> /andP[_ _] ??; rewrite add_event_ca_freshE.
+Qed.
 
 Lemma lfsp_ltransP l p q :
   reflect (l != bot /\ exists2 es, 
