@@ -67,6 +67,10 @@ Proof.
   apply: eqP; apply/iff_eqP; intuition.
 Qed.
 
+Lemma nmem_subset {T : Type} (p q : pred T) x : 
+  {subset p <= q} -> x \notin q -> x \notin p.
+Proof. by move=> subs; apply/contra=> ?; rewrite subs. Qed.
+
 (* ************************************************************************** *)
 (*     Anti-homomorphism (i.e. homomorphism with reversed direction)          *)
 (* ************************************************************************** *)
