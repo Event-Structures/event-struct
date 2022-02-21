@@ -67,6 +67,14 @@ Proof.
   by firstorder.
 Qed.
 
+Lemma sub_irrefl r1 r2 :
+  subrel r1 r2 -> irreflexive r2 -> irreflexive r1.
+Proof. by move=> sub irr x; apply/idP=> /sub; rewrite irr. Qed.
+
+Lemma sub_antisym r1 r2 :
+  subrel r1 r2 -> antisymmetric r2 -> antisymmetric r1.
+Proof. move=> sub anti x y /andP[??]; apply/anti/andP; split; exact/sub. Qed.
+
 Lemma eq_irrefl r1 r2 : 
   r1 =2 r2 -> irreflexive r1 <-> irreflexive r2.
 Proof. 
@@ -309,6 +317,14 @@ Definition iker r : rel T :=
   fun x y => (y != x) && r x y.
 
 Lemma iker_qmk r : 
+  iker (r : {dhrel T & T})^? =2 iker r.
+Proof. 
+  move=> x y; rewrite /iker dhrel_qmkE /=.
+  rewrite andb_orr orb_idl //. 
+  by rewrite eq_sym=> /andP[] /negP.
+Qed.
+
+Lemma qmk_iker r : 
   reflexive r -> (iker r : {dhrel T & T})^? =2 r.
 Proof. 
   move=> refl x y ; rewrite dhrel_qmkE /= /iker.
