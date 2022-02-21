@@ -206,6 +206,10 @@ Context (E : identType) (L : eqType).
 Variable (bot : L).
 Implicit Types (p q : lfspreposet E L bot) (ls : seq L).
 
+(* ************************************************************************** *)
+(*     Basic properties                                                       *)
+(* ************************************************************************** *)
+
 Lemma fs_sca_def p e1 e2 : 
   fs_sca p e1 e2 = (e2 != e1) && (fs_ca p e1 e2).
 Proof. done. Qed.
@@ -226,6 +230,22 @@ Proof.
   move: (eq_ica e' e)=> /=.
   by rewrite /fs_rcov.
 Qed.
+
+Lemma fs_ca_refl p : 
+  reflexive (fs_ca p). 
+Proof. exact/qmk_refl. Qed.
+
+Lemma fs_ca_antisym p :
+  acyclic (fin_ica p) -> antisymmetric (fs_ca p).
+Proof. move=> asym; exact/qmk_antisym/sub_rel_lift_antisym/acyc_antisym. Qed.
+
+Lemma fs_ca_trans p : 
+  transitive (fs_ca p). 
+Proof. move=> asym; exact/qmk_trans/sub_rel_lift_trans/connect_trans. Qed.
+
+(* ************************************************************************** *)
+(*     Switching between finType <-> finsupp                                  *)
+(* ************************************************************************** *)
 
 Lemma fin_lab_mono p : 
   {mono val : e / fin_lab p e >-> fs_lab p e}.
@@ -249,9 +269,9 @@ Proof.
   exact/connect_refl.
 Qed.
 
-Lemma eventset_fsupp p : 
-  lfsp_eventset p `<=` finsupp p.
-Proof. by apply/fsubsetP=> e; rewrite inE=> /andP[]. Qed.
+(* ************************************************************************** *)
+(*     Lab and eventset lemmas                                                *)
+(* ************************************************************************** *)
 
 Lemma fs_labNbot p e : 
   (fs_lab p e != bot) = (e \in lfsp_eventset p).
@@ -263,6 +283,113 @@ Qed.
 Lemma fs_lab_bot p e : 
   (e \notin lfsp_eventset p) -> fs_lab p e = bot.
 Proof. by rewrite -fs_labNbot negbK=> /eqP. Qed.  
+
+Lemma eventset_fsupp p : 
+  lfsp_eventset p `<=` finsupp p.
+Proof. by apply/fsubsetP=> e; rewrite inE=> /andP[]. Qed.
+
+(* ************************************************************************** *)
+(*     Properties of topological sorting and event numbering                  *)
+(* ************************************************************************** *)
+
+Lemma lfsp_tseq_size p : 
+  size (lfsp_tseq p) = lfsp_size p. 
+Proof. by rewrite /lfsp_tseq /lfsp_size size_map size_tseq cardfE. Qed.
+
+Lemma mem_lfsp_tseq p : 
+  lfsp_tseq p =i lfsp_eventset p.
+Proof. 
+  rewrite /lfsp_tseq=> e.
+  apply/idP/idP.
+  - by move=> /mapP [e'] + ->; case: e'.
+  move=> in_supp; apply/mapP.
+  exists (Sub e in_supp)=> //.
+  by rewrite mem_tseq fintype.mem_enum. 
+Qed.
+
+Lemma lfsp_tseq_uniq p : 
+  uniq (lfsp_tseq p).
+Proof. rewrite /lfsp_tseq (map_inj_uniq val_inj); exact/tseq_uniq. Qed.
+
+
+Lemma lfsp_idx_lt_szE p e :
+  (lfsp_idx p e < lfsp_size p)%N = (e \in lfsp_eventset p).
+Proof. by rewrite /lfsp_idx -lfsp_tseq_size index_mem mem_lfsp_tseq. Qed.
+
+Lemma lfsp_idx_le_sz p e :
+  lfsp_idx p e <= lfsp_size p.
+Proof. rewrite /lfsp_idx -lfsp_tseq_size; exact/index_size. Qed.
+
+Lemma lfsp_idxK p e0 :
+  {in lfsp_eventset p, cancel (lfsp_idx p) (lfsp_event p e0)}. 
+Proof. 
+  rewrite /lfsp_idx /lfsp_event=> e eIn.
+  by rewrite nth_index ?mem_lfsp_tseq.
+Qed.
+
+Lemma lfsp_eventK p e0 :
+  {in (< lfsp_size p), cancel (lfsp_event p e0) (lfsp_idx p)}. 
+Proof. 
+  rewrite /lfsp_idx /lfsp_event=> n. 
+  rewrite inE ltEnat=> nLe.
+  rewrite index_uniq ?lfsp_tseq_size //.
+  exact/lfsp_tseq_uniq.
+Qed.
+
+Lemma lfsp_idx_inj p : 
+  { in lfsp_eventset p &, injective (lfsp_idx p)}.
+Proof. 
+  rewrite /lfsp_idx=> e1 e2 e1In e2In.
+  by apply/index_inj; rewrite mem_lfsp_tseq.
+Qed.
+
+Lemma lfsp_idx_le p e1 e2 : acyclic (fin_ica p) ->
+  fs_ca p e1 e2 -> (lfsp_idx p e1 <= lfsp_idx p e2)%N.
+Proof.
+  move=> acyc. 
+  rewrite /lfsp_idx /lfsp_tseq /fs_ca /=.
+  move=> /orP[/eqP->|]; first exact/leqnn. 
+  rewrite /sub_rel_lift /=. 
+  case: insubP=> // e1' e1In <-.
+  case: insubP=> // e2' e2In <-.
+  rewrite !index_map; try exact/val_inj.
+  move: (tseq_correct (rgraph (fin_ica p)))=> [tc tin]. 
+  pose g := grel (rgraph (fin_ica p)).
+  have gE: g =2 (fin_ica p).
+  - by move=> x y /=; rewrite /grel /rgraph fintype.mem_enum. 
+  move=> ca12; apply/(@acyclic_connect_before _ g)=> //. 
+  - by rewrite (eq_acyclic gE). 
+  by rewrite (eq_connect gE).
+Qed.
+
+Lemma lfsp_labels_size p : 
+  size (lfsp_labels p) = lfsp_size p.
+Proof. by rewrite /lfsp_labels size_map lfsp_tseq_size. Qed.
+
+Lemma lfsp_labels_Nbot p : 
+  bot \notin lfsp_labels p.
+Proof. 
+  rewrite /lfsp_labels. 
+  apply/mapP=> [[e]].
+  rewrite mem_lfsp_tseq -fs_labNbot eq_sym. 
+  by move=> /negP + /eqP.
+Qed.
+
+(* TODO: fs_lab p e = nth bot (lfsp_labels p) (encode p e) ?? *)
+Lemma fs_lab_nthE p e :  
+  fs_lab p e = nth bot (lfsp_labels p) (lfsp_idx p e).
+Proof. 
+  rewrite /lfsp_labels /lfsp_idx.
+  case: (e \in lfsp_eventset p)/idP=> [eIn | /negP enIn].
+  - by rewrite (nth_map \i0) ?nth_index ?index_mem ?mem_lfsp_tseq.
+  rewrite nth_default ?fs_lab_bot //.
+  rewrite size_map memNindex ?lfsp_tseq_size //. 
+  by rewrite mem_lfsp_tseq.
+Qed.  
+
+(* ************************************************************************** *)
+(*     Lammas about preposets with closed support                             *)
+(* ************************************************************************** *)
 
 Lemma supp_closedP p : 
   reflect (forall e1 e2, fs_ica p e1 e2 -> 
@@ -292,8 +419,8 @@ Proof.
   by move=> /supcl [] ->.
 Qed.
 
-Lemma fs_ica_irrefl p : supp_closed p -> irreflexive (fin_ica p) -> 
-  irreflexive (fs_ica p).
+Lemma fs_ica_irrefl p : supp_closed p -> 
+  irreflexive (fin_ica p) -> irreflexive (fs_ica p).
 Proof. 
   move=> /supp_closedP supcl irr => e. 
   case: (e \in lfsp_eventset p)/idP.
@@ -302,17 +429,19 @@ Proof.
   by move=> /supcl [].
 Qed.
 
-Lemma fs_ca_refl p : 
-  reflexive (fs_ca p). 
-Proof. exact/qmk_refl. Qed.
-
-Lemma fs_ca_antisym p :
-  acyclic (fin_ica p) -> antisymmetric (fs_ca p).
-Proof. move=> asym; exact/qmk_antisym/sub_rel_lift_antisym/acyc_antisym. Qed.
-
-Lemma fs_ca_trans p : 
-  transitive (fs_ca p). 
-Proof. move=> asym; exact/qmk_trans/sub_rel_lift_trans/connect_trans. Qed.
+Lemma fin_ica_acyclic p : 
+  irreflexive (fs_ica p) -> antisymmetric (fs_ca p) -> acyclic (fin_ica p).
+Proof. 
+  move=> irrefl asym.
+  rewrite acyclicE; apply/andP; split.
+  - apply/irreflexiveP/irreflexive_mono. 
+    + exact/fin_ica_mono. 
+    by move=> ? /=.
+  apply/antisymmetricP/antisymmetric_mono. 
+  - exact/fin_ca_mono. 
+  move=> /= x y /andP[??].
+  by apply/val_inj/asym/andP.
+Qed.
  
 Lemma fs_caP p e1 e2 : supp_closed p -> 
   reflect (clos_refl_trans (fs_ica p) e1 e2) (fs_ca p e1 e2).
@@ -362,18 +491,6 @@ Proof.
   apply/rt_trans; first exact/rt12. 
   suff: e2' = e3'=> [->|] //.
   apply/val_inj=> /=; congruence.
-Qed.
-
-Lemma fin_ica_acyclic p : 
-  irreflexive (fs_ica p) -> antisymmetric (fs_ca p) -> acyclic (fin_ica p).
-Proof. 
-  move=> irrefl asym.
-  rewrite acyclicE; apply/andP; split.
-  - apply/irreflexiveP/irreflexive_mono; first exact/fin_ica_mono.
-    by move=> ? /=.
-  apply/antisymmetricP/antisymmetric_mono; first exact/fin_ca_mono. 
-  move=> /= x y /andP[??].
-  by apply/val_inj/asym/andP.
 Qed.
 
 Lemma fs_ica_ct_fin_sca p : supp_closed p -> acyclic (fin_ica p) ->
@@ -472,99 +589,9 @@ Proof.
   by move=> /andP[??] /orP[|] /negP.
 Qed.
 
-Lemma lfsp_tseq_size p : 
-  size (lfsp_tseq p) = lfsp_size p. 
-Proof. by rewrite /lfsp_tseq /lfsp_size size_map size_tseq cardfE. Qed.
-
-Lemma mem_lfsp_tseq p : 
-  lfsp_tseq p =i lfsp_eventset p.
-Proof. 
-  rewrite /lfsp_tseq=> e.
-  apply/idP/idP.
-  - by move=> /mapP [e'] + ->; case: e'.
-  move=> in_supp; apply/mapP.
-  exists (Sub e in_supp)=> //.
-  by rewrite mem_tseq fintype.mem_enum. 
-Qed.
-
-Lemma lfsp_tseq_uniq p : 
-  uniq (lfsp_tseq p).
-Proof. rewrite /lfsp_tseq (map_inj_uniq val_inj); exact/tseq_uniq. Qed.
-
-Lemma lfsp_idx_lt_szE p e :
-  (lfsp_idx p e < lfsp_size p)%N = (e \in lfsp_eventset p).
-Proof. by rewrite /lfsp_idx -lfsp_tseq_size index_mem mem_lfsp_tseq. Qed.
-
-Lemma lfsp_idx_le_sz p e :
-  lfsp_idx p e <= lfsp_size p.
-Proof. rewrite /lfsp_idx -lfsp_tseq_size; exact/index_size. Qed.
-
-Lemma lfsp_idxK p e0 :
-  {in lfsp_eventset p, cancel (lfsp_idx p) (lfsp_event p e0)}. 
-Proof. 
-  rewrite /lfsp_idx /lfsp_event=> e eIn.
-  by rewrite nth_index ?mem_lfsp_tseq.
-Qed.
-
-Lemma lfsp_eventK p e0 :
-  {in (< lfsp_size p), cancel (lfsp_event p e0) (lfsp_idx p)}. 
-Proof. 
-  rewrite /lfsp_idx /lfsp_event=> n. 
-  rewrite inE ltEnat=> nLe.
-  rewrite index_uniq ?lfsp_tseq_size //.
-  exact/lfsp_tseq_uniq.
-Qed.
-
-Lemma lfsp_idx_inj p : 
-  { in lfsp_eventset p &, injective (lfsp_idx p)}.
-Proof. 
-  rewrite /lfsp_idx=> e1 e2 e1In e2In.
-  by apply/index_inj; rewrite mem_lfsp_tseq.
-Qed.
-
-Lemma lfsp_idx_le p e1 e2 : acyclic (fin_ica p) ->
-  fs_ca p e1 e2 -> (lfsp_idx p e1 <= lfsp_idx p e2)%N.
-Proof.
-  move=> acyc. 
-  rewrite /lfsp_idx /lfsp_tseq /fs_ca /=.
-  move=> /orP[/eqP->|]; first exact/leqnn. 
-  rewrite /sub_rel_lift /=. 
-  case: insubP=> // e1' e1In <-.
-  case: insubP=> // e2' e2In <-.
-  rewrite !index_map; try exact/val_inj.
-  move: (tseq_correct (rgraph (fin_ica p)))=> [tc tin]. 
-  pose g := grel (rgraph (fin_ica p)).
-  have gE: g =2 (fin_ica p).
-  - by move=> x y /=; rewrite /grel /rgraph fintype.mem_enum. 
-  move=> ca12; apply/(@acyclic_connect_before _ g)=> //. 
-  - by rewrite (eq_acyclic gE). 
-  by rewrite (eq_connect gE).
-Qed.
-
-Lemma lfsp_labels_size p : 
-  size (lfsp_labels p) = lfsp_size p.
-Proof. by rewrite /lfsp_labels size_map lfsp_tseq_size. Qed.
-
-Lemma lfsp_labels_Nbot p : 
-  bot \notin lfsp_labels p.
-Proof. 
-  rewrite /lfsp_labels. 
-  apply/mapP=> [[e]].
-  rewrite mem_lfsp_tseq -fs_labNbot eq_sym. 
-  by move=> /negP + /eqP.
-Qed.
-
-(* TODO: fs_lab p e = nth bot (lfsp_labels p) (encode p e) ?? *)
-Lemma fs_lab_nthE p e :  
-  fs_lab p e = nth bot (lfsp_labels p) (lfsp_idx p e).
-Proof. 
-  rewrite /lfsp_labels /lfsp_idx.
-  case: (e \in lfsp_eventset p)/idP=> [eIn | /negP enIn].
-  - by rewrite (nth_map \i0) ?nth_index ?index_mem ?mem_lfsp_tseq.
-  rewrite nth_default ?fs_lab_bot //.
-  rewrite size_map memNindex ?lfsp_tseq_size //. 
-  by rewrite mem_lfsp_tseq.
-Qed.  
+(* ************************************************************************** *)
+(*     Properties of down closure and ideals                                  *)
+(* ************************************************************************** *)
 
 Lemma lfsp_dw_clos_subs p es : 
   {subset (lfsp_dw_clos p es) <= lfsp_eventset p}.
@@ -596,6 +623,10 @@ Proof.
   (* TODO: looks like it can be proven with weaker assumptions *)
   by move=> /(fs_sca_closed supcl acyc) ->.
 Qed.
+
+(* ************************************************************************** *)
+(*     Operational preposets                                                  *)
+(* ************************************************************************** *)
 
 (* TODO: do we need acyclic precondition? *)
 Lemma operationalP p : 
@@ -630,6 +661,10 @@ Proof.
   move=> sc>; rewrite /fin_ica sub_rel_lift_downK=> //=>.
   by case/(supp_closedP _ sc)=> /=->.
 Qed.
+
+(* ************************************************************************** *)
+(*     Consequently enumerated preposets                                      *)
+(* ************************************************************************** *)
 
 Lemma conseq_num_mem p e : 
   conseq_num p -> (e \in lfsp_eventset p) = (encode e < lfsp_size p)%N.
