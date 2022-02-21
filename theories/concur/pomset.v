@@ -214,6 +214,19 @@ Lemma fs_ca_scaE p e1 e2 :
   fs_ca p e1 e2 = (e1 == e2) || (fs_sca p e1 e2).
 Proof. rewrite /fs_sca -(@iker_qmk _ (fs_ca p)) //; exact/qmk_refl. Qed.
 
+Lemma lfsposet_eqP p q : 
+  reflect ((fs_lab p =1 fs_lab q) * (fs_ica p =2 fs_ica q)) (p == q).
+Proof. 
+  apply/(equivP idP); split=> [/eqP->|[]] //.
+  rewrite /fs_lab /fs_ica=> eq_lab eq_ica.
+  apply/eqP/fsfunP=> e /=; apply/eqP.
+  rewrite /eq_op=> /=; apply/andP; split.
+  - by rewrite (eq_lab e).
+  apply/fset_eqP=> e'.
+  move: (eq_ica e' e)=> /=.
+  by rewrite /fs_rcov.
+Qed.
+
 Lemma fin_lab_mono p : 
   {mono val : e / fin_lab p e >-> fs_lab p e}.
 Proof. done. Qed.
@@ -458,6 +471,100 @@ Proof.
   move=> /(fs_ca_closed supcl acyc) /orP[/eqP->|] //.
   by move=> /andP[??] /orP[|] /negP.
 Qed.
+
+Lemma lfsp_tseq_size p : 
+  size (lfsp_tseq p) = lfsp_size p. 
+Proof. by rewrite /lfsp_tseq /lfsp_size size_map size_tseq cardfE. Qed.
+
+Lemma mem_lfsp_tseq p : 
+  lfsp_tseq p =i lfsp_eventset p.
+Proof. 
+  rewrite /lfsp_tseq=> e.
+  apply/idP/idP.
+  - by move=> /mapP [e'] + ->; case: e'.
+  move=> in_supp; apply/mapP.
+  exists (Sub e in_supp)=> //.
+  by rewrite mem_tseq fintype.mem_enum. 
+Qed.
+
+Lemma lfsp_tseq_uniq p : 
+  uniq (lfsp_tseq p).
+Proof. rewrite /lfsp_tseq (map_inj_uniq val_inj); exact/tseq_uniq. Qed.
+
+Lemma lfsp_idx_lt_szE p e :
+  (lfsp_idx p e < lfsp_size p)%N = (e \in lfsp_eventset p).
+Proof. by rewrite /lfsp_idx -lfsp_tseq_size index_mem mem_lfsp_tseq. Qed.
+
+Lemma lfsp_idx_le_sz p e :
+  lfsp_idx p e <= lfsp_size p.
+Proof. rewrite /lfsp_idx -lfsp_tseq_size; exact/index_size. Qed.
+
+Lemma lfsp_idxK p e0 :
+  {in lfsp_eventset p, cancel (lfsp_idx p) (lfsp_event p e0)}. 
+Proof. 
+  rewrite /lfsp_idx /lfsp_event=> e eIn.
+  by rewrite nth_index ?mem_lfsp_tseq.
+Qed.
+
+Lemma lfsp_eventK p e0 :
+  {in (< lfsp_size p), cancel (lfsp_event p e0) (lfsp_idx p)}. 
+Proof. 
+  rewrite /lfsp_idx /lfsp_event=> n. 
+  rewrite inE ltEnat=> nLe.
+  rewrite index_uniq ?lfsp_tseq_size //.
+  exact/lfsp_tseq_uniq.
+Qed.
+
+Lemma lfsp_idx_inj p : 
+  { in lfsp_eventset p &, injective (lfsp_idx p)}.
+Proof. 
+  rewrite /lfsp_idx=> e1 e2 e1In e2In.
+  by apply/index_inj; rewrite mem_lfsp_tseq.
+Qed.
+
+Lemma lfsp_idx_le p e1 e2 : acyclic (fin_ica p) ->
+  fs_ca p e1 e2 -> (lfsp_idx p e1 <= lfsp_idx p e2)%N.
+Proof.
+  move=> acyc. 
+  rewrite /lfsp_idx /lfsp_tseq /fs_ca /=.
+  move=> /orP[/eqP->|]; first exact/leqnn. 
+  rewrite /sub_rel_lift /=. 
+  case: insubP=> // e1' e1In <-.
+  case: insubP=> // e2' e2In <-.
+  rewrite !index_map; try exact/val_inj.
+  move: (tseq_correct (rgraph (fin_ica p)))=> [tc tin]. 
+  pose g := grel (rgraph (fin_ica p)).
+  have gE: g =2 (fin_ica p).
+  - by move=> x y /=; rewrite /grel /rgraph fintype.mem_enum. 
+  move=> ca12; apply/(@acyclic_connect_before _ g)=> //. 
+  - by rewrite (eq_acyclic gE). 
+  by rewrite (eq_connect gE).
+Qed.
+
+Lemma lfsp_labels_size p : 
+  size (lfsp_labels p) = lfsp_size p.
+Proof. by rewrite /lfsp_labels size_map lfsp_tseq_size. Qed.
+
+Lemma lfsp_labels_Nbot p : 
+  bot \notin lfsp_labels p.
+Proof. 
+  rewrite /lfsp_labels. 
+  apply/mapP=> [[e]].
+  rewrite mem_lfsp_tseq -fs_labNbot eq_sym. 
+  by move=> /negP + /eqP.
+Qed.
+
+(* TODO: fs_lab p e = nth bot (lfsp_labels p) (encode p e) ?? *)
+Lemma fs_lab_nthE p e :  
+  fs_lab p e = nth bot (lfsp_labels p) (lfsp_idx p e).
+Proof. 
+  rewrite /lfsp_labels /lfsp_idx.
+  case: (e \in lfsp_eventset p)/idP=> [eIn | /negP enIn].
+  - by rewrite (nth_map \i0) ?nth_index ?index_mem ?mem_lfsp_tseq.
+  rewrite nth_default ?fs_lab_bot //.
+  rewrite size_map memNindex ?lfsp_tseq_size //. 
+  by rewrite mem_lfsp_tseq.
+Qed.  
 
 Lemma lfsp_dw_clos_subs p es : 
   {subset (lfsp_dw_clos p es) <= lfsp_eventset p}.
@@ -1776,113 +1883,6 @@ Lemma val_ca_mon p :
   { homo (val : [FinEvent of p] -> [Event of p]) : e1 e2 / e1 <= e2 }.
 Proof. by move=> x y; rewrite fin_caE fs_caE fin_ca_mono. Qed.
 
-Lemma lfsposet_eqP p q : 
-  reflect ((fs_lab p =1 fs_lab q) * (fs_ica p =2 fs_ica q)) (p == q).
-Proof. 
-  apply/(equivP idP); split=> [/eqP->|[]] //.
-  rewrite /fs_lab /fs_ica=> eq_lab eq_ica.
-  apply/eqP/val_inj=> /=.
-  apply/fsfunP=> e /=; apply/eqP.
-  rewrite /eq_op=> /=; apply/andP; split.
-  - by rewrite (eq_lab e).
-  apply/fset_eqP=> e'.
-  move: (eq_ica e' e)=> /=.
-  by rewrite /fs_rcov.
-Qed.
-
-Lemma lfsp_tseq_size p : 
-  size (lfsp_tseq p) = lfsp_size p. 
-Proof. by rewrite /lfsp_tseq /lfsp_size size_map size_tseq cardfE. Qed.
-
-Lemma mem_lfsp_tseq p : 
-  lfsp_tseq p =i lfsp_eventset p.
-Proof. 
-  rewrite /lfsp_tseq=> e.
-  apply/idP/idP.
-  - by move=> /mapP [e'] + ->; case: e'.
-  move=> in_supp; apply/mapP.
-  exists (Sub e in_supp)=> //.
-  by rewrite mem_tseq fintype.mem_enum. 
-Qed.
-
-Lemma lfsp_tseq_uniq p : 
-  uniq (lfsp_tseq p).
-Proof. rewrite /lfsp_tseq (map_inj_uniq val_inj); exact/tseq_uniq. Qed.
-
-Lemma lfsp_idx_lt_szE p e :
-  (lfsp_idx p e < lfsp_size p)%N = (e \in lfsp_eventset p).
-Proof. by rewrite /lfsp_idx -lfsp_tseq_size index_mem mem_lfsp_tseq. Qed.
-
-Lemma lfsp_idx_le_sz p e :
-  lfsp_idx p e <= lfsp_size p.
-Proof. rewrite /lfsp_idx -lfsp_tseq_size; exact/index_size. Qed.
-
-Lemma lfsp_idxK p e0 :
-  {in lfsp_eventset p, cancel (lfsp_idx p) (lfsp_event p e0)}. 
-Proof. 
-  rewrite /lfsp_idx /lfsp_event=> e eIn.
-  by rewrite nth_index ?mem_lfsp_tseq.
-Qed.
-
-Lemma lfsp_eventK p e0 :
-  {in (< lfsp_size p), cancel (lfsp_event p e0) (lfsp_idx p)}. 
-Proof. 
-  rewrite /lfsp_idx /lfsp_event=> n. 
-  rewrite inE ltEnat=> nLe.
-  rewrite index_uniq ?lfsp_tseq_size //.
-  exact/lfsp_tseq_uniq.
-Qed.
-
-Lemma lfsp_idx_inj p : 
-  { in lfsp_eventset p &, injective (lfsp_idx p)}.
-Proof. 
-  rewrite /lfsp_idx=> e1 e2 e1In e2In.
-  by apply/index_inj; rewrite mem_lfsp_tseq.
-Qed.
-
-Lemma lfsp_idx_le p e1 e2 : 
-  fs_ca p e1 e2 -> (lfsp_idx p e1 <= lfsp_idx p e2)%N.
-Proof. 
-  rewrite /lfsp_idx /lfsp_tseq /fs_ca /=.
-  move=> /orP[/eqP->|]; first exact/leqnn. 
-  rewrite /sub_rel_lift /=. 
-  case: insubP=> // e1' e1In <-.
-  case: insubP=> // e2' e2In <-.
-  rewrite !index_map; try exact/val_inj.
-  move: (tseq_correct (rgraph (fin_ica p)))=> [tc tin]. 
-  pose g := grel (rgraph (fin_ica p)).
-  have gE: g =2 (fin_ica p).
-  - by move=> x y /=; rewrite /grel /rgraph fintype.mem_enum. 
-  move=> ca12; apply/(@acyclic_connect_before _ g)=> //. 
-  - rewrite (eq_acyclic gE); exact/lfsp_acyclic.
-  by rewrite (eq_connect gE).
-Qed.
-
-Lemma lfsp_labels_size p : 
-  size (lfsp_labels p) = lfsp_size p.
-Proof. by rewrite /lfsp_labels size_map lfsp_tseq_size. Qed.
-
-Lemma lfsp_labels_Nbot p : 
-  bot \notin lfsp_labels p.
-Proof. 
-  rewrite /lfsp_labels. 
-  apply/mapP=> [[e]].
-  rewrite mem_lfsp_tseq -fs_labNbot eq_sym. 
-  by move=> /negP + /eqP.
-Qed.
-
-(* TODO: fs_lab p e = nth bot (lfsp_labels p) (encode p e) ?? *)
-Lemma fs_lab_nthE p e :  
-  fs_lab p e = nth bot (lfsp_labels p) (lfsp_idx p e).
-Proof. 
-  rewrite /lfsp_labels /lfsp_idx.
-  case: (e \in lfsp_eventset p)/idP=> [eIn | /negP enIn].
-  - by rewrite (nth_map \i0) ?nth_index ?index_mem ?mem_lfsp_tseq.
-  rewrite nth_default ?fs_lab_bot //.
-  rewrite size_map memNindex ?lfsp_tseq_size //. 
-  by rewrite mem_lfsp_tseq.
-Qed.  
-
 End Theory.
 End Theory.
 
@@ -3052,13 +3052,14 @@ Proof.
     rewrite !conseq_num_mem // !decodeK !usz !lfsp_idx_lt_szE.
     rewrite ident_leE /f !decodeK. 
     apply/idP/idP=> [/orP[|] |]; last 1 first.
-    + by rewrite e1In e2In leEnat=> /lfsp_idx_le ->. 
+    + rewrite e1In e2In leEnat=> /lfsp_idx_le -> //; exact/lfsp_acyclic. 
     + move=> /eqP /decode_inj /lfsp_idx_inj -> //; exact/fs_ca_refl.
     move=> /and3P[le12 ??].  
     move: (tomset_total_in e1In e2In).  
-    rewrite !fs_caE=> /orP[|] // => /lfsp_idx_le le21.
+    rewrite !fs_caE=> /orP[|] //. 
+    move=> /(lfsp_idx_le (lfsp_acyclic _)) le21.
     suff->: e1 = e2 by exact/fs_ca_refl.
-    exact/(lfsp_idx_inj e1In e2In)/le_anti/andP. 
+    by apply/(lfsp_idx_inj e1In e2In)/le_anti/andP. 
   pose g : [Event of u] -> [Event of t] := 
     fun e => lfsp_event t \i0 (encode e).
   exists g=> e; rewrite !conseq_num_mem // /f /g !usz ?decodeK.
