@@ -929,6 +929,16 @@ Proof.
   by rewrite /rl /sub_rel_lift /= !insubT !andbT !sub_val.
 Qed.
 
+Lemma sub_rel_lift_antisym r : 
+  antisymmetric r -> antisymmetric (sub_rel_lift r).
+Proof. 
+  move=> asym x y. 
+  rewrite /sub_rel_lift /=. 
+  case: insubP=> // x' ? <-.
+  case: insubP=> // y' ? <-.
+  by move=> /asym ->.
+Qed.
+
 Lemma sub_rel_lift_trans r : 
   transitive r -> transitive (sub_rel_lift r).
 Proof. 
