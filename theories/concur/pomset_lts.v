@@ -607,7 +607,8 @@ Proof.
   move=> /=; rewrite /trace_lang ?/(_ \in _) /= /lin /=.
   move/bhom_le_size; rewrite lFsPoset.of_seq_size size_map.
   rewrite lfsp_trace_labels_defined.  
-  move=> sizeE; apply/eqP/esym/val_inj/lFsPrePoset.empty_eqP=> /=. 
+  move=> sizeE; apply/eqP/esym/val_inj. 
+  apply/lFsPrePoset.size0_empty => //=. 
   set f := [eta (@lfsp_size E L bot)]: lfsposet _ _ _ -> nat.
   move: (@measure_lst _ _ _ f S) sizeE=> /=; rewrite /f /= /==> -> //.
   - rewrite iter_succn; lia.
@@ -636,7 +637,7 @@ Lemma of_seq_rcons l ls:
     (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i0])
     (lFsPoset.of_seq E L bot ls).
 Proof.
-  move=> nls nl; apply/eqP/lfsposet_eqP.
+  move=> nls nl; apply/eqP/lfspreposet_eqP.
   have labsDr: bot \notin rcons ls l. 
   - by rewrite mem_rcons ?inE negb_or eq_sym nls nl.
   have labsD: bot \notin ls. 
@@ -745,7 +746,8 @@ Lemma lfsp_lin_lang p (ls : seq L) :
 Proof.
   elim/last_ind: ls p=>/=.    
   - move=> ? _ homf; exists [trace] => //=.
-    apply/esym/val_inj/lFsPrePoset.empty_eqP. 
+    apply/esym/val_inj/lFsPrePoset.size0_empty. 
+    + exact/lfsp_supp_closed.
     rewrite /lfsp_size (is_hom_id_finsuppE homf).
     rewrite lFsPoset.of_seq_valE //.
     by move: lFsPrePoset.of_seq_size; rewrite /lfsp_size=>->.

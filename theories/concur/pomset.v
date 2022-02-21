@@ -937,13 +937,11 @@ Qed.
 
 (* TODO: /end/ the following proofs should be simpler :( *)
 
-Lemma empty_eqP p : supp_closed p -> 
-  reflect (p = empty) (lfsp_size p == 0%N).
+Lemma size0_empty p : 
+  supp_closed p -> lfsp_size p = 0%N -> p = empty.
 Proof.
   move=> supcl.
-  apply/(equivP idP); split=> [|->]; last first. 
-  - by rewrite fs_size_empty. 
-  rewrite /lfsp_size=> /eqP/cardfs0_eq fE. 
+  rewrite /lfsp_size=> /cardfs0_eq fE. 
   apply/eqP/lfspreposet_eqP; split=> >.
   - rewrite fs_lab_empty fs_lab_bot ?fE //.
   rewrite fs_ica_empty /fs_ica /=. 
@@ -1526,7 +1524,7 @@ Lemma of_seq_size ls :
 Proof. 
   rewrite of_seq_valE; case: ifP=> ?. 
   - by rewrite lFsPrePoset.of_seq_size. 
-  exact/eqP/lFsPrePoset.empty_eqP.
+  by rewrite lFsPrePoset.fs_size_empty. 
 Qed.
 
 Lemma of_seq_labE ls e :

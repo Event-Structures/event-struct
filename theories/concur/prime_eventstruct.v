@@ -334,7 +334,7 @@ Lemma lfsposet_of0 :
   lfsposet_of (fset0 : {fset E}) = lFsPoset.empty E L bot.
 Proof.
   rewrite /lfsposet_of /lfspreposet_of; case: eqP=> // ?.
-  apply/eqP/lfsposet_eqP; split=>>; rewrite /lFsPoset.empty /=.
+  apply/eqP/lfspreposet_eqP; split=>>; rewrite /lFsPoset.empty /=.
   - rewrite lFsPrePoset.fs_lab_empty lFsPrePoset.build_lab /sub_lift.
     by case: insubP.
   rewrite lFsPrePoset.fs_ica_empty lFsPrePoset.build_ica /sub_rel_lift /=.
