@@ -214,7 +214,7 @@ Lemma fs_ca_scaE p e1 e2 :
   fs_ca p e1 e2 = (e1 == e2) || (fs_sca p e1 e2).
 Proof. rewrite /fs_sca -(@iker_qmk _ (fs_ca p)) //; exact/qmk_refl. Qed.
 
-Lemma lfsposet_eqP p q : 
+Lemma lfspreposet_eqP p q : 
   reflect ((fs_lab p =1 fs_lab q) * (fs_ica p =2 fs_ica q)) (p == q).
 Proof. 
   apply/(equivP idP); split=> [/eqP->|[]] //.
@@ -748,7 +748,7 @@ Definition build_cov lab ca : lfspreposet E L bot :=
   let ica : rel fE := cov (relpre val sca) in
   @build E L bot fE lab ica.
 
-Variables (lab : fE -> L) (ca : rel E).
+Variables  (lab : fE -> L) (ca : rel E).
 Hypothesis (labD : forall e, lab e != bot).
 Hypothesis (ca_refl  : reflexive ca).
 Hypothesis (ca_anti  : antisymmetric ca).
@@ -902,14 +902,19 @@ Qed.
 
 (* TODO: /end/ the following proofs should be simpler :( *)
 
-Lemma empty_eqP p : 
+Lemma empty_eqP p : supp_closed p -> 
   reflect (p = empty) (lfsp_size p == 0%N).
 Proof.
+  move=> supcl.
   apply/(equivP idP); split=> [|->]; last first. 
   - by rewrite fs_size_empty. 
   rewrite /lfsp_size=> /eqP/cardfs0_eq fE. 
-  admit.
-Admitted.
+  apply/eqP/lfspreposet_eqP; split=> >.
+  - rewrite fs_lab_empty fs_lab_bot ?fE //.
+  rewrite fs_ica_empty /fs_ica /=. 
+  apply/idP; move/supp_closedP: supcl. 
+  by move=> /[apply]; rewrite fE => [[]].
+Qed.
 
 Lemma empty_supp_closed : 
   supp_closed empty.
