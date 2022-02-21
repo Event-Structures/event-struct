@@ -300,6 +300,49 @@ Qed.
 
 End FinGraphMono.
 
+(* TODO: rename? consult theory? unify with strictify? *)
+Section IKer. 
+Context {T : eqType}.
+Implicit Type (r : rel T).
+
+Definition iker r : rel T := 
+  fun x y => (y != x) && r x y.
+
+Lemma iker_qmk r : 
+  reflexive r -> (iker r : {dhrel T & T})^? =2 r.
+Proof. 
+  move=> refl x y ; rewrite dhrel_qmkE /= /iker.
+  apply/idP/idP=> [/orP[|]|].
+  - by move=> /eqP->; rewrite refl.
+  - by move=> /andP[].
+  move=> ->; rewrite andbT. 
+  case: (x == y)/idP=> //. 
+  by rewrite eq_sym=> /negP ->.
+Qed.
+
+Lemma iker_irrefl r : 
+  irreflexive (iker r).
+Proof. by move=> x; rewrite /iker eqxx. Qed.
+
+Lemma iker_antisym r : 
+  antisymmetric r -> antisymmetric (iker r).
+Proof. 
+  move=> asym x y /andP[] /andP[??] /andP[??].
+  exact/asym/andP.
+Qed.
+
+Lemma iker_trans r : 
+  antisymmetric r -> transitive r -> transitive (iker r).
+Proof. 
+  move=> asym trans z x y /andP[/eqP nzx rxz] /andP[/eqP nzy rzy].
+  apply/andP; split; last first.
+  - apply/trans; [exact/rxz|exact/rzy].
+  apply/negP=> /eqP eyx. 
+  by apply/nzx/asym/andP; split=> //; rewrite -eyx.
+Qed.
+
+End IKer.
+
 Section Covering.
 Context {T : finType}.
 Implicit Types (r : rel T).
@@ -419,16 +462,17 @@ Proof.
   apply/connect_sub=> {}x {}y; exact/cov_connect.  
 Qed.
 
-Lemma connect_sub_one r : 
-  connect r =2 connect ([rel a b | (a != b) && r a b]).
+Lemma iker_connect r : 
+  connect (iker r) =2 connect r.
 Proof.
   move=> x y; apply/(sameP (connect_strP _ _ _))/(equivP (connect_strP _ _ _)).
   rewrite kleene.str_weq1; first reflexivity.
-  symmetry; rewrite -qmk_sub_one; first apply/qmk_weq=> ?? /=.
-  - split=> [[]|/andP[/eqP ?]] * //; apply/andP; split=> //; exact/eqP.
+  rewrite -qmk_sub_one; first apply/qmk_weq=> ?? /=.
+  - rewrite /iker eq_sym.
+    split=> [[]|/andP[/eqP ?]] * //. 
+    by apply/andP; split=> //; apply/eqP. 
   move=> a b /=; split=> // ?; case: (a =P b); by (left+right).
 Qed.
-
 
 End Covering.
 
@@ -437,7 +481,6 @@ Definition sfrel {T : eqType} (f : T -> seq T) : {dhrel T & T} :=
     [rel a b | b \in f a].
 
 Section Strictify.
-
 Context {T : eqType}.
 Implicit Type (f : T -> seq T).
 
