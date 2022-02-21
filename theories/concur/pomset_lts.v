@@ -594,7 +594,7 @@ Proof.
   move: (lfsp_acyclic p)=> acyc.
   move=> e1In e2In Hca.
   apply/orP; right; apply/and3P; split=> //.
-  apply/(fs_ca_ident_le supcl acyc)=> //.
+  apply/operationalP; last exact/Hca.
   apply/(invariant_trace_lang invariant_operational)=> //. 
   exact/lFsPrePoset.empty_operational.
 Qed.
@@ -665,8 +665,6 @@ Lemma operational_of_seq ls :
   bot \notin ls -> operational (lFsPoset.of_seq E L bot ls).
 Proof.
   move=> labsD; apply/operationalP=>>.
-  - exact/lfsp_supp_closed.
-  - exact/lfsp_acyclic.
   rewrite lFsPoset.of_seq_caE labsD //.
   by case/orP=> [/eqP->|/andP[->]].
 Qed.
@@ -684,7 +682,7 @@ Lemma emax : [forall y : lfsp_eventset p, ~~ fs_ica p e (val y)].
 Proof.
   apply/forallP=> -[]/= f. 
   rewrite fs_p ?inE /==> ?; apply/negP.
-  move/(operational_sca (lfsp_supp_closed _) (lfsp_acyclic _)): oper.
+  move/operational_scaP: oper.
   move/[swap]/(@t_step E (fs_ica p)).
   move/(fs_scaP _ _ (lfsp_supp_closed _) (lfsp_acyclic _)).
   move/[swap]/[apply]; ilia.
