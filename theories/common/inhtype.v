@@ -104,7 +104,7 @@ Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 End ClassDef.
 
-Module Exports.
+Module Export Exports.
 Coercion base : class_of >-> Choice.class_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
@@ -117,12 +117,36 @@ Notation "[ 'inhType' 'of' T 'for' cT ]" := (@clone T _ cT _ id)
   (at level 0, format "[ 'inhType'  'of'  T  'for'  cT ]") : form_scope.
 Notation "[ 'inhType' 'of' T ]" := [inhType of T for _]
   (at level 0, format "[ 'inhType'  'of'  T ]") : form_scope.
-Definition inh {disp} {T : inhType disp} : T := inh (mixin (class T)).
 End Exports.
+
+Module Export Def.
+Section Def.
+Context {disp : unit} {T : inhType disp}.
+
+Definition inh : T := (inh (mixin (class T))).
+
+End Def.
+
+Section Homo.
+Context {dispT dispU : unit} {T : inhType dispT} {U : inhType dispU}.
+Implicit Types (f : T -> U).
+
+Definition homo_inh f : bool := 
+  (f inh == inh).
+
+End Homo.
+End Def.
+
+Module Export Syntax.
+Notation "{ 'homo' 'inh' f }" := (homo_inh f)
+  (at level 0, f at level 99, format "{ 'homo'  'inh'  f }") : type_scope.
+End Syntax.
 
 End Inhabited.
 
 Export Inhabited.Exports.
+Export Inhabited.Def.
+Export Inhabited.Syntax.
 
 
 Module Bottom. 
@@ -130,14 +154,30 @@ Module Bottom.
 Lemma disp : unit.
 Proof. exact: tt. Qed.
 
-Module Exports.
+Module Export Exports.
 Notation botType := (@Inhabited.type disp).
 Notation BotType T m := (@Inhabited.pack T disp _ _ id m).
-Definition bot {T : botType} : T := @inh _ T. 
 End Exports.
+
+Module Export Def.
+Section Def.
+Context {T : botType}.
+Definition bot : T := @inh _ T. 
+End Def.
+End Def.
+
+Module Export Syntax.
+(* TODO: enforce that f is a function from/to botType ? *)
+Notation "{ 'homo' 'bot' f }" := (homo_inh f)
+  (at level 0, f at level 99, format "{ 'homo'  'bot'  f }") : type_scope.
+End Syntax.
+
 End Bottom. 
 
 Export Bottom.Exports.
+Export Bottom.Def.
+Export Bottom.Syntax.
+
 
 Definition nat_inhMixin := @Inhabited.Mixin nat _ 0.
 Canonical nat_inhType := Eval hnf in InhType nat tt nat_inhMixin.
