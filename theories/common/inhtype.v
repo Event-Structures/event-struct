@@ -71,7 +71,6 @@ End Theory.
 
 
 Module Inhabited.
-
 Section ClassDef.
 
 Record mixin_of T0 (b : Choice.class_of T0) 
@@ -88,18 +87,18 @@ Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Choice.class_of.
 
-Structure type := Pack { sort; _ : class_of sort }.
+Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (cT : type).
+Variables (T : Type) (disp : unit) (cT : type disp).
 
 Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack T c.
+Definition clone c of phant_id class c := @Pack disp T c.
 
 Definition pack :=
   fun bT b & phant_id (Choice.class bT) b =>
-  fun m => Pack (@Class T b m).
+  fun m => Pack disp (@Class T b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
@@ -113,12 +112,12 @@ Coercion choiceType : type >-> Choice.type.
 Canonical eqType.
 Canonical choiceType.
 Notation inhType := type.
-Definition inh {T : inhType} : T := inh (mixin (class T)).
-Notation Inhabited T m := (@pack T _ _ id m).
-Notation "[ 'inhType' 'of' T 'for' cT ]" := (@clone T cT _ id)
+Notation InhType T d m := (@pack T d _ _ id m).
+Notation "[ 'inhType' 'of' T 'for' cT ]" := (@clone T _ cT _ id)
   (at level 0, format "[ 'inhType'  'of'  T  'for'  cT ]") : form_scope.
 Notation "[ 'inhType' 'of' T ]" := [inhType of T for _]
   (at level 0, format "[ 'inhType'  'of'  T ]") : form_scope.
+Definition inh {disp} {T : inhType disp} : T := inh (mixin (class T)).
 End Exports.
 
 End Inhabited.
@@ -126,4 +125,4 @@ End Inhabited.
 Export Inhabited.Exports.
 
 Definition nat_inhMixin := @Inhabited.Mixin nat _ 0.
-Canonical nat_inhType := Eval hnf in Inhabited nat nat_inhMixin.
+Canonical nat_inhType := Eval hnf in InhType nat tt nat_inhMixin.
