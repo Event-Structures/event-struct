@@ -124,5 +124,20 @@ End Inhabited.
 
 Export Inhabited.Exports.
 
+
+Module Bottom. 
+
+Lemma disp : unit.
+Proof. exact: tt. Qed.
+
+Module Exports.
+Notation botType := (@Inhabited.type disp).
+Notation BotType T m := (@Inhabited.pack T disp _ _ id m).
+Definition bot {T : botType} : T := @inh _ T. 
+End Exports.
+End Bottom. 
+
+Export Bottom.Exports.
+
 Definition nat_inhMixin := @Inhabited.Mixin nat _ 0.
 Canonical nat_inhType := Eval hnf in InhType nat tt nat_inhMixin.
