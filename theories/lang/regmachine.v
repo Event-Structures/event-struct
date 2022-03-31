@@ -55,7 +55,7 @@ Open Scope exec_eventstruct_scope.
 
 Import Label.Syntax.
 
-Context {E : identType} {Val : inhType}.
+Context {E : identType} {dV : unit} {Val : inhType dV}.
 
 (*Notation n := (@n val).*)
 (*Notation porf_event_struct := (porf_eventstruct E Val).

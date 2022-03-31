@@ -13,7 +13,7 @@ Local Open Scope ident_scope.
 Module SharedMem.
 
 Section Def.
-Context {Addr Val : inhType}.
+Context {dA dV : unit} {Addr : inhType dA} {Val : inhType dV}.
 
 Local Notation null := (inh : Addr).
 Local Notation v0   := (inh : Val).
@@ -50,11 +50,11 @@ Definition value : label -> Val :=
 
 End Def.
 
-Arguments state _ _ : clear implicits.
-Arguments label _ _ : clear implicits.
+Arguments state {_ _} _ _ .
+Arguments label {_ _} _ _ .
 
 Section Encode. 
-Context {Addr Val : inhType}.
+Context {dA dV : unit} {Addr : inhType dA} {Val : inhType dV}.
 
 Definition enc_lab : (label Addr Val) -> Addr * Val + Addr * Val + unit := 
   fun l => match l with 
@@ -77,24 +77,26 @@ Proof. by case. Qed.
 End Encode.
 
 Module Export Exports.
-Implicit Types (A V : inhType).
+Section Exports.
+Context {dA dV : unit} {A : inhType dA} {V : inhType dV}.
 
-Definition label_eqMixin A V := 
-  CanEqMixin (@enc_dec_labK A V).
-Canonical label_eqType A V := 
-  Eval hnf in EqType _ (label_eqMixin A V).
+Definition label_eqMixin := 
+  CanEqMixin (@enc_dec_labK _ _ A V).
+Canonical label_eqType := 
+  Eval hnf in EqType _ label_eqMixin.
 
-Definition label_choiceMixin A V := 
-  CanChoiceMixin (@enc_dec_labK A V).
-Canonical label_choiceType A V := 
-  Eval hnf in ChoiceType _ (label_choiceMixin A V).
+Definition label_choiceMixin := 
+  CanChoiceMixin (@enc_dec_labK _ _ A V).
+Canonical label_choiceType := 
+  Eval hnf in ChoiceType _ label_choiceMixin.
 
+End Exports.
 End Exports.
 
 
 Module Export LTS.
 Section LTS.
-Context {Addr Val : inhType}.
+Context {dA dV : unit} {Addr : inhType dA} {Val : inhType dV}.
 Local Notation state := (state Addr Val).
 Local Notation label := (label Addr Val).
 Implicit Types (m : state) (l : label).
@@ -133,16 +135,19 @@ Qed.
 End LTS.
 
 Module Export Exports.
-Implicit Types (A V : inhType).
+Section Exports.
+Context {dA dV : unit} {A : inhType dA} {V : inhType dV}.
 
-Definition ltsMixin A V := 
+Definition ltsMixin := 
   let S := (state A V) in
   let L := (label A V) in
   @LTS.LTS.Mixin S L _ _ _ enabledP. 
-Definition ltsType A V := 
-  Eval hnf in (LTSType _ _ (ltsMixin A V)).
+Definition ltsType := 
+  Eval hnf in (LTSType _ _ ltsMixin).
 
 End Exports.
+End Exports. 
+
 End LTS.
 
 Export LTS.Exports.
@@ -150,7 +155,7 @@ Export LTS.Exports.
 
 Module Export Label.
 Section Label.
-Context {Addr Val : inhType}.
+Context {dA dV : unit} {Addr : inhType dA} {Val : inhType dV}.
 Local Notation label := (label Addr Val).
 Implicit Types (ls : {fset label}) (l : label).
 
@@ -218,13 +223,16 @@ End Label.
 
 Module Export Exports.
 Section Exports.
-Implicit Types (A V : inhType).
+Context {dA dV : unit} {A : inhType dA} {V : inhType dV}.
 
-Definition labMixin A V := 
-  @Lab.Lab.Mixin (label A V) _ Bot com cf is_write is_read
+Definition inhMixin := @Inhabited.Mixin (label A V) _ Bot. 
+Canonical inhType := Eval hnf in InhType (label A V) Bottom.disp inhMixin. 
+
+Definition labMixin := 
+  @Lab.Lab.Mixin (label A V) _ com cf is_write is_read
     is_writeP is_readP bot_nwrite bot_nread.
-Canonical labType A V := 
-  Lab.Lab.Pack (Lab.Lab.Class (labMixin A V)).
+Canonical labType := 
+  Lab.Lab.Pack (Lab.Lab.Class labMixin).
 
 End Exports.
 End Exports.
