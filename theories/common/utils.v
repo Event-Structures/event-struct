@@ -263,33 +263,60 @@ Section Surjective.
 Context {rT aT : Type}.
 Implicit Types (f : aT -> rT).
 
-Definition surjective f :=
-  forall (x : rT), exists y, f y = x.
+Definition surjective f := 
+  forall (y : rT), exists x, f x = y.
 
 Lemma bij_surj f :
   bijective f -> surjective f.
-Proof. by case=> g Kf Kg x; exists (g x); rewrite Kg. Qed.
+Proof. by case=> g Kf Kg y; exists (g y); rewrite Kg. Qed.
 
 End Surjective.
 
-Section SurjectiveChoice.
+Section SurjectivePreim.
+Context {rT : eqType} {aT : choiceType}.
+Context (f : aT -> rT).
+Hypothesis (surjf : surjective f).
+
+Lemma preim_ofP : 
+  forall (x : rT), exists y, f y == x.
+Proof. by move=> x; case (surjf x)=> [y] <-; exists y. Qed.
+
+Definition preim_of : rT -> aT := 
+  fun y => xchoose (preim_ofP y).
+
+(* TODO: rename? *)
+Lemma preim_of_f : 
+  cancel preim_of f.
+Proof. 
+  rewrite /preim_of=> y.
+  exact/eqP/(xchooseP (preim_ofP y)).
+Qed.
+
+(* TODO: rename? *)
+Lemma f_preim_of : 
+  injective f -> cancel f preim_of.
+Proof. 
+  move=> injf x.
+  apply/injf=> //; apply/eqP. 
+  exact/(xchooseP (preim_ofP (f x))).
+Qed.
+
+End SurjectivePreim.
+
+Section SurjectiveTheory.
 Context {rT : eqType} {aT : choiceType}.
 Implicit Types (f : aT -> rT).
 
 Lemma inj_surj_bij f :
   injective f -> surjective f -> bijective f.
-Proof.
-  move=> finj fsurj.
-  have fsurj_eq : forall (x : rT), exists y, f y == x.
-  - by move=> x; case (fsurj x)=> [y] <-; exists y.
-  pose g := fun x => xchoose (fsurj_eq x).
-  exists g=> x; rewrite /g.
-  - apply/finj=> //; apply/eqP.
-    exact/(xchooseP (fsurj_eq (f x))).
-  exact/eqP/(xchooseP (fsurj_eq x)).
+Proof. 
+  move=> injf surjf.
+  exists (preim_of surjf).
+  - exact/f_preim_of.
+  exact/preim_of_f.
 Qed.
 
-End SurjectiveChoice.
+End SurjectiveTheory.
 
 Section SurjectiveRst.
 Context {rT aT : Type}.
