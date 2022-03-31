@@ -78,8 +78,7 @@ Module lFsPrePoset.
 
 Module Export Def.
 Section Def.
-(* TODO: perhaps, it is better to make L : inhType *)
-Context (E : identType) (L : eqType) (bot : L).
+Context (E : identType) (L : botType).
 
 (* TODO: perhaps, we should actually enforce 
  *   lab_defined and supp_closed properties here
@@ -174,37 +173,32 @@ Definition lfsp_equiv_partition p r : {fset {fset E}} :=
   [fset [fset (val e) | e : lfsp_eventset p & (e \in (P : {set _}))] | P in part].
 
 (* TODO: move/restructure *)
-Context (L' : eqType) (bot' : L').
+Context (L' : botType).
 Implicit Types (f : L -> L').
 
-(* TODO: move to inhtype, make a type of inhtype morphisms? *)
-Definition bot_preserving f := 
-  (f bot == bot').
-
 Definition finsupp_preserving p f := 
-  [forall e : lfsp_eventset p, f (fs_lab p (val e)) != bot'].
+  [forall e : lfsp_eventset p, f (fs_lab p (val e)) != bot].
 
 End Def.
 
-Arguments fs_lab {E L bot} p.
-Arguments fs_ica {E L bot} p.
-Arguments fs_sca {E L bot} p.
-Arguments fs_ca  {E L bot} p.
+Arguments fs_lab {E L} p.
+Arguments fs_ica {E L} p.
+Arguments fs_sca {E L} p.
+Arguments fs_ca  {E L} p.
 
-Arguments fin_lab {E L bot} p.
-Arguments fin_ica {E L bot} p.
-Arguments fin_sca {E L bot} p.
-Arguments fin_ca  {E L bot} p.
+Arguments fin_lab {E L} p.
+Arguments fin_ica {E L} p.
+Arguments fin_sca {E L} p.
+Arguments fin_ca  {E L} p.
 
 End Def.
 
-Arguments lfspreposet E L bot : clear implicits.
+Arguments lfspreposet E L : clear implicits.
 
 Module Export Theory.
 Section Theory.
-Context (E : identType) (L : eqType).
-Variable (bot : L).
-Implicit Types (p q : lfspreposet E L bot) (ls : seq L).
+Context (E : identType) (L : botType).
+Implicit Types (p q : lfspreposet E L) (ls : seq L).
 
 (* ************************************************************************** *)
 (*     Switching between finType <-> finsupp                                  *)
@@ -708,9 +702,9 @@ Qed.
 End Theory.
 
 Section TheoryAux.
-Context (E : identType) (L1 : eqType) (L2 : eqType) (bot1 : L1) (bot2 : L2).
-Implicit Types (p : lfspreposet E L1 bot1).
-Implicit Types (q : lfspreposet E L2 bot2).
+Context (E : identType) (L1 : botType) (L2 : botType).
+Implicit Types (p : lfspreposet E L1).
+Implicit Types (q : lfspreposet E L2).
 
 Lemma fs_ca_ica_eq p q : supp_closed p -> lfsp_eventset p = lfsp_eventset q -> 
   fs_ica p =2 fs_ica q -> fs_ca p =2 fs_ca q.
@@ -736,12 +730,12 @@ End TheoryAux.
 End Theory.
 
 Section Build.
-Context (E : identType) (L : eqType) (bot : L). 
+Context (E : identType) (L : botType).
 Context (fE : {fset E}).
-Implicit Types (p : lfspreposet E L bot).
+Implicit Types (p : lfspreposet E L).
 Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel E).
 
-Definition build lab ica : lfspreposet E L bot := 
+Definition build lab ica : lfspreposet E L := 
   let rcov e := [fsetval e' in rgraph [rel x y | ica y x] e] in
   [fsfun e => (lab e, rcov e)].
 
@@ -808,15 +802,15 @@ Qed.
 End Build.
 
 Section BuildCov.
-Context (E : identType) (L : eqType) (bot : L). 
+Context (E : identType) (L : botType).
 Context (fE : {fset E}).
-Implicit Types (p : lfspreposet E L bot).
+Implicit Types (p : lfspreposet E L).
 Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel E).
 
-Definition build_cov lab ca : lfspreposet E L bot := 
+Definition build_cov lab ca : lfspreposet E L := 
   let sca : rel E := (fun x y => (y != x) && (ca x y)) in
   let ica : rel fE := cov (relpre val sca) in
-  @build E L bot fE lab ica.
+  build lab ica.
 
 Variables  (lab : fE -> L) (ca : rel E).
 Hypothesis (labD : forall e, lab e != bot).
@@ -835,7 +829,7 @@ Proof.
   rewrite /fin_ica /sub_rel_down /=.
   rewrite build_ica /sub_rel_lift /=.
   do ? case: insubP=> [??? |/negP//].
-  move: in1 in2; case: _ / (esym (@build_eventset E L bot fE lab ica labD))=> *.
+  move: in1 in2; case: _ / (esym (@build_eventset E L fE lab ica labD))=> *.
   apply/congr2/val_inj=> //; exact/val_inj.
 Qed.
 
@@ -922,10 +916,10 @@ Qed.
 End BuildCov.
 
 Section Empty.
-Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p : lfspreposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p : lfspreposet E L).
 
-Definition empty : lfspreposet E L bot := [fsfun].
+Definition empty : lfspreposet E L := [fsfun].
 
 Lemma eventset_empty : 
   lfsp_eventset empty = fset0.
@@ -1024,18 +1018,18 @@ Qed.
 
 End Empty.
 
-Arguments empty E L bot : clear implicits.
+Arguments empty E L : clear implicits.
 
 Section OfSeq.
-Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p : lfspreposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p : lfspreposet E L).
 Implicit Types (ls : seq L).
 
 Definition of_seq ls := 
   let fE  := [fset e | e in nfresh \i0 (size ls)] in 
   let lab := fun e : fE => (nth bot ls (encode (val e))) in
   let ca  := fun e1 e2 : E => e1 <=^i e2 in
-  @build_cov E L bot fE lab ca.
+  @build_cov E L fE lab ca.
 
 Variable (ls : seq L).
 Hypothesis (lsD : bot \notin ls).
@@ -1045,9 +1039,9 @@ Lemma of_seq_nth_defined :
     nth bot ls (@encode E (val e)) != bot.
 Proof.
   move: lsD=> /negP nbl [/= ?].
-  rewrite ?inE /=; encodify=> ?.
+  rewrite ?inE /=; encodify; rewrite addn0=> ?.
   apply/negP; move: nbl=> /[swap]/eqP<-.
-  apply; apply/mem_nth; lia.
+  by apply; apply/mem_nth. 
 Qed.
 
 Lemma of_seq_eventset : 
@@ -1175,12 +1169,12 @@ Proof. move=> e1 e2; rewrite !of_seq_fin_caE /=; exact/le_total. Qed.
 
 End OfSeq.
 
-Arguments of_seq E L bot : clear implicits.
+Arguments of_seq E L : clear implicits.
 
 Section InterRel.
-Context (E : identType) (L : eqType) (bot : L). 
+Context (E : identType) (L : botType).
 Implicit Types (r : rel E).
-Implicit Types (p : lfspreposet E L bot).
+Implicit Types (p : lfspreposet E L).
 
 (* TODO: perhaps, we should define intersection for preorders only?
  *   Then we would have homogeneous binary operation, 
@@ -1193,7 +1187,7 @@ Implicit Types (p : lfspreposet E L bot).
  *            
  *)
 Definition inter_rel r p := 
-  @build_cov E L bot _ (fin_lab p) (r ⊓ (fs_ca p)).
+  @build_cov E L _ (fin_lab p) (r ⊓ (fs_ca p)).
 
 (* Lemma inter_rel_finsupp r p :  *)
 (*   lfsp_eventset (inter_rel r p) = lfsp_eventset p. *)
@@ -1218,7 +1212,7 @@ Proof.
   by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
 Qed.
 
-Variables (r : rel E) (p : lfspreposet E L bot).
+Variables (r : rel E) (p : lfspreposet E L).
 Hypothesis (refl  : reflexive r).
 Hypothesis (trans : transitive r).
 Hypothesis (supcl : supp_closed p).
@@ -1254,18 +1248,18 @@ Qed.
 End InterRel.
 
 Section Restrict.
-Context (E : identType) (L : eqType) (bot : L).
+Context (E : identType) (L : botType).
 Implicit Types (P : pred E).
-Implicit Types (p : lfspreposet E L bot).
+Implicit Types (p : lfspreposet E L).
 
-Definition restrict P p : lfspreposet E L bot :=
+Definition restrict P p : lfspreposet E L :=
   (* TODO: there should be a simpler solution... *)
   let fE  := [fset e in lfsp_eventset p | P e] in
   let lab := (fun e : fE => fs_lab p (val e)) in
   let ca  := (eq_op ⊔ (P × P)) ⊓ (fs_ca p) in
-  @build_cov E L bot _ lab ca.
+  @build_cov E L _ lab ca.
 
-Variables (P : pred E) (p : lfspreposet E L bot).
+Variables (P : pred E) (p : lfspreposet E L).
 Hypothesis (supcl : supp_closed p).
 Hypothesis (acyc  : acyclic (fin_ica p)).
 
@@ -1339,17 +1333,17 @@ End Restrict.
 
 
 Section Relabel.
-Context (E : identType) (L1 : eqType) (L2 : eqType) (bot1 : L1) (bot2 : L2). 
+Context (E : identType) (L1 : botType) (L2 : botType).
 Implicit Types (f : L1 -> L2).
-Implicit Types (p : lfspreposet E L1 bot1).
+Implicit Types (p : lfspreposet E L1).
 
-Definition relabel f p : lfspreposet E L2 bot2 :=
+Definition relabel f p : lfspreposet E L2 :=
   [fsfun e in finsupp p => (f (fs_lab p e), fs_rcov p e)].
 
-Variables (f : L1 -> L2) (p : lfspreposet E L1 bot1).
+Variables (f : L1 -> L2) (p : lfspreposet E L1).
 (* TODO: use inhtype to get rid of explicit bot arguments... *)
-Hypothesis (fbot : bot_preserving bot1 bot2 f).
-Hypothesis (fsupp : finsupp_preserving bot2 p f).
+Hypothesis (fbot : {homo bot f}).
+Hypothesis (fsupp : finsupp_preserving p f).
 
 (* TODO: refactor this precondition? *)
 (* Hypothesis (flabD : forall e, let l := fs_lab p e in (l == bot1) = (f l == bot2)). *)
@@ -1429,11 +1423,10 @@ Module lFsPoset.
 
 Module Export Def.
 Section Def. 
-Context (E : identType) (L : eqType).
-Variable (bot : L).
+Context (E : identType) (L : botType).
 
 Structure lfsposet : Type := mklFsPoset {
-  lfsposet_val :> lfspreposet E L bot ; 
+  lfsposet_val :> lfspreposet E L ; 
   _ : let p := lfsposet_val in 
       supp_closed p && acyclic (fin_ica p)
 }.
@@ -1451,36 +1444,36 @@ Proof. by move: (valP p)=> /andP[]. Qed.
 End Def.
 End Def.
 
-Arguments lfsposet E L bot : clear implicits.
+Arguments lfsposet E L : clear implicits.
 
 Module Export Instances.
 Section Instances. 
 
-Definition lfsposet_eqMixin E L bot := 
-  Eval hnf in [eqMixin of (lfsposet E L bot) by <:].
-Canonical lfinposet_eqType E L bot := 
-  Eval hnf in EqType (lfsposet E L bot) (@lfsposet_eqMixin E L bot).
+Definition lfsposet_eqMixin E L := 
+  Eval hnf in [eqMixin of (lfsposet E L) by <:].
+Canonical lfinposet_eqType E L := 
+  Eval hnf in EqType (lfsposet E L) (@lfsposet_eqMixin E L).
 
-Definition lfsposet_choiceMixin E (L : choiceType) bot :=
-  Eval hnf in [choiceMixin of (lfsposet E L bot) by <:].
-Canonical lfsposet_choiceType E (L : choiceType) bot :=
-  Eval hnf in ChoiceType (lfsposet E L bot) (@lfsposet_choiceMixin E L bot).
+Definition lfsposet_choiceMixin E L :=
+  Eval hnf in [choiceMixin of (lfsposet E L) by <:].
+Canonical lfsposet_choiceType E L :=
+  Eval hnf in ChoiceType (lfsposet E L) (@lfsposet_choiceMixin E L).
 
-Definition lfsposet_countMixin E (L : countType) bot :=
-  Eval hnf in [countMixin of (@lfsposet E L bot) by <:].
-Canonical lfsposet_countType E (L : countType) bot :=
-  Eval hnf in CountType (lfsposet E L bot) (@lfsposet_countMixin E L bot).
+(* Definition lfsposet_countMixin E (L : countType) bot := *)
+(*   Eval hnf in [countMixin of (@lfsposet E L bot) by <:]. *)
+(* Canonical lfsposet_countType E (L : countType) bot := *)
+(*   Eval hnf in CountType (lfsposet E L bot) (@lfsposet_countMixin E L bot). *)
 
-Canonical subFinfun_subCountType E (L : countType) bot :=
-  Eval hnf in [subCountType of (lfsposet E L bot)].
+(* Canonical subFinfun_subCountType E (L : countType) bot := *)
+(*   Eval hnf in [subCountType of (lfsposet E L bot)]. *)
 
 End Instances.
 End Instances.
 
 Section BuildCov.
-Context (E : identType) (L : eqType) (bot : L). 
+Context (E : identType) (L : botType).
 Context (fE : {fset E}).
-Implicit Types (p : lfsposet E L bot).
+Implicit Types (p : lfsposet E L).
 Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel E).
 
 Variables (lab : fE -> L) (ca : rel E).
@@ -1490,7 +1483,7 @@ Hypothesis ca_anti  : antisymmetric ca.
 Hypothesis ca_trans : transitive ca.
 
 Lemma build_covP : 
-  let p := lFsPrePoset.build_cov bot lab ca in
+  let p := lFsPrePoset.build_cov lab ca in
   supp_closed p && acyclic (fin_ica p).
 Proof.
   apply/andP; split=> //; last first.
@@ -1507,12 +1500,12 @@ End BuildCov.
 
 
 Section Empty.
-Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p : lfspreposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p : lfspreposet E L).
 
 (* TODO: rename? *)
 Lemma emptyP : 
-  let p := @lFsPrePoset.empty E L bot in
+  let p := @lFsPrePoset.empty E L in
   supp_closed p && acyclic (fin_ica p).
 Proof.
   apply/andP; split.
@@ -1520,20 +1513,20 @@ Proof.
   exact/lFsPrePoset.empty_acyclic.
 Qed.
 
-Definition empty : lfsposet E L bot := 
+Definition empty : lfsposet E L := 
   mklFsPoset emptyP.
 
 End Empty.
 
-Arguments empty E L bot : clear implicits.
+Arguments empty E L : clear implicits.
 
 Section OfSeq.
-Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p : lfspreposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p : lfspreposet E L).
 Implicit Types (ls : seq L).
 
 Lemma of_seqP ls : bot \notin ls -> 
-  let p := lFsPrePoset.of_seq E L bot ls in
+  let p := lFsPrePoset.of_seq E L ls in
   supp_closed p && acyclic (fin_ica p).
 Proof.
   move=> labD; apply/andP; split.
@@ -1541,17 +1534,17 @@ Proof.
   exact/lFsPrePoset.of_seq_acyclic.
 Qed.
 
-Definition of_seq ls : lfsposet E L bot := 
+Definition of_seq ls : lfsposet E L := 
   if bot \notin ls =P true is ReflectT nbl then
     mklFsPoset (of_seqP nbl)
-  else empty E L bot.
+  else empty E L.
 
 Lemma of_seq_valE ls : 
   val (of_seq ls) = 
     if (bot \notin ls) then 
-      lFsPrePoset.of_seq E L bot ls
+      lFsPrePoset.of_seq E L ls
     else 
-      lFsPrePoset.empty E L bot.
+      lFsPrePoset.empty E L.
 Proof. by case: ifP; rewrite /of_seq; case: eqP=> //= ->. Qed.
 
 Lemma of_seq_size ls : 
@@ -1612,8 +1605,8 @@ End OfSeq.
 
 (* TODO: move to pomset_lts.v (by analogy with add_event)? *)
 Section DeleteMax.
-Context (E : identType) (L : eqType) (bot : L).
-Context (p : lfsposet E L bot) (x : E).
+Context (E : identType) (L : botType).
+Context (p : lfsposet E L) (x : E).
 
 (* TODO: rename remove_event (by analogy with add_event)? *)
 Definition delete_pre := [fsfun p without x].
@@ -1703,7 +1696,7 @@ Proof. by rewrite delete_supp_closed delete_acyclic. Qed.
 End DeletePre.
 
 Definition delete :=
-  if eqP is ReflectT pf then mklFsPoset (deleteP pf) else lFsPoset.empty E L bot.
+  if eqP is ReflectT pf then mklFsPoset (deleteP pf) else lFsPoset.empty E L.
 
 Definition lfsp_delE: 
   [forall y : lfsp_eventset p, ~~ fs_ica p x (val y)] ->
@@ -1718,11 +1711,11 @@ Qed.
 
 End DeleteMax.
 
-Arguments of_seq E L bot : clear implicits.
+Arguments of_seq E L : clear implicits.
 
 Section InterRel.
-Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p : lfsposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p : lfsposet E L).
 
 Variable (r : rel E).
 Hypothesis (refl  : reflexive r).
@@ -1743,21 +1736,21 @@ Definition inter_rel p := mklFsPoset (inter_relP p).
 
 End InterRel.
 
-Arguments inter_rel {E L bot} r. 
+Arguments inter_rel {E L} r. 
 
 Section Inter.
-Context (E : identType) (L : eqType) (bot : L). 
-Implicit Types (p q : lfsposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p q : lfsposet E L).
 
 Definition inter p q := 
-  inter_rel (fs_ca p) (fs_ca_refl p) (@fs_ca_trans _ _ _ p) q.
+  inter_rel (fs_ca p) (fs_ca_refl p) (@fs_ca_trans _ _ p) q.
 
 End Inter.
 
 Section Restrict.
-Context (E : identType) (L : eqType) (bot : L).
+Context (E : identType) (L : botType).
 Implicit Types (P : pred E).
-Implicit Types (p : lfsposet E L bot).
+Implicit Types (p : lfsposet E L).
 
 Lemma restrictP P p :  
   let q := lFsPrePoset.restrict P p in
@@ -1779,17 +1772,17 @@ Proof. done. Qed.
 End Restrict.
 
 Section Relabel.
-Context (E : identType) (L1 : eqType) (L2 : eqType) (bot1 : L1) (bot2 : L2). 
+Context (E : identType) (L1 : botType) (L2 : botType).
 Implicit Types (f : L1 -> L2). 
-Implicit Types (p : lfsposet E L1 bot1).
+Implicit Types (p : lfsposet E L1).
 
 (* Hypothesis (flabD : forall e, let l := fs_lab p e in (l == bot1) = (f l == bot2)). *)
 (* Hypothesis (flabD : forall l, (l == bot1) = (f l == bot2)). *)
 (* Hypothesis (labD : lab_defined p). *)
 
 Lemma relabelP f p : 
-  bot_preserving bot1 bot2 f -> finsupp_preserving bot2 p f -> 
-  let q := @lFsPrePoset.relabel E L1 L2 bot1 bot2 f p in
+  {homo bot f} -> finsupp_preserving p f -> 
+  let q := @lFsPrePoset.relabel E L1 L2 f p in
   supp_closed q && acyclic (fin_ica q).
 Proof.
   move=> fbot fsupp.
@@ -1801,19 +1794,19 @@ Proof.
 Qed.
 
 Definition relabel f p :=
-  match (bot_preserving bot1 bot2 f) && (finsupp_preserving bot2 p f) =P true with
-  | ReflectF _  => lFsPoset.empty E L2 bot2
+  match {homo bot f} && (finsupp_preserving p f) =P true with
+  | ReflectF _  => lFsPoset.empty E L2 
   | ReflectT pf =>
     let: conj fbot fsupp := andP pf in
     mklFsPoset (relabelP fbot fsupp)
   end.
 
-Variable (f : L1 -> L2) (p : lfsposet E L1 bot1).
-Hypothesis (fbot : bot_preserving bot1 bot2 f).
-Hypothesis (fsupp : finsupp_preserving bot2 p f).
+Variable (f : L1 -> L2) (p : lfsposet E L1).
+Hypothesis (fbot : {homo bot f}).
+Hypothesis (fsupp : finsupp_preserving p f).
 
 Lemma relabel_valE : 
-  val (relabel f p) = @lFsPrePoset.relabel E L1 L2 bot1 bot2 f p.
+  val (relabel f p) = @lFsPrePoset.relabel E L1 L2 f p.
 Proof. 
   rewrite /relabel; case: eqP=> [pf|] //=.
   - by case: (andP pf). 
@@ -1822,19 +1815,19 @@ Qed.
 
 End Relabel.
 
-Arguments relabel {E L1 L2 bot1 bot2} f p.
+Arguments relabel {E L1 L2} f p.
 
 Module Export POrder.
 Section POrder.
-Context {E : identType} {L : eqType}.
-Variable (bot : L) (p : lfsposet E L bot).
+Context {E : identType} {L : botType}.
+Variable (bot : L) (p : lfsposet E L).
 
 Definition lfsposet_porderMixin := 
   @LePOrderMixin E (fs_ca p) (fs_sca p) 
     (fs_sca_def p) 
     (fs_ca_refl p) 
     (fs_ca_antisym (lfsp_acyclic p))
-    (@fs_ca_trans _ _ _ p). 
+    (@fs_ca_trans _ _ p). 
 
 Definition lfsposet_porderType := 
   POrderType tt E lfsposet_porderMixin.
@@ -1871,8 +1864,8 @@ End POrder.
 
 Module Export FinPOrder.
 Section FinPOrder.
-Context (E : identType) (L : eqType) (bot : L).
-Variable (p : lfsposet E L bot).
+Context (E : identType) (L : botType).
+Variable (p : lfsposet E L).
 
 Lemma fin_sca_def e1 e2 : 
   fin_sca p e1 e2 = (e2 != e1) && (fin_ca p e1 e2).
@@ -1927,8 +1920,8 @@ End Syntax.
 
 Module Export Theory.
 Section Theory.
-Context {E : identType} {L : eqType} {bot : L}.
-Implicit Types (p q : lfsposet E L bot).
+Context {E : identType} {L : botType}.
+Implicit Types (p q : lfsposet E L).
 
 Lemma fs_labE p : 
   lab =1 fs_lab p :> ([Event of p] -> L).  
@@ -1965,8 +1958,8 @@ Import lPoset.Syntax.
 
 Module Export Hom.
 Section Hom.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 Implicit Types (f : E1 -> E2).
 
 Definition is_hom f p q := 
@@ -1975,7 +1968,7 @@ Definition is_hom f p q :=
     & {in (lfsp_eventset p) &, {homo f : e1 e2 / e1 <= e2}}
   ].
 
-Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Variables (p : lfsposet E1 L) (q : lfsposet E2 L).
 Variables (f : E1 -> E2) (ff : {ffun [FinEvent of p] -> [FinEvent of q]}).
 Hypothesis (feq : forall e : lfsp_eventset p, f (val e) = val (ff e)).
 
@@ -2074,11 +2067,11 @@ Proof. by rewrite ffunE. Qed.
 
 End Hom.
 
-Arguments is_hom {_ _ _ _} _ _.
+Arguments is_hom {_ _ _} _ _.
 
 Section hPreOrder.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 
 Definition hom_le p q := 
   let EP := [FinEvent of p] in
@@ -2103,20 +2096,20 @@ Proof. move=> [] fmon ?; by rewrite -?fs_labNbot -?fs_labE fmon. Qed.
 End hPreOrder.
 
 Section PreOrder.
-Context {E : identType} {L : eqType} {bot : L}.
-Implicit Types (p q : lfsposet E L bot).
+Context {E : identType} {L : botType}.
+Implicit Types (p q : lfsposet E L).
 
 (* TODO: this relation should also be heterogeneous? *)
-Definition hom_lt : rel (lfsposet E L bot) := 
+Definition hom_lt : rel (lfsposet E L) := 
   fun p q => (q != p) && (hom_le p q).
 
 Lemma hom_lt_def p q : hom_lt p q = (q != p) && (hom_le p q).
 Proof. done. Qed.
 
-Lemma hom_le_refl : reflexive (@hom_le E E L bot). 
+Lemma hom_le_refl : reflexive (@hom_le E E L). 
 Proof. move=> ?; exact/lFinPoset.Hom.hom_le_refl. Qed.
 
-Lemma hom_le_trans : transitive (@hom_le E E L bot). 
+Lemma hom_le_trans : transitive (@hom_le E E L). 
 Proof. move=> ??? /[swap]; exact/lFinPoset.Hom.hom_le_trans. Qed.
 
 Lemma is_hom_id_finsuppE p q : 
@@ -2138,8 +2131,8 @@ End Hom.
 
 Module Export iHom.
 Section iHom.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 Implicit Types (f : E1 -> E2).
 
 Definition is_ihom f p q := 
@@ -2149,7 +2142,7 @@ Definition is_ihom f p q :=
     & {in (lfsp_eventset p) &, injective f}
   ].
 
-Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Variables (p : lfsposet E1 L) (q : lfsposet E2 L).
 Variables (f : E1 -> E2) (ff : {ffun [FinEvent of p] -> [FinEvent of q]}).
 Hypothesis (feq : forall e : lfsp_eventset p, f (val e) = val (ff e)).
 
@@ -2193,11 +2186,11 @@ Qed.
 
 End iHom.
 
-Arguments is_ihom {_ _ _ _} _ _.
+Arguments is_ihom {_ _ _} _ _.
 
 Section hPreOrder.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 
 (* TODO: rename bhom_preord? *)
 Definition ihom_le p q := 
@@ -2226,20 +2219,20 @@ Qed.
 End hPreOrder.
 
 Section PreOrder.
-Context (E : identType) (L : eqType) (bot : L).
-Implicit Types (p q : lfsposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p q : lfsposet E L).
 
 (* TODO: this relation should also be heterogeneous? *)
-Definition ihom_lt : rel (lfsposet E L bot) := 
+Definition ihom_lt : rel (lfsposet E L) := 
   fun p q => (q != p) && (ihom_le p q).
 
 Lemma ihom_lt_def p q : ihom_lt p q = (q != p) && (ihom_le p q).
 Proof. done. Qed.
 
-Lemma ihom_le_refl : reflexive (@ihom_le E E L bot). 
+Lemma ihom_le_refl : reflexive (@ihom_le E E L). 
 Proof. move=> ?; exact/lFinPoset.iHom.ihom_le_refl. Qed.
 
-Lemma ihom_le_trans : transitive (@ihom_le E E L bot). 
+Lemma ihom_le_trans : transitive (@ihom_le E E L). 
 Proof. move=> ??? /[swap]; exact/lFinPoset.iHom.ihom_le_trans. Qed.
 
 End PreOrder.
@@ -2249,8 +2242,8 @@ End iHom.
 
 Module Export bHom.
 Section bHom.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 Implicit Types (f : E1 -> E2).
 
 Definition is_bhom f p q := 
@@ -2260,7 +2253,7 @@ Definition is_bhom f p q :=
     & {on (lfsp_eventset q)  , bijective f}
   ].
 
-Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Variables (p : lfsposet E1 L) (q : lfsposet E2 L).
 Variables (f : E1 -> E2) (ff : {ffun [FinEvent of p] -> [FinEvent of q]}).
 Hypothesis (feq : forall e : lfsp_eventset p, f (val e) = val (ff e)).
 
@@ -2323,11 +2316,11 @@ Qed.
 
 End bHom.
 
-Arguments is_bhom {_ _ _ _} _ _.
+Arguments is_bhom {_ _ _} _ _.
 
 Section hPreOrder.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 
 (* TODO: rename bhom_preord? *)
 Definition bhom_le p q := 
@@ -2363,23 +2356,23 @@ Qed.
 End hPreOrder.
 
 Section PreOrder.
-Context (E : identType) (L : eqType) (bot : L).
-Implicit Types (p q : lfsposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p q : lfsposet E L).
 
 (* TODO: this relation should also be heterogeneous? *)
-Definition bhom_lt : rel (lfsposet E L bot) := 
+Definition bhom_lt : rel (lfsposet E L) := 
   fun p q => (q != p) && (bhom_le p q).
 
-Definition lin E L bot (p : lfsposet E L bot) : pred (seq L) :=
-  [pred ls | bhom_le (lFsPoset.of_seq E L bot ls) p].
+Definition lin E L (p : lfsposet E L) : pred (seq L) :=
+  [pred ls | bhom_le (lFsPoset.of_seq E L ls) p].
 
 Lemma bhom_lt_def p q : bhom_lt p q = (q != p) && (bhom_le p q).
 Proof. done. Qed.
 
-Lemma bhom_le_refl : reflexive (@bhom_le E E L bot). 
+Lemma bhom_le_refl : reflexive (@bhom_le E E L). 
 Proof. move=> ?; exact/lFinPoset.bHom.bhom_le_refl. Qed.
 
-Lemma bhom_le_trans : transitive (@bhom_le E E L bot). 
+Lemma bhom_le_trans : transitive (@bhom_le E E L). 
 Proof. move=> ??? /[swap]; exact/lFinPoset.bHom.bhom_le_trans. Qed.
 
 Lemma is_bhom_idE p q  : 
@@ -2396,8 +2389,8 @@ End bHom.
 
 Module Export Emb.
 Section Emb.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 Implicit Types (f : E1 -> E2).
 
 Definition is_emb f p q := 
@@ -2406,7 +2399,7 @@ Definition is_emb f p q :=
     & {in (lfsp_eventset p) &, {mono f : e1 e2 / e1 <= e2}}
   ].
 
-Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Variables (p : lfsposet E1 L) (q : lfsposet E2 L).
 Variables (f : E1 -> E2) (ff : {ffun [FinEvent of p] -> [FinEvent of q]}).
 Hypothesis (feq : forall e : lfsp_eventset p, f (val e) = val (ff e)).
 
@@ -2436,11 +2429,11 @@ Qed.
 
 End Emb.
 
-Arguments is_emb {_ _ _ _} _ _.
+Arguments is_emb {_ _ _} _ _.
 
 Section hPreOrder.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 
 Definition emb_le p q := 
   let EP := [FinEvent of p] in
@@ -2511,20 +2504,20 @@ Qed.
 End hPreOrder.
 
 Section PreOrder.
-Context (E : identType) (L : eqType) (bot : L).
-Implicit Types (p q : lfsposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p q : lfsposet E L).
 
 (* TODO: this relation should also be heterogeneous? *)
-Definition emb_lt : rel (lfsposet E L bot) := 
+Definition emb_lt : rel (lfsposet E L) := 
   fun p q => (q != p) && (emb_le p q).
 
 Lemma emb_lt_def p q : emb_lt p q = (q != p) && (emb_le p q).
 Proof. done. Qed.
 
-Lemma emb_le_refl : reflexive (@emb_le E E L bot). 
+Lemma emb_le_refl : reflexive (@emb_le E E L). 
 Proof. move=> ?; exact/lFinPoset.Emb.emb_le_refl. Qed.
 
-Lemma emb_le_trans : transitive (@emb_le E E L bot). 
+Lemma emb_le_trans : transitive (@emb_le E E L). 
 Proof. move=> ??? /[swap]; exact/lFinPoset.Emb.emb_le_trans. Qed.
 
 End PreOrder.
@@ -2534,8 +2527,8 @@ End Emb.
 
 Module Export Iso.
 Section Iso.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 Implicit Types (f : E1 -> E2).
 
 Definition is_iso f p q := 
@@ -2545,7 +2538,7 @@ Definition is_iso f p q :=
     & {on (lfsp_eventset q)  , bijective f}
   ].
 
-Variables (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Variables (p : lfsposet E1 L) (q : lfsposet E2 L).
 Variables (f : E1 -> E2) (ff : {ffun [FinEvent of p] -> [FinEvent of q]}).
 Hypothesis (feq : forall e : lfsp_eventset p, f (val e) = val (ff e)).
 
@@ -2586,8 +2579,8 @@ Qed.
 End Iso.
 
 Section hEquiv.
-Context {E1 E2 : identType} {L : eqType} {bot : L}.
-Implicit Types (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Context {E1 E2 : identType} {L : botType}.
+Implicit Types (p : lfsposet E1 L) (q : lfsposet E2 L).
 
 Definition iso_eqv p q := 
   let EP := [FinEvent of p] in
@@ -2629,7 +2622,7 @@ Lemma iso_eqv_size p q :
 Proof. by move=> /iso_bhom_le /bhom_le_size. Qed.
 
 Lemma bhom_factor p q : bhom_le p q -> 
-  exists2 q' : lfsposet E1 L bot, iso_eqv q' q & is_hom id q' p.
+  exists2 q' : lfsposet E1 L, iso_eqv q' q & is_hom id q' p.
 Proof.
   case/bhom_leP=> f [labf homf [/= g K K']]. 
   set fE := lfsp_eventset p.
@@ -2638,7 +2631,7 @@ Proof.
     (e1 == e2) || 
     [&& fs_ca q (g e1) (g e2), e1 \in lfsp_eventset p & e2 \in lfsp_eventset p].
   have [: a1 a2 a3 a4] @q' := 
-    @lFsPoset.build_cov E1 L bot fE fl ca a1 a2 a3 a4.
+    @lFsPoset.build_cov E1 L fE fl ca a1 a2 a3 a4.
   - by case=> e ein; rewrite /= /fl -labf K' //= fs_labE fs_labNbot. 
   - by move=> ?; rewrite /ca eqxx.
   - move=> e1 e2 /andP[] /orP[/eqP-> //|/and3P[+ e1In e2In]].
@@ -2649,7 +2642,7 @@ Proof.
     move=>/(_ e2In e1In)/[swap].
     move=> ??; suff: e1 = e2 :> [Event of p] by done.
     exact/le_anti/andP.
-  - set ft := (@fs_ca_trans _ _ _ q).
+  - set ft := (@fs_ca_trans _ _ q).
     move=>>; rewrite /ca => /orP[/eqP->//|/and3P[/[dup] fc /ft tr i1 i2]].
     move/orP=>[/eqP<-|]; rewrite ?fc ?i1 i2 //=.
     by move/andP=> [/tr->]->.
@@ -2685,7 +2678,7 @@ Definition upd_iso (f : E1 -> E2) p q e' x y e :=
  if e \in lfsp_eventset p then f e else if e == x then y else e'.
 
 Section Update.
-Variables (f : E1 -> E2) (p : lfsposet E1 L bot) (q : lfsposet E2 L bot).
+Variables (f : E1 -> E2) (p : lfsposet E1 L) (q : lfsposet E2 L).
 Variables (e' : E2) (x : E1) (y : E2).
 
 Hypothesis (en' : e' \notin lfsp_eventset q).
@@ -2741,17 +2734,17 @@ End Update.
 End hEquiv.
 
 Section Equiv.
-Context (E : identType) (L : eqType) (bot : L).
-Implicit Types (p q : lfsposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p q : lfsposet E L).
 
 (* TODO: generalize the proofs to arbitary `T -> T -> Type`? *)
-Lemma iso_eqv_refl : reflexive (@iso_eqv E E L bot).
+Lemma iso_eqv_refl : reflexive (@iso_eqv E E L).
 Proof. 
   move=> p; apply/lFinPoset.Iso.iso_eqvP. 
   exists; exact/[iso of idfun]. 
 Qed.
 
-Lemma iso_eqv_sym : symmetric (@iso_eqv E E L bot).
+Lemma iso_eqv_sym : symmetric (@iso_eqv E E L).
 Proof. 
   move=> p q.
   apply/idP/idP=> /lFinPoset.Iso.iso_eqvP [f]; 
@@ -2759,7 +2752,7 @@ Proof.
     exists; exact/[iso of bhom_inv f].
 Qed.
 
-Lemma iso_eqv_trans : transitive (@iso_eqv E E L bot).
+Lemma iso_eqv_trans : transitive (@iso_eqv E E L).
 Proof. 
   rewrite /iso_eqv=> p q r.
   move=> /lFinPoset.Iso.iso_eqvP [f] /lFinPoset.Iso.iso_eqvP [g]. 
@@ -2809,13 +2802,13 @@ Import lFsPoset.Syntax.
 
 Module Export Def.
 Section Def.  
-Context {E : identType} {L : choiceType} {bot : L}.
+Context {E : identType} {L : botType}.
 
 Canonical iso_equiv_rel := 
   EquivRel iso_eqv 
-    (@iso_eqv_refl E L bot) 
-    (@iso_eqv_sym E L bot) 
-    (@iso_eqv_trans E L bot).
+    (@iso_eqv_refl E L) 
+    (@iso_eqv_sym E L) 
+    (@iso_eqv_trans E L).
 
 Definition pomset := {eq_quot iso_eqv}.
 
@@ -2824,11 +2817,11 @@ Canonical pomset_eqType := [eqType of pomset].
 Canonical pomset_choiceType := [choiceType of pomset].
 Canonical pomset_eqQuotType := [eqQuotType iso_eqv of pomset].
 
-Definition pom : lfsposet E L bot -> pomset := \pi.
+Definition pom : lfsposet E L -> pomset := \pi.
 
 Implicit Types (p : pomset).
 
-Coercion lfsposet_of p : lfsposet E L bot := repr p.
+Coercion lfsposet_of p : lfsposet E L := repr p.
 
 (* TODO: specialize lemma event further? use is_iso equivalence directly? *)
 Lemma pomP q : 
@@ -2838,64 +2831,64 @@ Proof. by case: piP. Qed.
 End Def.
 End Def.
 
-Arguments pomset E L bot : clear implicits.
+Arguments pomset E L : clear implicits.
 
 Section OfSeq.
-Context (E : identType) (L : choiceType) (bot : L). 
-Implicit Types (p : pomset E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p : pomset E L).
 Implicit Types (ls : seq L).
 
-Definition of_seq ls : pomset E L bot := 
-  pom (@lFsPoset.of_seq E L bot ls).
+Definition of_seq ls : pomset E L := 
+  pom (@lFsPoset.of_seq E L ls).
 
 End OfSeq.
 
 Section InterRel.
-Context (E : identType) (L : choiceType) (bot : L). 
-Implicit Types (p : pomset E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p : pomset E L).
 
 Variable (r : rel E).
 Hypothesis (refl  : reflexive r).
 Hypothesis (trans : transitive r).
 
-Definition inter_rel p : pomset E L bot := 
+Definition inter_rel p : pomset E L := 
   \pi (lFsPoset.inter_rel r refl trans p).
 
 End InterRel.
 
-Arguments inter_rel {E L bot} r. 
+Arguments inter_rel {E L} r. 
 
 Section Inter.
-Context (E : identType) (L : choiceType) (bot : L). 
-Implicit Types (p q : pomset E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p q : pomset E L).
 
-Definition inter p q : pomset E L bot := 
+Definition inter p q : pomset E L := 
   \pi (lFsPoset.inter p q).
 
 End Inter.
 
 Section Restrict.
-Context (E : identType) (L : choiceType) (bot : L). 
+Context (E : identType) (L : botType).
 Implicit Types (P : pred E).
-Implicit Types (p q : pomset E L bot).
+Implicit Types (p q : pomset E L).
 
-Definition restrict P p : pomset E L bot := 
+Definition restrict P p : pomset E L := 
   \pi (lFsPoset.restrict P p).
 
 End Restrict.
 
 
 Section Relabel.
-Context (E : identType) (L1 L2 : choiceType) (bot1 : L1) (bot2 : L2). 
+Context (E : identType) (L1 L2 : botType).
 Implicit Types (f : L1 -> L2).
-Implicit Types (p : pomset E L1 bot1).
+Implicit Types (p : pomset E L1).
 
-Definition relabel f p : pomset E L2 bot2 := 
-  \pi (@lFsPoset.relabel E L1 L2 bot1 bot2 f p).
+Definition relabel f p : pomset E L2 := 
+  \pi (@lFsPoset.relabel E L1 L2 f p).
 
 End Relabel.
 
-Arguments relabel {E L1 L2 bot1 bot2} f p.
+Arguments relabel {E L1 L2} f p.
 
 Import lPoset.Syntax.
 Import lFsPoset.Syntax.
@@ -2903,9 +2896,9 @@ Import lFsPoset.Syntax.
 Module Export iHom.
 Module Export POrder.
 Section POrder.
-Implicit Types (E : identType) (L : choiceType).
+Implicit Types (E : identType) (L : botType).
 
-Lemma pom_ihom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+Lemma pom_ihom_le E1 E2 L (p : lfsposet E1 L) (q : lfsposet E2 L) :
   ihom_le (repr (pom p)) (repr (pom q)) = ihom_le p q.
 Proof.
   rewrite /ihom_le. 
@@ -2916,11 +2909,11 @@ Proof.
   exact/[ihom of [iso of (bhom_inv g)] \o h \o f].
 Qed.
 
-Context {E : identType} {L : choiceType} {bot : L}.
-Implicit Types (p q : pomset E L bot). 
+Context {E : identType} {L : botType}.
+Implicit Types (p q : pomset E L). 
 
 Lemma pom_ihom_mono :
-  {mono (@pom E L bot) : p q / ihom_le p q >-> ihom_le (repr p) (repr q)}.
+  {mono (@pom E L) : p q / ihom_le p q >-> ihom_le (repr p) (repr q)}.
 Proof. exact/pom_ihom_le. Qed.
 
 Canonical ihom_le_quot_mono2 := PiMono2 pom_ihom_mono.
@@ -2934,9 +2927,9 @@ End iHom.
 Module Export bHom.
 Module Export POrder.
 Section POrder.
-Implicit Types (E : identType) (L : choiceType).
+Implicit Types (E : identType) (L : botType).
 
-Lemma pom_bhom_le E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+Lemma pom_bhom_le E1 E2 L (p : lfsposet E1 L) (q : lfsposet E2 L) :
   bhom_le (repr (pom p)) (repr (pom q)) = bhom_le p q.
 Proof.
   rewrite /bhom_le. 
@@ -2947,7 +2940,7 @@ Proof.
   exact/[bhom of [iso of bhom_inv g] \o h \o f].
 Qed.
 
-Lemma pom_bhom_le1 E1 E2 L bot (p : lfsposet E1 L bot) (q : lfsposet E2 L bot) :
+Lemma pom_bhom_le1 E1 E2 L (p : lfsposet E1 L) (q : lfsposet E2 L) :
   bhom_le p (repr (pom q)) = bhom_le p q.
 Proof.
   rewrite /bhom_le. 
@@ -2958,33 +2951,33 @@ Proof.
   exact/[bhom of h \o f].
 Qed.
 
-Context {E : identType} {L : choiceType} {bot : L}.
-Implicit Types (p q : pomset E L bot). 
+Context {E : identType} {L : botType}.
+Implicit Types (p q : pomset E L). 
 
 Lemma pom_bhom_mono :
-  {mono (@pom E L bot) : p q / bhom_le p q >-> bhom_le (repr p) (repr q)}.
+  {mono (@pom E L) : p q / bhom_le p q >-> bhom_le (repr p) (repr q)}.
 Proof. exact/pom_bhom_le. Qed.
 
 Lemma pom_lin_mono l :
-  {mono (@pom E L bot) : p / l \in lin p >-> l \in lin (repr p)}.
+  {mono (@pom E L) : p / l \in lin p >-> l \in lin (repr p)}.
 Proof. exact/pom_bhom_le1. Qed.
 
 Canonical bhom_le_quote_mono2 := PiMono2 pom_bhom_mono.
 Canonical lin_quote_mono2 l := PiMono1 (pom_lin_mono l).
 
 Lemma pom_bhom_le_refl : 
-  reflexive (@bhom_le E E L bot : rel (pomset E L bot)). 
+  reflexive (@bhom_le E E L : rel (pomset E L)). 
 Proof. exact/bhom_le_refl. Qed.
 
 Lemma pom_bhom_le_antisym : 
-  antisymmetric (@bhom_le E E L bot : rel (pomset E L bot)). 
+  antisymmetric (@bhom_le E E L : rel (pomset E L)). 
 Proof. 
   move=> p q; rewrite -[p]reprK -[q]reprK !piE.
   move=> /andP[??]; exact/eqmodP/iso_bhom_le_antisym.
 Qed.
 
 Lemma pom_bhom_le_trans : 
-  transitive (@bhom_le E E L bot : rel (pomset E L bot)). 
+  transitive (@bhom_le E E L : rel (pomset E L)). 
 Proof. exact/bhom_le_trans. Qed.
 
 Lemma disp : unit. 
@@ -2992,12 +2985,12 @@ Proof. exact: tt. Qed.
 
 Definition pomset_bhomPOrderMixin := 
   @LePOrderMixin _ 
-    (@bhom_le E E L bot : rel (pomset E L bot)) 
+    (@bhom_le E E L : rel (pomset E L)) 
     (fun p q => (q != p) && (bhom_le p q))
     (fun p q => erefl) pom_bhom_le_refl pom_bhom_le_antisym pom_bhom_le_trans. 
 
 Canonical pomset_bhomPOrderType := 
-  POrderType disp (pomset E L bot) pomset_bhomPOrderMixin.
+  POrderType disp (pomset E L) pomset_bhomPOrderMixin.
 
 Lemma pom_bhom_leE p q : p <= q = bhom_le p q.
 Proof. done. Qed.
@@ -3008,10 +3001,10 @@ End bHom.
 
 Module Export Theory.
 Section Theory.
-Context {E : identType} {L : choiceType} (bot : L).
-Implicit Types (p q : pomset E L bot).
+Context {E : identType} {L : botType}.
+Implicit Types (p q : pomset E L).
 
-Lemma iso_eqv_pom (p : lfsposet E L bot) :
+Lemma iso_eqv_pom (p : lfsposet E L) :
   iso_eqv p (pom p).
 Proof. by rewrite -eqmodE piK. Qed.
 
@@ -3046,10 +3039,10 @@ Import lFsPoset.Syntax.
 
 Module Export Def.
 Section Def.  
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 
 Structure tomset : Type := mkTomset {
-  tomset_val :> pomset E L bot;
+  tomset_val :> pomset E L;
   _ : totalb (fin_ca tomset_val); 
 }.
 
@@ -3075,19 +3068,19 @@ Qed.
 End Def.
 End Def.
 
-Arguments tomset E L bot : clear implicits.
+Arguments tomset E L : clear implicits.
 
 
 Section OfSeq.
-Context (E : identType) (L : choiceType) (bot : L). 
-Implicit Types (p : lfspreposet E L bot).
+Context (E : identType) (L : botType).
+Implicit Types (p : lfspreposet E L).
 Implicit Types (ls : seq L).
 
 Lemma of_seq_total ls : 
-  let p := @Pomset.of_seq E L bot ls in
+  let p := @Pomset.of_seq E L ls in
   total (fin_ca p).   
 Proof. 
-  pose p := @lFsPoset.of_seq E L bot ls.
+  pose p := @lFsPoset.of_seq E L ls.
   rewrite /Pomset.of_seq=> /= e1 e2.
   move: (iso_eqv_pom p)=> /lFinPoset.Iso.iso_eqvP [f]. 
   move: (lFsPoset.of_seq_total (f e1) (f e2)).
@@ -3102,16 +3095,16 @@ End OfSeq.
 
 Module Export Theory.
 Section Theory.
-Context {E : identType} {L : choiceType} (bot : L).
-Implicit Types (t u : tomset E L bot).
+Context {E : identType} {L : botType}.
+Implicit Types (t u : tomset E L).
 
 Lemma tomset_labelsK : 
-  cancel (@lfsp_labels E L bot : tomset E L bot -> seq L) (@of_seq E L bot).
+  cancel (@lfsp_labels E L : tomset E L -> seq L) (@of_seq E L).
 Proof. 
   move=> t; apply/val_inj/esym/eqP=> /=.
   rewrite eqquot_piE iso_eqv_sym.
   apply/iso_eqvP.
-  pose u := lFsPoset.of_seq E L bot (lfsp_labels t).
+  pose u := lFsPoset.of_seq E L (lfsp_labels t).
   pose f : [Event of t] -> [Event of u] := 
     fun e => decode (lfsp_idx t e).
   move: (lfsp_labels_Nbot t)=> labD.

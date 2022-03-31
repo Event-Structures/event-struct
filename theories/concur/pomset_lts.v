@@ -29,32 +29,32 @@ Local Open Scope pomset_scope.
 
 
 (* TODO: consider decidable/bool languages only? *)
-Notation pomlang E L bot := (pomset E L bot -> Prop).
+Notation pomlang E L := (pomset E L -> Prop).
 
 Module Export PomLang.
 Section PomLang.
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 Context (S : ltsType L).
 Implicit Types (l : L) (s : S).
-Implicit Types (p : pomset E L bot).
+Implicit Types (p : pomset E L).
 
 (* TODO: this should be simplified *)
-Definition lts_pomlang s : pomlang E L bot := 
-  fun p => exists2 ls, p = @Pomset.of_seq E L bot ls & lts_lang s ls. 
+Definition lts_pomlang s : pomlang E L := 
+  fun p => exists2 ls, p = @Pomset.of_seq E L ls & lts_lang s ls. 
 
 (* TODO: for bool-languages it can be stated using {subsumes} notation *)
-Definition subsumes : pomlang E L bot -> pomlang E L bot -> Prop := 
+Definition subsumes : pomlang E L -> pomlang E L -> Prop := 
   fun P Q => forall p, P p -> exists q, Q q /\ bhom_le p q.
 
 (* TODO: for bool-languages it can be stated using {subsumes} notation *)
-Definition supports : pomlang E L bot -> pomlang E L bot -> Prop := 
+Definition supports : pomlang E L -> pomlang E L -> Prop := 
   fun P Q => forall p, P p -> exists q, Q q /\ bhom_le q p.
 
 (* for a given pomset p returns language consisting of 
  * restrictions of p onto its principal ideals, 
  * that is prefixes of events of p.  
  *)
-Definition pideal_lang p : pomlang E L bot := 
+Definition pideal_lang p : pomlang E L := 
   let pideals := [fset (pideal (e : [Event of p])) | e in finsupp p] in
   let qs := [fset (Pomset.restrict (mem (es : {fset E})) p) | es in pideals] in
   fun q => q \in qs.
@@ -71,11 +71,11 @@ Module Export AddEvent.
 
 Module Export Def.
 Section Def.  
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p : lfspreposet E L bot).
+Implicit Types (p : lfspreposet E L).
 
-Definition lfspre_add_event l es p : lfspreposet E L bot := 
+Definition lfspre_add_event l es p : lfspreposet E L := 
   let e := lfsp_fresh p in
   [fsfun p with e |-> (l, es)].
 
@@ -84,9 +84,9 @@ End Def.
 
 Module Export Theory.
 Section Theory.  
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 Variable (l : L) (es : {fset E}).
-Variable (p : lfspreposet E L bot).
+Variable (p : lfspreposet E L).
 
 Hypothesis (lD : l != bot).
 Hypothesis (esSub : es `<=` lfsp_eventset p).
@@ -283,15 +283,15 @@ Module Export lFsPosetLTS.
 
 Module Export Def.
 Section Def.  
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p : lfsposet E L bot).
+Implicit Types (p : lfsposet E L).
 
-Definition lfsp_add_event l es p : lfsposet E L bot :=
+Definition lfsp_add_event l es p : lfsposet E L :=
   let e := lfsp_fresh p in
   let q := lfspre_add_event l es p in
   match (l != bot) && (es `<=` (lfsp_eventset p)) =P true with
-  | ReflectF _  => lFsPoset.empty E L bot
+  | ReflectF _  => lFsPoset.empty E L
   | ReflectT pf => mklFsPoset
     (let: conj lD esSub := andP pf in
     let supcl := add_event_supp_closed lD esSub (lfsp_supp_closed p) in
@@ -308,9 +308,9 @@ End Def.
 (* TODO: there is a lot of copypaste from lFsPrePosetLTS ... *)
 Module LTS.
 Section LTS.
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p : lfsposet E L bot).
+Implicit Types (p : lfsposet E L).
 
 Definition ltrans l p q := 
   (l != bot) &&
@@ -333,14 +333,14 @@ Proof.
 Qed.
   
 Definition mixin := 
-  let S := lfsposet E L bot in
+  let S := lfsposet E L in
   @LTS.LTS.Mixin S L _ _ _ enabledP. 
 Definition ltsType := 
-  Eval hnf in let S := lfsposet E L bot in (LTSType S L mixin).
+  Eval hnf in let S := lfsposet E L in (LTSType S L mixin).
 
 End LTS.
 
-Arguments ltsType E L bot : clear implicits.
+Arguments ltsType E L : clear implicits.
 
 Module Export Exports.
 Canonical ltsType.
@@ -352,10 +352,10 @@ Export LTS.Exports.
 
 Module Export Theory.
 Section Theory.  
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p q : lfsposet E L bot).
-Implicit Types (tr : trace (LTS.ltsType E L bot)).
+Implicit Types (p q : lfsposet E L).
+Implicit Types (tr : trace (LTS.ltsType E L)).
 
 Import lPoset.Syntax.
 Local Open Scope lts_scope.
@@ -469,9 +469,9 @@ Proof.
     rewrite upd_iso_delta_eq /lfsp_fresh //; last exact/fresh_seq_nmem.
     case: ifP=> // _; exact/labg.
   - rewrite !fs_caE !lfsp_add_eventE // => in1 in2.
-    rewrite -fs_caE (@emb_fs_ca _ _ _ _ _ p q _ _ injg) //.
+    rewrite -fs_caE (@emb_fs_ca _ _ _ _ p q _ _ injg) //.
     rewrite upd_iso_delta_eq //; last exact/fresh_seq_nmem.
-    by rewrite -(@emb_dw_clos _ _ _ _ g p q) //.
+    by rewrite -(@emb_dw_clos _ _ _ g p q) //.
   case bijf=> h K K'.  
   exists [eta h with lfsp_fresh q |-> lfsp_fresh p] => e.
   all: rewrite lfsp_add_eventE // !in_fset1U /=; case: ifP=> //= [+ _|?]. 
@@ -488,7 +488,7 @@ Qed.
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
 
 Lemma invariant_operational : 
-  @invariant L (LTS.ltsType E L bot) (@operational _ _ _).
+  @invariant L (LTS.ltsType E L) (@operational _ _).
 Proof.
   move=> p q [l /lfsp_ltransP[? [? /[dup] ? /fsubsetP sub ->]]].
   move/operationalP=> o; apply/operationalP=>> //.
@@ -501,7 +501,7 @@ Qed.
 (* TODO: invariant_conseq_num ? *)
 
 Lemma lfsp_trace_fresh tr p:
-  let emp := lFsPoset.empty E L bot in
+  let emp := lFsPoset.empty E L in
   p = lst_state emp tr ->
   tr \in trace_lang emp -> lfsp_fresh p = iter (size tr) fresh \i0.
 Proof.
@@ -520,7 +520,7 @@ Proof.
 Qed. 
 
 Lemma lfsp_trace_eventset tr :
-  let emp := lFsPoset.empty E L bot in
+  let emp := lFsPoset.empty E L in
   let p := lst_state emp tr in
   tr \in trace_lang emp -> lfsp_eventset p = [fset e | e in nfresh \i0 (size tr)].
 Proof.
@@ -545,7 +545,7 @@ Proof.
 Qed. 
 
 Lemma lfsp_trace_lab tr e : 
-  let emp := lFsPoset.empty E L bot in 
+  let emp := lFsPoset.empty E L in 
   let p := lst_state emp tr in
   tr \in trace_lang emp -> fs_lab p e = nth bot (map lbl tr) (encode e).
 Proof.
@@ -571,12 +571,12 @@ Proof.
 Qed.
 
 Lemma lfsp_lang_lin tr : 
-  let emp := lFsPoset.empty E L bot in 
+  let emp := lFsPoset.empty E L in 
   let p := lst_state emp tr in
   tr \in trace_lang emp -> labels tr \in lin p.
 Proof. 
   move=> emp p inTr; rewrite /lin inE /=.
-  pose q := lFsPoset.of_seq E L bot (map lbl tr).
+  pose q := lFsPoset.of_seq E L (map lbl tr).
   have labsD : bot \notin (map lbl tr).
   - apply/mapP=> -[[/=> /(allP (trace_steps _))/[swap]<-]].
     by case/lfsp_ltransP=> /eqP.
@@ -600,7 +600,7 @@ Proof.
 Qed.
 
 Lemma lfsp_lin_trace_lang tr : 
-  let emp := lFsPoset.empty E L bot in 
+  let emp := lFsPoset.empty E L in 
   let p := lst_state emp tr in
   labels tr \in lin p -> tr \in trace_lang emp.
 Proof.
@@ -609,7 +609,7 @@ Proof.
   rewrite lfsp_trace_labels_defined.  
   move=> sizeE; apply/eqP/esym/val_inj. 
   apply/lFsPrePoset.size0_empty => //=. 
-  set f := [eta (@lfsp_size E L bot)]: lfsposet _ _ _ -> nat.
+  set f := [eta (@lfsp_size E L)]: lfsposet _ _ -> nat.
   move: (@measure_lst _ _ _ f S) sizeE=> /=; rewrite /f /= /==> -> //.
   - rewrite iter_succn; lia.
   move=> s s' l; case/lfsp_ltransP=> ? [?? ->]. 
@@ -619,7 +619,7 @@ Qed.
 Lemma max_of_seq (ls : seq L): 
   bot \notin ls ->
   (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i0])
-  `<=` lfsp_eventset (lFsPoset.of_seq E L bot ls).
+  `<=` lfsp_eventset (lFsPoset.of_seq E L ls).
 Proof.
   move=> labsD.
   rewrite /= lFsPoset.of_seq_valE labsD //. 
@@ -631,11 +631,11 @@ Qed.
 Lemma of_seq_rcons l ls: 
   bot \notin ls ->
   l != bot ->
-  lFsPoset.of_seq E L bot (rcons ls l) = 
+  lFsPoset.of_seq E L (rcons ls l) = 
   lfsp_add_event 
     l
     (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i0])
-    (lFsPoset.of_seq E L bot ls).
+    (lFsPoset.of_seq E L ls).
 Proof.
   move=> nls nl; apply/eqP/lfspreposet_eqP.
   have labsDr: bot \notin rcons ls l. 
@@ -662,7 +662,7 @@ Proof.
 Qed.
 
 Lemma operational_of_seq ls : 
-  bot \notin ls -> operational (lFsPoset.of_seq E L bot ls).
+  bot \notin ls -> operational (lFsPoset.of_seq E L ls).
 Proof.
   move=> labsD; apply/operationalP=>>.
   rewrite lFsPoset.of_seq_caE labsD //.
@@ -670,7 +670,7 @@ Proof.
 Qed.
 
 Section BackwardStep.
-Context (p : lfsposet E L bot) (n : nat).
+Context (p : lfsposet E L) (n : nat).
 Hypothesis oper : operational p.
 Hypothesis fs_p : lfsp_eventset p = [fset e | e in nfresh \i0 n].
 Hypothesis ne0n : n != 0%N.
@@ -735,9 +735,9 @@ Qed.
 End BackwardStep.
 
 Lemma lfsp_lin_lang p (ls : seq L) : 
-  let emp := lFsPoset.empty E L bot in 
+  let emp := lFsPoset.empty E L in 
   bot \notin ls ->
-  is_hom id p (lFsPoset.of_seq E L bot ls) ->
+  is_hom id p (lFsPoset.of_seq E L ls) ->
   exists2 tr : trace _,
       lst_state emp tr = p & 
       labels tr = ls.
@@ -768,16 +768,16 @@ Proof.
   rewrite of_seq_rcons // => homf.
   have?: 
     (if ls == [::] then fset0 else [fset iter (size ls).-1 fresh \i0])
-    `<=` lfsp_eventset (lFsPoset.of_seq E L bot ls).
+    `<=` lfsp_eventset (lFsPoset.of_seq E L ls).
   - exact/max_of_seq.
   move: (str); case/lfsp_ltransP=> ?[es ?/[dup] pE->].
   move: homf=> /[dup] homf /is_hom_id_finsuppE.
   rewrite pE ?lfsp_add_eventE // => fE.
-  have fqE: lfsp_fresh (lFsPoset.of_seq E L bot ls) = lfsp_fresh q.
+  have fqE: lfsp_fresh (lFsPoset.of_seq E L ls) = lfsp_fresh q.
   - apply/(@is_sup_uniq _ _ (lfsp_fresh q |` lfsp_eventset q)).
     + rewrite fE; exact/is_sup_fresh.
     exact/is_sup_fresh.
-  have fsE: lfsp_eventset q = lfsp_eventset (lFsPoset.of_seq E L bot ls).
+  have fsE: lfsp_eventset q = lfsp_eventset (lFsPoset.of_seq E L ls).
   - apply/fsetP=> x; move/fsetP/(_ x): fE; rewrite !in_fset1U fqE.
     case: (x =P _)=> //->_; by rewrite -{2}fqE ?(negbTE (fresh_seq_nmem _)).
   case: (IHl q)=> //.
@@ -809,11 +809,11 @@ Module Export PomsetLTS.
 (* TODO: there is a lot of copypaste from lFsPrePosetLTS ... *)
 Module LTS.
 Section LTS.
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p q : pomset E L bot).
+Implicit Types (p q : pomset E L).
 
-Definition ltrans l (p q : lfsposet E L bot) := 
+Definition ltrans l (p q : lfsposet E L) := 
   (l != bot) &&
   [exists es : fpowerset (lfsp_eventset p),
     iso_eqv q (lfsp_add_event l (val es) p) 
@@ -854,14 +854,14 @@ Proof.
 Qed.
   
 Definition mixin := 
-  let S := pomset E L bot in
+  let S := pomset E L in
   @LTS.LTS.Mixin S L _ _ _ enabledP. 
 Definition pomltsType := 
-  Eval hnf in let S := pomset E L bot in (LTSType S L mixin).
+  Eval hnf in let S := pomset E L in (LTSType S L mixin).
 
 End LTS.
 
-Arguments pomltsType E L bot : clear implicits.
+Arguments pomltsType E L : clear implicits.
 
 Module Export Exports.
 Canonical pomltsType.
@@ -874,10 +874,10 @@ Export LTS.Exports.
 
 Module Export Theory.
 Section Theory.  
-Context (E : identType) (L : choiceType) (bot : L).
+Context (E : identType) (L : botType).
 Implicit Types (l : L) (es : {fset E}).
-Implicit Types (p q : pomset E L bot).
-Implicit Types (tr : trace (LTS.pomltsType E L bot)).
+Implicit Types (p q : pomset E L).
+Implicit Types (tr : trace (LTS.pomltsType E L)).
 
 Import lPoset.Syntax.
 Local Open Scope lts_scope.
@@ -885,10 +885,10 @@ Local Open Scope lts_scope.
 Export Simulation.Exports.
 Import Simulation.Syntax.
 
-Definition R : hrel (pomset E L bot) (lfsposet E L bot) := 
+Definition R : hrel (pomset E L) (lfsposet E L) := 
   iso_eqv.
 
-Lemma ltransP l (p q : lfsposet E L bot) :
+Lemma ltransP l (p q : lfsposet E L) :
   reflect (l != bot /\ exists2 es, 
              es `<=` lfsp_eventset p & 
              iso_eqv q (lfsp_add_event l es p))
@@ -906,7 +906,7 @@ Qed.
 
 
 Lemma iso_sim_class_of : Simulation.class_of 
-  (iso_eqv : hrel (pomset E L bot) (lfsposet E L bot)).
+  (iso_eqv : hrel (pomset E L) (lfsposet E L)).
 Proof.
   do ? split; rewrite /ltrans /==> l s1 t1 t2 ?.
   case/lfsp_ltransP=> ? [es ? t2E].
@@ -919,7 +919,7 @@ Qed.
 Definition iso_sim := Simulation.Pack iso_sim_class_of.
 
 Lemma iso_sim_tr_class_of : Simulation.class_of 
-  (iso_eqv : hrel (lfsposet E L bot) (pomset E L bot)).
+  (iso_eqv : hrel (lfsposet E L) (pomset E L)).
 Proof.
   do ? split; rewrite /ltrans /==> l s1 t1 t2.
   rewrite iso_eqv_sym -eqquot_piE=> /eqP->.
@@ -930,10 +930,10 @@ Qed.
 
 Definition iso_sim_tr := Simulation.Pack iso_sim_tr_class_of.
 
-Notation of_seq := (lFsPoset.of_seq E L bot).
+Notation of_seq := (lFsPoset.of_seq E L).
 
 Lemma pomset_linP p (ls : seq L) :
-  let emp := lFsPoset.empty E L bot in 
+  let emp := lFsPoset.empty E L in 
   bot \notin ls ->
     reflect 
       (exists tr : trace _,
