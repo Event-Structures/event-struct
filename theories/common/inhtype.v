@@ -2,6 +2,27 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype choice fingraph path. 
 From eventstruct Require Import utils.
 
+(******************************************************************************)
+(* This file provides a theory of inhabited types, i.e. types with one        *)
+(* distinguished inhabitant.                                                  *)
+(*            ?|T| == propositional assertion that type T has an inhabitant.  *)
+(*           ??|T| == boolean assertion that finite type T has an inhabitant. *)
+(*       inhType d == inhabited type.                                         *)
+(*         inh : T == distinguished inhabitant of the type T.                 *)
+(*         botType == special kind of inhabited types where the               *)
+(*                    distinguished inhabitant represets bottom               *)
+(*                    (i.e. undefined value).                                 *)
+(*         bot : T == bottom of the type T.                                   *)
+(*   {homo bot f} <-> f is a homomorphism between types with bottom:          *)
+(*                    f bot = bot.                                            *)
+(*                                                                            *)
+(* We also provide canonical instance of inhType for the following types:     *)
+(* - nat with inhabitant 0;                                                   *)
+(* - product type T * U with inhabitant (inh : T, inh : U);                   *)
+(*                                                                            *)
+(******************************************************************************)
+
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
