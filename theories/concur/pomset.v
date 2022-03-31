@@ -288,6 +288,22 @@ Proof.
   move=> [] neq tr; split=> //; by right.  
 Qed.  
 
+Lemma fin_ica_irrefl p : 
+  irreflexive (fs_ica p) -> irreflexive (fin_ica p).
+Proof.
+  move=> irr; apply/irreflexive_mono.
+  - exact/fin_ica_mono.
+  move=> /= *; exact/irr. 
+Qed.
+
+Lemma fin_ca_antisym p : 
+  antisymmetric (fs_ca p) -> antisymmetric (fin_ca p).
+Proof.
+  move=> asym; apply/antisymmetric_mono.
+  - exact/fin_ca_mono.
+  move=> x y /= ?; exact/val_inj/asym.
+Qed.
+
 (* ************************************************************************** *)
 (*     Lab and eventset lemmas                                                *)
 (* ************************************************************************** *)
@@ -308,7 +324,7 @@ Lemma eventset_fsupp p :
 Proof. by apply/fsubsetP=> e; rewrite inE=> /andP[]. Qed.
 
 (* ************************************************************************** *)
-(*     Properties of topological sorting and event numbering                  *)
+(*     Properties of topological sorting and event enumeration                *)
 (* ************************************************************************** *)
 
 Lemma lfsp_tseq_size p : 
@@ -356,7 +372,7 @@ Proof.
 Qed.
 
 Lemma lfsp_idx_inj p : 
-  { in lfsp_eventset p &, injective (lfsp_idx p)}.
+  {in lfsp_eventset p &, injective (lfsp_idx p)}.
 Proof. 
   rewrite /lfsp_idx=> e1 e2 e1In e2In.
   by apply/index_inj; rewrite mem_lfsp_tseq.
@@ -438,8 +454,8 @@ Proof.
   by move=> /supcl [] ->.
 Qed.
 
-Lemma fs_ica_fin_icaE p : 
-  supp_closed p -> fs_ica p =2 sub_rel_lift (fin_ica p).
+Lemma fs_ica_fin_icaE p : supp_closed p -> 
+  fs_ica p =2 sub_rel_lift (fin_ica p).
 Proof.
   move=> sc>; rewrite /fin_ica sub_rel_lift_downK=> //=>.
   by case/(supp_closedP _ sc)=> /=->.
@@ -456,17 +472,10 @@ Proof.
 Qed.
 
 Lemma fin_ica_acyclic p : 
-  irreflexive (fs_ica p) -> antisymmetric (fs_ca p) -> acyclic (fin_ica p).
+  irreflexive (fin_ica p) -> antisymmetric (fin_ca p) -> acyclic (fin_ica p).
 Proof. 
-  move=> irrefl asym.
-  rewrite acyclicE; apply/andP; split.
-  - apply/irreflexiveP/irreflexive_mono. 
-    + exact/fin_ica_mono. 
-    by move=> ? /=.
-  apply/antisymmetricP/antisymmetric_mono. 
-  - exact/fin_ca_mono. 
-  move=> /= x y /andP[??].
-  by apply/val_inj/asym/andP.
+  move=> irrefl asym; rewrite acyclicE.
+  apply/andP; split; [exact/irreflexiveP | exact/antisymmetricP].
 Qed.
  
 Lemma fs_caP p e1 e2 : supp_closed p -> 
@@ -518,14 +527,6 @@ Proof.
   suff: e2' = e3'=> [->|] //.
   apply/val_inj=> /=; congruence.
 Qed.
-
-  (* rewrite clos_t_itr=> supcl e1 e2 ica_xy.  *)
-  (* pose D x := mem (lfsp_eventset p) x : Prop. *)
-  (* have: (D × D) e1 e2. *)
-  (* - apply: (clos_t_restr _ ica_xy)=> x y /=. *)
-  (*   by move: supcl=> /supp_closedP /(_ x y) /[apply] [[]].  *)
-  (* rewrite /D /= => [[]] in1 in2. *)
-  (* rewrite /sub_rel_lift /= !insubT. *)   
 
 Lemma fs_ica_ct_fin_sca p : supp_closed p -> acyclic (fin_ica p) ->
   clos_trans (fs_ica p) ≦ sub_rel_lift (fin_sca p).
@@ -786,20 +787,23 @@ Lemma acyclic_build :
   acyclic ica -> acyclic (fin_ica (build lab ica)).
 Proof. 
   move=> acyc; apply/fin_ica_acyclic. 
-  - move=> e; rewrite build_ica /sub_rel_lift /=.
+  - apply/fin_ica_irrefl.
+    move=> e; rewrite build_ica /sub_rel_lift /=.
     case: insubP=> // e' ??; exact/acyc_irrefl.
+  apply/fin_ca_antisym.
   move=> /= x y /andP[].
   pose supcl := supp_closed_build.
   move=> /(fs_caP _ _ supcl)/clos_rt_str + /(fs_caP _ _ supcl)/clos_rt_str.
   have eq_ica: (fs_ica (build lab ica) : hrel E E) ≡ sub_rel_lift ica.
   - by move=> ?? /=; rewrite build_ica.
-  rewrite !(str_weq eq_ica) !sub_rel_lift_connect. 
+  rewrite !(str_weq eq_ica) !sub_rel_lift_connect /=. 
   move=> [->|] // + [->|] //.
   rewrite /sub_rel_lift /=.
-  case: insubP=> //= x' ? <-; case: insubP=> //= y' ? <-.
+  case: insubP=> //= x' ? <-.
+  case: insubP=> //= y' ? <-.
   move=> ??; suff->: x' = y' => //.
   by apply/(acyc_antisym acyc)/andP.
-Qed.  
+Qed.
 
 End Build.
 
@@ -1322,11 +1326,11 @@ Lemma restrict_acyclic :
   acyclic (fin_ica (restrict P p)).
 Proof.
   apply/fin_ica_acyclic.
-  - apply/fs_ica_irrefl; first exact/restrict_supp_closed.
-    move=> x; rewrite /restrict build_cov_fin_ica; first exact/cov_irrefl.
+  - move=> x; rewrite /restrict build_cov_fin_ica; first exact/cov_irrefl.
     by case=> e /=; rewrite /lfsp_eventset !inE /= -andbA=> /and3P[]. 
-  move=> e1 e2; rewrite !restrict_ca //.
-  move=> /andP[] /orP[/eqP->|] // + /orP[/eqP->|] //.
+  apply/fin_ca_antisym.
+  move=> e1 e2 /= /andP[]; rewrite !restrict_ca //=.
+  move=> /orP[/eqP->|] // + /orP[/eqP->|] //.
   move=> /and3P[???] /and3P[???].
   by apply/(fs_ca_antisym acyc)/andP. 
 Qed.
@@ -1404,9 +1408,11 @@ Lemma relabel_acyclic :
   supp_closed p -> acyclic (fin_ica p) -> acyclic (fin_ica (relabel f p)).
 Proof.
   move=> suplc acyc; apply/fin_ica_acyclic.
-  - move=> e; rewrite relabel_ica.
+  - apply/fin_ica_irrefl.
+    move=> e; rewrite relabel_ica.
     apply/fs_ica_irrefl=> //. 
     exact/acyc_irrefl.
+  apply/fin_ca_antisym.
   move=> e1 e2; rewrite !relabel_ca //.
   exact/fs_ca_antisym. 
 Qed.
@@ -1680,9 +1686,11 @@ Qed.
 Lemma delete_acyclic : 
   acyclic (fin_ica delete_pre).
 Proof.
-  apply/fin_ica_acyclic=>>. 
-  - rewrite delete_fs_ica /=; case: ifP=> // *.
+  apply/fin_ica_acyclic.  
+  - apply/fin_ica_irrefl=> ?.
+    rewrite delete_fs_ica /=; case: ifP=> // *.
     exact/fs_ica_irrefl/acyc_irrefl/lfsp_acyclic/lfsp_supp_closed.
+  apply/fin_ca_antisym=> ??.
   rewrite? delete_fs_ca /=; case: ifP=> [_|_ /andP[/eqP->]] //.
   case: ifP=> [_|_ /andP[? /eqP->]] //.
   exact/fs_ca_antisym/lfsp_acyclic. 
