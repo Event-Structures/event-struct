@@ -181,3 +181,9 @@ Export Bottom.Syntax.
 
 Definition nat_inhMixin := @Inhabited.Mixin nat _ 0.
 Canonical nat_inhType := Eval hnf in InhType nat tt nat_inhMixin.
+
+Definition prod_inhMixin {dT dU} (T : inhType dT) (U : inhType dU) := 
+  @Inhabited.Mixin _ _ (inh : T, inh : U).
+Canonical prod_inhType {dT dU dTU} (T : inhType dT) (U : inhType dU) := 
+  Eval hnf in InhType (T * U) dTU (prod_inhMixin T U). 
+
