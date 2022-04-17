@@ -1,6 +1,6 @@
 From RelationAlgebra Require Import lattice boolean.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
-From mathcomp Require Import eqtype choice order seq tuple.
+From mathcomp Require Import eqtype choice order seq tuple path div.
 From mathcomp Require Import fintype finfun fingraph finmap.
 From eventstruct Require Import utils.
 
@@ -10,6 +10,7 @@ Unset Printing Implicit Defensive.
 
 Import Order.Theory.
 
+Local Open Scope fset_scope.
 Local Open Scope order_scope.
 
 (******************************************************************************)
@@ -39,6 +40,132 @@ Qed.
 
 End POrderUtils.
 
+
+Section Closure.
+Context {disp : unit} {T : porderType disp}.
+Implicit Types (x y z : T) (X : pred T).
+
+Definition dw_closed (X : pred T) : Prop :=
+  (* ca · [X] ≦ [X] · ca; *)
+  forall x y, x <= y -> X y -> X x.
+
+Lemma eq_dw_closed X Y : 
+  X =1 Y -> dw_closed X <-> dw_closed Y. 
+Proof. move=> e; split=> dw ??; [rewrite -?e | rewrite ?e]; exact/dw. Qed.
+
+End Closure.
+
+Section POrderMorph.
+Context {dispT : unit} {dispU : unit}. 
+Context {T : porderType dispT} {U : porderType dispU}.
+Implicit Types (f : T -> U).
+Implicit Types (x y z : T).
+
+(* Definition monotone     f := { homo f : x y / x <= y}. *)
+(* Definition antimonotone f := {ahomo f : x y / x <= y}. *)
+(* Definition reflecting   f := { mono f : x y / x <= y}. *)
+
+Lemma le_homo_lt_img f x y : 
+  {homo f : x y / x <= y} -> (f x < f y) -> (x < y) || (x >< y).
+Proof.
+  case lt_xy: (x < y)=> //= fmon lt_fxy.
+  apply/negP=> /orP [].
+  - rewrite le_eqVlt lt_xy orbF.
+    by move: lt_fxy=> /[swap] /eqP<-; rewrite ltxx.
+  move=> /fmon le_fyx.
+  move: (lt_le_asym (f x) (f y)).
+  by move=> /andP; apply; split=> //.
+Qed.
+
+Lemma lt_homo_le_img f x y : 
+  {homo f : x y / x < y} -> (f x <= f y) -> (x <= y) || (x >< y).
+Proof.
+  move=> fmon le_fxy.
+  move: (le_gt_incomp x y)=> /or3P[-> | | ->] //.
+  move=> /fmon lt_fyx; exfalso.
+  move: (lt_le_asym (f y) (f x)).
+  by move=> /andP; apply; split=> //.
+Qed.
+
+Lemma le_homo_mono f : {homo f : x y / x <= y} -> {ahomo f : x y / x <= y} -> 
+  {mono f : x y / x <= y}.
+Proof. 
+  move=> fmon frefl x y. 
+  apply/idP/idP; [exact/frefl | exact/fmon]. 
+Qed.
+
+Lemma cancel_le_ahomo_homo f g : cancel g f ->
+  {ahomo f : x y / x <= y} -> {homo g : x y / x <= y}.
+Proof. by move=> K fmon x y le_xy; apply/fmon; rewrite !K. Qed.
+
+Lemma le_mono_incomp f :
+  {mono f : x y / x <= y} -> { mono f : x y / x >< y }.
+Proof.
+  move=> femb x y; apply: negbLR.  
+  by rewrite !negbK /Order.comparable !femb.
+Qed.
+
+Lemma le_homo_bij_total f : bijective f -> {homo f : x y / x <= y} ->
+  total (<=%O : rel T) -> total (<=%O : rel U).
+Proof. 
+  case=> g Kf Kg fmon tot x y.
+  by move: (tot (g x) (g y))=> /orP[] /fmon; rewrite !Kg=> ->. 
+Qed.  
+
+(* TODO: equivalent to mathcomp.ssreflect.order.le_mono *)
+Lemma lt_homo_total_mono f : {homo f : x y / x < y} -> total (<=%O : rel T) ->
+  { mono f : e1 e2 / e1 <= e2 }.
+Proof.
+  move=> fmon tot x y. 
+  apply/idP/idP; last exact/ltW_homo. 
+  move=> /(lt_homo_le_img fmon)=> /orP[] //.
+  by rewrite /Order.comparable; move: (tot x y) ->.  
+Qed.
+
+Lemma dw_closed_preim f P : 
+  {homo f : x y / x <= y} -> dw_closed P -> dw_closed (preim f P).
+Proof. move=> fmon dw_clos=> x y /fmon; exact/dw_clos. Qed.
+
+End POrderMorph.
+
+Section FinPOrderMorph.
+Context {dispT : unit} {dispU : unit}. 
+Context {T : finPOrderType dispT} {U : finPOrderType dispU}.
+Implicit Types (f : T -> U) (g : U -> T).
+Implicit Types (x y z : T).
+
+Lemma inj_le_homo_mono f g : injective f -> injective g ->
+  {homo f : x y / x <= y} -> {homo g : x y / x <= y} -> {mono f : x y / x <= y}.
+Proof. 
+  move=> finj ginj fmon gmon.
+  move=> e1 e2; apply/idP/idP; last exact/fmon.
+  pose h := g \o f. 
+  have hmon: {homo h : x y / x <= y}.
+  - by move=> ?? /fmon /gmon. 
+  have : injective h by exact/inj_comp. 
+  move=> /cycle_orbit cyc.
+  pose o1 := order h e1.
+  pose o2 := order h e2.
+  pose o  := lcmn o1 o2.
+  have {2}<-: iter ((o %/ o1) * o1) h e1 = e1.
+  - rewrite iter_mul_eq /o1 //.
+    apply/(iter_order_cycle (cyc e1)); exact/in_orbit.
+  have {2}<-: iter ((o %/ o2) * o2) h e2 = e2.
+  - rewrite iter_mul_eq /o2 //.
+    apply/(iter_order_cycle (cyc e2)); exact/in_orbit.
+  rewrite !divnK; last first. 
+  - exact/dvdn_lcml.
+  - exact/dvdn_lcmr.
+  have: o = lcmn o1 o2 by done.
+  case o=> [|{}o]; last first.
+  - rewrite !iterSr=> ??; apply/homo_iter=> //; exact/gmon.
+  move=> /esym /eqP. 
+  rewrite eqn0Ngt lcmn_gt0 negb_and ?/o1 ?/o2.
+  move: (order_gt0 h e1) (order_gt0 h e2).
+  by move=> ++ /orP[/negP|/negP]. 
+Qed.
+
+End FinPOrderMorph.
 
 Module Export MaxSup.
 Section Def.
@@ -219,10 +346,81 @@ Proof.
 Qed.
 
 End Monotone.
-
 End Theory.
 
 End MaxSup.
+
+
+Section DwSurjective.
+Context {dispT : unit} {T : porderType dispT}.
+Context {dispU : unit} {U : porderType dispU}.
+Implicit Types (f : T -> U) (P : pred T) (Q : pred U).
+Implicit Types (x y z : T).
+
+(* TODO: consult literature to find relevant theory *)
+Definition dw_surjective f := 
+  forall x, {in (<= f x), surjective f}.
+
+Definition dw_surjective_le f := 
+  forall x, {in (<= f x), surjective [rst f | (<= x) : pred T] }.
+
+Lemma eq_dw_surj f : 
+  dw_surjective f -> forall g, f =1 g -> dw_surjective g.
+Proof. by move=> fdw g eqf x y; rewrite -?eqf=> /fdw [z] <-; exists z. Qed.
+
+Lemma surj_dw_surj f : 
+  surjective f -> dw_surjective f.
+Proof. by move=> fsurj x y _; move: (fsurj y)=> [z] <-; exists z. Qed.
+
+Lemma eq_dw_surj_le f : 
+  dw_surjective_le f -> forall g, f =1 g -> dw_surjective_le g.
+Proof. 
+  move=> fdw g eqf x y; rewrite -?eqf=> /fdw [z] <-; exists z. 
+  by rewrite /rst /= eqf.
+Qed.
+
+Lemma dw_surj_leW f : 
+  dw_surjective_le f -> dw_surjective f.
+Proof. by move=> dwf x y /dwf[z] <-; rewrite /rst /=; exists (val z). Qed.
+
+Lemma ahomo_dw_surj_le f : 
+  {ahomo f : x y / x <= y} -> dw_surjective f -> dw_surjective_le f.
+Proof. 
+  move=> lef dwf x y /=. 
+  rewrite inE=> /[dup] /dwf[z] <-.
+  by move=> /lef lez; exists (Sub z lez).
+Qed.
+
+Lemma dw_surj_le_in_ahomo_in f P : dw_surjective_le f -> dw_closed P ->
+  {in P &, injective f} -> {in P &, {ahomo f : x y / x <= y}}. 
+Proof. 
+  move=> dwf dwX injf x y xin yin. 
+  move=> /dwf[[z]] /= zin.
+  rewrite /rst /= => /injf <- //.
+  by apply/dwX/yin.
+Qed. 
+
+Lemma dw_surj_le_inj_ahomo f : 
+  dw_surjective_le f -> injective f -> {ahomo f : x y / x <= y}. 
+Proof. 
+  move=> dwf injf x y.
+  apply/(@dw_surj_le_in_ahomo_in f predT)=> //.
+  move=>> ??; exact/injf. 
+Qed. 
+
+Lemma dw_surj_le_closed f (X : pred T) (Y : pred U) : 
+  dw_surjective_le f -> {in Y, surjective f} -> (preim f Y) =1 X -> 
+    dw_closed X -> dw_closed Y.
+Proof. 
+  move=> fdw fsurj fpreim dwX x y. 
+  move=> /[swap] /[dup] /fsurj [y'] <-.
+  move=> /[swap] /fdw=> [[]] [x'] /= + <-. 
+  rewrite /rst /= => /dwX.
+  by rewrite -fpreim -fpreim. 
+Qed.
+
+End DwSurjective.
+
 
 Module DwFinPOrder.
 
@@ -282,20 +480,42 @@ End Exports.
 Module Export Def.
 Section Def.
 Context {T : dwFinPOrderType}.
+Implicit Types (x : T) (X : {fset T}).
 
 Definition pideal : T -> {fset T} := 
   DwFinPOrder.pideal (DwFinPOrder.class T).
 
+Definition fin_ideal X : {fset T} := 
+  \bigcup_(x <- X) (pideal x).
+
 Definition up_clos : pred T -> pred T :=
   fun P x => [exists y : pideal x, P (val y)].
 
+Definition dw_closedb X := 
+  [forall x : fin_ideal X, val x \in X].
+
 End Def.
+
+Section Homo.
+Context {T : dwFinPOrderType} {U : dwFinPOrderType}.
+Implicit Types (f : T -> U).
+
+Definition homo_pideal f := 
+ forall x, pideal (f x) `<=` f @` (pideal x).
+
+End Homo.
 End Def.
+
+Module Export Syntax.
+Notation "{ 'homo' 'pideal' f }" := (homo_pideal f)
+  (at level 0, f at level 99, format "{ 'homo'  'pideal'  f }") : order_scope.
+End Syntax.
 
 Module Export Theory.
 Section Theory.
 Context {T : dwFinPOrderType}.
-Implicit Types (x y : T) (P Q : pred T).
+Implicit Types (x y : T) (X : {fset T}).
+Implicit Types (P Q : pred T).
 
 Lemma pidealE x y :
   x \in (pideal y) = (x <= y).
@@ -305,6 +525,22 @@ Proof. by move: x y; case: T=> [? [? []]]. Qed.
 Lemma pidealx x : 
   x \in pideal x.
 Proof. by rewrite pidealE. Qed.
+
+Lemma fin_idealP X x : 
+  reflect (exists2 y, y \in X & x <= y) (x \in fin_ideal X).
+Proof.
+  apply/equivP; first exact/bigfcupP.
+  by apply/exists2_equiv=> y; rewrite ?andbT ?pidealE.
+Qed.  
+
+Lemma dw_closedP X : 
+  reflect (dw_closed (mem X)) (dw_closedb X).
+Proof. 
+  apply/equivP; first apply/(fset_forallP); split.
+  - move=> inX x y le_xy Xy. 
+    by apply/inX/fin_idealP; exists y.
+  by move=> dwX x /fin_idealP [y] /dwX; apply.
+Qed.
 
 Lemma up_closP P x : 
   reflect (exists2 y, y <= x & y \in P) (x \in up_clos P). 
@@ -361,12 +597,60 @@ Proof.
   apply/up_closP; move: (subs y Py)=> [z] z_in le_zy.
   exists z=> //; exact/(le_trans le_zy).
 Qed.
+  
+End Theory.
+End Theory.
 
-End Theory.
-End Theory.
+(* TODO: better naming convention *)
+Module Export AuxTheory.
+Section AuxTheory.
+Context {T U V : dwFinPOrderType}.
+Implicit Types (f : T -> U) (g : U -> V).
+
+Lemma homo_pidealE {T1 U1 : dwFinPOrderType} (f : T1 -> U1) : 
+  { homo pideal f } <-> dw_surjective_le f.
+Proof. 
+  split=> [homf x y | subs].
+  - rewrite inE -pidealE=> yin. 
+    move: (homf x)=> /fsubsetP /(_ y yin). 
+    move=> /imfsetP=> [[]] z /= + ->.
+    by rewrite pidealE=> zle; exists (Sub z zle).
+  move=> x; apply/fsubsetP=> y.
+  rewrite pidealE=> yle.
+  move: (subs x y yle)=> [[z]] /= zle.
+  rewrite /rst /= => <-.
+  apply/imfsetP; exists z=> //=.
+  by rewrite pidealE.
+Qed.
+
+Lemma homo_pideal_comp g f : 
+  {homo pideal g} -> {homo pideal f} -> {homo pideal (g \o f)}.
+Proof. 
+  rewrite !homo_pidealE=> hg hf x y /=.
+  move=> /hg [[a]] /=; rewrite /rst /= => +   <-. 
+  move=> /hf [[b]] /=; rewrite /rst /= => bin <-.  
+  by exists (Sub b bin).
+Qed.
+
+Lemma dw_closedb_imfsetE f X : injective f -> {homo f : x y / x <= y} -> 
+  dw_surjective_le f -> dw_closedb (f @` X) = dw_closedb X.
+Proof. 
+  move=> finj lef fdw. 
+  move: (imfset_preim_eq X finj)=> /eq_dw_closed dw_preim. 
+  apply/idP/idP=> /dw_closedP dw; apply/dw_closedP.
+  - apply/dw_preim/dw_closed_preim=> //. 
+  apply/(dw_surj_le_closed fdw)=> //. 
+  - by move=> x /imfsetP [y] /= _ ->; exists y.
+  exact/dw_preim.
+Qed.   
+
+End AuxTheory.
+End AuxTheory.
 
 End DwFinPOrder.
 
 Export DwFinPOrder.Exports.
 Export DwFinPOrder.Def.
+Export DwFinPOrder.Syntax.
 Export DwFinPOrder.Theory.
+Export DwFinPOrder.AuxTheory.

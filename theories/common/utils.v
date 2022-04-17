@@ -43,11 +43,274 @@ Proof. by rewrite !orbT. Qed.
 Lemma orbbbbT a b c d: [|| a, b, c, d | true].
 Proof. by rewrite !orbT. Qed.
 
+#[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
+
+Lemma and3PP P Q R p q r : reflect P p -> reflect Q q -> reflect R r -> 
+  reflect [/\ P, Q & R] [&& p, q & r].
+Proof. by move=> rP rQ rR; apply: (iffP and3P)=> -[/rP ? /rQ ? /rR ?]. Qed.
+
 Lemma andb_iff (a b c d : bool) : 
   (a <-> c) -> (b <-> d) -> (a && b <-> c && d).
 Proof. by move=> ??; split=> /andP[??]; apply/andP; split; firstorder. Qed.
 
-#[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
+Lemma iff_eqP (a b : bool) : 
+  reflect (a <-> b) (a == b).
+Proof. 
+  apply/(equivP idP); split=> [/eqP->|] //.
+  case a; case b=> //; intuition.
+Qed.
+
+Lemma forall_iff_eqP {T U : Type} P (p : pred T) x y : 
+  (forall x, reflect (P x) (p x)) -> (P x <-> P y) -> (p x = p y).
+Proof.
+  move=> /[dup] /(_ x) /rwP[??] /(_ y) /rwP[??] [??].
+  apply: eqP; apply/iff_eqP; intuition.
+Qed.
+
+(* ************************************************************************** *)
+(*     Anti-homomorphism (i.e. homomorphism with reversed direction)          *)
+(* ************************************************************************** *)
+
+(* TODO: recheck the name (antihomomorphism) in the literature *)
+
+Section AntiHomomorphism.
+Context (aT rT : Type) (f : aT -> rT).
+
+Definition antihomomorphism_1 (aP rP : _ -> Prop) := forall x, rP (f x) -> aP x.
+Definition antihomomorphism_2 (aR rR : _ -> _ -> Prop) :=
+  forall x y, rR (f x) (f y) -> aR x y.
+
+End AntiHomomorphism.
+
+Notation "{ 'ahomo' f : x / a >-> r }" :=
+  (antihomomorphism_1 f (fun x => a) (fun x => r))
+  (at level 0, f at level 99, x name,
+   format "{ 'ahomo'  f  :  x  /  a  >->  r }") : type_scope.
+
+Notation "{ 'ahomo' f : x / a }" :=
+  (antihomomorphism_1 f (fun x => a) (fun x => a))
+  (at level 0, f at level 99, x name,
+   format "{ 'ahomo'  f  :  x  /  a }") : type_scope.
+
+Notation "{ 'ahomo' f : x y / a >-> r }" :=
+  (antihomomorphism_2 f (fun x y => a) (fun x y => r))
+  (at level 0, f at level 99, x name, y name,
+   format "{ 'ahomo'  f  :  x  y  /  a  >->  r }") : type_scope.
+
+Notation "{ 'ahomo' f : x y / a }" :=
+  (antihomomorphism_2 f (fun x y => a) (fun x y => a))
+  (at level 0, f at level 99, x name, y name,
+   format "{ 'ahomo'  f  :  x  y  /  a }") : type_scope.
+
+Notation "{ 'ahomo' f : x y /~ a }" :=
+  (antihomomorphism_2 f (fun y x => a) (fun x y => a))
+  (at level 0, f at level 99, x name, y name,
+   format "{ 'ahomo'  f  :  x  y  /~  a }") : type_scope.
+
+
+Section AntiHomomorphismTheory.
+Context (aT rT : Type) (f : aT -> rT).
+Context (aR : rel aT) (rR : rel rT).
+
+Lemma mono2aW : 
+  {mono f : x y / aR x y >-> rR x y} -> {ahomo f : x y / aR x y >-> rR x y}.
+Proof. by move=> hf x y axy; rewrite -hf. Qed.
+
+End AntiHomomorphismTheory.
+
+(* ************************************************************************** *)
+(*     Decidable morphisms on finite types                                    *)
+(* ************************************************************************** *)
+
+Section FinTypeMorphism.
+Context (aT : finType) (rT : eqType) (f : aT -> rT).
+Implicit Types (aF : aT -> aT) (rF : rT -> rT).
+Implicit Types (aOp : aT -> aT -> aT) (rOp : rT -> rT -> rT).
+
+Lemma morph1P aF rF : 
+  reflect (morphism_1 f aF rF) 
+          ([forall x, f (aF x) == rF (f x)]).
+Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
+
+Lemma morph2P aOp rOp : 
+  reflect (morphism_2 f aOp rOp) 
+          ([forall x, forall y, f (aOp x y) == rOp (f x) (f y)]).
+Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
+
+End FinTypeMorphism.
+
+Section FinTypeHomomorphism.
+Context (aT : finType) (rT : Type) (f : aT -> rT).
+Implicit Types (aP : pred aT) (rP : pred rT).
+Implicit Types (aR : rel aT) (rR : rel rT).
+
+Lemma homo1P aP rP : 
+  reflect (homomorphism_1 f aP rP) 
+          ([forall x, aP x ==> rP (f x)]).
+Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
+
+Lemma homo2P aR rR : 
+  reflect (homomorphism_2 f aR rR) 
+          ([forall x, forall y, aR x y ==> rR (f x) (f y)]).
+Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
+
+End FinTypeHomomorphism.
+
+Section FinTypeMonomorphism.
+Context (aT : finType) (rT : Type) (sT : eqType) (f : aT -> rT).
+Implicit Types (aP : aT -> sT) (rP : rT -> sT).
+Implicit Types (aR : aT -> aT -> sT) (rR : rT -> rT -> sT).
+
+Lemma mono1P aP rP : 
+  reflect (monomorphism_1 f aP rP) 
+          ([forall x, rP (f x) == aP x]).
+Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
+
+Lemma mono2P aR rR : 
+  reflect (monomorphism_2 f aR rR) 
+          ([forall x, forall y, rR (f x) (f y) == aR x y]).
+Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
+
+End FinTypeMonomorphism.
+
+(* ************************************************************************** *)
+(*     Morphisms of extensionally equal functions                             *)
+(* ************************************************************************** *)
+
+Section MorphismEq.
+Context (aT rT : Type) (f : aT -> rT) (g : aT -> rT).
+Implicit Types (aF : aT -> aT) (rF : rT -> rT).
+Implicit Types (aOp : aT -> aT -> aT) (rOp : rT -> rT -> rT).
+
+Hypothesis (eqf : f =1 g).
+
+Lemma eq_morph1 aF rF : 
+  (morphism_1 f aF rF) <-> (morphism_1 g aF rF).
+Proof. split=> mor x; [rewrite -?eqf | rewrite ?eqf]; exact/mor. Qed.
+
+Lemma eq_morph2 aOp rOp : 
+  (morphism_2 f aOp rOp) <-> (morphism_2 g aOp rOp).
+Proof. split=> mor x y; [rewrite -?eqf | rewrite ?eqf]; exact/mor. Qed.
+
+End MorphismEq.
+
+Section HomomorphismEq.
+Context (aT rT : Type) (f : aT -> rT) (g : aT -> rT).
+Implicit Types (aP : aT -> Prop) (rP : rT -> Prop).
+Implicit Types (aR : rel aT) (rR : rel rT).
+
+Hypothesis (eqf : f =1 g).
+
+Lemma eq_homo1 aP rP : 
+  (homomorphism_1 f aP rP) <-> (homomorphism_1 g aP rP). 
+Proof. split=> hom x; [rewrite -?eqf | rewrite ?eqf]; exact/hom. Qed.
+
+Lemma eq_homo2 aR rR : 
+  (homomorphism_2 f aR rR) <-> (homomorphism_2 g aR rR). 
+Proof. split=> hom x y; [rewrite -?eqf | rewrite ?eqf]; try exact/hom. Qed.
+
+End HomomorphismEq.
+
+Section MonomorphismEq.
+Context (aT rT : Type) (sT : Type) (f : aT -> rT) (g : aT -> rT).
+Implicit Types (aP : aT -> sT) (rP : rT -> sT).
+Implicit Types (aR : aT -> aT -> sT) (rR : rT -> rT -> sT).
+
+Hypothesis (eqf : f =1 g).
+
+Lemma eq_mono1 aP rP : 
+  (monomorphism_1 f aP rP) <-> (monomorphism_1 g aP rP).
+Proof. split=> mon x; [rewrite -?eqf | rewrite ?eqf]; exact/mon. Qed.
+
+Lemma eq_mono2 aR rR : 
+  (monomorphism_2 f aR rR) <-> (monomorphism_2 g aR rR).
+Proof. split=> mon x y; [rewrite -?eqf | rewrite ?eqf]; exact/mon. Qed.
+
+End MonomorphismEq.
+
+(* ************************************************************************** *)
+(*     Restriction of the function to subType                                 *)
+(* ************************************************************************** *)
+
+Section RstDef.
+Context {T U : Type} {P : pred T} {S : subType P}.
+Implicit Types  (f : T -> U).
+
+Definition rst f : S -> U := f \o val.
+ 
+End RstDef.
+
+Notation "[ 'rst' f 'to' S ]" := (rst f : S -> _)
+  (at level 0, f at level 99,
+   format "[ 'rst'  f  'to'  S ]") : form_scope.
+
+Notation "[ 'rst' f | P ]" := (rst f : (sig P) -> _)
+  (at level 0, f at level 99,
+   format "[ 'rst'  f  |  P ]") : form_scope.
+
+Section SubFunTheory.
+Context {T U : Type} {P : pred T} {S : subType P}.
+Implicit Types  (f : T -> U).
+
+Lemma rst_existsE f (PU : U -> Prop) : 
+  (exists x, PU ([rst f to S] x)) <-> (exists2 x, P x & PU (f x)).
+Proof. 
+  split=> [[x] pux | [x] px pux]. 
+  - exists (val x)=> //; exact/valP.
+  by exists (Sub x px); rewrite /rst /= SubK. 
+Qed.
+ 
+End SubFunTheory.
+
+(* Variables (T U : Type) (P : pred T) (f : T -> U). *)
+(* Check ([rst f | P]). *)
+
+(* ************************************************************************** *)
+(*     Surjective function                                                    *)
+(* ************************************************************************** *)
+
+Section Surjective.
+Context {rT aT : Type}.
+Implicit Types (f : aT -> rT).
+
+Definition surjective f := 
+  forall (x : rT), exists y, f y = x.
+
+Lemma bij_surj f : 
+  bijective f -> surjective f.
+Proof. by case=> g Kf Kg x; exists (g x); rewrite Kg. Qed.
+
+End Surjective.
+
+Section SurjectiveChoice.
+Context {rT : eqType} {aT : choiceType}.
+Implicit Types (f : aT -> rT).
+
+Lemma inj_surj_bij f : 
+  injective f -> surjective f -> bijective f.
+Proof. 
+  move=> finj fsurj.
+  have fsurj_eq : forall (x : rT), exists y, f y == x.
+  - by move=> x; case (fsurj x)=> [y] <-; exists y.
+  pose g := fun x => xchoose (fsurj_eq x). 
+  exists g=> x; rewrite /g. 
+  - apply/finj=> //; apply/eqP. 
+    exact/(xchooseP (fsurj_eq (f x))).
+  exact/eqP/(xchooseP (fsurj_eq x)).  
+Qed.
+
+End SurjectiveChoice.
+
+Section SurjectiveRst.
+Context {rT aT : Type}.
+Implicit Types (f : aT -> rT).
+Implicit Types (rP : pred rT) (aP : pred aT).
+
+Lemma surj_rstE rP aP f : 
+  {in rP, surjective [rst f | aP]} <-> (forall y, rP y -> exists2 x, aP x & f x = y).
+Proof. by split=> surjf y py; apply/(rst_existsE f (eq^~ y))/surjf. Qed.
+
+End SurjectiveRst.
 
 (* ************************************************************************** *)
 (*     Mapping using proof of membership                                      *)
@@ -93,6 +356,11 @@ End SeqIn.
 Lemma exists_equiv {T} {A B : T -> Prop} :
   (forall x, A x <-> B x) -> (exists x, A x) <-> (exists x, B x).
 Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
+
+Lemma exists2_equiv {T} {A B C D : T -> Prop} :
+  (forall x, A x <-> C x) -> (forall x, B x <-> D x) -> 
+  (exists2 x, A x & B x) <-> (exists2 x, C x & D x).
+Proof. move=> H1 H2; split=> [][] x /H1 ? /H2 ?; by exists x. Qed.
 
 Inductive and6 (P1 P2 P3 P4 P5 P6 : Prop) : Prop :=
   And6 of P1 & P2 & P3 & P4 & P5 & P6.
@@ -326,6 +594,13 @@ Qed.
 
 End FoldUtils. 
 
+
+Notation "@! f" := (fun A => f @` A)%fset 
+  (at level 10, f at level 8, no associativity, format "@!  f") : fset_scope.
+
+(* Context {T U : choiceType} (f : T -> U) {A : {fset T}}. *)
+(* Check (@!f : {fset T} -> {fset U})%fset. *)
+
 Section FSetUtils.
 Context {key : unit} {T U : choiceType}.
 Implicit Types (p : pred T) (r : rel T) (f : T -> U).
@@ -372,6 +647,17 @@ Proof.
     rewrite inE; apply/orP; [left|right].
 Qed.
 
+Lemma imfset_preim_subs f s : 
+  {subset s <= preim f (mem (f @` s))}. 
+Proof. by move=> x xin; rewrite inE /=; apply/imfsetP; exists x. Qed.
+
+Lemma imfset_preim_eq f s :
+  injective f -> preim f (mem (f @` s)) =1 (mem s).
+Proof.
+  move=> finj x /=; apply/idP/idP; last exact/imfset_preim_subs.
+  by move=> /imfsetP [y] /= /[swap] /finj ->.
+Qed.
+
 Lemma fset_existsP s p :
   reflect (exists x, x \in s /\ p x) [exists x : s, p (val x)].
 Proof.
@@ -392,13 +678,18 @@ Proof.
   by apply /fset_existsP; exists y.
 Qed.  
 
+Lemma fset_forallPP s pp p :
+  (forall x, reflect (pp x) (p x)) -> 
+  reflect {in s, forall x, pp x} [forall x : s, p (val x)].
+Proof.
+  move=> refl; apply /equivP; first (by apply /forallP); split.
+  - move=> H x inX; move: (H (Sub x inX)); exact/refl.  
+  move=> H x; exact/refl/H/(valP x).
+Qed.  
+
 Lemma fset_forallP s p :
   reflect {in s, forall x, p x} [forall x : s, p (val x)].
-Proof.
-  apply /equivP; first (by apply /forallP); split.
-  - by move=> H x inX; move: (H (Sub x inX)).  
-  move=> H x; exact/H/(valP x).
-Qed.  
+Proof. apply/fset_forallPP=> x; exact/idP. Qed.
 
 (* TODO: use `rst s r` (restriction of relation) ? *)
 Lemma fset_forall2P s r :
@@ -410,21 +701,35 @@ Proof.
   - move=> H x y inX inY; move: (H x inX). 
     by move=> /forallP=> Hy; move: (Hy (Sub y inY)).
   move=> H x Hx /=; apply/forallP=> y; exact/H.
-Qed.    
+Qed. 
 
 End FSetUtils.
 
 
 Section FinTypeUtils.
-
-Context {T T' : finType}. 
-Implicit Types (r : rel T) (f : T -> T').
+Context {T U : finType}. 
+Implicit Types (r : rel T) (f : T -> U).
 
 (* TODO: migrate to `mathcomp` once 
  *   https://github.com/math-comp/math-comp/pull/771 is merged 
  *)
-Lemma bij_eq_card f : bijective f -> #|T| = #|T'|.
+Lemma bij_eq_card f : bijective f -> #|T| = #|U|.
 Proof. by move=> [g /can_inj/leq_card + /can_inj/leq_card]; case: ltngtP. Qed.
+
+Lemma inj_inj_bij f (g : U -> T) : 
+  injective f -> injective g -> bijective f.
+Proof. move=> + /leq_card; exact/inj_card_bij. Qed.
+
+Definition bijectiveb f := 
+  injectiveb f && (#|U| <= #|T|)%N.
+
+Lemma bijectiveP f : 
+  reflect (bijective f) (bijectiveb f).
+Proof. 
+  apply/(equivP idP); split; rewrite /bijectiveb. 
+  - move=> /andP[/injectiveP]; exact/inj_card_bij.  
+  by move=> /[dup] /bij_inj /injectiveP -> /= /bij_eq_card ->. 
+Qed.
 
 (* TODO: use `forallPP` instead? *)
 Lemma forall2P r : 
@@ -444,6 +749,32 @@ Proof.
 Qed.
 
 End FinTypeUtils.
+
+(* TODO: better name? (h stands for heterogeneous) *)
+Section InvFh.
+Context {T U : finType}. 
+Variable (f : T -> U).
+Hypothesis (fbij : bijective f).
+
+Lemma injFh_onto y : 
+  y \in codom f. 
+Proof. 
+  apply/(inj_card_onto (bij_inj fbij)). 
+  by rewrite (bij_eq_card fbij).  
+Qed.
+
+Definition invFh y := iinv (injFh_onto y).
+
+Lemma invFh_f : cancel f invFh. 
+Proof. move=> x; apply: iinv_f; exact/bij_inj. Qed.
+
+Lemma f_invFh : cancel invFh f. 
+Proof. by move=> y; apply: f_iinv. Qed.
+
+Lemma injFh_bij : bijective invFh. 
+Proof. exists f; [exact/f_invFh | exact/invFh_f]. Qed.
+  
+End InvFh.  
 
 
 Section SubTypeUtils.
