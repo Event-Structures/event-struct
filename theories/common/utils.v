@@ -380,40 +380,6 @@ Qed.
 
 End ReflectConnectives.
 
-Section RelationOnSeq.
-
-Lemma rfoldl {A B C D} (r : A -> C -> bool) (r' : B -> D -> bool) 
-  (f : A -> B -> A) (f' : C -> D -> C) (bs : seq B) (ds : seq D)
-  (ini : A) (ini' : C) : r ini ini' ->
-  (forall a b c d, r a c -> r' b d -> r (f a b) (f' c d)) ->
-  all2 r' bs ds -> r (foldl f ini bs) (foldl f' ini' ds).
-Proof.
-  move=> + H.
-  elim: bs ini ini' ds=> [??[]//|?? IHbs ?? []//= ??? /andP[*]].
-  by apply/IHbs; first exact/H.
-Qed.
-
-Lemma rpath {T S} (sf : T -> S -> bool)  (r' : rel S) (y : S)
-  (s : seq S) (r : rel T) (t : seq T) (x : T) : sf x y ->
-  (forall a b c d, sf a c -> sf b d -> r a b = r' c d) ->
-  all2 sf t s -> 
-  path r x t = path r' y s.
-Proof.
-  move=> + H.
-  elim: t x y s=> [??[]//|/=> IHt ?? []//=> /H R /andP[/[dup] /IHt IH+/IH]].
-  by move/R->=>->.
-Qed.
-
-Lemma foldr_monoid {S : Type} {f : S -> S -> S} {n s1 s2}: 
-  associative f ->
-  (forall a, f n a = a) ->
-  (forall a, f a n = a) ->
-  f (foldr f n s1) (foldr f n s2) =
-  foldr f n (s1 ++ s2).
-Proof. by move=> A L R; elim: s1=> //= ??; rewrite -A=>->. Qed.
-
-End RelationOnSeq.
-
 Section Swap.
 
 Context {T : eqType}.
@@ -528,11 +494,6 @@ End OptionUtils.
 
 Section TupleUtils.
 Context {T : Type}.
-
-(* TODO: duplicate of https://github.com/math-comp/math-comp/pull/777 *)
-Lemma val_tcast m n (eq_mn : m = n) (t : m.-tuple T) :
-  tcast eq_mn t = t :> seq T.
-Proof. by case: n / eq_mn. Qed.
 
 Lemma eq_from_tuple {s1 s2 : seq T} (eq_sz : size s1 = size s2) : 
   tcast eq_sz (in_tuple s1) = in_tuple s2 -> s1 = s2.
@@ -709,12 +670,6 @@ End FSetUtils.
 Section FinTypeUtils.
 Context {T U : finType}. 
 Implicit Types (r : rel T) (f : T -> U).
-
-(* TODO: migrate to `mathcomp` once 
- *   https://github.com/math-comp/math-comp/pull/771 is merged 
- *)
-Lemma bij_eq_card f : bijective f -> #|T| = #|U|.
-Proof. by move=> [g /can_inj/leq_card + /can_inj/leq_card]; case: ltngtP. Qed.
 
 Lemma inj_inj_bij f (g : U -> T) : 
   injective f -> injective g -> bijective f.
