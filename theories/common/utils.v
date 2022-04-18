@@ -15,20 +15,6 @@ Import Order.Theory.
 (*     Some automation with hints and tactics                                 *)
 (* ************************************************************************** *)
 
-(***** Intro pattern ltac views *****)
-(* This is due to Cyril Cohen.
-   TODO: remove when https://github.com/math-comp/math-comp/pull/501 is merged *)
-
-Module Export ipat.
-
-Notation "'[' '1' '!' rules ']'"     := (ltac:(rewrite rules))
-  (at level 0, rules at level 200, only parsing) : ssripat_scope.
-Notation "'[' '!' rules ']'"         := (ltac:(rewrite !rules))
-  (at level 0, rules at level 200, only parsing) : ssripat_scope.
-Notation "'[' '-!' rules ']'"         := (ltac:(rewrite -!rules))
-  (at level 0, rules at level 200, only parsing) : ssripat_scope.
-End ipat.
-
 (****** Hints to deal with dummy bolean goals ******)
 
 Lemma orbTb a b : [|| a, true | b].

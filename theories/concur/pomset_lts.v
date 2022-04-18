@@ -971,7 +971,8 @@ Proof.
     - apply/lfsp_lin_trace_lang; rewrite /= in ispq.
       by rewrite (eqquot_piP _ _ ispq) piE -lE -lsE in lsl.
     case: (sim_trace ise tr_lang lE)=> tr' [??/=].
-    move=> /(iso_eqv_trans)-/(_ _ eqv) /[-! eqquot_eqE]/eqP?.
+    move=> /(iso_eqv_trans)-/(_ _ eqv).
+    rewrite -eqquot_eqE=> /eqP.
     by exists tr'.
   case=> tr [<-] tl lt. 
   have ise': iso_sim_tr emp (pom emp) by rewrite /= iso_eqv_sym in ise.

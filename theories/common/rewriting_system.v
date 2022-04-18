@@ -201,8 +201,10 @@ Qed.
 Theorem confl_eqv : eqv_confluent.
 Proof.
   move=> s1 s2 s3.
-  move/(dcomm_comm dcomm_rw_rw_eqv) => /[swap]/[dup] ? /[-! dotx1 r^+ s1].
-  move/(dot_leq (leq_Reflexive r^+) eqv_refl) /rw_eqv_itr=> R /(_ _ R)[x].
+  move/(dcomm_comm dcomm_rw_rw_eqv) => /[swap]/[dup] _ rs.
+  have: (r^+ ⋅ e) s1 s3.
+  - by exists s3=> //; apply/eqv_refl.
+  move/rw_eqv_itr=> R /(_ _ R)[x].
   by case/rw_eqv_itr=> y; exists y, x.
 Qed.
 
