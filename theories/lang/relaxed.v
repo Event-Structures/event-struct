@@ -20,9 +20,8 @@ Module Lab.
 
 Module Lab.
 Section ClassDef.
-Record mixin_of (T0 : Type) (b : Choice.class_of T0)
-                (T := Choice.Pack b) := Mixin {
-  bot : T;
+Record mixin_of (T0 : Type) (b : Inhabited.class_of T0)
+                (T := Inhabited.Pack Bottom.disp b) := Mixin {
   com : {fset T} -> T -> bool;
   cf  : rel T;
   is_write : pred T;
@@ -34,15 +33,13 @@ Record mixin_of (T0 : Type) (b : Choice.class_of T0)
 }.
 
 Set Primitive Projections.
-
 Record class_of (T : Type) := Class {
-  base   : Choice.class_of T;
+  base   : Inhabited.class_of T;
   mixin  : mixin_of base;
 }.
-
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> Choice.class_of.
+Local Coercion base : class_of >-> Inhabited.class_of.
 
 Structure type := Pack { sort; _ : class_of sort }.
 
@@ -54,20 +51,24 @@ Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
 Definition clone c of phant_id class c := @Pack T c.
 
 Definition pack :=
-  fun b bT & phant_id (Choice.class bT) b => fun m => Pack (@Class T b m).
+  fun b bT & phant_id (@Inhabited.class Bottom.disp bT) b => 
+  fun m => Pack (@Class T b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
+Definition botType := @Inhabited.Pack Bottom.disp cT class.
 End ClassDef.
 
 Module Exports.
-Coercion base : class_of >-> Choice.class_of.
+Coercion base : class_of >-> Inhabited.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
+Coercion botType : type >-> Inhabited.type.
 Canonical eqType.
 Canonical choiceType.
+Canonical botType.
 Notation labType := type.
 Notation LabType T m := (@pack T _ _ id m).
 End Exports.
@@ -94,8 +95,6 @@ Module Export Def.
 Section Def.
 Context {L : labType}.
 Implicit Types (l : L).
-
-Definition bot : L := Lab.bot (Lab.class L).
 
 Definition com : {fset L} -> L -> bool := Lab.com (Lab.class L).
 
@@ -159,10 +158,10 @@ Export Lab.Theory.
 Module Export ThrdPomset.
 
 Notation thrd_pomset E L Tid := 
-  (@pomset E _ (\i0 : Tid, bot : L)).
+  (@pomset E (prod_inhType Tid L)).
 
 Notation thrd_pomlang E L Tid := 
-  (@pomset E _ (\i0 : Tid, bot : L) -> Prop).
+  (@pomlang E (prod_inhType Tid L)).
 
 Section Def.
 Context {E : identType} {L : labType}.
@@ -192,7 +191,7 @@ Definition dlab_defined p :=
 Definition lab_prj : Tid * L -> L := snd.
 
 Definition lts_thrd_pomlang d : thrd_pomlang E L Tid := 
-  fun p => (lts_pomlang d : pomlang E L bot) (Pomset.relabel lab_prj p).
+  fun p => (lts_pomlang d : pomlang E L) (Pomset.relabel lab_prj p).
 
 Definition respects_com d : thrd_pomlang E L Tid := 
   fun p => forall e, exists (es : {fset E}), 
@@ -240,7 +239,7 @@ Definition po_spec p :=
   {in (fs_tids p), forall t, exists (s0 : TS),
     let es := [fset e | e in finsupp p & (fs_tid p e == t)] in
     let pt := Pomset.restrict (mem es) p in
-    (lts_pomlang s0 : pomlang E L bot) (Pomset.relabel lab_prj pt)
+    (lts_pomlang s0 : pomlang E L) (Pomset.relabel lab_prj pt)
   }.
 
 End ProgramOrder.
@@ -317,7 +316,7 @@ Definition causal d p :=
     let p_rlb := Pomset.relabel f p in  
     let p_rst := Pomset.restrict (mem rst) p_rlb in
     [/\ relab_mod p ro f
-      & eq (p_rst) \supports (lts_pomlang d : pomlang E L bot)
+      & eq (p_rst) \supports (lts_pomlang d : pomlang E L)
     ]
   }.
   
@@ -346,7 +345,7 @@ Definition pipe_cst d p :=
     in
     let po_rlb := Pomset.relabel f (po p) in  
     [/\ relab_mod p prv f
-      & eq po_rlb \supports (lts_pomlang d : pomlang E L bot)
+      & eq po_rlb \supports (lts_pomlang d : pomlang E L)
     ]
   }.
 

@@ -67,6 +67,14 @@ Proof.
   by firstorder.
 Qed.
 
+Lemma sub_irrefl r1 r2 :
+  subrel r1 r2 -> irreflexive r2 -> irreflexive r1.
+Proof. by move=> sub irr x; apply/idP=> /sub; rewrite irr. Qed.
+
+Lemma sub_antisym r1 r2 :
+  subrel r1 r2 -> antisymmetric r2 -> antisymmetric r1.
+Proof. move=> sub anti x y /andP[??]; apply/anti/andP; split; exact/sub. Qed.
+
 Lemma eq_irrefl r1 r2 : 
   r1 =2 r2 -> irreflexive r1 <-> irreflexive r2.
 Proof. 
@@ -83,7 +91,67 @@ Proof.
   rewrite !eqr; exact/anti.
 Qed.
 
-End Rel. 
+Lemma eq_trans r1 r2 : 
+  r1 =2 r2 -> transitive r1 <-> transitive r2.
+Proof. 
+  move=> eqr; split=> trans z x y.
+  - rewrite -?eqr; exact/trans.
+  rewrite ?eqr; exact/trans.
+Qed.
+
+End Rel.
+
+Section ClosRefl.
+Context {T : eqType}.
+Implicit Types (r : {dhrel T & T}). 
+
+Lemma dhrel_qmkE r :
+  r^? =2 [rel x y | (x == y) || (r x y)].
+Proof. done. Qed.
+
+Lemma qmk_refl r :
+  reflexive r^?.
+Proof. by move=> x; rewrite dhrel_qmkE /= eqxx. Qed.
+
+Lemma qmk_antisym r :
+  antisymmetric r -> antisymmetric r^?.
+Proof. 
+  move=> asym x y; rewrite !dhrel_qmkE /=.
+  move=> /andP[] /orP[/eqP->|?] // /orP[/eqP->|?] //.
+  by apply/asym/andP.  
+Qed.
+  
+Lemma qmk_trans r :
+  transitive r -> transitive r^?.
+Proof.
+  move=> trans z x y; rewrite !dhrel_qmkE /=.
+  move=> /orP[/eqP<-|rxz] // /orP[/eqP<-|rzy] //.
+  apply/orP; right; apply/trans; [exact/rxz|exact/rzy]. 
+Qed.
+
+End ClosRefl.
+
+Section SubRelLift.
+Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
+
+Lemma sub_rel_lift_qmk (r : {dhrel S & S}) :
+  (sub_rel_lift r : {dhrel T & T})^? =2 (sub_rel_lift r^? : {dhrel T & T})^?. 
+Proof. 
+  move=> x y; rewrite !dhrel_qmkE /=.
+  apply/idP/idP=> [/orP[|]|].
+  - by move=> /eqP->; rewrite eqxx. 
+  - move=> /sub_rel_liftP[] x' [] y' [] ? <- <-.
+    apply/orP; right; apply/sub_rel_liftP. 
+    exists x', y'; split=> //=.
+    by apply/orP; right. 
+  move=> /orP[/eqP->|]; rewrite ?eqxx //.
+  move=> /sub_rel_liftP[] x' [] y' [] /= + <- <-.
+  move=> /orP[/eqP->|]; rewrite ?eqxx //.
+  move=> ?; apply/orP; right; apply/sub_rel_liftP.
+  by exists x', y'.
+Qed.
+
+End SubRelLift.
 
 Section FinGraph. 
 Context {T : finType}.
@@ -240,6 +308,57 @@ Qed.
 
 End FinGraphMono.
 
+(* TODO: rename? consult theory? unify with strictify? *)
+Section IKer. 
+Context {T : eqType}.
+Implicit Type (r : rel T).
+
+Definition iker r : rel T := 
+  fun x y => (y != x) && r x y.
+
+Lemma iker_qmk r : 
+  iker (r : {dhrel T & T})^? =2 iker r.
+Proof. 
+  move=> x y; rewrite /iker dhrel_qmkE /=.
+  rewrite andb_orr orb_idl //. 
+  by rewrite eq_sym=> /andP[] /negP.
+Qed.
+
+Lemma qmk_iker r : 
+  reflexive r -> (iker r : {dhrel T & T})^? =2 r.
+Proof. 
+  move=> refl x y ; rewrite dhrel_qmkE /= /iker.
+  apply/idP/idP=> [/orP[|]|].
+  - by move=> /eqP->; rewrite refl.
+  - by move=> /andP[].
+  move=> ->; rewrite andbT. 
+  case: (x == y)/idP=> //. 
+  by rewrite eq_sym=> /negP ->.
+Qed.
+
+Lemma iker_irrefl r : 
+  irreflexive (iker r).
+Proof. by move=> x; rewrite /iker eqxx. Qed.
+
+Lemma iker_antisym r : 
+  antisymmetric r -> antisymmetric (iker r).
+Proof. 
+  move=> asym x y /andP[] /andP[??] /andP[??].
+  exact/asym/andP.
+Qed.
+
+Lemma iker_trans r : 
+  antisymmetric r -> transitive r -> transitive (iker r).
+Proof. 
+  move=> asym trans z x y /andP[/eqP nzx rxz] /andP[/eqP nzy rzy].
+  apply/andP; split; last first.
+  - apply/trans; [exact/rxz|exact/rzy].
+  apply/negP=> /eqP eyx. 
+  by apply/nzx/asym/andP; split=> //; rewrite -eyx.
+Qed.
+
+End IKer.
+
 Section Covering.
 Context {T : finType}.
 Implicit Types (r : rel T).
@@ -359,16 +478,17 @@ Proof.
   apply/connect_sub=> {}x {}y; exact/cov_connect.  
 Qed.
 
-Lemma connect_sub_one r : 
-  connect r =2 connect ([rel a b | (a != b) && r a b]).
+Lemma iker_connect r : 
+  connect (iker r) =2 connect r.
 Proof.
   move=> x y; apply/(sameP (connect_strP _ _ _))/(equivP (connect_strP _ _ _)).
   rewrite kleene.str_weq1; first reflexivity.
-  symmetry; rewrite -qmk_sub_one; first apply/qmk_weq=> ?? /=.
-  - split=> [[]|/andP[/eqP ?]] * //; apply/andP; split=> //; exact/eqP.
+  rewrite -qmk_sub_one; first apply/qmk_weq=> ?? /=.
+  - rewrite /iker eq_sym.
+    split=> [[]|/andP[/eqP ?]] * //. 
+    by apply/andP; split=> //; apply/eqP. 
   move=> a b /=; split=> // ?; case: (a =P b); by (left+right).
 Qed.
-
 
 End Covering.
 
@@ -377,7 +497,6 @@ Definition sfrel {T : eqType} (f : T -> seq T) : {dhrel T & T} :=
     [rel a b | b \in f a].
 
 Section Strictify.
-
 Context {T : eqType}.
 Implicit Type (f : T -> seq T).
 

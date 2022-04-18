@@ -2,7 +2,8 @@ From Coq Require Import Relations.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun eqtype.
 From mathcomp Require Import seq path fingraph fintype.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From RelationAlgebra Require Import lattice monoid boolean rel fhrel kat_tac.
+From RelationAlgebra Require Import lattice monoid boolean rel fhrel. 
+From RelationAlgebra Require Import kleene kat_tac.
 
 (* ************************************************************************** *)
 (*   Missing definitions, notations and lemmas for relation-algebra package   *)
@@ -30,14 +31,13 @@ End PropUtils.
 (*     Cartesian product for lattice-valued functions                         *)
 (* ************************************************************************** *)
 
-Section CartesianProd.
-
+Section Prod.
 Context {T : Type} {L : lattice.ops}.
 
 Definition cart_prod (p q : T -> L) : T -> T -> L :=
   fun x y => p x ⊓ q y.
 
-End CartesianProd.
+End Prod.
 
 Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
 
@@ -55,6 +55,10 @@ Proof. by ka. Qed.
 Lemma qmk_weq `{laws} `{CUP ≪ l} n (x y : X n n): 
   x ≡ y -> x^? ≡ y^?.
 Proof. by move => ->. Qed.
+
+Lemma qmk_str `{laws} `{BKA ≪ l} n (x : X n n) :
+  x^*^? ≡ x^*.
+Proof. ka. Qed.
 
 (* ************************************************************************** *)
 (*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
@@ -449,6 +453,17 @@ Proof.
   by rewrite clos_t_itr. 
 Qed.
 
+Lemma itr_prod (D : T -> Prop) : 
+  (D × D : hrel T T)^+ ≡ D × D.
+Proof. 
+  apply/weq_spec; split; last exact/itr_ext. 
+  by apply/itr_ind_l1=> //= x y [] z [] ++ []. 
+Qed.
+
+Lemma clos_t_restr R D :
+  R ≦ D × D -> R^+ ≦ D × D.
+Proof. move=> rD; rewrite -itr_prod; exact/itr_leq. Qed.
+
 (* TODO: this cannot be proven for KA+NEG, 
  *   because hrel does not have NEG
  *)
@@ -474,6 +489,10 @@ End RelClos.
 Section FinRel.
 Context {T : finType}.
 Implicit Types (R : hrel T T) (r : rel T).
+
+Lemma connect_strE r : 
+  (r : {fhrel T & T})^* ≡ (connect r).
+Proof. done. Qed.
 
 Lemma connect_strP r x y : 
   reflect ((r : hrel T T)^* x y) (connect r x y).

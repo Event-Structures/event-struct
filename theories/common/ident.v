@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import finmap choice eqtype order zify.
-From eventstruct Require Import utils order wftype.
+From eventstruct Require Import utils inhtype order wftype.
 
 (******************************************************************************)
 (* This file contains a theory of types that can be used as identifiers.      *)
@@ -226,10 +226,29 @@ Proof. exact/pickle_inj. Qed.
 End Props.
 End Props.
 
+Module Export Inh. 
+Section Inh. 
+Context (T : identType).
+Implicit Types (x y z : T).
+
+Lemma disp : unit. 
+Proof. exact: tt. Qed.
+
+Definition inhMixin := @Inhabited.Mixin T _ ident0.
+Definition inhType := Eval hnf in InhType T disp inhMixin.
+
+End Inh.
+
+Module Export Exports.
+Canonical inhType.
+Coercion inhType : type >-> Inhabited.type.
+End Exports.
+
+End Inh.
+
 
 Module Export Order. 
 Section Order. 
-
 Context (T : identType).
 Implicit Types (x y z : T).
 
@@ -465,7 +484,7 @@ Proof. by rewrite /nfresh; exact/trajectSr. Qed.
 Lemma in_nfresh x n y : 
   y \in nfresh x n = (encode x <= encode y < n + encode x)%N.
 Proof.
-  elim: n x=> //= [?|?/[swap] ?]; rewrite ?(inE, in_nil); first lia.
+  elim: n x=> //= [? |?/[swap] ?]; rewrite ?(inE, in_nil); first lia.
   move=>->; rewrite encode_fresh -(inj_eq encode_inj); lia.
 Qed.
 
@@ -519,7 +538,7 @@ Lemma fresh_seq_subset s1 s2 :
   {subset s1 <= s2} -> fresh_seq s1 <=^i fresh_seq s2.
 Proof.
   rewrite /fresh_seq. 
-  elim: s1 s2=> [??|] //=; first exact/le0x. 
+  elim: s1 s2=> [?? |] //=; first exact/le0x. 
   move=> a s1 IH s2 subs.
   rewrite le_maxl; apply/andP; split.
   - apply/max_seq_in_le; rewrite (mem_map fresh_inj). 
@@ -561,6 +580,7 @@ End Theory.
 End Ident.
 
 Export Ident.Exports.
+Export Ident.Inh.Exports.
 Export Ident.Order.Exports.
 Export Ident.Def.
 Export Ident.Props.

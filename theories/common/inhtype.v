@@ -2,6 +2,27 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq fintype order.
 From mathcomp Require Import eqtype choice fingraph path. 
 From eventstruct Require Import utils.
 
+(******************************************************************************)
+(* This file provides a theory of inhabited types, i.e. types with one        *)
+(* distinguished inhabitant.                                                  *)
+(*            ?|T| == propositional assertion that type T has an inhabitant.  *)
+(*           ??|T| == boolean assertion that finite type T has an inhabitant. *)
+(*       inhType d == inhabited type.                                         *)
+(*         inh : T == distinguished inhabitant of the type T.                 *)
+(*         botType == special kind of inhabited types where the               *)
+(*                    distinguished inhabitant represets bottom               *)
+(*                    (i.e. undefined value).                                 *)
+(*         bot : T == bottom of the type T.                                   *)
+(*   {homo bot f} <-> f is a homomorphism between types with bottom:          *)
+(*                    f bot = bot.                                            *)
+(*                                                                            *)
+(* We also provide canonical instance of inhType for the following types:     *)
+(* - nat with inhabitant 0;                                                   *)
+(* - product type T * U with inhabitant (inh : T, inh : U);                   *)
+(*                                                                            *)
+(******************************************************************************)
+
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -71,7 +92,6 @@ End Theory.
 
 
 Module Inhabited.
-
 Section ClassDef.
 
 Record mixin_of T0 (b : Choice.class_of T0) 
@@ -88,24 +108,24 @@ Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Choice.class_of.
 
-Structure type := Pack { sort; _ : class_of sort }.
+Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (cT : type).
+Variables (T : Type) (disp : unit) (cT : type disp).
 
 Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack T c.
+Definition clone c of phant_id class c := @Pack disp T c.
 
 Definition pack :=
   fun bT b & phant_id (Choice.class bT) b =>
-  fun m => Pack (@Class T b m).
+  fun m => Pack disp (@Class T b m).
 
 Definition eqType := @Equality.Pack cT class.
 Definition choiceType := @Choice.Pack cT class.
 End ClassDef.
 
-Module Exports.
+Module Export Exports.
 Coercion base : class_of >-> Choice.class_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
@@ -113,17 +133,78 @@ Coercion choiceType : type >-> Choice.type.
 Canonical eqType.
 Canonical choiceType.
 Notation inhType := type.
-Definition inh {T : inhType} : T := inh (mixin (class T)).
-Notation Inhabited T m := (@pack T _ _ id m).
-Notation "[ 'inhType' 'of' T 'for' cT ]" := (@clone T cT _ id)
+Notation InhType T d m := (@pack T d _ _ id m).
+Notation "[ 'inhType' 'of' T 'for' cT ]" := (@clone T _ cT _ id)
   (at level 0, format "[ 'inhType'  'of'  T  'for'  cT ]") : form_scope.
 Notation "[ 'inhType' 'of' T ]" := [inhType of T for _]
   (at level 0, format "[ 'inhType'  'of'  T ]") : form_scope.
 End Exports.
 
+Module Export Def.
+Section Def.
+Context {disp : unit} {T : inhType disp}.
+
+Definition inh : T := (inh (mixin (class T))).
+
+End Def.
+
+Section Homo.
+Context {dispT dispU : unit} {T : inhType dispT} {U : inhType dispU}.
+Implicit Types (f : T -> U).
+
+Definition homo_inh f : bool := 
+  (f inh == inh).
+
+End Homo.
+End Def.
+
+Module Export Syntax.
+Notation "{ 'homo' 'inh' f }" := (homo_inh f)
+  (at level 0, f at level 99, format "{ 'homo'  'inh'  f }") : type_scope.
+End Syntax.
+
 End Inhabited.
 
 Export Inhabited.Exports.
+Export Inhabited.Def.
+Export Inhabited.Syntax.
+
+
+Module Bottom. 
+
+Lemma disp : unit.
+Proof. exact: tt. Qed.
+
+Module Export Exports.
+Notation botType := (@Inhabited.type disp).
+Notation BotType T m := (@Inhabited.pack T disp _ _ id m).
+End Exports.
+
+Module Export Def.
+Section Def.
+Context {T : botType}.
+Definition bot : T := @inh _ T. 
+End Def.
+End Def.
+
+Module Export Syntax.
+(* TODO: enforce that f is a function from/to botType ? *)
+Notation "{ 'homo' 'bot' f }" := (homo_inh f)
+  (at level 0, f at level 99, format "{ 'homo'  'bot'  f }") : type_scope.
+End Syntax.
+
+End Bottom. 
+
+Export Bottom.Exports.
+Export Bottom.Def.
+Export Bottom.Syntax.
+
 
 Definition nat_inhMixin := @Inhabited.Mixin nat _ 0.
-Canonical nat_inhType := Eval hnf in Inhabited nat nat_inhMixin.
+Canonical nat_inhType := Eval hnf in InhType nat tt nat_inhMixin.
+
+Definition prod_inhMixin {dT dU} (T : inhType dT) (U : inhType dU) := 
+  @Inhabited.Mixin _ _ (inh : T, inh : U).
+Canonical prod_inhType {dT dU dTU} (T : inhType dT) (U : inhType dU) := 
+  Eval hnf in InhType (T * U) dTU (prod_inhMixin T U). 
+

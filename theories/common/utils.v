@@ -67,6 +67,10 @@ Proof.
   apply: eqP; apply/iff_eqP; intuition.
 Qed.
 
+Lemma nmem_subset {T : Type} (p q : pred T) x : 
+  {subset p <= q} -> x \notin q -> x \notin p.
+Proof. by move=> subs; apply/contra=> ?; rewrite subs. Qed.
+
 (* ************************************************************************** *)
 (*     Anti-homomorphism (i.e. homomorphism with reversed direction)          *)
 (* ************************************************************************** *)
@@ -927,6 +931,16 @@ Proof.
   move=> + <- <-; move: (valP x') (valP y'). 
   move=> /[dup] ? -> /[dup] ? ->.
   by rewrite /rl /sub_rel_lift /= !insubT !andbT !sub_val.
+Qed.
+
+Lemma sub_rel_lift_antisym r : 
+  antisymmetric r -> antisymmetric (sub_rel_lift r).
+Proof. 
+  move=> asym x y. 
+  rewrite /sub_rel_lift /=. 
+  case: insubP=> // x' ? <-.
+  case: insubP=> // y' ? <-.
+  by move=> /asym ->.
 Qed.
 
 Lemma sub_rel_lift_trans r : 
