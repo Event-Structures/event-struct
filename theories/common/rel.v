@@ -5,7 +5,7 @@ From mathcomp Require Import eqtype choice seq order path.
 From mathcomp Require Import fintype finfun fingraph finmap.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 From Equations Require Import Equations.
-From eventstruct Require Import utils relalg wftype.
+From eventstruct Require Import utils seq relalg wftype.
 
 (******************************************************************************)
 (* Auxiliary definitions and lemmas about binary decidable relations.         *)

@@ -10,6 +10,7 @@
 -arg -w -arg -ambiguous-paths
 
 theories/common/utils.v
+theories/common/seq.v
 theories/common/relalg.v
 theories/common/wftype.v
 theories/common/inhtype.v
