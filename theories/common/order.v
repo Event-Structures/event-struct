@@ -2,7 +2,7 @@ From RelationAlgebra Require Import lattice boolean.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path div.
 From mathcomp Require Import fintype finfun fingraph finmap.
-From eventstruct Require Import utils.
+From eventstruct Require Import utils seq.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

@@ -29,7 +29,8 @@ For a more detailed description, see the documentation in the headers of source 
 
 - `common` - common definitions, lemmas, and notations  
 
-    - `utils.v` - miscellaneous 
+    - `utils.v` - miscellaneous
+    - `seq.v` - various additions to seq theory from mathcomp 
     - `rel.v` - additional facts about decidable binary relations
     - `relalg.v` - variuos additions to relation-algebra package
     - `order.v` - various additions to porder theory from mathcomp 

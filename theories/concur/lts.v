@@ -1,7 +1,7 @@
 From RelationAlgebra Require Import lattice monoid rel.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat eqtype choice.
 From mathcomp Require Import seq tuple path.
-From eventstruct Require Import utils relalg.
+From eventstruct Require Import utils seq relalg.
 
 (******************************************************************************)
 (* This file provides a theory of labelled transition systems (LTS),          *)
