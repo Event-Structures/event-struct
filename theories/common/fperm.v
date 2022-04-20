@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat.
 From mathcomp Require Import eqtype choice seq fintype finfun finmap zify.
-From eventstruct Require Import utils inhtype ident.
+From eventstruct Require Import utils.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -44,7 +44,7 @@ End FsFunBij.
 Module Export FPerm.
 
 Section Def. 
-Context (T : identType).
+Context (T : choiceType).
 
 Structure fPerm : Type := mkPerm {
   fperm_val :> { fsfun T -> T for id }; 
@@ -71,17 +71,24 @@ Notation "{ 'fperm' T }" := (@fPerm T) : type_scope.
 End Syntax.
 
 Section Instances.
-Context (T : identType).
 
-Definition fperm_eqMixin := Eval hnf in [eqMixin of {fperm T} by <:].
-Canonical fperm_eqType := Eval hnf in EqType {fperm T} fperm_eqMixin.
+Definition fperm_eqMixin (T : choiceType) := 
+  Eval hnf in [eqMixin of {fperm T} by <:].
+Canonical fperm_eqType (T : choiceType) := 
+  Eval hnf in EqType {fperm T} (fperm_eqMixin T).
 
-Definition fperm_choiceMixin := Eval hnf in [choiceMixin of {fperm T} by <:].
-Canonical fperm_choiceType := Eval hnf in ChoiceType {fperm T} fperm_choiceMixin.
+Definition fperm_choiceMixin (T : choiceType) := 
+  Eval hnf in [choiceMixin of {fperm T} by <:].
+Canonical fperm_choiceType (T : choiceType) := 
+  Eval hnf in ChoiceType {fperm T} (fperm_choiceMixin T).
 
-Definition fperm_countMixin := Eval hnf in [countMixin of {fperm T} by <:].
-Canonical fperm_countType := Eval hnf in CountType {fperm T} fperm_countMixin.
+Definition fperm_countMixin (T : countType) := 
+  Eval hnf in [countMixin of {fperm T} by <:].
+Canonical fperm_countType (T : countType) := 
+  Eval hnf in CountType {fperm T} (fperm_countMixin T).
 
-Canonical fperm_subCountType := Eval hnf in [subCountType of {fperm T}].
+Canonical fperm_subCountType (T : countType) := 
+  Eval hnf in [subCountType of {fperm T}].
 
 End Instances.
+End FPerm.
