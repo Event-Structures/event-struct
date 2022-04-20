@@ -64,6 +64,8 @@ Proof. exact/fsinj_bij/fperm_inj. Qed.
 Lemma fperm_surj f : surjective f.
 Proof. exact/bij_surj/fperm_bij. Qed.
 
+Definition fperm_inv f := preim_of (fperm_surj f).
+
 End Def.
 
 Module Export Syntax. 
@@ -91,4 +93,17 @@ Canonical fperm_subCountType (T : countType) :=
   Eval hnf in [subCountType of {fperm T}].
 
 End Instances.
+
+Section Theory.
+Context (T : choiceType).
+Implicit Types (f : {fperm T}).
+
+Lemma fperm_invK f : cancel f (fperm_inv f).
+Proof. exact/f_preim_of/fperm_inj. Qed.
+
+Lemma inv_fpermK f : cancel (fperm_inv f) f.
+Proof. exact/preim_of_f. Qed.
+
+End Theory. 
+
 End FPerm.
