@@ -41,45 +41,47 @@ Qed.
 End FsFunBij.
 
 
-Module Export Permutation.
+Module Export FPerm.
 
 Section Def. 
 Context (T : identType).
 
-Structure perm : Type := mkPerm {
-  perm_val :> { fsfun T -> T for id }; 
-  _ : fsinjectiveb perm_val; 
+Structure fPerm : Type := mkPerm {
+  fperm_val :> { fsfun T -> T for id }; 
+  _ : fsinjectiveb fperm_val; 
 }.
 
-Canonical perm_subType := Eval hnf in [subType for perm_val].
+Canonical fperm_subType := Eval hnf in [subType for fperm_val].
 
-Implicit Types (f : perm).
+Implicit Types (f : fPerm).
 
-Lemma perm_inj f : injective f.
+Lemma fperm_inj f : injective f.
 Proof. exact/fsinjectiveP/valP. Qed.
 
-Lemma perm_bij f : bijective f.
-Proof. exact/fsinj_bij/perm_inj. Qed.
+Lemma fperm_bij f : bijective f.
+Proof. exact/fsinj_bij/fperm_inj. Qed.
 
-Lemma perm_surj f : surjective f.
-Proof. exact/bij_surj/perm_bij. Qed.
+Lemma fperm_surj f : surjective f.
+Proof. exact/bij_surj/fperm_bij. Qed.
 
 End Def.
+
+Module Export Syntax. 
+Notation "{ 'fperm' T }" := (@fPerm T) : type_scope.
+End Syntax.
 
 Section Instances.
 Context (T : identType).
 
-Definition perm_eqMixin := Eval hnf in [eqMixin of (perm T) by <:].
-Canonical perm_eqType := Eval hnf in EqType (perm T) perm_eqMixin.
+Definition fperm_eqMixin := Eval hnf in [eqMixin of {fperm T} by <:].
+Canonical fperm_eqType := Eval hnf in EqType {fperm T} fperm_eqMixin.
 
-Definition perm_choiceMixin := Eval hnf in [choiceMixin of (perm T) by <:].
-Canonical perm_choiceType := Eval hnf in ChoiceType (perm T) perm_choiceMixin.
+Definition fperm_choiceMixin := Eval hnf in [choiceMixin of {fperm T} by <:].
+Canonical fperm_choiceType := Eval hnf in ChoiceType {fperm T} fperm_choiceMixin.
 
-Definition perm_countMixin := Eval hnf in [countMixin of (perm T) by <:].
-Canonical perm_countType := Eval hnf in CountType (perm T) perm_countMixin.
+Definition fperm_countMixin := Eval hnf in [countMixin of {fperm T} by <:].
+Canonical fperm_countType := Eval hnf in CountType {fperm T} fperm_countMixin.
 
-Canonical perm_subCountType := Eval hnf in [subCountType of (perm T)].
+Canonical fperm_subCountType := Eval hnf in [subCountType of {fperm T}].
 
 End Instances.
- 
-End Permutation.
