@@ -300,7 +300,7 @@ Implicit Types (e : E).
 Hypothesis lab_def : [forall x : X, lab (val x) != bot].
 
 Definition lfspreposet_of := 
-  @lFsPrePoset.build_cov E L X (lab \o val) (<=%O : rel E).
+  @lFsPrePoset.build_cov E L X lab (<=%O : rel E).
 
 Lemma lfspreposet_of_finsupp : 
   lfsp_eventset lfspreposet_of = X.
