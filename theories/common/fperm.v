@@ -104,6 +104,9 @@ Proof. exact/f_preim_of/fperm_inj. Qed.
 Lemma inv_fpermK f : cancel (fperm_inv f) f.
 Proof. exact/preim_of_f. Qed.
 
+Lemma fperm_inv_inj f : injective (fperm_inv f).
+Proof. exact/can_inj/inv_fpermK. Qed.
+
 End Theory. 
 
 End FPerm.
