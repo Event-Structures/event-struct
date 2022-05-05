@@ -3,7 +3,7 @@ From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path zify.
 From mathcomp Require Import fintype finfun fingraph finmap.
 From mathcomp Require Import generic_quotient.
-From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
+From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -15,7 +15,7 @@ Import Order.Theory.
 (*     Some automation with hints and tactics                                 *)
 (* ************************************************************************** *)
 
-(****** Hints to deal with dummy bolean goals ******)
+(****** Hints to deal with dummy boolean goals ******)
 
 Lemma orbTb a b : [|| a, true | b].
 Proof. by case: a. Qed.
@@ -31,29 +31,29 @@ Proof. by rewrite !orbT. Qed.
 
 #[export] Hint Resolve orbT orbTb orbbT orbbbT orbbbbT : core.
 
-Lemma and3PP P Q R p q r : reflect P p -> reflect Q q -> reflect R r -> 
+Lemma and3PP P Q R p q r : reflect P p -> reflect Q q -> reflect R r ->
   reflect [/\ P, Q & R] [&& p, q & r].
 Proof. by move=> rP rQ rR; apply: (iffP and3P)=> -[/rP ? /rQ ? /rR ?]. Qed.
 
-Lemma andb_iff (a b c d : bool) : 
+Lemma andb_iff (a b c d : bool) :
   (a <-> c) -> (b <-> d) -> (a && b <-> c && d).
 Proof. by move=> ??; split=> /andP[??]; apply/andP; split; firstorder. Qed.
 
-Lemma iff_eqP (a b : bool) : 
+Lemma iff_eqP (a b : bool) :
   reflect (a <-> b) (a == b).
-Proof. 
+Proof.
   apply/(equivP idP); split=> [/eqP->|] //.
   case a; case b=> //; intuition.
 Qed.
 
-Lemma forall_iff_eqP {T U : Type} P (p : pred T) x y : 
+Lemma forall_iff_eqP {T U : Type} P (p : pred T) x y :
   (forall x, reflect (P x) (p x)) -> (P x <-> P y) -> (p x = p y).
 Proof.
   move=> /[dup] /(_ x) /rwP[??] /(_ y) /rwP[??] [??].
   apply: eqP; apply/iff_eqP; intuition.
 Qed.
 
-Lemma nmem_subset {T : Type} (p q : pred T) x : 
+Lemma nmem_subset {T : Type} (p q : pred T) x :
   {subset p <= q} -> x \notin q -> x \notin p.
 Proof. by move=> subs; apply/contra=> ?; rewrite subs. Qed.
 
@@ -102,7 +102,7 @@ Section AntiHomomorphismTheory.
 Context (aT rT : Type) (f : aT -> rT).
 Context (aR : rel aT) (rR : rel rT).
 
-Lemma mono2aW : 
+Lemma mono2aW :
   {mono f : x y / aR x y >-> rR x y} -> {ahomo f : x y / aR x y >-> rR x y}.
 Proof. by move=> hf x y axy; rewrite -hf. Qed.
 
@@ -117,13 +117,13 @@ Context (aT : finType) (rT : eqType) (f : aT -> rT).
 Implicit Types (aF : aT -> aT) (rF : rT -> rT).
 Implicit Types (aOp : aT -> aT -> aT) (rOp : rT -> rT -> rT).
 
-Lemma morph1P aF rF : 
-  reflect (morphism_1 f aF rF) 
+Lemma morph1P aF rF :
+  reflect (morphism_1 f aF rF)
           ([forall x, f (aF x) == rF (f x)]).
 Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
 
-Lemma morph2P aOp rOp : 
-  reflect (morphism_2 f aOp rOp) 
+Lemma morph2P aOp rOp :
+  reflect (morphism_2 f aOp rOp)
           ([forall x, forall y, f (aOp x y) == rOp (f x) (f y)]).
 Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
 
@@ -134,13 +134,13 @@ Context (aT : finType) (rT : Type) (f : aT -> rT).
 Implicit Types (aP : pred aT) (rP : pred rT).
 Implicit Types (aR : rel aT) (rR : rel rT).
 
-Lemma homo1P aP rP : 
-  reflect (homomorphism_1 f aP rP) 
+Lemma homo1P aP rP :
+  reflect (homomorphism_1 f aP rP)
           ([forall x, aP x ==> rP (f x)]).
 Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
 
-Lemma homo2P aR rR : 
-  reflect (homomorphism_2 f aR rR) 
+Lemma homo2P aR rR :
+  reflect (homomorphism_2 f aR rR)
           ([forall x, forall y, aR x y ==> rR (f x) (f y)]).
 Proof. repeat apply/forallPP=> ?; exact/implyP. Qed.
 
@@ -151,13 +151,13 @@ Context (aT : finType) (rT : Type) (sT : eqType) (f : aT -> rT).
 Implicit Types (aP : aT -> sT) (rP : rT -> sT).
 Implicit Types (aR : aT -> aT -> sT) (rR : rT -> rT -> sT).
 
-Lemma mono1P aP rP : 
-  reflect (monomorphism_1 f aP rP) 
+Lemma mono1P aP rP :
+  reflect (monomorphism_1 f aP rP)
           ([forall x, rP (f x) == aP x]).
 Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
 
-Lemma mono2P aR rR : 
-  reflect (monomorphism_2 f aR rR) 
+Lemma mono2P aR rR :
+  reflect (monomorphism_2 f aR rR)
           ([forall x, forall y, rR (f x) (f y) == aR x y]).
 Proof. repeat apply/forallPP=> ?; exact/eqP. Qed.
 
@@ -174,11 +174,11 @@ Implicit Types (aOp : aT -> aT -> aT) (rOp : rT -> rT -> rT).
 
 Hypothesis (eqf : f =1 g).
 
-Lemma eq_morph1 aF rF : 
+Lemma eq_morph1 aF rF :
   (morphism_1 f aF rF) <-> (morphism_1 g aF rF).
 Proof. split=> mor x; [rewrite -?eqf | rewrite ?eqf]; exact/mor. Qed.
 
-Lemma eq_morph2 aOp rOp : 
+Lemma eq_morph2 aOp rOp :
   (morphism_2 f aOp rOp) <-> (morphism_2 g aOp rOp).
 Proof. split=> mor x y; [rewrite -?eqf | rewrite ?eqf]; exact/mor. Qed.
 
@@ -191,12 +191,12 @@ Implicit Types (aR : rel aT) (rR : rel rT).
 
 Hypothesis (eqf : f =1 g).
 
-Lemma eq_homo1 aP rP : 
-  (homomorphism_1 f aP rP) <-> (homomorphism_1 g aP rP). 
+Lemma eq_homo1 aP rP :
+  (homomorphism_1 f aP rP) <-> (homomorphism_1 g aP rP).
 Proof. split=> hom x; [rewrite -?eqf | rewrite ?eqf]; exact/hom. Qed.
 
-Lemma eq_homo2 aR rR : 
-  (homomorphism_2 f aR rR) <-> (homomorphism_2 g aR rR). 
+Lemma eq_homo2 aR rR :
+  (homomorphism_2 f aR rR) <-> (homomorphism_2 g aR rR).
 Proof. split=> hom x y; [rewrite -?eqf | rewrite ?eqf]; try exact/hom. Qed.
 
 End HomomorphismEq.
@@ -208,11 +208,11 @@ Implicit Types (aR : aT -> aT -> sT) (rR : rT -> rT -> sT).
 
 Hypothesis (eqf : f =1 g).
 
-Lemma eq_mono1 aP rP : 
+Lemma eq_mono1 aP rP :
   (monomorphism_1 f aP rP) <-> (monomorphism_1 g aP rP).
 Proof. split=> mon x; [rewrite -?eqf | rewrite ?eqf]; exact/mon. Qed.
 
-Lemma eq_mono2 aR rR : 
+Lemma eq_mono2 aR rR :
   (monomorphism_2 f aR rR) <-> (monomorphism_2 g aR rR).
 Proof. split=> mon x y; [rewrite -?eqf | rewrite ?eqf]; exact/mon. Qed.
 
@@ -227,7 +227,7 @@ Context {T U : Type} {P : pred T} {S : subType P}.
 Implicit Types  (f : T -> U).
 
 Definition rst f : S -> U := f \o val.
- 
+
 End RstDef.
 
 Notation "[ 'rst' f 'to' S ]" := (rst f : S -> _)
@@ -242,14 +242,14 @@ Section SubFunTheory.
 Context {T U : Type} {P : pred T} {S : subType P}.
 Implicit Types  (f : T -> U).
 
-Lemma rst_existsE f (PU : U -> Prop) : 
+Lemma rst_existsE f (PU : U -> Prop) :
   (exists x, PU ([rst f to S] x)) <-> (exists2 x, P x & PU (f x)).
-Proof. 
-  split=> [[x] pux | [x] px pux]. 
+Proof.
+  split=> [[x] pux | [x] px pux].
   - exists (val x)=> //; exact/valP.
-  by exists (Sub x px); rewrite /rst /= SubK. 
+  by exists (Sub x px); rewrite /rst /= SubK.
 Qed.
- 
+
 End SubFunTheory.
 
 (* Variables (T U : Type) (P : pred T) (f : T -> U). *)
@@ -263,10 +263,10 @@ Section Surjective.
 Context {rT aT : Type}.
 Implicit Types (f : aT -> rT).
 
-Definition surjective f := 
+Definition surjective f :=
   forall (x : rT), exists y, f y = x.
 
-Lemma bij_surj f : 
+Lemma bij_surj f :
   bijective f -> surjective f.
 Proof. by case=> g Kf Kg x; exists (g x); rewrite Kg. Qed.
 
@@ -276,17 +276,17 @@ Section SurjectiveChoice.
 Context {rT : eqType} {aT : choiceType}.
 Implicit Types (f : aT -> rT).
 
-Lemma inj_surj_bij f : 
+Lemma inj_surj_bij f :
   injective f -> surjective f -> bijective f.
-Proof. 
+Proof.
   move=> finj fsurj.
   have fsurj_eq : forall (x : rT), exists y, f y == x.
   - by move=> x; case (fsurj x)=> [y] <-; exists y.
-  pose g := fun x => xchoose (fsurj_eq x). 
-  exists g=> x; rewrite /g. 
-  - apply/finj=> //; apply/eqP. 
+  pose g := fun x => xchoose (fsurj_eq x).
+  exists g=> x; rewrite /g.
+  - apply/finj=> //; apply/eqP.
     exact/(xchooseP (fsurj_eq (f x))).
-  exact/eqP/(xchooseP (fsurj_eq x)).  
+  exact/eqP/(xchooseP (fsurj_eq x)).
 Qed.
 
 End SurjectiveChoice.
@@ -296,7 +296,7 @@ Context {rT aT : Type}.
 Implicit Types (f : aT -> rT).
 Implicit Types (rP : pred rT) (aP : pred aT).
 
-Lemma surj_rstE rP aP f : 
+Lemma surj_rstE rP aP f :
   {in rP, surjective [rst f | aP]} <-> (forall y, rP y -> exists2 x, aP x & f x = y).
 Proof. by split=> surjf y py; apply/(rst_existsE f (eq^~ y))/surjf. Qed.
 
@@ -310,16 +310,16 @@ Section SeqIn.
 
 Context {T : eqType}.
 Implicit Type s : seq T.
-  
+
 Fixpoint seq_in_sub s s' (sub : subseq s' s) : seq {x in s} :=
   (if s' is h :: t then
-     fun sub => 
+     fun sub =>
        exist _ h (mem_subseq sub (mem_head h t)) ::
        seq_in_sub (subseq_trans (subseq_cons t h) sub)
    else fun => [::]
   ) sub.
 
-Definition seq_in s : seq {x in s} := seq_in_sub (subseq_refl s). 
+Definition seq_in s : seq {x in s} := seq_in_sub (subseq_refl s).
 
 Lemma val_seq_in_sub s s' (sub : subseq s' s) :
   map val (seq_in_sub sub) = s'.
@@ -348,7 +348,7 @@ Lemma exists_equiv {T} {A B : T -> Prop} :
 Proof. move=> H; split=> [][] x /H ?; by exists x. Qed.
 
 Lemma exists2_equiv {T} {A B C D : T -> Prop} :
-  (forall x, A x <-> C x) -> (forall x, B x <-> D x) -> 
+  (forall x, A x <-> C x) -> (forall x, B x <-> D x) ->
   (exists2 x, A x & B x) <-> (exists2 x, C x & D x).
 Proof. move=> H1 H2; split=> [][] x /H1 ? /H2 ?; by exists x. Qed.
 
@@ -381,7 +381,7 @@ Context (f : T -> T) (a b : T).
 Definition swap := fun x =>
   if x == a then
     f b
-  else if x == b then 
+  else if x == b then
     f a
   else f x.
 
@@ -423,12 +423,12 @@ Qed.
 
 End Swap.
 
-Section NatUtils. 
+Section NatUtils.
 Implicit Types (n m : nat).
 
-Lemma ltn_total n m : 
+Lemma ltn_total n m :
   [|| n == m, n < m | m < n].
-Proof. 
+Proof.
   move: (leq_total n m).
   rewrite [n <= m]leq_eqVlt [m <= n]leq_eqVlt.
   by rewrite orbA orbAC orbC eq_sym !orbA orbb.
@@ -436,20 +436,20 @@ Qed.
 
 End NatUtils.
 
-Section OptionUtils. 
+Section OptionUtils.
 
 Context {T rT : Type}.
 Implicit Types (f : T -> option rT) (p : pred rT) (r : rel rT).
 
-Definition opreim f p : simpl_pred T := 
-  [pred x | match f x with Some x => p x | _ => false end]. 
+Definition opreim f p : simpl_pred T :=
+  [pred x | match f x with Some x => p x | _ => false end].
 
-Definition orelpre f r : simpl_rel T := 
+Definition orelpre f r : simpl_rel T :=
   [rel x y | match f x, f y with Some x, Some y => r x y | _, _ => false end].
 
 Definition mk_total f (tot : forall x, f x) : T -> rT :=
   fun x => oextract (tot x).
-  
+
 Lemma mk_totalE d f x tot :
   @mk_total f tot x = odflt d (f x).
 Proof.
@@ -485,17 +485,17 @@ End OptionUtils.
 Section TupleUtils.
 Context {T : Type}.
 
-Lemma eq_from_tuple {s1 s2 : seq T} (eq_sz : size s1 = size s2) : 
+Lemma eq_from_tuple {s1 s2 : seq T} (eq_sz : size s1 = size s2) :
   tcast eq_sz (in_tuple s1) = in_tuple s2 -> s1 = s2.
-Proof. 
+Proof.
   have: s2 = val (in_tuple s2) by done.
-  move=> /[swap] + ->; move=> <-. 
-  by rewrite /val /= val_tcast. 
+  move=> /[swap] + ->; move=> <-.
+  by rewrite /val /= val_tcast.
 Qed.
 
 End TupleUtils.
 
-Section CountableUtils. 
+Section CountableUtils.
 Context {T : countType}.
 
 Lemma pickle_inj : injective (@choice.pickle T).
@@ -504,23 +504,23 @@ Proof. apply /pcan_inj /choice.pickleK. Qed.
 End CountableUtils.
 
 
-Section FoldUtils. 
+Section FoldUtils.
 
-Lemma foldl_maxn_leq n m s : 
+Lemma foldl_maxn_leq n m s :
   n <= m -> foldl maxn n s <= foldl maxn m s.
-Proof. 
+Proof.
   move: n m; elim s=> [|k {}s IH n m] => //=.
   rewrite {2 4}/maxn; case: ifP; case: ifP=> //; last 1 first.
-  - by move=> ?? /IH. 
+  - by move=> ?? /IH.
   - by move=> /negP /(contra_not_leq id) /IH.
   move=> + /negP /(contra_not_leq id).
-  move=> + /leq_trans /[apply]. 
+  move=> + /leq_trans /[apply].
   lia.
 Qed.
 
-Lemma foldl_maxn_leq_init n s : 
+Lemma foldl_maxn_leq_init n s :
   n <= foldl maxn n s.
-Proof. 
+Proof.
   move: n; elim s=> [|m {}s IH n] => //=.
   rewrite {2}/maxn; case: ifP=> //.
   move=> H; apply /leq_trans; last by exact/IH.
@@ -539,14 +539,14 @@ Proof.
   rewrite -leEnat le_eqVlt=> /orP[/eqP<-|] //=.
   move: S; rewrite -(@path_min_sorted _ _ 0); last first.
   - apply/allP=> x ?; exact/leq0n.
-  rewrite rcons_path=> /andP[] ?. 
-  by move=> H; rewrite (le_gtF H). 
+  rewrite rcons_path=> /andP[] ?.
+  by move=> H; rewrite (le_gtF H).
 Qed.
 
-End FoldUtils. 
+End FoldUtils.
 
 
-Notation "@! f" := (fun A => f @` A)%fset 
+Notation "@! f" := (fun A => f @` A)%fset
   (at level 10, f at level 8, no associativity, format "@!  f") : fset_scope.
 
 (* Context {T U : choiceType} (f : T -> U) {A : {fset T}}. *)
@@ -559,47 +559,47 @@ Implicit Types (s : {fset T}) (x : T).
 
 Local Open Scope fset_scope.
 
-Definition fset_pick s : option T := 
+Definition fset_pick s : option T :=
   omap val [pick x : s].
 
-Lemma fset_pick1 x : 
+Lemma fset_pick1 x :
   fset_pick [fset x] = Some x.
-Proof. 
-  rewrite /fset_pick; case: pickP=> /= [y _|]. 
+Proof.
+  rewrite /fset_pick; case: pickP=> /= [y _|].
   - by move: (valP y); rewrite inE => /eqP->.
-  by move=>/(_ (Sub x (fset11 x))) /=. 
+  by move=>/(_ (Sub x (fset11 x))) /=.
 Qed.
 
 Lemma in_fset1 (x : T) a :
   (a \in [fset[key] x in [:: x]]) = (a == x).
 Proof. by rewrite !mem_imfset //= inE. Qed.
 
-Lemma fset_singl (x : T) : 
+Lemma fset_singl (x : T) :
   [fset[key] x in [:: x]] = [fset x].
 Proof. by apply/fsetP=> y; rewrite in_fset1 inE. Qed.
 
-Lemma imfset1 f x : 
+Lemma imfset1 f x :
   f @` ([fset x]) = [fset (f x)].
-Proof. 
-  apply/fsetP=> y /=; rewrite !inE. 
+Proof.
+  apply/fsetP=> y /=; rewrite !inE.
   apply/idP/idP=> [/imfsetP|].
   - by move=> [] z /=; rewrite inE=> /eqP-> ->.
   move=> /eqP->; apply/imfsetP; exists x=> //=; exact/fset11.
 Qed.
 
-Lemma imfsetU f s1 s2 : 
+Lemma imfsetU f s1 s2 :
   f @` (s1 `|` s2) = (f @` s1) `|` (f @` s2).
-Proof. 
-  apply/fsetP=> x /=; rewrite !inE. 
+Proof.
+  apply/fsetP=> x /=; rewrite !inE.
   apply/idP/idP=> [/imfsetP|].
   - move=> [] y /=; rewrite !inE=> + ->.
     by move=> /orP[?|?]; apply/orP; [left|right]; apply/imfsetP; exists y.
-  by move=> /orP[|] /imfsetP[] /= y ? ->; apply/imfsetP; exists y=> //; 
+  by move=> /orP[|] /imfsetP[] /= y ? ->; apply/imfsetP; exists y=> //;
     rewrite inE; apply/orP; [left|right].
 Qed.
 
-Lemma imfset_preim_subs f s : 
-  {subset s <= preim f (mem (f @` s))}. 
+Lemma imfset_preim_subs f s :
+  {subset s <= preim f (mem (f @` s))}.
 Proof. by move=> x xin; rewrite inE /=; apply/imfsetP; exists x. Qed.
 
 Lemma imfset_preim_eq f s :
@@ -613,30 +613,30 @@ Lemma fset_existsP s p :
   reflect (exists x, x \in s /\ p x) [exists x : s, p (val x)].
 Proof.
   apply /equivP; first (by apply /existsP); split.
-  - by move=> [] /= [] /= x Hx Px; exists x. 
-  by move=> [] x [] Hx Px; exists (FSetSub Hx). 
-Qed.  
+  - by move=> [] /= [] /= x Hx Px; exists x.
+  by move=> [] x [] Hx Px; exists (FSetSub Hx).
+Qed.
 
 (* TODO: use `rst s r` (restriction of relation) ? *)
 Lemma fset_exists2P s r :
-  reflect (exists x y, [/\ x \in s, y \in s & r x y]) 
+  reflect (exists x y, [/\ x \in s, y \in s & r x y])
           [exists x : s, exists y : s, r (val x) (val y)].
 Proof.
-  apply /equivP; last split. 
+  apply /equivP; last split.
   - apply /(@fset_existsP _ (fun x => [exists y, r x (val y)])).
   - by move=> [] x [] Hx /fset_existsP [] y [] Hy Rxy; exists x, y.
-  move=> [] x [] y [] Hx Hy Rxy; exists x; split=> //. 
+  move=> [] x [] y [] Hx Hy Rxy; exists x; split=> //.
   by apply /fset_existsP; exists y.
-Qed.  
+Qed.
 
 Lemma fset_forallPP s pp p :
-  (forall x, reflect (pp x) (p x)) -> 
+  (forall x, reflect (pp x) (p x)) ->
   reflect {in s, forall x, pp x} [forall x : s, p (val x)].
 Proof.
   move=> refl; apply /equivP; first (by apply /forallP); split.
-  - move=> H x inX; move: (H (Sub x inX)); exact/refl.  
+  - move=> H x inX; move: (H (Sub x inX)); exact/refl.
   move=> H x; exact/refl/H/(valP x).
-Qed.  
+Qed.
 
 Lemma fset_forallP s p :
   reflect {in s, forall x, p x} [forall x : s, p (val x)].
@@ -647,213 +647,213 @@ Lemma fset_forall2P s r :
   reflect {in s & s, forall x y, r x y}
           [forall x : s, forall y : s, r (val x) (val y)].
 Proof.
-  apply /equivP; last split. 
+  apply /equivP; last split.
   - by apply/(@fset_forallP _ (fun x => [forall y, r x (val y)])).
-  - move=> H x y inX inY; move: (H x inX). 
+  - move=> H x y inX inY; move: (H x inX).
     by move=> /forallP=> Hy; move: (Hy (Sub y inY)).
   move=> H x Hx /=; apply/forallP=> y; exact/H.
-Qed. 
+Qed.
 
 End FSetUtils.
 
 
 Section FinTypeUtils.
-Context {T U : finType}. 
+Context {T U : finType}.
 Implicit Types (r : rel T) (f : T -> U).
 
-Lemma inj_inj_bij f (g : U -> T) : 
+Lemma inj_inj_bij f (g : U -> T) :
   injective f -> injective g -> bijective f.
 Proof. move=> + /leq_card; exact/inj_card_bij. Qed.
 
-Definition bijectiveb f := 
+Definition bijectiveb f :=
   injectiveb f && (#|U| <= #|T|)%N.
 
-Lemma bijectiveP f : 
+Lemma bijectiveP f :
   reflect (bijective f) (bijectiveb f).
-Proof. 
-  apply/(equivP idP); split; rewrite /bijectiveb. 
-  - move=> /andP[/injectiveP]; exact/inj_card_bij.  
-  by move=> /[dup] /bij_inj /injectiveP -> /= /bij_eq_card ->. 
+Proof.
+  apply/(equivP idP); split; rewrite /bijectiveb.
+  - move=> /andP[/injectiveP]; exact/inj_card_bij.
+  by move=> /[dup] /bij_inj /injectiveP -> /= /bij_eq_card ->.
 Qed.
 
 (* TODO: use `forallPP` instead? *)
-Lemma forall2P r : 
+Lemma forall2P r :
   reflect (forall x y, r x y) [forall x, forall y, r x y].
-Proof. 
+Proof.
   apply/(equivP forallP); split.
   - by move=> H x y; move: (H x)=> /forallP.
-  by move=> H x; apply/forallP.  
+  by move=> H x; apply/forallP.
 Qed.
 
-Lemma forall3P (p : T -> T -> T -> bool) : 
+Lemma forall3P (p : T -> T -> T -> bool) :
   reflect (forall x y z, p x y z) [forall x, forall y, forall z, p x y z].
-Proof. 
+Proof.
   apply/(equivP forallP); split.
   - by move=> H x y z; move: (H x)=> /forall2P.
-  by move=> H x; apply/forall2P.  
+  by move=> H x; apply/forall2P.
 Qed.
 
 End FinTypeUtils.
 
 (* TODO: better name? (h stands for heterogeneous) *)
 Section InvFh.
-Context {T U : finType}. 
+Context {T U : finType}.
 Variable (f : T -> U).
 Hypothesis (fbij : bijective f).
 
-Lemma injFh_onto y : 
-  y \in codom f. 
-Proof. 
-  apply/(inj_card_onto (bij_inj fbij)). 
-  by rewrite (bij_eq_card fbij).  
+Lemma injFh_onto y :
+  y \in codom f.
+Proof.
+  apply/(inj_card_onto (bij_inj fbij)).
+  by rewrite (bij_eq_card fbij).
 Qed.
 
 Definition invFh y := iinv (injFh_onto y).
 
-Lemma invFh_f : cancel f invFh. 
+Lemma invFh_f : cancel f invFh.
 Proof. move=> x; apply: iinv_f; exact/bij_inj. Qed.
 
-Lemma f_invFh : cancel invFh f. 
+Lemma f_invFh : cancel invFh f.
 Proof. by move=> y; apply: f_iinv. Qed.
 
-Lemma injFh_bij : bijective invFh. 
+Lemma injFh_bij : bijective invFh.
 Proof. exists f; [exact/f_invFh | exact/invFh_f]. Qed.
-  
-End InvFh.  
+
+End InvFh.
 
 
 Section SubTypeUtils.
 
 Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
 
-Definition sub_down (g : U -> S) (f : U -> T) : U -> S := 
+Definition sub_down (g : U -> S) (f : U -> T) : U -> S :=
   fun x => insubd (g x) (f x).
 
-Definition sub_lift (g : T -> U) (f : S -> U) : T -> U := 
+Definition sub_lift (g : T -> U) (f : S -> U) : T -> U :=
   fun x => odflt (g x) (omap f (insub x)).
 
-Definition sub_rel_down (r : rel T) : rel S := 
+Definition sub_rel_down (r : rel T) : rel S :=
   [rel x y | r (val x) (val y)].
 
-Definition sub_rel_lift (r : rel S) : rel T := 
+Definition sub_rel_lift (r : rel S) : rel T :=
   [rel x y | match (insub x), (insub y) with
     | Some x, Some y => r x y
     | _, _ => false
     end
-  ]. 
+  ].
 
-Definition compatible (g : T -> U) (f : S -> U) : Prop := 
-  forall x y, g x = f y -> P x. 
+Definition compatible (g : T -> U) (f : S -> U) : Prop :=
+  forall x y, g x = f y -> P x.
 
-Lemma sub_inj (x y : T) (px : P x) (py : P y) : 
+Lemma sub_inj (x y : T) (px : P x) (py : P y) :
   Sub x px = Sub y py :> S -> x = y.
 Proof. by move=> H; move: (SubK S px) (SubK S py)=> <- <-; rewrite H. Qed.
 
-Lemma sub_val (x : S) px : 
+Lemma sub_val (x : S) px :
   Sub (val x) px = x.
 Proof. by apply/val_inj; rewrite SubK. Qed.
 
-Lemma sub_downT y g f x : 
-  P (f x) -> sub_down g f x = insubd y (f x). 
+Lemma sub_downT y g f x :
+  P (f x) -> sub_down g f x = insubd y (f x).
 Proof. by move=> ?; rewrite /sub_down /insubd insubT //. Qed.
 
-Lemma val_sub_downT g f x : 
-  P (f x) -> val (sub_down g f x) = f x. 
+Lemma val_sub_downT g f x :
+  P (f x) -> val (sub_down g f x) = f x.
 Proof. by rewrite /sub_down val_insubd; case: ifP. Qed.
 
-Lemma sub_downF g f x : 
-  ~ P (f x) -> sub_down g f x = g x. 
+Lemma sub_downF g f x :
+  ~ P (f x) -> sub_down g f x = g x.
 Proof. move=> ?; rewrite /sub_down /insubd insubF //; exact/negP. Qed.
 
-Lemma val_sub_downF g f x : 
-  ~ P (f x) -> val (sub_down g f x) = val (g x). 
+Lemma val_sub_downF g f x :
+  ~ P (f x) -> val (sub_down g f x) = val (g x).
 Proof. by rewrite /sub_down val_insubd; case: ifP. Qed.
 
-Lemma sub_down_inj_inT (g : U -> S) f (pU := fun x => f x \in P) : 
+Lemma sub_down_inj_inT (g : U -> S) f (pU := fun x => f x \in P) :
   injective f -> { in pU &, injective (sub_down g f) }.
-Proof. 
+Proof.
   subst pU; move=> Hf x y; rewrite /in_mem /= => Hx Hy.
-  by rewrite /sub_down /insubd !insubT /= => /sub_inj/Hf. 
+  by rewrite /sub_down /insubd !insubT /= => /sub_inj/Hf.
 Qed.
 
-Lemma sub_down_inj_inF (g : U -> S) f (pU := fun x => f x \notin P) : 
+Lemma sub_down_inj_inF (g : U -> S) f (pU := fun x => f x \notin P) :
   injective g -> { in pU &, injective (sub_down g f) }.
-Proof. 
+Proof.
   subst pU; move=> Hg x y; rewrite /in_mem /= => /negP Hx /negP Hy.
   rewrite !sub_downF //; exact/Hg.
 Qed.
 
-Lemma sub_liftT g f x Px : 
+Lemma sub_liftT g f x Px :
   sub_lift g f x = f (Sub x Px).
 Proof. by rewrite /sub_lift /insubd insubT /=. Qed.
 
-Lemma sub_liftF g f x : 
+Lemma sub_liftF g f x :
   ~ P x -> sub_lift g f x = g x.
 Proof. move=> ?; rewrite /sub_lift /insubd insubF //=; exact/negP. Qed.
 
-Lemma sub_lift_inj g f : 
+Lemma sub_lift_inj g f :
   compatible g f -> injective g -> injective f -> injective (sub_lift g f).
-Proof. 
-  move=> Hc Hg Hf x y. 
+Proof.
+  move=> Hc Hg Hf x y.
   case: (P x)/idP; case: (P y)/idP=> Hx Hy.
   - rewrite !sub_liftT=> /Hf; exact/sub_inj.
-  - by rewrite sub_liftT sub_liftF // => /esym /Hc. 
-  - by rewrite sub_liftF // sub_liftT=> /Hc. 
+  - by rewrite sub_liftT sub_liftF // => /esym /Hc.
+  - by rewrite sub_liftF // sub_liftT=> /Hc.
   rewrite !sub_liftF //; exact/Hg.
 Qed.
 
-Lemma sub_lift_homo g f (rT : rel T) (rU : rel U) : 
-  (forall x y, rT x y -> P y -> P x) -> 
+Lemma sub_lift_homo g f (rT : rel T) (rU : rel U) :
+  (forall x y, rT x y -> P y -> P x) ->
   (forall x y, ~ P y -> rU (f x) (g y)) ->
-  { homo g : x y / rT x y >-> rU x y } -> 
-  { homo f : x y / rT (val x) (val y) >-> rU x y } -> 
+  { homo g : x y / rT x y >-> rU x y } ->
+  { homo f : x y / rT (val x) (val y) >-> rU x y } ->
   { homo (sub_lift g f) : x y / rT x y >-> rU x y }.
-Proof. 
+Proof.
   move=> HrT HrU Hg Hf x y.
   case: (P x)/idP; case: (P y)/idP=> Hx Hy.
-  - by rewrite !sub_liftT=> ?; apply/Hf; rewrite !SubK. 
-  - by rewrite sub_liftT sub_liftF // => ?; apply/HrU. 
+  - by rewrite !sub_liftT=> ?; apply/Hf; rewrite !SubK.
+  - by rewrite sub_liftT sub_liftF // => ?; apply/HrU.
   - by move: Hx=> /[swap] /HrT /[apply].
   rewrite !sub_liftF //; exact/Hg.
 Qed.
 
-Lemma sub_rel_lift_val r (x y : S) : 
+Lemma sub_rel_lift_val r (x y : S) :
   sub_rel_lift r (val x) (val y) = r x y.
-Proof. 
+Proof.
   rewrite /sub_rel_lift /= !insubT; try exact/valP.
   by move=> ??; rewrite !sub_val.
 Qed.
 
-Lemma sub_rel_lift_fld r : 
+Lemma sub_rel_lift_fld r :
   subrel (sub_rel_lift r) [rel x y | P x && P y].
-Proof. 
+Proof.
   rewrite /sub_rel_lift=> ?? /=.
   by repeat case: insubP=> [? ->|] //.
 Qed.
 
-Lemma sub_rel_down_liftK r : 
+Lemma sub_rel_down_liftK r :
   sub_rel_down (sub_rel_lift r) =2 r.
-Proof. 
-  rewrite /sub_rel_lift /sub_rel_down=> x y /=. 
+Proof.
+  rewrite /sub_rel_lift /sub_rel_down=> x y /=.
   rewrite !insubT; try exact/valP.
-  by move=> ??; rewrite !sub_val. 
+  by move=> ??; rewrite !sub_val.
 Qed.
 
-Lemma sub_rel_lift_downK r : 
-  subrel r [rel x y | P x && P y] -> sub_rel_lift (sub_rel_down r) =2 r.  
-Proof. 
+Lemma sub_rel_lift_downK r :
+  subrel r [rel x y | P x && P y] -> sub_rel_lift (sub_rel_down r) =2 r.
+Proof.
   move=> sub x y /=.
   have ->: r x y = [&& r x y, P x & P y].
-  - apply/idP/idP=> [|/and3P[]] //=. 
-    by move=> /[dup] /sub /andP[] -> -> ->. 
+  - apply/idP/idP=> [|/and3P[]] //=.
+    by move=> /[dup] /sub /andP[] -> -> ->.
   rewrite /sub_rel_lift /sub_rel_down /=.
   apply/idP/idP.
-  - repeat (case: insubP=> [? -> ->|] //); by move=> ->. 
+  - repeat (case: insubP=> [? -> ->|] //); by move=> ->.
   move=> /and3P[???].
   repeat (case: insubP=> [?? ->|/negP] //).
-Qed. 
+Qed.
 
-Lemma sub_rel_liftP (r : rel S) x y : 
+Lemma sub_rel_liftP (r : rel S) x y :
   reflect (exists x' y', [/\ r x' y', val x' = x & val y' = y])
           (sub_rel_lift r x y).
 Proof.
@@ -861,49 +861,49 @@ Proof.
   pose r' := [rel x y | P x && P y].
   rewrite -/rl.
   have ->: rl x y = [&& rl x y, P x & P y].
-  - apply/idP/idP=> [/[dup] + ->|/and3P[]] //. 
-    by move=> /sub_rel_lift_fld /andP[-> ->]. 
+  - apply/idP/idP=> [/[dup] + ->|/and3P[]] //.
+    by move=> /sub_rel_lift_fld /andP[-> ->].
   apply/(equivP idP); split.
   - move=> /and3P[rxy px py].
     exists (Sub x px), (Sub y py).
-    split; rewrite ?SubK //. 
+    split; rewrite ?SubK //.
     by move: rxy=> /=; rewrite /rl /sub_rel_lift /= !insubT.
   move=> [x' [] y' []] /=.
-  move=> + <- <-; move: (valP x') (valP y'). 
+  move=> + <- <-; move: (valP x') (valP y').
   move=> /[dup] ? -> /[dup] ? ->.
   by rewrite /rl /sub_rel_lift /= !insubT !andbT !sub_val.
 Qed.
 
-Lemma sub_rel_lift_antisym r : 
+Lemma sub_rel_lift_antisym r :
   antisymmetric r -> antisymmetric (sub_rel_lift r).
-Proof. 
-  move=> asym x y. 
-  rewrite /sub_rel_lift /=. 
+Proof.
+  move=> asym x y.
+  rewrite /sub_rel_lift /=.
   case: insubP=> // x' ? <-.
   case: insubP=> // y' ? <-.
   by move=> /asym ->.
 Qed.
 
-Lemma sub_rel_lift_trans r : 
+Lemma sub_rel_lift_trans r :
   transitive r -> transitive (sub_rel_lift r).
-Proof. 
-  move=> trans x y z. 
-  rewrite /sub_rel_lift /=. 
+Proof.
+  move=> trans x y z.
+  rewrite /sub_rel_lift /=.
   case: insubP=> // y' ??.
   case: insubP=> // x' ??.
   case: insubP=> // z' ??.
   exact/trans.
 Qed.
 
-Lemma eq_sub_rel_down r1 r2 : 
+Lemma eq_sub_rel_down r1 r2 :
   r1 =2 r2 -> sub_rel_down r1 =2 sub_rel_down r2.
 Proof. by move=> eqr x y; rewrite /sub_rel_down /= eqr. Qed.
 
-Lemma eq_sub_rel_lift r1 r2 : 
+Lemma eq_sub_rel_lift r1 r2 :
   r1 =2 r2 -> sub_rel_lift r1 =2 sub_rel_lift r2.
-Proof. 
+Proof.
   move=> eqr x y; rewrite /sub_rel_lift /=.
-  by do 2 case: insubP=> //. 
+  by do 2 case: insubP=> //.
 Qed.
 
 End SubTypeUtils.
@@ -915,7 +915,7 @@ Section Def.
 Context {aT : finType} {rT : Type}.
 Implicit Types (f : {ffun aT -> rT}) (P : pred {ffun aT -> rT}).
 
-Structure subFinfun P : Type := SubFinfun { 
+Structure subFinfun P : Type := SubFinfun {
   apply :> {ffun aT -> rT};
   _     : P apply;
 }.
@@ -926,7 +926,7 @@ Definition sub_finfun_of (ph : phant (aT -> rT)) P : predArgType :=
   [subType of (subFinfun P)].
 
 (* TODO: invent better rename or notation? *)
-Definition SubFinfunOf f P : P f -> sub_finfun_of (Phant (aT -> rT)) P := 
+Definition SubFinfunOf f P : P f -> sub_finfun_of (Phant (aT -> rT)) P :=
   fun pf => SubFinfun pf.
 
 End Def.
@@ -937,9 +937,9 @@ Notation "{ 'ffun' fT '|' P }" := (sub_finfun_of (Phant fT) P)
 Section Instances.
 Context {aT : finType}.
 
-Definition subFinfun_eqMixin (rT : eqType) (P : pred {ffun aT -> rT}) := 
+Definition subFinfun_eqMixin (rT : eqType) (P : pred {ffun aT -> rT}) :=
   Eval hnf in [eqMixin of {ffun aT -> rT | P} by <:].
-Canonical subFinfun_eqType (rT : eqType) (P : pred {ffun aT -> rT}) := 
+Canonical subFinfun_eqType (rT : eqType) (P : pred {ffun aT -> rT}) :=
   Eval hnf in EqType {ffun aT -> rT | P} (subFinfun_eqMixin P).
 
 Definition subFinfun_choiceMixin (rT : choiceType) (P : pred {ffun aT -> rT}) :=
@@ -974,7 +974,7 @@ Section Def.
 Context {T : Type}.
 Implicit Types (r : rel T) (mp : mem_pred T).
 
-Definition subsumes_mem r mp1 mp2 := 
+Definition subsumes_mem r mp1 mp2 :=
   forall x, in_mem x mp1 -> exists2 y, in_mem y mp2 & r x y.
 
 End Def.
@@ -983,7 +983,7 @@ Notation "{ 'subsumes' A <= B 'by' R }" :=
   (subsumes_mem R (mem A) (mem B))
     (A at level 69, B at level 69) : type_scope.
 
-Notation "{ 'subsumes' A <= B : x y / a }" := 
+Notation "{ 'subsumes' A <= B : x y / a }" :=
   (subsumes_mem (fun x y => a) (mem A) (mem B))
     (A at level 69, B at level 69, x at level 0, y at level 0) : type_scope.
 
@@ -1018,18 +1018,18 @@ Implicit Types (r : rel T).
 (* TODO: r could be T -> T -> Prop ? *)
 Lemma homo_iter r f n :
   { homo f : x y / r x y } -> { homo (iter n f) : x y / r x y }.
-Proof. 
+Proof.
   elim n=> [|{}n IH] //=.
-  - by move=> ? x y /=. 
+  - by move=> ? x y /=.
   move=> homo x y /= ?.
-  by apply/homo/IH. 
+  by apply/homo/IH.
 Qed.
 
-Lemma iter_mul_eq n m f x : 
+Lemma iter_mul_eq n m f x :
   iter m f x = x -> iter (n * m) f x = x.
-Proof. 
+Proof.
   move=> fmx; elim: n=> [|{}n IH] => //=.
-  by rewrite mulSnr iterD fmx IH. 
+  by rewrite mulSnr iterD fmx IH.
 Qed.
 
 End IterUtils.
@@ -1049,7 +1049,7 @@ Proof.
   have [n leMn] := ubnP #|` X|; elim: n => // n IHn in X leMn *.
   case (fset_0Vmem X)=> [->//| [x]/[dup] I /fsetD1K<-].
   apply/Ps/IHn; first by rewrite ?inE eqxx.
-  by rewrite (cardfsD1 x) I /= addnC addn1 in leMn. 
+  by rewrite (cardfsD1 x) I /= addnC addn1 in leMn.
 Qed.
 
 End FSetInduction.
@@ -1070,7 +1070,7 @@ Qed.
 Lemma imfset0 (K V : choiceType)
   (f : K -> V) : f @` fset0 = fset0.
 Proof.
-  apply/cardfs0_eq/eqP; rewrite -leqn0. 
+  apply/cardfs0_eq/eqP; rewrite -leqn0.
   exact/(leq_trans (leq_imfset_card _ _ _)).
 Qed.
 
@@ -1093,11 +1093,11 @@ Section FinMapUtils.
 Context {K : choiceType} {V : eqType}.
 Implicit Types (A : {fset K}).
 
-Lemma finsupp_fset (A : {fset K}) (f : K -> V) dflt : 
-  finsupp [fsfun k in A => f k | dflt] = [fset k in A | f k != dflt]%fset. 
-Proof. 
-  apply/fsetP=> x. 
-  rewrite mem_finsupp fsfunE in_fset !inE /=. 
+Lemma finsupp_fset (A : {fset K}) (f : K -> V) dflt :
+  finsupp [fsfun k in A => f k | dflt] = [fset k in A | f k != dflt]%fset.
+Proof.
+  apply/fsetP=> x.
+  rewrite mem_finsupp fsfunE in_fset !inE /=.
   by case: (x \in A)=> //; rewrite eq_refl.
 Qed.
 
@@ -1105,28 +1105,28 @@ Context {P : pred K} {fK : subFinType P}.
 
 Lemma in_fsetval k :
   (k \in [fsetval k' in fK])%fset = (insub k : option fK).
-Proof. 
-  case: insubP=> /=. 
+Proof.
+  case: insubP=> /=.
   - move=> k' ? <-; apply/idP/idP=> //.
-    by apply/imfsetP; exists k'. 
-  move=> /negP nPe. 
-  apply/idP/idP=> //; apply/negP. 
+    by apply/imfsetP; exists k'.
+  move=> /negP nPe.
+  apply/idP/idP=> //; apply/negP.
   move=> /imfsetP[k''] /= ? H; apply/nPe.
   by move: (valP k''); rewrite H.
 Qed.
 
 Lemma in_fsetval_seq k (s : seq fK) :
-  (k \in [fsetval k' in s])%fset = 
+  (k \in [fsetval k' in s])%fset =
     if insub k is Some k' then k' \in s else false.
-Proof. 
-  case: insubP=> /=. 
+Proof.
+  case: insubP=> /=.
   - move=> k' ? <-; apply/idP/idP=> //.
-    + by move=> /imfsetP[k''] /= + /val_inj ->. 
+    + by move=> /imfsetP[k''] /= + /val_inj ->.
     by move=> ?; apply/imfsetP; exists k'.
   move=> /negP nPk; apply/idP/idP=> //.
   apply/negP=> /imfsetP[k''] /= ? H.
   by move: (valP k''); rewrite -H.
-Qed.  
+Qed.
 
 End FinMapUtils.
 
@@ -1149,9 +1149,9 @@ Proof. by rewrite reprK. Qed.
 Lemma eqquot_piE (x : Q) (y : T) :
   x == (\pi y)%qT = e (repr x) y.
 Proof.
-  rewrite eqquot_eqE; apply/etrans. 
+  rewrite eqquot_eqE; apply/etrans.
   - by rewrite -(@eqquotE T e Q) piK.
-  by rewrite -(@eqquotE T e Q). 
+  by rewrite -(@eqquotE T e Q).
 Qed.
 
 Lemma eqquot_piP (x : Q) (y : T) :
