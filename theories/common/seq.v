@@ -146,13 +146,11 @@ Qed.
 
 Lemma index_inj s :
   {in s &, injective (index^~ s)}.
-Proof.
-  move=> x y; elim s=> [|z {}s] IH //=.
-  rewrite !inE=> /orP[/eqP->|xIn] /orP[/eqP->|yIn] //.
-  - by rewrite eq_refl; case: ifP=> [/eqP->|] //.
-  - by rewrite eq_refl; case: ifP=> [/eqP->|] //.
-  case: ifP=> [/eqP->|]; case: ifP=> [/eqP->|] //.
-  by move=> ?? [] /IH H; apply/H.
+Proof. 
+  move=> x y; elim s=> [|z {}s] IH //=. 
+  case: ifP=> [/eqP->|]; case: ifP=> [/eqP->|] => //. 
+  rewrite !inE [z == y]eq_sym [z == x]eq_sym => -> -> /=. 
+  move=> ?? []; exact/IH.
 Qed.
 
 Lemma mkseq_in_uniq (f : nat -> T) n :

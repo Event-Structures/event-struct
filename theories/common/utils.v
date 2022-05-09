@@ -636,6 +636,10 @@ Proof.
   by move=> /imfsetP [y] /= /[swap] /finj ->.
 Qed.
 
+Lemma imfset_can_in f g s :
+  {on f @` s, cancel f & g} -> {in s, cancel f g}.
+Proof. by move=> K x xin; rewrite K ?(in_imfset _ f). Qed.
+
 Lemma fset_existsP s p :
   reflect (exists x, x \in s /\ p x) [exists x : s, p (val x)].
 Proof.
