@@ -1079,11 +1079,12 @@ End Imfset.
 
 Section FinMapCount.
 Variable (K : countType) (V : countType).
+Implicit Types (d : K -> V).
 
 Definition finMap_countMixin := CanCountMixin (@finMap_codeK K V).
 Canonical finMap_countType := CountType {fmap K -> V} finMap_countMixin.
 
-Definition fsfun_countMixin d := [countMixin of fsfun d by <:].
+Definition fsfun_countMixin d := [countMixin of (fsfun d) by <:].
 Canonical fsfun_countType d := CountType (fsfun d) (fsfun_countMixin d).
 
 End FinMapCount.
