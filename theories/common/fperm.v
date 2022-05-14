@@ -94,16 +94,8 @@ Notation "{ 'fperm' T }" := (@fPerm T)
 Notation "[ 'fperm' ]" := (fperm0) 
   (at level 0, format "[ 'fperm' ]") : fun_scope.
 
-Notation "[ 'fperm' x : X => F ]" := (mkfperm (fun (x : X) => F) X)
-  (at level 0, x at level 99, format "[ 'fperm'  x  :  X  =>  F ]") 
-  : fun_scope.
-
 Notation "[ 'fperm' x 'in' X => F ]" := (mkfperm (fun x => F) X)
   (at level 0, x at level 99, format "[ 'fperm'  x  'in'  X  =>  F ]") 
-  : fun_scope.
-
-Notation "[ 'fperm' x => F ]" := [fperm x : _ => F]
-  (at level 0, x at level 99, format "[ 'fperm'  x  =>  F ]") 
   : fun_scope.
 
 End Syntax.
