@@ -3,8 +3,8 @@ From RelationAlgebra Require Import lattice monoid rel fhrel boolean kat_tac.
 From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
-From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted.
-From eventstruct Require Import utils seq rel relalg inhtype ident ilia.
+From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
+From eventstruct Require Import utils seq fperm rel relalg inhtype ident ilia.
 From eventstruct Require Import order lposet.
 
 (******************************************************************************)
@@ -302,16 +302,20 @@ Qed.
 (*     Lab and eventset lemmas                                                *)
 (* ************************************************************************** *)
 
-Lemma fs_labNbot p e :
+Lemma fs_labNbotE p e : 
   (fs_lab p e != bot) = (e \in lfsp_eventset p).
 Proof.
   rewrite /lfsp_eventset !inE /fs_lab andb_idl ?mem_finsupp //=.
   by case: (p e)=> l es; rewrite xpair_eqE negb_and /= => ->.
 Qed.
 
+Lemma fs_lab_botE p e : 
+  (fs_lab p e == bot) = (e \notin lfsp_eventset p).
+Proof. by rewrite -fs_labNbotE negbK. Qed.  
+
 Lemma fs_lab_bot p e :
   (e \notin lfsp_eventset p) -> fs_lab p e = bot.
-Proof. by rewrite -fs_labNbot negbK=> /eqP. Qed.
+Proof. by rewrite -fs_lab_botE=> /eqP. Qed.
 
 Lemma eventset_fsupp p :
   lfsp_eventset p `<=` finsupp p.
@@ -400,7 +404,7 @@ Lemma lfsp_labels_Nbot p :
 Proof.
   rewrite /lfsp_labels.
   apply/mapP=> [[e]].
-  rewrite mem_lfsp_tseq -fs_labNbot eq_sym.
+  rewrite mem_lfsp_tseq -fs_labNbotE eq_sym. 
   by move=> /negP + /eqP.
 Qed.
 
@@ -609,8 +613,23 @@ Proof.
   apply/orP; right; exact/andP.
 Qed.
 
-Lemma fs_ca_nsupp p e1 e2 : supp_closed p -> acyclic (fin_ica p) ->
-  ((e1 \notin lfsp_eventset p) || (e2 \notin lfsp_eventset p)) ->
+Lemma fs_ica_ca p : supp_closed p -> acyclic (fin_ica p) -> 
+  subrel (fs_ica p) (fs_sca p).
+Proof. 
+  move=> supcl acyc x y ica.
+  by apply/(fs_scaP _ _ supcl acyc)/t_step.
+Qed.
+
+Lemma fs_ica_nsupp p e1 e2 : supp_closed p -> 
+  ((e1 \notin lfsp_eventset p) || (e2 \notin lfsp_eventset p)) -> 
+    ~ fs_ica p e1 e2.
+Proof. 
+  move=> supcl nin /(supp_closedP _ supcl) []. 
+  by move: nin=> /orP[] /negP.
+Qed.
+
+Lemma fs_ca_nsupp p e1 e2 : supp_closed p -> acyclic (fin_ica p) -> 
+  ((e1 \notin lfsp_eventset p) || (e2 \notin lfsp_eventset p)) -> 
     fs_ca p e1 e2 -> e1 = e2.
 Proof.
   move=> supcl acyc /[swap].
@@ -657,8 +676,7 @@ Qed.
 (*     Operational preposets                                                  *)
 (* ************************************************************************** *)
 
-(* TODO: do we need acyclic precondition? *)
-Lemma operationalP p :
+Lemma operationalP p : 
   reflect (subrel (fs_ca p) (<=^i%O)) (operational p).
 Proof.
   apply: iffP.
@@ -805,15 +823,16 @@ Section BuildCov.
 Context (E : identType) (L : botType).
 Context (fE : {fset E}).
 Implicit Types (p : lfspreposet E L).
-Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel E).
+Implicit Types (lab : E -> L) (ica : rel fE) (ca : rel E).
 
 Definition build_cov lab ca : lfspreposet E L :=
   let sca : rel E := (fun x y => (y != x) && (ca x y)) in
   let ica : rel fE := cov (relpre val sca) in
-  build lab ica.
+  build (lab \o val) ica.
 
-Variables  (lab : fE -> L) (ca : rel E).
-Hypothesis (labD : forall e, lab e != bot).
+Variables  (lab : E -> L) (ca : rel E).
+Hypothesis (labD  : forall (e : fE), lab (val e) != bot).
+Hypothesis (labDS : forall (e : E) , (lab e != bot) = (e \in fE)).
 Hypothesis (ca_refl  : reflexive ca).
 Hypothesis (ca_anti  : antisymmetric ca).
 Hypothesis (ca_trans : transitive ca).
@@ -821,15 +840,29 @@ Hypothesis (ca_trans : transitive ca).
 (* Let sca : rel E  := (fun x y => (y != x) && (ca x y)). *)
 Let ica : rel fE := cov (relpre val (iker ca)).
 
-Lemma build_cov_fin_ica :
+Lemma build_cov_lab : 
+  fs_lab (build_cov lab ca) =1 lab.
+Proof. 
+  move=> e; rewrite /build_cov build_lab. 
+  case: (e \in fE)/idP=> [? |].
+  - by rewrite sub_liftT.
+  move=> /[dup] ? /negP.
+  by rewrite -labDS sub_liftF // negbK => /eqP.
+Qed.
+
+Lemma build_cov_eventset : 
+  lfsp_eventset (build_cov lab ca) = fE.
+Proof. by rewrite /build_cov build_eventset. Qed.
+
+Lemma build_cov_fin_ica : 
   fin_ica (build_cov lab ca) =2 cov (relpre val (iker ca)).
 Proof.
-  case=> ? /[dup] + in1 [? /[dup] + in2].
-  rewrite {1 2}build_eventset => * //.
+  case=> ? /[dup] + in1 [? /[dup] + in2]. 
+  rewrite {1 2}build_eventset => * //; last exact/labD.
   rewrite /fin_ica /sub_rel_down /=.
   rewrite build_ica /sub_rel_lift /=.
   do ? case: insubP=> [??? |/negP//].
-  move: in1 in2; case: _ / (esym (@build_eventset E L fE lab ica labD))=> *.
+  move: in1 in2; case: _ / (esym (build_eventset ica labD))=> *.
   apply/congr2/val_inj=> //; exact/val_inj.
 Qed.
 
@@ -900,18 +933,35 @@ Proof.
   by rewrite build_cov_fin_ca /= val1 val2 andbT.
 Qed.
 
+Hypothesis (ca_subE : subrel ca (mem fE × mem fE : {dhrel E & E})^?).
+
 (* TODO: rename? *)
-Lemma build_cov_ca_wf : subrel ca (mem fE × mem fE : {dhrel E & E})^? ->
+Lemma build_cov_ca_wf : 
   fs_ca (build_cov lab ca) =2 ca.
-Proof.
-  move=> sub e1 e2; rewrite build_cov_ca.
+Proof. 
+  move=> e1 e2; rewrite build_cov_ca.
   apply/idP/idP=> [/orP[|]|].
   - move=> /eqP->; exact/ca_refl.
   - by move=> /and3P[].
-  move=> /[dup] /sub /= /orP[|].
-  - by move=> /eqP-> ?; apply/orP; left.
+  move=> /[dup] /ca_subE /= /orP[|]. 
+  - by move=> /eqP-> ?; apply/orP; left. 
   by move=> /andP[-> ->] ->; rewrite orbT.
 Qed.
+
+(* TODO: rename? *)
+(* Lemma build_cov_ica_wf (ica_ : rel E) :  *)
+(*   (forall x y, reflect (clos_refl_trans (ica_ : hrel E E) x y) (ca x y)) ->  *)
+(*   fs_ica (build_cov lab ca) =2 ica_. *)
+(* Proof.  *)
+(*   move=> icaP e1 e2.  *)
+(*   rewrite build_cov_ca. *)
+(*   apply/idP/idP=> [/orP[|]|]. *)
+(*   - move=> /eqP->; exact/ca_refl. *)
+(*   - by move=> /and3P[]. *)
+(*   move=> /[dup] /sub /= /orP[|].  *)
+(*   - by move=> /eqP-> ?; apply/orP; left.  *)
+(*   by move=> /andP[-> ->] ->; rewrite orbT. *)
+(* Qed. *)
 
 End BuildCov.
 
@@ -1025,9 +1075,9 @@ Context (E : identType) (L : botType).
 Implicit Types (p : lfspreposet E L).
 Implicit Types (ls : seq L).
 
-Definition of_seq ls :=
-  let fE  := [fset e | e in nfresh \i0 (size ls)] in
-  let lab := fun e : fE => (nth bot ls (encode (val e))) in
+Definition of_seq ls := 
+  let fE  := [fset e | e in nfresh \i0 (size ls)] in 
+  let lab := fun e : E => (nth bot ls (encode e)) in
   let ca  := fun e1 e2 : E => e1 <=^i e2 in
   @build_cov E L fE lab ca.
 
@@ -1186,8 +1236,8 @@ Implicit Types (p : lfspreposet E L).
  *                             \-- lfsequiv
  *
  *)
-Definition inter_rel r p :=
-  @build_cov E L _ (fin_lab p) (r ⊓ (fs_ca p)).
+Definition inter_rel r p := 
+  @build_cov E L (lfsp_eventset p) (fs_lab p) (r ⊓ (fs_ca p)).
 
 (* Lemma inter_rel_finsupp r p :  *)
 (*   lfsp_eventset (inter_rel r p) = lfsp_eventset p. *)
@@ -1255,9 +1305,8 @@ Implicit Types (p : lfspreposet E L).
 Definition restrict P p : lfspreposet E L :=
   (* TODO: there should be a simpler solution... *)
   let fE  := [fset e in lfsp_eventset p | P e] in
-  let lab := (fun e : fE => fs_lab p (val e)) in
   let ca  := (eq_op ⊔ (P × P)) ⊓ (fs_ca p) in
-  @build_cov E L _ lab ca.
+  @build_cov E L fE (fs_lab p) ca.
 
 Variables (P : pred E) (p : lfspreposet E L).
 Hypothesis (supcl : supp_closed p).
@@ -1332,6 +1381,102 @@ Qed.
 End Restrict.
 
 
+Section Rename.
+Context (E : identType) (L : botType).
+Implicit Types (f : {fperm E}).
+Implicit Types (p : lfspreposet E L).
+
+Definition rename f p : lfspreposet E L :=
+  let fE   := f @` (lfsp_eventset p) in
+  let invF := (fperm_inv f) \o (val : fE -> E) in
+  let lab  := (fs_lab p) \o invF in
+  let ica  := [rel x y | fs_ica p (invF x) (invF y)] in
+  build lab ica.
+
+Lemma fperm_inv_inE f p e :
+  (fperm_inv f e \in lfsp_eventset p) = (e \in f @` lfsp_eventset p).
+Proof. rewrite -{2}[e](inv_fpermK f) mem_imfset //; exact/fperm_inj. Qed.
+
+Lemma rename_lab f p : 
+  fs_lab (rename f p) =1 (fs_lab p) \o (fperm_inv f).
+Proof.
+  move=> e; rewrite /rename build_lab //=.
+  case: (e \in f @` (lfsp_eventset p))/idP=> [ein|enin].
+  - by rewrite sub_liftT.
+  rewrite sub_liftF ?fs_lab_bot ?fperm_inv_inE //; exact/negP.
+Qed.
+
+Lemma rename_eventset f p : 
+  lfsp_eventset (rename f p) = f @` (lfsp_eventset p).
+Proof.
+  rewrite /rename build_eventset // => e.
+  rewrite fs_labNbotE fperm_inv_inE; exact/valP.
+Qed.
+
+Lemma rename_ica f p : supp_closed p ->
+  fs_ica (rename f p) =2 [rel x y | fs_ica p (fperm_inv f x) (fperm_inv f y)].
+Proof.
+  move=> supcl x y; rewrite /rename build_ica.
+  case: (x \in f @` lfsp_eventset p)/idP; last first.
+  - move=> /negP xnin; rewrite /sub_rel_lift /=. 
+    rewrite insubF; last exact/(introF idP)/negP.
+    symmetry; apply/(introF idP)/fs_ica_nsupp=> //.
+    by apply/orP; left; rewrite fperm_inv_inE.
+  case: (y \in f @` lfsp_eventset p)/idP; last first.
+  - move=> /negP ynin xin; rewrite /sub_rel_lift /=. 
+    rewrite insubT insubF; last exact/(introF idP)/negP.
+    symmetry; apply/(introF idP)/fs_ica_nsupp=> //.
+    by apply/orP; right; rewrite fperm_inv_inE.
+  move=> iny inx. 
+  have->: x = val [` inx] by done.
+  have->: y = val [` iny] by done.
+  by rewrite sub_rel_lift_val /=.
+Qed.
+
+Lemma rename_supp_closed f p : 
+  supp_closed p -> supp_closed (rename f p).
+Proof. 
+  move=> supcl; apply/supp_closedP=> x y.
+  rewrite rename_ica //=.
+  move=> /(supp_closedP _ supcl)[].
+  by rewrite !fperm_inv_inE rename_eventset.
+Qed.
+
+Lemma rename_ca f p : supp_closed p -> acyclic (fin_ica p) ->
+  fs_ca (rename f p) =2 [rel x y | fs_ca p (fperm_inv f x) (fperm_inv f y)].
+Proof.
+  move=> supcl acyc x y; apply/eqP/iff_eqP; apply: iff_trans.
+  - symmetry; apply: rwP; exact/fs_caP/rename_supp_closed.
+  symmetry; apply: iff_trans; last split.
+  - symmetry; apply: rwP=> /=; exact/fs_caP.
+  - rewrite -{2}[x](inv_fpermK f) -{2}[y](inv_fpermK f).
+    elim=> //=; last first.
+    +  move=> {}x {}y {}z _ xy _ yz; exact/(rt_trans _ _ _ _ _ xy yz). 
+    move=> {}x {}y icaxy; apply/rt_step.
+    by rewrite rename_ica //= !fperm_invK.
+  elim=> //=; last first.
+  - move=> {}x {}y {}z _ xy _ yz; exact/(rt_trans _ _ _ _ _ xy yz). 
+  move=> {}x {}y icaxy; apply/rt_step.
+  by move: icaxy; rewrite rename_ica.
+Qed.
+
+Lemma rename_acyclic f p : supp_closed p -> acyclic (fin_ica p) ->
+  acyclic (fin_ica (rename f p)).
+Proof.
+  move=> suplc acyc; apply/fin_ica_acyclic.
+  - apply/fin_ica_irrefl.
+    move=> e; rewrite rename_ica //.
+    apply/fs_ica_irrefl=> //. 
+    exact/acyc_irrefl.
+  apply/fin_ca_antisym.
+  move=> e1 e2; rewrite !rename_ca //=.
+  move=> ?; apply/(@fperm_inv_inj _ f).
+  exact/(fs_ca_antisym acyc). 
+Qed.
+
+End Rename.
+
+
 Section Relabel.
 Context (E : identType) (L1 : botType) (L2 : botType).
 Implicit Types (f : L1 -> L2).
@@ -1363,12 +1508,12 @@ Lemma relabel_eventset :
   lfsp_eventset (relabel f p) = lfsp_eventset p.
 Proof.
   apply/fsetP=> e; rewrite /relabel.
-  rewrite -?fs_labNbot relabel_lab /=.
-  case: (e \in lfsp_eventset p)/idP=> [|/negP].
-  - move=> /[dup] ein; rewrite -fs_labNbot=> ->.
-    apply/idP; move: fsupp=> /forallP.
+  rewrite -?fs_labNbotE relabel_lab /=.
+  case: (e \in lfsp_eventset p)/idP=> [|/negP]. 
+  - move=> /[dup] ein; rewrite -fs_labNbotE=> ->.
+    apply/idP; move: fsupp=> /forallP. 
     by move=> /(_ (Sub e ein)).
-  rewrite -fs_labNbot negbK=> /eqP ->.
+  rewrite -fs_labNbotE negbK=> /eqP ->.
   by move: fbot=> /eqP ->; rewrite !eqxx.
 Qed.
 
@@ -1476,14 +1621,14 @@ Context (fE : {fset E}).
 Implicit Types (p : lfsposet E L).
 Implicit Types (lab : fE -> L) (ica : rel fE) (ca : rel E).
 
-Variables (lab : fE -> L) (ca : rel E).
-Hypothesis labD : forall e, lab e != bot.
+Variables (lab : E -> L) (ca : rel E).
+Hypothesis labD : forall (e : fE), lab (val e) != bot.
 Hypothesis ca_refl  : reflexive ca.
 Hypothesis ca_anti  : antisymmetric ca.
 Hypothesis ca_trans : transitive ca.
 
-Lemma build_covP :
-  let p := lFsPrePoset.build_cov lab ca in
+Lemma build_covP : 
+  let p := lFsPrePoset.build_cov fE lab ca in
   supp_closed p && acyclic (fin_ica p).
 Proof.
   apply/andP; split=> //; last first.
@@ -1771,6 +1916,32 @@ Proof. done. Qed.
 
 End Restrict.
 
+Section Rename.
+Context (E : identType) (L : botType).
+Implicit Types (f : {fperm E}).
+Implicit Types (p : lfsposet E L).
+
+Lemma renameP f p : 
+  let q := lFsPrePoset.rename f p in
+  supp_closed q && acyclic (fin_ica q).
+Proof.
+  move: (lfsp_supp_closed p)=> supcl.
+  move: (lfsp_acyclic p)=> acyc.
+  apply/andP; split.
+  - exact/lFsPrePoset.rename_supp_closed. 
+  exact/lFsPrePoset.rename_acyclic. 
+Qed.
+
+Definition rename f p := mklFsPoset (renameP f p).
+
+(* Variable (f : {fperm E}) (p : lfsposet E L). *)
+
+(* Lemma relabel_valE :  *)
+(*   val (rename f p) = lFsPrePoset.rename f p. *)
+(* Proof. done. Qed. *)
+
+End Rename.
+
 Section Relabel.
 Context (E : identType) (L1 : botType) (L2 : botType).
 Implicit Types (f : L1 -> L2).
@@ -2028,8 +2199,8 @@ Qed.
 (* TODO: move this lemma to appropriate place *)
 Lemma mono_lab_eventset e :
   let f : [Event of p] -> [Event of q] := f in
-  {mono f : e / lab e} -> (e \in lfsp_eventset p) = (f e \in lfsp_eventset q).
-Proof. by move=> /= labf; rewrite -?fs_labNbot -?fs_labE labf. Qed.
+  {mono f : e / lab e} -> (e \in lfsp_eventset p) = (f e \in lfsp_eventset q). 
+Proof. by move=> /= labf; rewrite -?fs_labNbotE -?fs_labE labf. Qed.
 
 Lemma fin_is_hom :
   lFinPoset.Hom.axiom ff -> is_hom f p q.
@@ -2091,7 +2262,7 @@ Qed.
 
 Lemma is_hom_in_finsuppE p q f e :
   is_hom f p q -> (e \in lfsp_eventset p) = (f e \in lfsp_eventset q).
-Proof. move=> [] fmon ?; by rewrite -?fs_labNbot -?fs_labE fmon. Qed.
+Proof. move=> [] fmon ?; by rewrite -?fs_labNbotE -?fs_labE fmon. Qed.
 
 End hPreOrder.
 
@@ -2263,11 +2434,11 @@ Lemma bijective_onW :
 Proof.
   move=> /= labf; case=> g K K'; apply/bijectiveP.
   have suppg : forall e, e \in lfsp_eventset q -> (g e) \in lfsp_eventset p.
-  - move=> x /[dup] xin; rewrite -fs_labNbot -fs_labNbot -fs_labE -fs_labE.
-    by rewrite -?labf; apply/contra; rewrite K'.
-  pose gg : [FinEvent of q] -> [FinEvent of p] :=
-    fun e => Sub (g (val e)) (suppg (val e) (valP e)).
-  exists gg=> e; rewrite /gg; apply/val_inj=> /=; rewrite -?feq /= ?K ?K' //.
+  - move=> x /[dup] xin; rewrite -fs_labNbotE -fs_labNbotE -fs_labE -fs_labE. 
+    by rewrite -?labf; apply/contra; rewrite K'. 
+  pose gg : [FinEvent of q] -> [FinEvent of p] := 
+    fun e => Sub (g (val e)) (suppg (val e) (valP e)). 
+  exists gg=> e; rewrite /gg; apply/val_inj=> /=; rewrite -?feq /= ?K ?K' //. 
   rewrite -(Hom.mono_lab_eventset _ labf); exact/valP.
 Qed.
 
@@ -2588,9 +2759,8 @@ Definition iso_eqv p q :=
   ??|{ffun EQ -> EP | lFinPoset.Iso.axiom}|.
 
 Lemma iso_eqvP p q :
-  reflect
-    (exists (f : E2 -> E1), is_iso f q p) (iso_eqv p q).
-Proof.
+  reflect (exists (f : E2 -> E1), is_iso f q p) (iso_eqv p q).
+Proof. 
   apply/(equivP (fin_inhP _)); split; last first.
   - move=> [] f ax; exists; exists (hom_down (is_iso_hom ax)).
     apply/(is_iso_fin _ ax); exact/Hom.hom_down_eq.
@@ -2626,13 +2796,13 @@ Lemma bhom_factor p q : bhom_le p q ->
 Proof.
   case/bhom_leP=> f [labf homf [/= g K K']].
   set fE := lfsp_eventset p.
-  set fl : fE -> L := fun e => lab (g (val e) : [Event of q]).
-  set ca  : rel E1  := fun e1 e2 =>
-    (e1 == e2) ||
+  set fl : E1 -> L := fun e => lab (g e : [Event of q]).
+  set ca  : rel E1  := fun e1 e2 => 
+    (e1 == e2) || 
     [&& fs_ca q (g e1) (g e2), e1 \in lfsp_eventset p & e2 \in lfsp_eventset p].
   have [: a1 a2 a3 a4] @q' :=
     @lFsPoset.build_cov E1 L fE fl ca a1 a2 a3 a4.
-  - by case=> e ein; rewrite /= /fl -labf K' //= fs_labE fs_labNbot.
+  - by case=> e ein; rewrite /= /fl -labf K' //= fs_labE fs_labNbotE. 
   - by move=> ?; rewrite /ca eqxx.
   - move=> e1 e2 /andP[] /orP[/eqP-> //|/and3P[+ e1In e2In]].
     move=> /homf; rewrite !(Hom.mono_lab_eventset _ labf) ?K' //.
@@ -2651,7 +2821,7 @@ Proof.
     rewrite lFsPrePoset.build_lab /sub_lift.
     case: insubP=> /=; rewrite /fl.
     + by case=> /= ???->; rewrite K.
-    by rewrite -fs_labNbot -?fs_labE labf eq_sym negbK=> /eqP.
+    by rewrite -fs_labNbotE -?fs_labE labf eq_sym negbK=> /eqP. 
   - move=> e1 e2 e1In e2In; rewrite ?/(_ <= _) /=.
     rewrite lFsPrePoset.build_cov_ca_wf ?/ca //; last first.
     + move=> x y /orP[/eqP->|/and3P[]] //=; rewrite ?/dhrel_one ?eqxx //.
@@ -2665,8 +2835,8 @@ Proof.
   - by exists g; rewrite lFsPrePoset.build_eventset.
   - move=> e; rewrite ?fs_labE lFsPrePoset.build_lab /sub_lift.
     case: insubP=> /= [[/=>?]|].
-    + rewrite /fl -labf fs_labE /= K' // =>-> //.
-    by rewrite -fs_labNbot negbK=>/eqP->.
+    + by rewrite /fl -labf fs_labE /= K' // => _ -> //.
+    by rewrite -fs_labNbotE negbK=>/eqP->.
   move=>>; rewrite ?/(_ <= _) /= lFsPrePoset.build_cov_ca // /ca /fE.
   rewrite lFsPrePoset.build_eventset // => ??.
   case/orP=> [/eqP->|]; first exact/fs_ca_refl.
@@ -2777,6 +2947,26 @@ Proof. move=> /bhom_ihom_le + /bhom_ihom_le; exact/iso_ihom_le_antisym. Qed.
 Lemma iso_emb_le_antisym p q :
   emb_le p q -> emb_le q p -> iso_eqv p q.
 Proof. move=> /emb_ihom_le + /emb_ihom_le; exact/iso_ihom_le_antisym. Qed.
+
+(* TODO: unfortunately, due to current representation of 
+ *   posets it is not possible to prove the lemma in 
+ *   the other direction. It is because the posets 
+ *   are represented as an arbitary relation, 
+ *   and thus two non-isomorphic relations
+ *   can have isomorphic transitive closures. 
+ *   We should try to overcome this by changing the representation. 
+ *)
+Lemma rename_iso f p :
+  iso_eqv p (lFsPoset.rename f p).
+Proof.
+  move: (lfsp_supp_closed p)=> supcl.
+  move: (lfsp_acyclic p)=> acyc.
+  rewrite iso_eqv_sym.
+  apply/iso_eqvP; exists f; split.
+  - by move=> e /=; rewrite !fs_labE lFsPrePoset.rename_lab /= fperm_invK. 
+  - by move=> x y; rewrite !fs_caE lFsPrePoset.rename_ca /= ?fperm_invK.
+  exact/onW_bij/fperm_bij.
+Qed.  
 
 End Equiv.
 
