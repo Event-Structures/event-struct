@@ -481,8 +481,8 @@ Proof.
     by rewrite -(lFsPoset.Hom.mono_lab_eventset _ labf).
   - move=> /eqP->; rewrite /g upd_iso_delta //; exact/fresh_seq_nmem.
   rewrite /g /upd_iso; case: ifP=> [?? |]; rewrite ?K' //.
-  move=> /[swap] /[dup] ?; rewrite -fs_labNbot.
-  by rewrite -{1}[e]K' // -fs_labE labf fs_labNbot=> ->.
+  move=> /[swap] /[dup] ?; rewrite -fs_labNbotE.
+  by rewrite -{1}[e]K' // -fs_labE labf fs_labNbotE=> ->.
 Qed.
 
 Hint Resolve lfsp_supp_closed lfsp_acyclic : core.
@@ -716,7 +716,7 @@ Lemma backward_step :
 Proof.
   exists (lFsPoset.delete p e); apply/lfsp_ltransP.
   have nb: (fs_lab p e != bot).
-  - rewrite fs_labNbot fs_p ?inE /=; ilia.
+  - rewrite fs_labNbotE fs_p ?inE /=; ilia.
   split=> //.
   have ess: (p e).2 `<=` lfsp_eventset (lFsPoset.delete p e).
   - rewrite lFsPoset.lfsp_delE //; apply/fsubsetP=> x /[dup]; rewrite in_fsetD1.
