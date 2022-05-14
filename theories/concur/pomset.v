@@ -2759,9 +2759,8 @@ Definition iso_eqv p q :=
   ??|{ffun EQ -> EP | lFinPoset.Iso.axiom}|.
 
 Lemma iso_eqvP p q :
-  reflect
-    (exists (f : E2 -> E1), is_iso f q p) (iso_eqv p q).
-Proof.
+  reflect (exists (f : E2 -> E1), is_iso f q p) (iso_eqv p q).
+Proof. 
   apply/(equivP (fin_inhP _)); split; last first.
   - move=> [] f ax; exists; exists (hom_down (is_iso_hom ax)).
     apply/(is_iso_fin _ ax); exact/Hom.hom_down_eq.
@@ -2949,8 +2948,25 @@ Lemma iso_emb_le_antisym p q :
   emb_le p q -> emb_le q p -> iso_eqv p q.
 Proof. move=> /emb_ihom_le + /emb_ihom_le; exact/iso_ihom_le_antisym. Qed.
 
-Lemma iso_renameP p q : 
-  reflect (exists f, q = lFsPrePoset.rename f p) (iso_eqv p q).
+(* TODO: unfortunately, due to current representation of 
+ *   posets it is not possible to prove the lemma in 
+ *   the other direction. It is because the posets 
+ *   are represented as an arbitary relation, 
+ *   and thus two non-isomorphic relations
+ *   can have isomorphic transitive closures. 
+ *   We should try to overcome this by changing the representation. 
+ *)
+Lemma rename_iso f p :
+  iso_eqv p (lFsPoset.rename f p).
+Proof.
+  move: (lfsp_supp_closed p)=> supcl.
+  move: (lfsp_acyclic p)=> acyc.
+  rewrite iso_eqv_sym.
+  apply/iso_eqvP; exists f; split.
+  - by move=> e /=; rewrite !fs_labE lFsPrePoset.rename_lab /= fperm_invK. 
+  - by move=> x y; rewrite !fs_caE lFsPrePoset.rename_ca /= ?fperm_invK.
+  exact/onW_bij/fperm_bij.
+Qed.  
 
 End Equiv.
 
