@@ -1,6 +1,6 @@
 From RelationAlgebra Require Import lattice monoid rel kat_tac kat kleene.
 From mathcomp Require Import ssreflect ssrbool ssrfun eqtype choice.
-From eventstruct Require Import utils relalg.
+From eventstruct Require Import utils rel_algebra.
 
 (*****************************************************************************)
 (* exlaberal theory of rewriting systems                                     *)

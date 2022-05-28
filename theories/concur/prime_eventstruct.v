@@ -3,8 +3,8 @@ From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq.
 From mathcomp Require Import eqtype choice order finmap fintype fingraph.
 From mathcomp Require Import generic_quotient zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import pomset utils relalg order lposet ident rel.
-From eventstruct Require Import inhtype.
+From eventstruct Require Import pomset utils rel_algebra order rel.
+From eventstruct Require Import inhtype ident lposet.
 
 (******************************************************************************)
 (* This file provides a theory of prime event structures.                     *)

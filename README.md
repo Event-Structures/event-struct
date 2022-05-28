@@ -32,7 +32,7 @@ For a more detailed description, see the documentation in the headers of source 
     - `utils.v` - miscellaneous
     - `seq.v` - various additions to seq theory from mathcomp 
     - `rel.v` - additional facts about decidable binary relations
-    - `relalg.v` - variuos additions to relation-algebra package
+    - `rel_algebra.v` - variuos additions to relation-algebra package
     - `order.v` - various additions to porder theory from mathcomp 
     - `wftype.v` - interface for types with well-founded partial order
     - `inhtype.v` - interface for inhabited type, that is a type with one distinguished inhabitant

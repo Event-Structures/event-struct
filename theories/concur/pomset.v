@@ -4,8 +4,8 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat seq tuple.
 From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils seq fperm rel relalg inhtype ident ilia.
-From eventstruct Require Import order lposet.
+From eventstruct Require Import utils seq fperm rel rel_algebra inhtype.
+From eventstruct Require Import order ident ilia lposet.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)

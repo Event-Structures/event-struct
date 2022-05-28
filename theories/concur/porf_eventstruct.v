@@ -2,8 +2,8 @@ From Coq Require Import Relations Relation_Operators.
 From RelationAlgebra Require Import lattice monoid rel kat_tac.
 From mathcomp Require Import ssreflect ssrfun ssrbool ssrnat seq path.
 From mathcomp Require Import eqtype choice order finmap fintype finfun.
-From eventstruct Require Import utils relalg rel order wftype ident inhtype.
-From eventstruct Require Import lposet prime_eventstruct.
+From eventstruct Require Import utils rel_algebra rel order wftype.
+From eventstruct Require Import inhtype ident lposet prime_eventstruct.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
