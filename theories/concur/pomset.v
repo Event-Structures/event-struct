@@ -58,6 +58,7 @@ Unset Printing Implicit Defensive.
 Import Order.LTheory.
 Import Order.Theory.
 
+Local Open Scope rel_scope.
 Local Open Scope order_scope.
 Local Open Scope fset_scope.
 Local Open Scope quotient_scope.
@@ -117,7 +118,7 @@ Definition fin_sca p : rel (lfsp_eventset p) :=
   iker (@fin_ca p).
 
 Definition fs_ca p : rel E :=
-  (sub_rel_lift (@fin_ca p) : {dhrel E & E})^?.
+  (sub_rel_lift (@fin_ca p) : {hrel E & E})^?.
 
 Definition fs_sca p : rel E :=
   iker (@fs_ca p).
@@ -527,7 +528,7 @@ Proof.
 Qed.
 
 Lemma fs_ica_ct_fin_sca p : supp_closed p -> acyclic (fin_ica p) ->
-  clos_trans (fs_ica p) ≦ sub_rel_lift (fin_sca p).
+  clos_trans (fs_ica p) \<= sub_rel_lift (fin_sca p).
 Proof.
   move=> supcl acyc e1 e2; elim; clear e1 e2.
   - move=> x y; rewrite /sub_rel_lift /=.
@@ -564,7 +565,7 @@ Proof.
   move=> supcl acyc.
   apply/equivP; last first.
   - symmetry; apply/clos_t_itr.
-  suff: (fs_ica p : hrel E E)^+ ≡ !1 ⊓ (fs_ca p : hrel E E).
+  suff: (fs_ica p : hrel E E)^+ \== !1 \& (fs_ca p : hrel E E).
   - move=> scaE.
     apply/equivP; last first.
     + symmetry; apply/scaE.
@@ -573,7 +574,7 @@ Proof.
     + by move=> /andP[] /eqP.
     by move=> /= [/eqP ??]; apply/andP.
   rewrite -capC.
-  have->: (fs_ica p : hrel E E)^+ ≡ (fs_ica p : hrel E E)^+ \ 1.
+  have->: (fs_ica p : hRel E E)^+ \== (fs_ica p : hRel E E)^+ \\ \1.
   - apply/weq_spec; split; last by lattice.
     rewrite -clos_t_itr; move=> x y /= ica_xy; split=> //.
     move: ica_xy=> /[swap] <-.
@@ -581,7 +582,7 @@ Proof.
     rewrite /sub_rel_lift /=.
     case: insubP=> // x'.
     by rewrite /fin_sca /iker eq_refl.
-  suff->: (fs_ca p : hrel E E) ≡ (fs_ica p : hrel E E)^*.
+  suff->: (fs_ca p : hRel E E) \== (fs_ica p : hRel E E)^*.
   - by symmetry; apply/str_itr_sub_one.
   rewrite -clos_rt_str.
   move=> ?? /=; symmetry; apply: rwP; exact/fs_caP.
@@ -591,8 +592,8 @@ Lemma fs_sca_closed p e1 e2 : supp_closed p -> acyclic (fin_ica p) ->
   fs_sca p e1 e2 -> (e1 \in lfsp_eventset p) * (e2 \in lfsp_eventset p).
 Proof.
   move=> supcl acyc /(fs_scaP _ _ supcl acyc) /clos_t_itr.
-  suff: (fs_ica p : hrel E E)^+ ≦
-         mem (lfsp_eventset p) × mem (lfsp_eventset p).
+  suff: (fs_ica p : hrel E E)^+ \<=
+         mem (lfsp_eventset p) \x mem (lfsp_eventset p).
   - by move=> /[apply] /= /andP[].
   etransitivity.
   - apply kleene.itr_leq=> ??.
@@ -732,7 +733,7 @@ Proof.
   - apply/supp_closedP=> {}e1 {}e2.
     rewrite -eqsupp -eq_ica.
     by apply/supp_closedP.
-  have eq_ica': (fs_ica p : hrel E E) ≡ fs_ica q.
+  have eq_ica': (fs_ica p : hrel E E) \== fs_ica q.
   - by move=> ?? /=; rewrite eq_ica.
   apply/idP/idP.
   - move=> /(fs_caP _ _ supclp)/clos_rt_str.
@@ -806,7 +807,7 @@ Proof.
   move=> /= x y /andP[].
   pose supcl := supp_closed_build.
   move=> /(fs_caP _ _ supcl)/clos_rt_str + /(fs_caP _ _ supcl)/clos_rt_str.
-  have eq_ica: (fs_ica (build lab ica) : hrel E E) ≡ sub_rel_lift ica.
+  have eq_ica: (fs_ica (build lab ica) : hrel E E) \== sub_rel_lift ica.
   - by move=> ?? /=; rewrite build_ica.
   rewrite !(str_weq eq_ica) !sub_rel_lift_connect /=.
   move=> [->|] // + [->|] //.
@@ -933,7 +934,7 @@ Proof.
   by rewrite build_cov_fin_ca /= val1 val2 andbT.
 Qed.
 
-Hypothesis (ca_subE : subrel ca (mem fE × mem fE : {dhrel E & E})^?).
+Hypothesis (ca_subE : subrel ca (mem fE \x mem fE : {hrel E & E})^?).
 
 (* TODO: rename? *)
 Lemma build_cov_ca_wf : 
@@ -1237,7 +1238,7 @@ Implicit Types (p : lfspreposet E L).
  *
  *)
 Definition inter_rel r p := 
-  @build_cov E L (lfsp_eventset p) (fs_lab p) (r ⊓ (fs_ca p)).
+  @build_cov E L (lfsp_eventset p) (fs_lab p) (r \& (fs_ca p)).
 
 (* Lemma inter_rel_finsupp r p :  *)
 (*   lfsp_eventset (inter_rel r p) = lfsp_eventset p. *)
@@ -1281,7 +1282,7 @@ Proof.
 Qed.
 
 Lemma inter_rel_ca :
-  fs_ca (inter_rel r p) =2 r ⊓ (fs_ca p).
+  fs_ca (inter_rel r p) =2 r \& (fs_ca p).
 Proof.
   rewrite /inter_rel=> e1 e2.
   rewrite build_cov_ca_wf //.
@@ -1305,7 +1306,7 @@ Implicit Types (p : lfspreposet E L).
 Definition restrict P p : lfspreposet E L :=
   (* TODO: there should be a simpler solution... *)
   let fE  := [fset e in lfsp_eventset p | P e] in
-  let ca  := (eq_op ⊔ (P × P)) ⊓ (fs_ca p) in
+  let ca  := (eq_op \+ (P \x P)) \& (fs_ca p) in
   @build_cov E L fE (fs_lab p) ca.
 
 Variables (P : pred E) (p : lfspreposet E L).
@@ -1358,7 +1359,7 @@ Proof.
     move=> /orP[/eqP->|/andP[??]] //.
     move=> /orP[/eqP<-|/andP[??]] //.
     1-2: by apply/orP; right; apply/andP.
-  move=> /= {}e1 {}e2; rewrite /dhrel_one /=.
+  move=> /= {}e1 {}e2; rewrite /hrel_one /=.
   move=> /andP[/orP[->|/andP[p1 p2]]] //.
   move=> /(fs_ca_closed supcl acyc) /orP[->|] //.
   move=> /andP[]; rewrite /lfsp_eventset !inE=> /andP[??] /andP[??].
@@ -2824,7 +2825,7 @@ Proof.
     by rewrite -fs_labNbotE -?fs_labE labf eq_sym negbK=> /eqP. 
   - move=> e1 e2 e1In e2In; rewrite ?/(_ <= _) /=.
     rewrite lFsPrePoset.build_cov_ca_wf ?/ca //; last first.
-    + move=> x y /orP[/eqP->|/and3P[]] //=; rewrite ?/dhrel_one ?eqxx //.
+    + move=> x y /orP[/eqP->|/and3P[]] //=; rewrite ?/hrel_one ?eqxx //.
       by rewrite /fE=> ? -> ->.
     rewrite ?K -?(Hom.mono_lab_eventset _ labf) //.
     rewrite e1In e2In !andbT; apply: orb_idl=> /eqP.

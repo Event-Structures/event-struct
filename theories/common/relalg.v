@@ -13,6 +13,42 @@ Set Implicit Arguments.
 Unset Printing Implicit Defensive.
 Unset Strict Implicit.
 
+Declare Scope rel_scope.
+Delimit Scope rel_scope with rel.
+
+Local Open Scope rel_scope.
+
+(* ************************************************************************** *)
+(*     Notations                                                              *)
+(* ************************************************************************** *)
+
+(* A notation to differentiate prop & bool valued relations. *)
+Notation hRel A B := (hrel A B).
+Notation Rel A := (hrel A A).
+
+(* Non-unicode alternative notations for relation-algebra. *)
+Notation "A \== B" := (weq A B) 
+  (at level 70, no associativity) : rel_scope.
+Notation "A \<= B" := (leq A B) 
+  (at level 70, no associativity) : rel_scope.
+Notation "A \& B" := (cap A B) 
+  (at level 68, left associativity) : rel_scope.
+Notation "A \+ B" := (cup A B) 
+  (at level 64, left associativity) : rel_scope.
+Notation "A \; B" := (dot A B) 
+  (at level 60, right associativity, format "A \; B") : rel_scope.
+Notation "\! A" := (neg A) 
+  (at level 20, right associativity, format "\! A") : rel_scope.
+Notation "A ^+" := (itr _ A) 
+  (at level 5, left associativity, format "A ^+") : rel_scope.
+Notation "A ^*" := (str _ A) 
+  (at level 5, left associativity, format "A ^*") : rel_scope.
+Notation "A ^t" := (cnv _ _ A) 
+  (at level 5, left associativity, format "A ^t") : rel_scope.
+Notation "\0" := bot (at level 0) : rel_scope.
+Notation "\T" := top (at level 0) : rel_scope.
+Notation "\1" := (one _) (at level 0) : rel_scope.
+
 (* ************************************************************************** *)
 (*     Utilities                                                              *)
 (* ************************************************************************** *)
@@ -22,7 +58,7 @@ Context {T : Type}.
 Implicit Types (P : T -> Prop).
 
 Lemma inh_nempty P :
-  inhabited { x | P x } -> ~ (P ≦ bot).
+  inhabited { x | P x } -> ~ (P \<= \0).
 Proof. by move=> [] [] x Hx H; move: (H x Hx)=> //=. Qed.
 
 End PropUtils.
@@ -35,36 +71,39 @@ Section Prod.
 Context {T : Type} {L : lattice.ops}.
 
 Definition cart_prod (p q : T -> L) : T -> T -> L :=
-  fun x y => p x ⊓ q y.
+  fun x y => p x \& q y.
 
 End Prod.
 
-Notation "p × q" := (cart_prod p q) (at level 60, no associativity) : ra_terms.
+Notation "p \x q" := (cart_prod p q)
+  (at level 60, no associativity) : rel_scope.
 
 (* ************************************************************************** *)
 (*     Reflexive closure                                                      *)
 (* ************************************************************************** *)
 
-Notation "r ^?" := (1 ⊔ r) (left associativity, at level 5, format "r ^?"): ra_terms.
+Notation "r ^?" := (\1 \+ r) 
+  (left associativity, at level 5, format "r ^?"): rel_scope.
 
 Lemma itr_qmk `{laws} `{BKA ≪ l} n (x : X n n) :
-  x^+^? ≡ x^?^+.
+  x^+^? \== x^?^+.
 Proof. by ka. Qed.
 
 (* TODO: make lemma instance of Proper for rewriting? *)
 Lemma qmk_weq `{laws} `{CUP ≪ l} n (x y : X n n):
-  x ≡ y -> x^? ≡ y^?.
+  x \== y -> x^? \== y^?.
 Proof. by move => ->. Qed.
 
 Lemma qmk_str `{laws} `{BKA ≪ l} n (x : X n n) :
-  x^*^? ≡ x^*.
+  x^*^? \== x^*.
 Proof. ka. Qed.
 
 (* ************************************************************************** *)
 (*     Subtraction (for complemented lattices, i.e. lattices with negation)   *)
 (* ************************************************************************** *)
 
-Notation "x \ y" := (x ⊓ !y) (left associativity, at level 45): ra_terms.
+Notation "x \\ y" := (x \& \!y) 
+  (left associativity, at level 45): rel_scope.
 
 Section SubtractionTheory.
 
@@ -72,10 +111,10 @@ Context `{monoid.laws} (n : ob X).
 Implicit Types (x : X n n).
 
 (* TODO: introduce a class of lattices/KATs with decidable equality? *)
-Hypothesis (eq_dec : 1 ⊔ !1 ≡ (top : X n n)).
+Hypothesis (eq_dec : 1 \+ \!1 \== (top : X n n)).
 
 Lemma qmk_sub_one `{CUP+CAP+TOP ≪ l} x :
-  (x \ 1)^? ≡ x^?.
+  (x \\ 1)^? \== x^?.
 Proof.
   apply/weq_spec; split; first by lattice.
   by rewrite -[x in _ + x]capxt -eq_dec capcup; lattice.
@@ -119,30 +158,30 @@ End PWMorph.
 
 (* Adopted from relation-algebra/fhrel.v  *)
 
-Section DHRelType.
+Section HrelType.
   Variables A B : eqType.
-  Definition dhrel_type := A -> B -> bool.
-  Definition dhrel_of of phant A & phant B := dhrel_type.
-End DHRelType.
+  Definition hrel_type := A -> B -> bool.
+  Definition hrel_of of phant A & phant B := hrel_type.
+End HrelType.
 
-Notation "{ 'dhrel' A & B }" := (dhrel_of (Phant A) (Phant B))
-  (at level 0, format "{ 'dhrel'  A  &  B }") : type_scope.
+Notation "{ 'hrel' A & B }" := (hrel_of (Phant A) (Phant B))
+  (at level 0, format "{ 'hrel'  A  &  B }") : type_scope.
 
-Section DHRel.
+Section Hrel.
 Implicit Types A B : eqType.
 
 (* Lattice structure is derived via the powerset
  * construction on the lattice of booleans.
  *)
 
-Canonical Structure dhrel_lattice_ops A B :=
-  lattice.mk_ops {dhrel A & B} lattice.leq weq cup cap neg bot top.
+Canonical Structure hrel_lattice_ops A B :=
+  lattice.mk_ops {hrel A & B} lattice.leq weq cup cap neg bot top.
 
 Arguments lattice.leq : simpl never.
 Arguments lattice.weq : simpl never.
 
-Global Instance dhrel_lattice_laws A B :
-  lattice.laws BDL (dhrel_lattice_ops A B) :=
+Global Instance hrel_lattice_laws A B :
+  lattice.laws BDL (hrel_lattice_ops A B) :=
     lower_lattice_laws (H:=pw_laws _).
   (* lattice.laws (BL+ONE+CNV) (dhrel_lattice_ops A B) :=  *)
   (*   lower_lattice_laws (H:=pw_laws _). *)
@@ -150,58 +189,58 @@ Global Instance dhrel_lattice_laws A B :
 Section MonoidOps.
 Variables (A B C : eqType).
 
-Definition dhrel_one : {dhrel A & A} :=
+Definition hrel_one : {hrel A & A} :=
   @eq_op A.
 
-Definition dhrel_cnv (r : {dhrel A & B}) : {dhrel B & A} :=
+Definition hrel_cnv (r : {hrel A & B}) : {hrel B & A} :=
   fun x y => r y x.
 
-Definition dhrel_inj (p : pred A) :=
+Definition hrel_inj (p : pred A) :=
   fun x y => (x == y) && p x.
 
-Definition dhrel_dot (r1 : {dhrel A & B}) (r2 : {dhrel B & C}) : {dhrel A & C} :=
+Definition hrel_dot (r1 : {hrel A & B}) (r2 : {hrel B & C}) : {hrel A & C} :=
   fun x y => false.
-Definition dhrel_ldv (r1 : {dhrel A & B}) (r2 : {dhrel A & C}) : {dhrel B & C} :=
+Definition hrel_ldv (r1 : {hrel A & B}) (r2 : {hrel A & C}) : {hrel B & C} :=
   fun x y => false.
-Definition dhrel_rdv (r1 : {dhrel B & A}) (r2 : {dhrel C & A}) : {dhrel C & B} :=
+Definition hrel_rdv (r1 : {hrel B & A}) (r2 : {hrel C & A}) : {hrel C & B} :=
   fun x y => false.
 
-Definition dhrel_itr (r : {dhrel A & A}) : {dhrel A & A} :=
+Definition hrel_itr (r : {hrel A & A}) : {hrel A & A} :=
   fun x y => false.
-Definition dhrel_str (r : {dhrel A & A}) : {dhrel A & A} :=
+Definition hrel_str (r : {hrel A & A}) : {hrel A & A} :=
   fun x y => false.
 
 End MonoidOps.
 
-Canonical dhrel_monoid_ops :=
-  monoid.mk_ops eqType dhrel_lattice_ops
-                dhrel_dot
-                dhrel_one
-                dhrel_itr
-                dhrel_str
-                dhrel_cnv
-                dhrel_ldv
-                dhrel_rdv.
+Canonical hrel_monoid_ops :=
+  monoid.mk_ops eqType hrel_lattice_ops
+                hrel_dot
+                hrel_one
+                hrel_itr
+                hrel_str
+                hrel_cnv
+                hrel_ldv
+                hrel_rdv.
 
 (** Ensure that the [dhrel_*] definitions simplify, given enough arguments. *)
-Arguments dhrel_dot {_ _ _} _ _ /.
-Arguments dhrel_cnv {_ _} _ _ /.
-Arguments dhrel_one {_} _ _ /.
-Arguments dhrel_str {_} _ _ /.
-Arguments dhrel_ldv {_} _ _ /.
-Arguments dhrel_rdv {_} _ _ /.
-Arguments dhrel_inj {_} _ _ _ /.
+Arguments hrel_dot {_ _ _} _ _ /.
+Arguments hrel_cnv {_ _} _ _ /.
+Arguments hrel_one {_} _ _ /.
+Arguments hrel_str {_} _ _ /.
+Arguments hrel_ldv {_} _ _ /.
+Arguments hrel_rdv {_} _ _ /.
+Arguments hrel_inj {_} _ _ _ /.
 
 (** We obtain the monoid laws using a faithful functor to the hrel model *)
-Definition hrel_of (A B : eqType) (r : {dhrel A & B}) : hrel A B := fun x y => r x y.
-Ltac hrel_prop := do ! move => ?; rewrite /hrel_of /=; to_prop; by firstorder.
+Definition hRel_of (A B : eqType) (r : {hrel A & B}) : hRel A B := fun x y => r x y.
+Ltac hRel_prop := do ! move => ?; rewrite /hRel_of /=; to_prop; by firstorder.
 
-Lemma hrel_of_morphism (A B : eqType) :
-  morphism BDL (@hrel_of A B).
+Lemma hRel_of_morphism (A B : eqType) :
+  morphism BDL (@hRel_of A B).
   (* morphism (BDL+ONE+CNV) (@hrel_of A B). *)
 Proof.
-  split; try done; try hrel_prop.
-  move => e1 e2 H x y. apply/eq_bool_iff. exact: H.
+  split; try done; try hRel_prop.
+  move => e1 e2 H x y; apply/eq_bool_iff; exact: H.
 Qed.
 
 (* We cannot declare the monoid laws instance, since
@@ -236,41 +275,41 @@ Qed.
 (*   split; try assumption. exact: dhrel_lattice_laws. *)
 (* Qed. *)
 
-Lemma dhrel_oneE A a b : (1 : {dhrel A & A}) a b = (a == b).
+Lemma hrel_oneE A a b : (1 : {hrel A & A}) a b = (a == b).
 Proof. reflexivity. Qed.
 Definition oneE := (hrel_oneE,fhrel_oneE).
 
 (* The following is required, see fhrel.v for details *)
 Definition d_top_def (A B : eqType) of phant A & phant B :=
-  (@top (@mor dhrel_monoid_ops A B)).
+  (@top (@mor hrel_monoid_ops A B)).
 Notation d_top A B := (d_top_def (Phant A) (Phant B)).
 
 Definition d_zero_def (A B : eqType) of phant A & phant B :=
-  (@bot (@mor dhrel_monoid_ops A B)).
+  (@bot (@mor hrel_monoid_ops A B)).
 Notation d_zero A B := (d_zero_def (Phant A) (Phant B)).
 
 Definition d_one_def (A : eqType) of phant A :=
-  (@one dhrel_monoid_ops A).
+  (@one hrel_monoid_ops A).
 Notation d_one A := (d_one_def (Phant A)).
 
 Arguments d_top_def A B /.
 Arguments d_zero_def A B /.
 Arguments d_one_def A /.
 
-Definition dset : ob dhrel_monoid_ops -> lattice.ops := pw_ops bool_lattice_ops.
+Definition dset : ob hrel_monoid_ops -> lattice.ops := pw_ops bool_lattice_ops.
 
-Canonical Structure dhrel_kat_ops :=
-  kat.mk_ops dhrel_monoid_ops dset (@dhrel_inj).
+Canonical Structure hrel_kat_ops :=
+  kat.mk_ops hrel_monoid_ops dset (@hrel_inj).
 
 (* Same issue as for monoid laws instance (see above). *)
 
-(* Global Instance dhrel_kat_laws: kat.laws (CUP+BOT+ONE) BL dhrel_kat_ops. *)
+(* Global Instance hrel_kat_laws: kat.laws (CUP+BOT+ONE) BL hrel_kat_ops. *)
 (* Proof. *)
 (*   split. *)
 (*   - by eapply lower_laws.  *)
 (*   - move => A. by eapply lower_lattice_laws. *)
 (*   - move => A. *)
-(*     have H : Proper (lattice.leq ==> lattice.leq) (@dhrel_inj A). *)
+(*     have H : Proper (lattice.leq ==> lattice.leq) (@hrel_inj A). *)
 (*     + move => e1 e2 H x y /=. by case: (_ == _) => //=.  *)
 (*     split => //=. *)
 (*     + move => x y. rewrite !weq_spec. by intuition. *)
@@ -284,12 +323,12 @@ Section Theory.
 
 Context {T : eqType}.
 
-Lemma dhrel_eq_dec : 1 ⊔ !1 ≡ (top : {dhrel T & T}).
+Lemma hrel_eq_dec : 1 \+ \!1 \== (top : {hrel T & T}).
 Proof. rewrite /weq => x y /=. case: (x =P y)=> //=. Qed.
 
 End Theory.
 
-End DHRel.
+End Hrel.
 
 (* ************************************************************************** *)
 (*     Morphism lemmas for bool/Prop relations.                               *)
@@ -299,50 +338,50 @@ End DHRel.
  * than using morphism instances directly.
  *)
 
-Lemma rel_leq_m {A B : eqType} (r1 r2 : {dhrel A & B}) :
-  r1 ≦ r2 -> (r1 : hrel A B) ≦ (r2 : hrel A B).
-Proof. by case (hrel_of_morphism A B)=> H ??????; apply H; solve_lower. Qed.
+Lemma rel_leq_m {A B : eqType} (r1 r2 : {hrel A & B}) :
+  r1 \<= r2 -> (r1 : hRel A B) \<= (r2 : hRel A B).
+Proof. by case (hRel_of_morphism A B)=> H ??????; apply H; solve_lower. Qed.
 
-Lemma rel_weq_m {A B : eqType} (r1 r2 : {dhrel A & B}) :
-  r1 ≡ r2 -> (r1 : hrel A B) ≡ (r2 : hrel A B).
-Proof. by case (hrel_of_morphism A B)=> ? H ?????; apply H; solve_lower. Qed.
+Lemma rel_weq_m {A B : eqType} (r1 r2 : {hrel A & B}) :
+  r1 \== r2 -> (r1 : hRel A B) \== (r2 : hRel A B).
+Proof. by case (hRel_of_morphism A B)=> ? H ?????; apply H; solve_lower. Qed.
 
-Lemma rel_cup_m {A B : eqType} (r1 r2 : {dhrel A & B}) :
-  (r1 ⊔ r2 : hrel A B) ≡ (r1 : hrel A B) ⊔ (r2 : hrel A B).
-Proof. by case (hrel_of_morphism A B)=> ?? H ????; apply H; solve_lower. Qed.
+Lemma rel_cup_m {A B : eqType} (r1 r2 : {hrel A & B}) :
+  (r1 \+ r2 : hRel A B) \== (r1 : hRel A B) \+ (r2 : hRel A B).
+Proof. by case (hRel_of_morphism A B)=> ?? H ????; apply H; solve_lower. Qed.
 
-Lemma rel_cap_m {A B : eqType} (r1 r2 : {dhrel A & B}) :
-  (r1 ⊓ r2 : hrel A B) ≡ (r1 : hrel A B) ⊓ (r2 : hrel A B).
-Proof. by case (hrel_of_morphism A B)=> ??? H ???; apply H; solve_lower. Qed.
+Lemma rel_cap_m {A B : eqType} (r1 r2 : {hrel A & B}) :
+  (r1 \& r2 : hRel A B) \== (r1 : hRel A B) \& (r2 : hRel A B).
+Proof. by case (hRel_of_morphism A B)=> ??? H ???; apply H; solve_lower. Qed.
 
 Lemma rel_bot_m {A B : eqType} :
-  ((bot : {dhrel A & B}) : hrel A B) ≡ (bot : hrel A B).
-Proof. by case (hrel_of_morphism A B)=> ???? H ??; apply H; solve_lower. Qed.
+  ((\0 : {hrel A & B}) : hRel A B) \== (\0 : hRel A B).
+Proof. by case (hRel_of_morphism A B)=> ???? H ??; apply H; solve_lower. Qed.
 
 Lemma rel_top_m {A B : eqType} :
-  ((top : {dhrel A & B}) : hrel A B) ≡ (top : hrel A B).
-Proof. by case (hrel_of_morphism A B)=> ????? H ?; apply H; solve_lower. Qed.
+  ((\T : {hrel A & B}) : hRel A B) \== (\T : hRel A B).
+Proof. by case (hRel_of_morphism A B)=> ????? H ?; apply H; solve_lower. Qed.
 
-Lemma rel_neg_m {A B : eqType} (r : {dhrel A & B}) :
-  (!r : hrel A B) ≡ !(r : hrel A B).
+Lemma rel_neg_m {A B : eqType} (r : {hrel A & B}) :
+  (\!r : hRel A B) \== \!(r : hRel A B).
 Proof. move=> x y /=. split. apply /elimN/idP. apply /introN/idP. Qed.
 
-Lemma rel_sub_m {A B : eqType} (r1 r2 : {dhrel A & B}) :
-  (r1 \ r2 : hrel A B) ≡ (r1 : hrel A B) \ (r2 : hrel A B).
+Lemma rel_sub_m {A B : eqType} (r1 r2 : {hrel A & B}) :
+  (r1 \\ r2 : hRel A B) \== (r1 : hRel A B) \\ (r2 : hRel A B).
 Proof. by rewrite -rel_neg_m rel_cap_m. Qed.
 
 Lemma rel_one_m {A : eqType} :
-  ((1 : {dhrel A & A}) : hrel A A) ≡ (1 : hrel A A).
+  ((\1 : {hrel A & A}) : hRel A A) \== (\1 : hRel A A).
 Proof. do ! move => ?; rewrite /hrel_of /=; to_prop; by firstorder. Qed.
 (* Proof. case hrel_of_functor=> ?? H ?????; apply H; solve_lower. Qed. *)
 
-Lemma rel_qmk_m {A : eqType} (r : {dhrel A & A}) :
-  (r^? : hrel A A) ≡ (r : hrel A A)^?.
+Lemma rel_qmk_m {A : eqType} (r : {hrel A & A}) :
+  (r^? : hRel A A) \== (r : hRel A A)^?.
 Proof. by rewrite rel_cup_m rel_one_m. Qed.
 
-Lemma rel_cnv_m {A : eqType} (r : {dhrel A & A}) :
-  (r° : hrel A A) ≡ (r : hrel A A)°.
-Proof. do ! move => ?; rewrite /hrel_of /=; to_prop; by firstorder. Qed.
+Lemma rel_cnv_m {A : eqType} (r : {hrel A & A}) :
+  (r^t : hRel A A) \== (r : hRel A A)^t.
+Proof. do ! move => ?; rewrite /hRel_of /=; to_prop; by firstorder. Qed.
 (* Proof. case hrel_of_functor=> ????? H ??; apply H; solve_lower. Qed. *)
 
 (* ************************************************************************** *)
@@ -350,11 +389,13 @@ Proof. do ! move => ?; rewrite /hrel_of /=; to_prop; by firstorder. Qed.
 (* ************************************************************************** *)
 
 Instance hrel_neg_leq {A B : Type} :
-  Proper ((@leq (hrel_lattice_ops A B)) --> (@leq (hrel_lattice_ops A B))) neg.
+  Proper ((@leq (rel.hrel_lattice_ops A B)) --> 
+         (@leq (rel.hrel_lattice_ops A B))) neg.
 Proof. rewrite /leq=> x y /= H a b; apply /contra_not/H. Qed.
 
 Instance hrel_neg_weq {A B : Type} :
-  Proper (@weq (hrel_lattice_ops A B) ==> (@weq (hrel_lattice_ops A B))) neg.
+  Proper (@weq (rel.hrel_lattice_ops A B) ==> 
+         (@weq (rel.hrel_lattice_ops A B))) neg.
 Proof.
   rewrite /weq=> x y /= H a b.
   move: (H a b)=> [Hl Hr]; split; by apply /contra_not.
@@ -372,11 +413,11 @@ Implicit Types (R : relation T) (r : rel T).
 (* TODO: introduce `reflect_rel := forall x y, (R x y) (r x y)` ? *)
 
 Lemma weq_reflect R r :
-  R ≡ r -> forall x y, reflect (R x y) (r x y).
+  R \== r -> forall x y, reflect (R x y) (r x y).
 Proof. move=> H x y; apply: equivP; [exact: idP | symmetry; apply H]. Qed.
 
 Lemma reflect_weq R r :
-  (forall x y, reflect (R x y) (r x y)) -> R ≡ r.
+  (forall x y, reflect (R x y) (r x y)) -> R \== r.
 Proof. by move=> H x y; apply rwP. Qed.
 
 End PwEqvReflect.
@@ -409,7 +450,7 @@ Proof.
 Qed.
 
 Lemma clos_rt_crE R :
-  clos_refl_trans R ≡ clos_refl (clos_trans R).
+  clos_refl_trans R \== clos_refl (clos_trans R).
 Proof.
   move=> x y; split.
   - elim=> [{}x {}y xy | {}x | {}x {}y z _ xy _ yz] //.
@@ -421,14 +462,14 @@ Proof.
 Qed.
 
 Lemma clos_r_qmk R :
-  clos_refl R ≡ R^?.
+  clos_refl R \== R^?.
 Proof.
   split; first by case; [right | left].
   case=> [->|]; first exact: r_refl; exact: r_step.
 Qed.
 
 Lemma clos_t1n_itr R :
-  clos_trans_1n R ≡ R^+.
+  clos_trans_1n R \== R^+.
 Proof.
   move=> x y; split.
   - elim=> {x y} [x y | x z y] Rxy; first by exists y=> //; exists O.
@@ -440,38 +481,38 @@ Proof.
 Qed.
 
 Lemma clos_t_itr R :
-  clos_trans R ≡ R^+.
+  clos_trans R \== R^+.
 Proof.
   move=> x y; rewrite clos_trans_t1n_iff.
   by apply: clos_t1n_itr.
 Qed.
 
 Lemma clos_rt_str R :
-  clos_refl_trans R ≡ R^*.
+  clos_refl_trans R \== R^*.
 Proof.
   rewrite str_itr clos_rt_crE clos_r_qmk.
   by rewrite clos_t_itr.
 Qed.
 
 Lemma itr_prod (D : T -> Prop) :
-  (D × D : hrel T T)^+ ≡ D × D.
+  (D \x D : hrel T T)^+ \== D \x D.
 Proof.
   apply/weq_spec; split; last exact/itr_ext.
   by apply/itr_ind_l1=> //= x y [] z [] ++ [].
 Qed.
 
 Lemma clos_t_restr R D :
-  R ≦ D × D -> R^+ ≦ D × D.
+  R \<= D \x D -> R^+ \<= D \x D.
 Proof. move=> rD; rewrite -itr_prod; exact/itr_leq. Qed.
 
 (* TODO: this cannot be proven for KA+NEG,
  *   because hrel does not have NEG
  *)
 Lemma str_itr_sub_one R :
-  R^* \ 1 ≡ R^+ \ 1.
+  R^* \\ \1 \== R^+ \\ \1.
 Proof.
   rewrite str_itr capC capcup.
-  suff->: !1 ⊓ (1 : hrel T T) ≡ 0.
+  suff->: !1 \& (1 : hrel T T) \== 0.
   - by lattice.
   by move=> ?? /=; split=> // [[]].
 Qed.
@@ -479,8 +520,8 @@ Qed.
 (* TODO: also need to reprove this (see qmk_weq),
  *   because of some techinical issues with typeclass inference
  *)
-Lemma qmk_weq_rel {U : eqType} (r1 r2 : {dhrel U & U}) :
-  r1 ≡ r2 -> r1^? ≡ r2^?.
+Lemma qmk_weq_rel {U : eqType} (r1 r2 : {hrel U & U}) :
+  r1 \== r2 -> r1^? \== r2^?.
 Proof. by move=> ->. Qed.
 
 End RelClos.
@@ -491,11 +532,11 @@ Context {T : finType}.
 Implicit Types (R : hrel T T) (r : rel T).
 
 Lemma connect_strE r :
-  (r : {fhrel T & T})^* ≡ (connect r).
+  (r : {fhrel T & T})^* \== (connect r).
 Proof. done. Qed.
 
 Lemma connect_strP r x y :
-  reflect ((r : hrel T T)^* x y) (connect r x y).
+  reflect ((r : hRel T T)^* x y) (connect r x y).
 Proof. by move=> /=; apply/(equivP idP)/connect_iter. Qed.
 
 End FinRel.
@@ -513,7 +554,7 @@ Definition minimal R x := forall y, R y x -> x = y.
 
 Definition maximal R x := forall y, R x y -> x = y.
 
-Lemma minimal_maximal R : minimal R ≡ maximal R°.
+Lemma minimal_maximal R : minimal R \== maximal R°.
 Proof. by rewrite /cnv /= /hrel_cnv /minimal /maximal. Qed.
 
 (* TODO: relax to `leq` ? *)
@@ -531,17 +572,17 @@ Proof.
   by move=> /cnv_weq; apply: minimal_weq.
 Qed.
 
-Lemma minimal_str R : minimal R ≡ minimal R^*.
+Lemma minimal_str R : minimal R \== minimal R^*.
 Proof.
   move=> s; split=> [/[swap] ? /[swap]|/[swap] s' /(_ s') I /(str_ext R)/I //].
-  suff: R^* ≦ (fun s s' => minimal R s' -> s' = s).
+  suff: R^* \<= (fun s s' => minimal R s' -> s' = s).
   - by move=> /[apply] /[apply].
   apply/str_ind_l1=> ?? // [? ++ /[dup]].
   move=> H /[apply]; move: H=> /[swap] ->.
   by move=> /[swap] /[apply].
 Qed.
 
-Lemma maximal_str R : maximal R ≡ maximal R^*.
+Lemma maximal_str R : maximal R \== maximal R^*.
 Proof. by rewrite -!minimal_maximal minimal_str -kleene.cnvstr. Qed.
 
 End RelAux.

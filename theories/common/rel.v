@@ -26,10 +26,10 @@ From eventstruct Require Import utils seq relalg wftype.
 (*   wsuffix f    == a weak (reflexive) suffix, i.e. a set { y | x R? y }     *)
 (*   t_closure f  == given a well-founded function f returns its              *)
 (*                   transitive closure as a decidable relation.              *)
-(*                   t_closure f ≡ (sfrel f)^+                                *)
+(*                   t_closure f \== (sfrel f)^+                              *)
 (*   rt_closure f == given a well-founded function f returns its              *)       
 (*                   reflexive-transitive closure as a decidable relation,    *)
-(*                   t_closure f ≡ (sfrel f)^*                                *)
+(*                   t_closure f \== (sfrel f)^*                              *)
 (******************************************************************************)
 
 
@@ -41,18 +41,18 @@ Set Equations Transparent.
 
 Import Order.LTheory.
 Local Open Scope order_scope.
-Local Open Scope ra_terms.
+Local Open Scope rel_scope.
 
 Section Rel.
 Context {T : Type}.
 Implicit Types (r : rel T). 
 
 Lemma refl_cap r1 r2 :
-  reflexive r1 -> reflexive r2 -> reflexive (r1 ⊓ r2).
+  reflexive r1 -> reflexive r2 -> reflexive (r1 \& r2).
 Proof. by move=> refl1 refl2 x /=; apply/andP. Qed.
 
 Lemma antisym_cap r1 r2 :
-  antisymmetric r1 -> antisymmetric (r1 ⊓ r2).
+  antisymmetric r1 -> antisymmetric (r1 \& r2).
 Proof. 
   move=> asym x y /=. 
   rewrite -andbA=> /and4P[????].
@@ -60,7 +60,7 @@ Proof.
 Qed.
 
 Lemma trans_cap r1 r2 :
-  transitive r1 -> transitive r2 -> transitive (r1 ⊓ r2).
+  transitive r1 -> transitive r2 -> transitive (r1 \& r2).
 Proof. 
   move=> trans1 trans2 z x y /=. 
   move=> /andP[??] /andP[??]; apply/andP. 
@@ -103,7 +103,7 @@ End Rel.
 
 Section ClosRefl.
 Context {T : eqType}.
-Implicit Types (r : {dhrel T & T}). 
+Implicit Types (r : {hrel T & T}). 
 
 Lemma dhrel_qmkE r :
   r^? =2 [rel x y | (x == y) || (r x y)].
@@ -134,8 +134,8 @@ End ClosRefl.
 Section SubRelLift.
 Context {T : eqType} {U : Type} {P : pred T} {S : subType P}.
 
-Lemma sub_rel_lift_qmk (r : {dhrel S & S}) :
-  (sub_rel_lift r : {dhrel T & T})^? =2 (sub_rel_lift r^? : {dhrel T & T})^?. 
+Lemma sub_rel_lift_qmk (r : {hrel S & S}) :
+  (sub_rel_lift r : {hrel T & T})^? =2 (sub_rel_lift r^? : {hrel T & T})^?. 
 Proof. 
   move=> x y; rewrite !dhrel_qmkE /=.
   apply/idP/idP=> [/orP[|]|].
@@ -232,7 +232,7 @@ Context {T : choiceType} {fT : {fset T}}.
 Implicit Types (g : rel fT). 
 
 Lemma sub_rel_lift_connect g : 
-  (sub_rel_lift g : hrel T T)^* ≡ (sub_rel_lift (connect g) : hrel T T)^?.
+  (sub_rel_lift g : hrel T T)^* \== (sub_rel_lift (connect g) : hrel T T)^?.
 Proof. 
   move=> x y; split.
   - move=> /clos_rt_str; elim.
@@ -317,7 +317,7 @@ Definition iker r : rel T :=
   fun x y => (y != x) && r x y.
 
 Lemma iker_qmk r : 
-  iker (r : {dhrel T & T})^? =2 iker r.
+  iker (r : {hrel T & T})^? =2 iker r.
 Proof. 
   move=> x y; rewrite /iker dhrel_qmkE /=.
   rewrite andb_orr orb_idl //. 
@@ -325,7 +325,7 @@ Proof.
 Qed.
 
 Lemma qmk_iker r : 
-  reflexive r -> (iker r : {dhrel T & T})^? =2 r.
+  reflexive r -> (iker r : {hrel T & T})^? =2 r.
 Proof. 
   move=> refl x y ; rewrite dhrel_qmkE /= /iker.
   apply/idP/idP=> [/orP[|]|].
@@ -493,7 +493,7 @@ Qed.
 End Covering.
 
 (* TODO: rename to `mrel` and move to `monad.v` ? *)
-Definition sfrel {T : eqType} (f : T -> seq T) : {dhrel T & T} :=
+Definition sfrel {T : eqType} (f : T -> seq T) : {hrel T & T} :=
     [rel a b | b \in f a].
 
 Section Strictify.
@@ -504,14 +504,14 @@ Definition strictify f : T -> seq T :=
   fun x => filter^~ (f x) (fun y => x != y).
 
 Lemma strictify_weq f :
-  sfrel (strictify f) ≡ (sfrel f \ eq_op).
+  sfrel (strictify f) \== (sfrel f \\ eq_op).
 Proof. 
   move=> x y; rewrite /sfrel /strictify /=.
   by rewrite mem_filter andbC. 
 Qed.
 
 Lemma strictify_leq f : 
-  sfrel (strictify f) ≦ sfrel f.
+  sfrel (strictify f) \<= sfrel f.
 Proof. by rewrite strictify_weq; lattice. Qed.
 
 End Strictify. 
@@ -527,7 +527,7 @@ Context {disp : unit} {T : wfType disp}.
 Variable (f : T -> seq T).
 
 (* Hypothesis descend : forall x y, y \in f x -> y < x. *)
-Hypothesis descend : sfrel f ≦ (>%O).
+Hypothesis descend : sfrel f \<= (>%O).
 
 (* A hack to get around a bug in Equations 
  * (see https://github.com/mattam82/Coq-Equations/issues/241).
@@ -551,11 +551,11 @@ Definition wsuffix (x : T) : seq T :=
   x :: suffix x.
 
 (* decidable transitive closure *)
-Definition t_closure : {dhrel T & T} := 
+Definition t_closure : {hrel T & T} := 
   fun x y => y \in suffix x.
 
 (* decidable reflexive-transitive closure *)
-Definition rt_closure : {dhrel T & T} := 
+Definition rt_closure : {hrel T & T} := 
   fun x y => y \in wsuffix x.
   
 (* ************************************************************************** *)
@@ -584,14 +584,14 @@ Proof.
 Qed.
 
 Lemma clos_trans_gt : 
-  clos_trans (sfrel f) ≦ (>%O : rel T).
+  clos_trans (sfrel f) \<= (>%O : rel T).
 Proof. 
   move=> ??; rewrite/sfrel /=.
   elim=> [y z /descend | x y z _ ] //=.
   move=> /[swap] _ /[swap]; exact: lt_trans.
 Qed.
 
-Lemma t_closure_gt : t_closure ≦ (>%O : rel T).
+Lemma t_closure_gt : t_closure \<= (>%O : rel T).
 Proof. by move=> x y /t_closureP /clos_trans_gt. Qed.
 
 Lemma t_closure_antisym : antisymmetric t_closure.
@@ -617,13 +617,13 @@ Proof.
   by apply predU1P.
 Qed.
 
-Lemma rt_closureE : rt_closure ≡ t_closure^?.
+Lemma rt_closureE : rt_closure \== t_closure^?.
 Proof. 
   move=> x y /=; rewrite /rt_closure /t_closure /wsuffix. 
-  by rewrite /dhrel_one in_cons eq_sym. 
+  by rewrite /hrel_one in_cons eq_sym. 
 Qed.
 
-Lemma rt_closure_ge : rt_closure ≦ (>=%O : rel T).
+Lemma rt_closure_ge : rt_closure \<= (>=%O : rel T).
 Proof.
   rewrite rt_closureE.
   move=> x y /orP[/eqP<-//=|].

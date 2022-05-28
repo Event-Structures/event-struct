@@ -19,6 +19,7 @@ Unset Printing Implicit Defensive.
 
 Import Order.LTheory.
 
+Local Open Scope rel_scope.
 Local Open Scope order_scope.
 Local Open Scope fset_scope.
 Local Open Scope quotient_scope.
@@ -161,7 +162,7 @@ Proof.
   pose r2 : hrel E E := 
     (fun e1' e2' => fs_ica p e1' e2').
   rewrite -/r.
-  have reqv : (r ≡ (r2 ⊔ r1)).
+  have reqv : (r \== (r2 \+ r1)).
   - rewrite cupC /r /r1 /r2=> {}e1 {}e2 /=. 
     by split=> /orP. 
   rewrite (str_weq reqv) kleene.str_pls.
@@ -174,7 +175,7 @@ Proof.
     move=> /andP[] /(lfsp_dw_closP _ supcl acyc esSub) [e3] ++ /eqP->.    
     move=> ??; exists e3; rewrite ?eq_refl ?andbT //.
     by apply/clos_rt_str/(fs_caP _ _ supcl).
-  suff->: (r2^* ⋅ (r1 ⋅ r2^*)^*) e1 e2 <-> ((r2^* ⋅ r1) ⊔ r2^*) e1 e2.
+  suff->: (r2^* ⋅ (r1 ⋅ r2^*)^*) e1 e2 <-> ((r2^* ⋅ r1) \+ r2^*) e1 e2.
   - split=> [[|]|].
     + by move=> /H ->.
     + move=> ca12; apply/orP; right; apply/fs_caP=> //.
@@ -182,21 +183,21 @@ Proof.
     move=> /orP[|].
     + by move=> /H ?; left.
     by move=> /(fs_caP _ _ supcl)/clos_rt_str ?; right.
-  suff: r2^*⋅(r1⋅r2^*)^* ≡ r2^*⋅r1 + r2^*.
+  suff: r2^*⋅(r1⋅r2^*)^* \== r2^*⋅r1 + r2^*.
   - by move=> ->. 
-  have->: r1 ⋅ r2^* ≡ r1.
+  have->: r1 ⋅ r2^* \== r1.
   - rewrite str_unfold_l dotxpls dotA.
-    have->: r1 ⋅ r2 ≡ 0%ra; last by kat.
+    have->: r1 ⋅ r2 \== 0%ra; last by kat.
     move=> {}e1 {}e2 /=; split=> //.
     rewrite /r1 /r2 /hrel_dot=> [[e3]].        
     move=> /andP[] ? /eqP->.
     rewrite /lfsp_fresh.
     move=> /(supp_closedP _ supcl)=> [[+ _]].
     by move: (fresh_seq_nmem (lfsp_eventset p))=> /negP.
-  have->: r1^* ≡ 1 ⊔ r1.
+  have->: r1^* \== 1 \+ r1.
   - rewrite str_unfold_l; apply/qmk_weq.
     rewrite str_unfold_l dotxpls dotA.
-    have->: r1 ⋅ r1 ≡ 0%ra; last by kat.
+    have->: r1 ⋅ r1 \== 0%ra; last by kat.
     move=> {}e1 {}e2 /=; split=> //.
     rewrite /r1 /r2 /hrel_dot=> [[e3]].        
     move=> /andP[] ? /eqP-> /andP[+ _].

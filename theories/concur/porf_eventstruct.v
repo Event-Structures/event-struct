@@ -47,6 +47,7 @@ Set Equations Transparent.
 Import Order.LTheory.
 Import WfClosure.
 
+Local Open Scope rel_scope.
 Local Open Scope order_scope.
 Local Open Scope fset_scope.
 Local Open Scope fmap_scope.
@@ -713,7 +714,7 @@ Definition fca e : seq E := [:: fpo e; frf e].
 (* TODO: `sfrel` - infer [canonical] instance automatically, 
  *   then get rid of `ica` and use `sfrel fca` inplace
  *)
-Definition ica : {dhrel E & E} := 
+Definition ica : {hrel E & E} := 
   (sfrel fca)°.
 
 Lemma fca0 : fca \i0 = [:: \i0 ; \i0].
@@ -730,7 +731,7 @@ Qed.
 Lemma fca_ndom e : e \notin dom -> fca e = [:: e; e].
 Proof. by move=> ndom; rewrite /fca (fpo_ndom e ndom) (frf_ndom e ndom). Qed.
 
-Lemma fca_ge : sfrel fca ≦ (>=%O : rel E).
+Lemma fca_ge : sfrel fca \<= (>=%O : rel E).
 Proof. 
   move=> ?? /=; red; rewrite /sfrel /=.
   rewrite ?inE=> /orP[]/eqP->; [exact: fpo_le | exact: frf_le]. 
@@ -738,7 +739,7 @@ Qed.
 
 (* TODO: consider to generalize this lemma and move to `relations.v` *)
 Lemma fca_gt :
-  (sfrel (strictify fca)) ≦ (>%O : rel E).
+  (sfrel (strictify fca)) \<= (>%O : rel E).
 Proof. 
   rewrite strictify_weq.
   (* TODO: can ssreflect rewrite do setoid rewrites? *)
@@ -792,7 +793,7 @@ Proof.
   rewrite cnv_invol str_itr itr_qmk.
   rewrite -(kleene.itr_weq (qmk_sub_one _ _)); last first.
   - rewrite -rel_top_m -rel_one_m -rel_neg_m -rel_cup_m.
-    apply /rel_weq_m/dhrel_eq_dec.
+    apply /rel_weq_m/hrel_eq_dec.
   rewrite kleene.itr_weq; last first.
   - rewrite -rel_one_m -rel_sub_m -rel_cup_m.
     by apply /rel_weq_m; rewrite -strictify_weq.
@@ -809,7 +810,7 @@ Proof.
   exact: clos_rt_rtn1_iff. 
 Qed.
 
-Lemma ica_ca : ica ≦ ca.
+Lemma ica_ca : ica \<= ca.
 Proof. by move=> x y H; apply /closureP /rt_step. Qed.
 
 Lemma ca0 e1 :
@@ -841,7 +842,7 @@ Qed.
 
 Lemma ca_le e1 e2 : ca e1 e2 -> e1 <=^i e2.
 Proof. 
-  rewrite /ca /= /dhrel_cnv. 
+  rewrite /ca /= /hrel_cnv. 
   apply /rt_closure_ge.
 Qed.
 
@@ -853,14 +854,14 @@ Hint Resolve ca_refl : core.
 Lemma ca_anti : antisymmetric ca.
 Proof. 
   (* TODO: generalize lemma *)
-  rewrite /ca /antisymmetric /= /dhrel_cnv. 
+  rewrite /ca /antisymmetric /= /hrel_cnv. 
   move=> x y. rewrite andbC. apply /rt_closure_antisym. 
 Qed.
 
 Lemma ca_trans : transitive ca.
 Proof. 
   (* TODO: generalize lemma *)
-  rewrite /ca /transitive /= /dhrel_cnv. 
+  rewrite /ca /transitive /= /hrel_cnv. 
   move=> x y z /[swap]. apply rt_closure_trans.
 Qed.
 
@@ -969,7 +970,7 @@ Definition cf e1 e2 : bool :=
 Lemma cfP {e1 e2} :
   reflect (exists e1' e2', [/\ ca e1' e1, ca e2' e2 & icf e1' e2']) (cf e1 e2).
 Proof.
-  rewrite /ca /rt_closure /= /dhrel_cnv.
+  rewrite /ca /rt_closure /= /hrel_cnv.
   apply/(iffP hasP) => [[? /allpairsPdep[x[y[]]]] | [x [y []]]].
   - by move=> ?? -> /= ?; exists x, y. 
   by exists (icf x y)=> //; rewrite allpairs_f.

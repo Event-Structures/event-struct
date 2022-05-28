@@ -46,7 +46,7 @@ Context {disp : unit} {T : porderType disp}.
 Implicit Types (x y z : T) (X : pred T).
 
 Definition dw_closed (X : pred T) : Prop :=
-  (* ca · [X] ≦ [X] · ca; *)
+  (* ca · [X] \<= [X] · ca; *)
   forall x y, x <= y -> X y -> X x.
 
 Lemma eq_dw_closed X Y : 

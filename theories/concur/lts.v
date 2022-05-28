@@ -95,13 +95,15 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* TODO: move to more appropriate place *)
-Notation lang L := (seq L -> Prop).
+Local Open Scope rel_scope.
 
 Declare Scope lts_scope.
 Delimit Scope lts_scope with lts.
 
 Local Open Scope lts_scope.
+
+(* TODO: move to more appropriate place *)
+Notation lang L := (seq L -> Prop).
 
 Reserved Notation "s1 '--[' l ']-->' s2" (at level 55, no associativity).
 
@@ -228,7 +230,7 @@ Qed.
 Lemma ftrans_trans l s :
   s -->? (ftrans l s).
 Proof. 
-  rewrite /= /dhrel_one. 
+  rewrite /= /hrel_one. 
   move: (ftrans_ltrans l s)=> /orP[].
   - by move=> /eqP {1}->; left. 
   by move=> ?; right; exists l. 
@@ -1010,13 +1012,13 @@ Lemma sim_step R l s1 t1 t2 :
 Proof. case: R=> ? [[H]] /=; exact/H. Qed.
 
 Lemma of_eqrel_class (R' : hrel S T) R : 
-  R' ≡ R -> Simulation.class_of R'.
+  R' \== R -> Simulation.class_of R'.
 Proof.
   move=> E; (do ? split)=>> /E/sim_step/[apply][[s /E]].
   by exists s.
 Qed.
 
-Definition of_eqrel (R' : hrel S T) R : R' ≡ R -> {sim S -> T} := 
+Definition of_eqrel (R' : hrel S T) R : R' \== R -> {sim S -> T} := 
   fun eqf => Simulation.Pack (of_eqrel_class eqf).
 
 Fact sim_trace_aux R s t (tr : traceSeq T) :
@@ -1074,7 +1076,7 @@ Proof.
 Qed.
 
 Lemma sim_lang R s t :
-  R s t -> lts_lang t ≦ lts_lang s.
+  R s t -> lts_lang t \<= lts_lang s.
 Proof.
   move=> HR w [[tr Htr]] + ->; clear w.
   rewrite /lts_lang /trace_lang /= => /eqP Hh.
@@ -1096,7 +1098,7 @@ Definition det_sim_R : hrel S T := fun s1 t1 =>
         lst_state t (trace_from t ls) = t1 &
         lst_state s (trace_from s ls) = s1].
 
-Lemma det_sim_class : lts_lang t ≦ lts_lang s -> Simulation.class_of det_sim_R.
+Lemma det_sim_class : lts_lang t \<= lts_lang s -> Simulation.class_of det_sim_R.
 Proof.
   move=> LS.
   (do ? split)=> l ??? [ls [/[dup] /dlts_langP tls ? <-<- st]].
@@ -1116,7 +1118,7 @@ Qed.
 Definition det_sim := fun lls => Simulation.Pack (det_sim_class lls).
 
 Lemma sim_lang_det : 
-  lts_lang t ≦ lts_lang s <-> exists R, R s t.
+  lts_lang t \<= lts_lang s <-> exists R, R s t.
 Proof.
   split=> [lls|[? /sim_lang //]].
   exists (det_sim lls), [::]; split=> //; exact/lts_lang0.
@@ -1204,7 +1206,7 @@ Lemma sim_step_cnv R l s1 s2 t1 :
 Proof. case: R=> ? [[? [H]]] /=; exact/H. Qed.
 
 Lemma bisim_lang R s t : 
-  R s t -> lts_lang t ≡ lts_lang s.
+  R s t -> lts_lang t \== lts_lang s.
 Proof. 
   move=> HR; apply/weq_spec; split. 
   - exact/(sim_lang HR).
@@ -1218,7 +1220,7 @@ Context {L : eqType}.
 Context {S T : dltsType L}.
 Implicit Types (s : S) (t : T) (R : {bisim S -> T}).
 
-Lemma det_bisim_class t s : lts_lang t ≡ lts_lang s -> 
+Lemma det_bisim_class t s : lts_lang t \== lts_lang s -> 
   Bisimulation.class_of (det_sim_R s t).
 Proof.
   move=> /[dup] E /weq_spec[? L2]; split; first exact/det_sim_class.
@@ -1230,7 +1232,7 @@ Definition det_bisim t s :=
   fun els => Bisimulation.Pack (@det_bisim_class t s els).
 
 Lemma bisim_lang_det t s : 
-  lts_lang t ≡ lts_lang s <-> exists R, R s t.
+  lts_lang t \== lts_lang s <-> exists R, R s t.
 Proof.
   split=> [lls|[? /bisim_lang //]].
   exists (det_bisim lls), [::]; split=> //; exact/lts_lang0.
