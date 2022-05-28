@@ -1,8 +1,8 @@
 From RelationAlgebra Require Import lattice monoid rel kat_tac kleene.
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype choice seq path.
 From mathcomp Require Import order finmap fintype ssrnat finfun.
-From eventstruct Require Import utils ident porf_eventstruct.
-From eventstruct Require Import rewriting_system inhtype.
+From eventstruct Require Import utils rel_algebra rewriting_system.
+From eventstruct Require Import inhtype ident porf_eventstruct.
 
 (******************************************************************************)
 (* Here we want to make function that by event and event structure creates a  *)
@@ -40,6 +40,8 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.LTheory.
+
+Local Open Scope rel_scope.
 Local Open Scope order_scope.
 Local Open Scope fset_scope.
 Local Open Scope ident_scope.
@@ -509,7 +511,7 @@ Qed.
 
 Definition eqv := exlab is_iso.
 
-Lemma eqv_refl : 1 ≦ eqv.
+Lemma eqv_refl : \1 \<= eqv.
 Proof.
   move=> ??->. exists id; do ? split=> //; last exact/inv_bij;
   rewrite ?map_id // => ? /=; by rewrite edescr_map_id.
@@ -649,7 +651,7 @@ Proof.
   exists (swap id (fresh_id1 es) (fresh_id2 es)); exact/swap_add.
 Qed.
 
-Lemma exlab_tr : tr ≡ exlab ltr.
+Lemma exlab_tr : tr \== exlab ltr.
 Proof. by move=> ??; split=> [[l ->]|[?[l ->]]]; do ? exists l. Qed.
 
 Arguments isoE {_ _ _ _ _}.

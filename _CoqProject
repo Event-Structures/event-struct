@@ -12,7 +12,7 @@
 theories/common/utils.v
 theories/common/seq.v
 theories/common/fperm.v
-theories/common/relalg.v
+theories/common/rel_algebra.v
 theories/common/wftype.v
 theories/common/inhtype.v
 theories/common/ident.v
