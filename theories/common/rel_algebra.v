@@ -49,6 +49,17 @@ Notation "\0" := bot (at level 0) : rel_scope.
 Notation "\T" := top (at level 0) : rel_scope.
 Notation "\1" := (one _) (at level 0) : rel_scope.
 
+Notation "A \== B :> T" := (weq (A : T) (B : T)) 
+  (at level 70, B at next level, only parsing) : rel_scope.
+Notation "A \<= B :> T" := (leq (A : T) (B : T)) 
+  (at level 70, B at next level, only parsing) : rel_scope.
+Notation "A \& B :> T" := (cap (A : T) (B : T)) 
+  (at level 68, B at next level, only parsing) : rel_scope.
+Notation "A \+ B :> T" := (cup (A : T) (B : T)) 
+  (at level 64, B at next level, only parsing) : rel_scope.
+Notation "A \; B :> T" := (dot (A : T) (B : T)) 
+  (at level 60, B at next level, only parsing) : rel_scope.
+
 (* ************************************************************************** *)
 (*     Utilities                                                              *)
 (* ************************************************************************** *)
