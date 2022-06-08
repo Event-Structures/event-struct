@@ -28,7 +28,7 @@ Module FsGraph.
 
 Module Export Def.
 Section hDef.
-Context (T U : identType).
+Context {T U : identType}.
 
 (* TODO: ideogically it would be better to make the definition opaque, 
  *   i.e. to keep internal graph representation hidden. 
@@ -54,7 +54,9 @@ Definition cod g : {fset U} := [fset (snd p) | p in g].
 
 End hDef.
 
-Notation fsgraph T := (@hfsgraph T T).
+Arguments hfsgraph T U : clear implicits.
+
+Notation fsgraph T := (hfsgraph T T).
 
 Definition fsgraph0 {T U} : hfsgraph T U := fset0.
 
@@ -100,9 +102,8 @@ End Theory.
 
 Module Export Hom.
 Section Def. 
-Context {T U : identType}.
-Implicit Types (f : T -> U).
-Implicit Types (g : fsgraph T) (h : fsgraph U).
+Context {T : identType}.
+Implicit Types (f : T -> T) (g h : fsgraph T).
 
 Definition hom f g h := {homo f : x y / g x y >-> h x y}.
 
@@ -110,6 +111,9 @@ Definition fin_hom g h (ff : {ffun (fld g) -> (fld h)}) :=
   [forall x, forall y, (g (val x) (val y)) ==> h (val (ff x)) (val (ff y))].
 
 Definition hom_le g h := [exists ff, @fin_hom g h ff].
+
+Definition hom_lt : rel (fsgraph T) :=
+  fun g h => (h != g) && (hom_le g h).
 
 Lemma hom_dom f g h x : 
   hom f g h -> x \in dom g -> f x \in dom h.
@@ -132,13 +136,13 @@ Proof.
   by move=> /orP[/(hom_dom homf) | /(hom_cod homf)] ->.
 Qed.
 
-Context (g : fsgraph T) (h : fsgraph U).
+Context (g h : fsgraph T).
 Implicit Types (ff : {ffun (fld g) -> (fld h)}).
 
 Definition fin_hom_of f homf : {ffun (fld g) -> (fld h)} := 
   [ffun x => Sub (f (val x)) (hom_fld homf (valP x))].
 
-Definition of_fin_hom ff : T -> U := 
+Definition of_fin_hom ff : T -> T := 
   fun x => odflt \i0 (omap (val \o ff) (insub x)).
 
 Lemma fin_hom_ofE f homf x : 
@@ -151,7 +155,7 @@ Lemma of_fin_homE ff x :
   f (val x) = val (ff x).
 Proof. by rewrite /of_fin_hom /= insubT // => ?; rewrite sub_val. Qed.
 
-Context (f : T -> U) (ff : {ffun (fld g) -> (fld h)}).
+Context (f : T -> T) (ff : {ffun (fld g) -> (fld h)}).
 Hypothesis (feq : forall x, f (val x) = val (ff x)).
 
 Lemma fin_homP : 
@@ -167,19 +171,14 @@ Qed.
 
 End Def.
 
-Arguments fin_hom {T U} g h.
+Arguments fin_hom {T} g h.
 
-Section hTheory.
-Context {T U : identType}.
-Implicit Types (f : T -> U).
-Implicit Types (g : fsgraph T) (h : fsgraph U).
+Section Theory.
+Context {T : identType}.
+Implicit Types (f : T -> T) (g h : fsgraph T).
 
 Lemma hom_emp f h : hom f [emp] h.
 Proof. done. Qed.
-
-(* Lemma fld_emp g :  *)
-(*   (g == [emp]) = (fld g == fset0). *)
-(* Proof. admit. Admitted. *)
 
 Lemma hom_leP g h :
   reflect (exists f, hom f g h) (hom_le g h).
@@ -191,13 +190,28 @@ Proof.
   exact/(fin_homP (of_fin_homE ff)). 
 Qed.  
 
-End hTheory.
+Lemma hom_lt_def g h : 
+  hom_lt g h = (h != g) && (hom_le g h).
+Proof. done. Qed.
 
-End Hom.
+Lemma hom_le_refl : 
+  reflexive (@hom_le T).
+Proof. by move=> g; apply/hom_leP; exists id. Qed.
+
+Lemma hom_le_trans : 
+  transitive (@hom_le T).
+Proof. 
+  move=> ??? /hom_leP[f] homf /hom_leP[g] homg. 
+  apply/hom_leP; exists (g \o f)=> ??? /=. 
+  exact/homg/homf.
+Qed.
+
+End Theory.
+
 End Hom.
 
 Section KleeneAlgebra.
-Context {T U : choiceType}.
+Context {T U : identType}.
 
 Canonical Structure fsgraph_lattice_ops : lattice.ops := {|
   lattice.car := @hfsgraph T U;
