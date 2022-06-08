@@ -68,9 +68,9 @@ End PropUtils.
 (* ************************************************************************** *)
 
 Section Prod.
-Context {T : Type} {L : lattice.ops}.
+Context {T U : Type} {L : lattice.ops}.
 
-Definition cart_prod (p q : T -> L) : T -> T -> L :=
+Definition cart_prod (p : T -> L) (q : U -> L) : T -> U -> L :=
   fun x y => p x \& q y.
 
 End Prod.
