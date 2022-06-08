@@ -52,19 +52,6 @@ Coercion hfsgraph_apply : hfsgraph >-> Funclass.
 Definition dom g : {fset T} := [fset (fst p) | p in g].
 Definition cod g : {fset U} := [fset (snd p) | p in g].
 
-(* TODO: move to theory module *)
-
-Lemma fsgraphE g x y : (g x y) = ((x, y) \in g).
-Proof. done. Qed.
-
-Lemma dom_cod_restr g : 
-  (g : {hrel T & U}) \<= mem (dom g) \x mem (cod g).
-Proof. 
-  move=> x y /=; rewrite /le_bool /dom /cod /=. 
-  rewrite /hrel_of_hfsgraph=> ing. 
-  by apply/andP; split; apply/imfsetP; exists (x, y).
-Qed.
-
 End hDef.
 
 Notation fsgraph T := (@hfsgraph T T).
@@ -77,13 +64,6 @@ Implicit Types (g : fsgraph T).
 
 Definition fld g : {fset T} := dom g `|` cod g.
 
-Lemma fld_restr g : 
-  (g : {hrel T & T}) \<= mem (fld g) \x mem (fld g).
-Proof. 
-  move=> x y /dom_cod_restr /= /andP[].
-  by rewrite /fld !inE=> -> -> /=.
-Qed.
-
 End Def.
 End Def.
 
@@ -91,6 +71,32 @@ Module Export Syntax.
 Notation "[ 'emp' ]" := (fsgraph0)
   (at level 0, format "[ 'emp' ]") : fsgraph_scope.
 End Syntax.
+
+Module Export Theory.
+Section Theory.
+Context {T : identType}.
+Implicit Types (g : fsgraph T).
+
+Lemma fsgraphE g x y : (g x y) = ((x, y) \in g).
+Proof. done. Qed.
+
+Lemma dom_cod_restr g : 
+  g \<= mem (dom g) \x mem (cod g) :> rel T.
+Proof. 
+  move=> x y /=; rewrite /le_bool /dom /cod /=. 
+  rewrite /hrel_of_hfsgraph=> ing. 
+  by apply/andP; split; apply/imfsetP; exists (x, y).
+Qed.
+
+Lemma fld_restr g : 
+  g \<= mem (fld g) \x mem (fld g) :> rel T.
+Proof. 
+  move=> x y /dom_cod_restr /= /andP[].
+  by rewrite /fld !inE=> -> -> /=.
+Qed.
+
+End Theory.
+End Theory.
 
 Module Export Hom.
 Section Def. 
@@ -100,25 +106,10 @@ Implicit Types (g : fsgraph T) (h : fsgraph U).
 
 Definition hom f g h := {homo f : x y / g x y >-> h x y}.
 
-Definition hom_le g h := 
-  let (fT, fU) := (fld g, fld h) in
-  [exists f : {ffun fT -> fU}, 
-    [forall x, forall y, (g (val x) (val y)) ==> h (val (f x)) (val (f y))]
-  ].
+Definition fin_hom g h (ff : {ffun (fld g) -> (fld h)}) := 
+  [forall x, forall y, (g (val x) (val y)) ==> h (val (ff x)) (val (ff y))].
 
-End Def.
-
-Section hTheory.
-Context {T U : identType}.
-Implicit Types (f : T -> U).
-Implicit Types (g : fsgraph T) (h : fsgraph U).
-
-Lemma hom_emp f h : hom f [emp] h.
-Proof. done. Qed.
-
-(* Lemma fld_emp g :  *)
-(*   (g == [emp]) = (fld g == fset0). *)
-(* Proof. admit. Admitted. *)
+Definition hom_le g h := [exists ff, @fin_hom g h ff].
 
 Lemma hom_dom f g h x : 
   hom f g h -> x \in dom g -> f x \in dom h.
@@ -141,21 +132,63 @@ Proof.
   by move=> /orP[/(hom_dom homf) | /(hom_cod homf)] ->.
 Qed.
 
+Context (g : fsgraph T) (h : fsgraph U).
+Implicit Types (ff : {ffun (fld g) -> (fld h)}).
+
+Definition fin_hom_of f homf : {ffun (fld g) -> (fld h)} := 
+  [ffun x => Sub (f (val x)) (hom_fld homf (valP x))].
+
+Definition of_fin_hom ff : T -> U := 
+  fun x => odflt \i0 (omap (val \o ff) (insub x)).
+
+Lemma fin_hom_ofE f homf x : 
+  let ff := @fin_hom_of f homf in
+  f (val x) = val (ff x).
+Proof. by rewrite /fin_hom_of /= ffunE. Qed.
+
+Lemma of_fin_homE ff x : 
+  let f := @of_fin_hom ff in
+  f (val x) = val (ff x).
+Proof. by rewrite /of_fin_hom /= insubT // => ?; rewrite sub_val. Qed.
+
+Context (f : T -> U) (ff : {ffun (fld g) -> (fld h)}).
+Hypothesis (feq : forall x, f (val x) = val (ff x)).
+
+Lemma fin_homP : 
+  reflect (hom f g h) (@fin_hom g h ff).
+Proof. 
+  apply/(equivP (homo2P _ _ _))=> /=; split; last first.
+  - move=> homf x y; rewrite -!feq; exact/homf.
+  move=> homf x y /[dup] /fld_restr /= /andP[xin yin]. 
+  have->: x = val (Sub x xin : fld g) by done. 
+  have->: y = val (Sub y yin : fld g) by done. 
+  by move=> /homf; rewrite !feq. 
+Qed.
+
+End Def.
+
+Arguments fin_hom {T U} g h.
+
+Section hTheory.
+Context {T U : identType}.
+Implicit Types (f : T -> U).
+Implicit Types (g : fsgraph T) (h : fsgraph U).
+
+Lemma hom_emp f h : hom f [emp] h.
+Proof. done. Qed.
+
+(* Lemma fld_emp g :  *)
+(*   (g == [emp]) = (fld g == fset0). *)
+(* Proof. admit. Admitted. *)
+
 Lemma hom_leP g h :
   reflect (exists f, hom f g h) (hom_le g h).
 Proof.
   apply/(equivP existsP); split=> /=; last first.
-  - move=> [f] homf.
-    pose ff : {ffun (fld g) -> (fld h)} := 
-      [ffun x => Sub (f (val x)) (hom_fld homf (valP x))].
-    exists ff; apply/forall2P=> /= x y; apply/implyP. 
-    rewrite !ffunE /=; exact/homf.
-  move=> [ff] /homo2P homf. 
-  pose f : T -> U := 
-    fun x => odflt \i0 (omap (val \o ff) (insub x)).
-  exists f => /= x y; rewrite /f. 
-  move=> /[dup] /fld_restr /= /andP[xin yin].
-  rewrite !insubT /= => gxy; exact/homf.
+  - move=> [f] homf; exists (fin_hom_of homf).
+    exact/(fin_homP (fin_hom_ofE homf)).  
+  move=> [ff] homf; exists (of_fin_hom ff). 
+  exact/(fin_homP (of_fin_homE ff)). 
 Qed.  
 
 End hTheory.
