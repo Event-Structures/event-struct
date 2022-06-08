@@ -61,10 +61,14 @@ Notation fsgraph T := (hfsgraph T T).
 Definition fsgraph0 {T U} : hfsgraph T U := fset0.
 
 Section Def.
-Context {T : identType}.
+Context {T U : identType}.
 Implicit Types (g : fsgraph T).
+Implicit Types (f : T -> U).
 
 Definition fld g : {fset T} := dom g `|` cod g.
+
+Definition fsg_map f g : fsgraph U := 
+  (fun '(x, y) => (f x, f y)) @` g.
 
 End Def.
 End Def.
@@ -72,11 +76,15 @@ End Def.
 Module Export Syntax. 
 Notation "[ 'emp' ]" := (fsgraph0)
   (at level 0, format "[ 'emp' ]") : fsgraph_scope.
+Notation "f @` g" := (fsg_map f g)
+  (at level 24) : fsgraph_scope.
+Notation "@! f" := (fun g => f @` g)%fsgraph
+  (at level 10, f at level 8, no associativity, format "@!  f") : fsgraph_scope.
 End Syntax.
 
 Module Export Theory.
 Section Theory.
-Context {T : identType}.
+Context {T U V : identType}.
 Implicit Types (g : fsgraph T).
 
 Lemma fsgraphE g x y : (g x y) = ((x, y) \in g).
@@ -95,6 +103,25 @@ Lemma fld_restr g :
 Proof. 
   move=> x y /dom_cod_restr /= /andP[].
   by rewrite /fld !inE=> -> -> /=.
+Qed.
+
+Lemma fsg_map_id g : 
+  id @` g = g.
+Proof. 
+  rewrite /fsg_map; apply/fsetP=> /= [[x y]]. 
+  apply/idP/idP=> [/imfsetP[[??]] /= ? [-> ->]|] //. 
+  by move=> ?; apply/imfsetP; exists (x, y).
+Qed.
+
+Lemma fsg_map_comp f (h : U -> V) g : 
+  (h \o f) @` g = (@! h \o @! f) g.
+Proof.
+  rewrite /fsg_map; apply/fsetP=> /= [[x y]]. 
+  apply/idP/idP=> /imfsetP /= [[{}x {}y]] + [-> ->] /=.
+  - move=> ?; apply/imfsetP; exists (f x, f y)=> //. 
+    by apply/imfsetP; exists (x, y).
+  move=> /imfsetP /= [[{}x {}y]] /[swap] [[-> ->]] ?. 
+  by apply/imfsetP; exists (x, y).
 Qed.
 
 End Theory.
@@ -180,6 +207,15 @@ Implicit Types (f : T -> T) (g h : fsgraph T).
 Lemma hom_emp f h : hom f [emp] h.
 Proof. done. Qed.
 
+Lemma hom_mapP f g h : 
+  reflect (hom f g h) (f @` g `<=` h).
+Proof. 
+  apply/equivP; first exact/fsubsetP; split. 
+  - by move=> subs x y ?; apply/subs/imfsetP; exists (x, y).
+  move=> homf [??] /imfsetP[[??]] /= + [-> ->]. 
+  by rewrite -!fsgraphE=> /homf.
+Qed.
+
 Lemma hom_leP g h :
   reflect (exists f, hom f g h) (hom_le g h).
 Proof.
@@ -188,7 +224,7 @@ Proof.
     exact/(fin_homP (fin_hom_ofE homf)).  
   move=> [ff] homf; exists (of_fin_hom ff). 
   exact/(fin_homP (of_fin_homE ff)). 
-Qed.  
+Qed. 
 
 Lemma hom_lt_def g h : 
   hom_lt g h = (h != g) && (hom_le g h).
