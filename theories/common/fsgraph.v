@@ -182,6 +182,13 @@ Lemma of_fin_homE ff x :
   f (val x) = val (ff x).
 Proof. by rewrite /of_fin_hom /= insubT // => ?; rewrite sub_val. Qed.
 
+Lemma fin_hom_ofK f homf x : 
+  x \in fld g -> of_fin_hom (@fin_hom_of f homf) x = f x.
+Proof. 
+  move=> xin; have->: x = val (Sub x xin : fld g) by done.  
+  by rewrite of_fin_homE fin_hom_ofE.
+Qed.
+
 Context (f : T -> T) (ff : {ffun (fld g) -> (fld h)}).
 Hypothesis (feq : forall x, f (val x) = val (ff x)).
 
@@ -204,9 +211,6 @@ Section Theory.
 Context {T : identType}.
 Implicit Types (f : T -> T) (g h : fsgraph T).
 
-Lemma hom_emp f h : hom f [emp] h.
-Proof. done. Qed.
-
 Lemma hom_mapP f g h : 
   reflect (hom f g h) (f @` g `<=` h).
 Proof. 
@@ -219,11 +223,13 @@ Qed.
 Lemma hom_leP g h :
   reflect (exists f, hom f g h) (hom_le g h).
 Proof.
-  apply/(equivP existsP); split=> /=; last first.
-  - move=> [f] homf; exists (fin_hom_of homf).
-    exact/(fin_homP (fin_hom_ofE homf)).  
-  move=> [ff] homf; exists (of_fin_hom ff). 
-  exact/(fin_homP (of_fin_homE ff)). 
+  apply/(equivP (existsPP _)). 
+  - by move=> /= ff; apply/fin_homP/of_fin_homE. 
+  move=> /=; split=> [[ff] ? | [f]].
+  - by exists (of_fin_hom ff).
+  move=> homf; exists (fin_hom_of homf).
+  move=> x y /[dup] /fld_restr /andP[??]. 
+  rewrite !fin_hom_ofK //; exact/homf.
 Qed. 
 
 Lemma hom_lt_def g h : 
@@ -242,9 +248,102 @@ Proof.
   exact/homg/homf.
 Qed.
 
+Lemma hom_le_emp g : hom_le [emp] g.
+Proof. by apply/hom_leP; exists id. Qed.
+
 End Theory.
 
 End Hom.
+
+
+Module Export iHom.
+Section Def. 
+Context {T : identType}.
+Implicit Types (f : T -> T) (g h : fsgraph T).
+
+Definition ihom f g h := 
+  [/\ {homo f : x y / g x y >-> h x y}
+    & {in (fld g) &, injective f}
+  ].
+
+Definition fin_ihom g h (ff : {ffun (fld g) -> (fld h)}) := 
+  fin_hom g h ff && injectiveb ff.
+
+Definition ihom_le g h := [exists ff, @fin_ihom g h ff].
+
+Definition ihom_lt : rel (fsgraph T) :=
+  fun g h => (h != g) && (ihom_le g h).
+
+Context (g h : fsgraph T).
+Context (f : T -> T) (ff : {ffun (fld g) -> (fld h)}).
+Hypothesis (feq : forall x : fld g, f (val x) = val (ff x)).
+
+Lemma fin_ihomP : 
+  reflect (ihom f g h) (@fin_ihom g h ff).
+Proof. 
+  apply/(equivP (andPP (fin_homP _) _)) => //; last exact: iff_refl.
+  apply/(equivP (injectiveP _)); split=> injf /= x y; last first.
+  - move=> H; apply/val_inj/injf; try exact/valP.
+    by rewrite !feq H.
+  move=> xin yin.
+  have->: x = val (Sub x xin : fld g) by done.
+  have->: y = val (Sub y yin : fld g) by done.
+  by rewrite !feq=> /val_inj/injf ->.
+Qed.
+
+End Def.
+
+Arguments fin_ihom {T} g h.
+
+Section Theory.
+Context {T : identType}.
+Implicit Types (f : T -> T) (g h : fsgraph T).
+
+(* Lemma ihom_mapP f g h :  *)
+(*   reflect (hom f g h) (f @` g `<=` h). *)
+(* Proof.  *)
+(*   apply/equivP; first exact/fsubsetP; split.  *)
+(*   - by move=> subs x y ?; apply/subs/imfsetP; exists (x, y). *)
+(*   move=> homf [??] /imfsetP[[??]] /= + [-> ->].  *)
+(*   by rewrite -!fsgraphE=> /homf. *)
+(* Qed. *)
+
+Lemma ihom_leP g h :
+  reflect (exists f, ihom f g h) (ihom_le g h).
+Proof.
+  apply/(equivP (existsPP _)). 
+  - by move=> /= ff; apply/fin_ihomP/of_fin_homE. 
+  move=> /=; split=> [[ff] ? | [f]].
+  - by exists (of_fin_hom ff).
+  move=> [homf injf]; exists (fin_hom_of homf); split. 
+  - move=> x y /[dup] /fld_restr /andP[??]. 
+    rewrite !fin_hom_ofK //; exact/homf.
+  move=> x y ??; rewrite !fin_hom_ofK //; exact/injf.
+Qed. 
+
+Lemma ihom_lt_def g h : 
+  ihom_lt g h = (h != g) && (ihom_le g h).
+Proof. done. Qed.
+
+Lemma ihom_le_refl : 
+  reflexive (@ihom_le T).
+Proof. by move=> g; apply/ihom_leP; exists id; split. Qed.
+
+Lemma hom_le_trans : 
+  transitive (@ihom_le T).
+Proof. 
+  move=> ??? /ihom_leP[f] [homf injf] /ihom_leP[g] [homg injg]. 
+  apply/ihom_leP; exists (g \o f); split; move=> /= *. 
+  - exact/homg/homf.
+  apply/injf/injg=> //; exact/(hom_fld homf).
+Qed.
+
+Lemma ihom_le_emp g : ihom_le [emp] g.
+Proof. by apply/ihom_leP; exists id; split. Qed.
+
+End Theory.
+
+End iHom.
 
 Section KleeneAlgebra.
 Context {T U : identType}.
