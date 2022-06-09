@@ -295,18 +295,14 @@ End Def.
 
 Arguments fin_ihom {T} g h.
 
+Module Export Syntax. 
+Notation "g \subgraph h" := (ihom_le g h)
+  (at level 70, format "g  \subgraph  h") : fsgraph_scope.
+End Syntax.
+
 Section Theory.
 Context {T : identType}.
 Implicit Types (f : T -> T) (g h : fsgraph T).
-
-(* Lemma ihom_mapP f g h :  *)
-(*   reflect (hom f g h) (f @` g `<=` h). *)
-(* Proof.  *)
-(*   apply/equivP; first exact/fsubsetP; split.  *)
-(*   - by move=> subs x y ?; apply/subs/imfsetP; exists (x, y). *)
-(*   move=> homf [??] /imfsetP[[??]] /= + [-> ->].  *)
-(*   by rewrite -!fsgraphE=> /homf. *)
-(* Qed. *)
 
 Lemma ihom_leP g h :
   reflect (exists f, ihom f g h) (ihom_le g h).
@@ -321,6 +317,10 @@ Proof.
   move=> x y ??; rewrite !fin_hom_ofK //; exact/injf.
 Qed. 
 
+Lemma ihom_le_size g h : 
+  ihom_le g h -> (#|`fld g| <= #|`fld h|)%N.
+Proof. by rewrite !cardfE=> /existsP /= [f] /andP[_ /injectiveP] /leq_card. Qed.
+  
 Lemma ihom_lt_def g h : 
   ihom_lt g h = (h != g) && (ihom_le g h).
 Proof. done. Qed.
@@ -329,7 +329,7 @@ Lemma ihom_le_refl :
   reflexive (@ihom_le T).
 Proof. by move=> g; apply/ihom_leP; exists id; split. Qed.
 
-Lemma hom_le_trans : 
+Lemma ihom_le_trans : 
   transitive (@ihom_le T).
 Proof. 
   move=> ??? /ihom_leP[f] [homf injf] /ihom_leP[g] [homg injg]. 
