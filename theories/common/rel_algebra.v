@@ -22,6 +22,9 @@ Local Open Scope rel_scope.
 (*     Notations                                                              *)
 (* ************************************************************************** *)
 
+Notation "r1 '\subrel' r2" := (subrel r1 r2) 
+  (at level 40, no associativity) : fun_scope.
+
 (* A notation to differentiate prop & bool valued relations. *)
 Notation hRel A B := (hrel A B).
 Notation Rel A := (hrel A A).
