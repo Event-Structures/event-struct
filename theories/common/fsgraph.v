@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat zify.
 From mathcomp Require Import eqtype choice seq order path.
 From mathcomp Require Import fintype finfun fingraph finmap.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils seq rel_algebra rel inhtype ident.
+From eventstruct Require Import utils seq rel_algebra rel fsrel inhtype ident.
 
 (******************************************************************************)
 (* A theory of finitely supported graphs.                                     *)
@@ -15,9 +15,10 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Local Open Scope rel_scope.
 Local Open Scope fset_scope.
 Local Open Scope ident_scope.
+Local Open Scope rel_scope.
+Local Open Scope fsrel_scope.
 
 Declare Scope fsgraph_scope.
 Delimit Scope fsgraph_scope with fsgraph.
@@ -27,185 +28,241 @@ Local Open Scope fsgraph_scope.
 Module FsGraph.
 
 Module Export Def.
-Section hDef.
-Context {T U : identType}.
-
-(* TODO: ideogically it would be better to make the definition opaque, 
- *   i.e. to keep internal graph representation hidden. 
- *   However, by making fset-based representation transparent 
- *   we can easily reuse all the fset infrastructure 
- *   (e.g. unions, intersections, etc)
- *   without the need to write a lot of boilerplate code. 
- *   In the future, however, we should find a better solution. 
- *   For example by developing some common theory of set-like structures?
- *)
-Definition hfsgraph := {fset T * U}.
-
-Implicit Types (g : hfsgraph).
-
-Coercion hrel_of_hfsgraph g : {hrel T & U} := 
-  fun x y => (x, y) \in g.
-
-Definition hfsgraph_apply g : T -> U -> bool := hrel_of_hfsgraph g.
-Coercion hfsgraph_apply : hfsgraph >-> Funclass.
-
-Definition dom g : {fset T} := [fset (fst p) | p in g].
-Definition cod g : {fset U} := [fset (snd p) | p in g].
-
-End hDef.
-
-Arguments hfsgraph T U : clear implicits.
-
-Notation fsgraph T := (hfsgraph T T).
-
-Definition fsgraph0 {T U} : hfsgraph T U := fset0.
-
 Section Def.
-Context {T U : identType}.
-Implicit Types (g : fsgraph T).
-Implicit Types (f : T -> U).
+Context (T : identType) (L : botType).
 
-Definition fld g : {fset T} := dom g `|` cod g.
+Record fsgraph := mk_fsgraph {
+  lab   : {fsfun T -> L with bot};
+  edges : fsrel T;
+}.
 
-Definition fsg_map f g : fsgraph U := 
-  (fun '(x, y) => (f x, f y)) @` g.
+Implicit Types (g : fsgraph).
+
+Definition nodes g := finsupp (lab g).
+
+Coercion rel_of_fsgraph g : rel T := 
+  fun x y => (x, y) \in edges g.
+
+Definition fsgraph_apply g : T -> T -> bool := rel_of_fsgraph g.
+Coercion fsgraph_apply : fsgraph >-> Funclass.
+
+Definition fsgraph0 : fsgraph := 
+  mk_fsgraph [fsfun] fset0.
+
+Definition prod_of_fsgraph g := (lab g, edges g).
+Definition fsgraph_of_prod := fun '(f, es) => mk_fsgraph f es.
+
+Lemma prod_of_fsgraph_inj : injective prod_of_fsgraph.
+Proof. by move=> [??] [??] [-> ->]. Qed.
+
+Lemma prod_of_fsgraphK : cancel prod_of_fsgraph fsgraph_of_prod.
+Proof. by case. Qed.
+
+Definition fsgraph_eqMixin := InjEqMixin (prod_of_fsgraph_inj). 
+Canonical fsgraph_eqType := 
+  Eval hnf in EqType fsgraph fsgraph_eqMixin.
+
+Definition fsgraph_choiceMixin := CanChoiceMixin prod_of_fsgraphK.
+Canonical fsgraph_choiceType := 
+  Eval hnf in ChoiceType fsgraph fsgraph_choiceMixin.
 
 End Def.
 End Def.
+
+Arguments fsgraph0 {T L}.
 
 Module Export Syntax. 
 Notation "[ 'emp' ]" := (fsgraph0)
   (at level 0, format "[ 'emp' ]") : fsgraph_scope.
-Notation "f @` g" := (fsg_map f g)
-  (at level 24) : fsgraph_scope.
-Notation "@! f" := (fun g => f @` g)%fsgraph
-  (at level 10, f at level 8, no associativity, format "@!  f") : fsgraph_scope.
 End Syntax.
+
 
 Module Export Theory.
 Section Theory.
-Context {T U V : identType}.
-Implicit Types (g : fsgraph T).
+Context {T U : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
 
-Lemma fsgraphE g x y : (g x y) = ((x, y) \in g).
+Lemma fsgraphE g x y : (g x y) = ((x, y) \in edges g).
 Proof. done. Qed.
 
-Lemma dom_cod_restr g : 
-  g \<= mem (dom g) \x mem (cod g) :> rel T.
-Proof. 
-  move=> x y /=; rewrite /le_bool /dom /cod /=. 
-  rewrite /hrel_of_hfsgraph=> ing. 
-  by apply/andP; split; apply/imfsetP; exists (x, y).
-Qed.
+Lemma mem_nodes g x : 
+  (x \in nodes g) = (lab g x != bot).
+Proof. by rewrite mem_finsupp. Qed.
 
-Lemma fld_restr g : 
-  g \<= mem (fld g) \x mem (fld g) :> rel T.
-Proof. 
-  move=> x y /dom_cod_restr /= /andP[].
-  by rewrite /fld !inE=> -> -> /=.
-Qed.
+Lemma memNnodes g x : 
+  (x \notin nodes g) = (lab g x == bot).
+Proof. by rewrite memNfinsupp. Qed.
 
-Lemma fsg_map_id g : 
-  id @` g = g.
-Proof. 
-  rewrite /fsg_map; apply/fsetP=> /= [[x y]]. 
-  apply/idP/idP=> [/imfsetP[[??]] /= ? [-> ->]|] //. 
-  by move=> ?; apply/imfsetP; exists (x, y).
-Qed.
-
-Lemma fsg_map_comp f (h : U -> V) g : 
-  (h \o f) @` g = (@! h \o @! f) g.
-Proof.
-  rewrite /fsg_map; apply/fsetP=> /= [[x y]]. 
-  apply/idP/idP=> /imfsetP /= [[{}x {}y]] + [-> ->] /=.
-  - move=> ?; apply/imfsetP; exists (f x, f y)=> //. 
-    by apply/imfsetP; exists (x, y).
-  move=> /imfsetP /= [[{}x {}y]] /[swap] [[-> ->]] ?. 
-  by apply/imfsetP; exists (x, y).
-Qed.
+Lemma lab_bot g x :
+  (x \notin nodes g) -> lab g x = bot.
+Proof. by rewrite memNnodes=> /eqP. Qed.
 
 End Theory.
 End Theory.
+
 
 Module Export Hom.
+Module Export Def.
 Section Def. 
-Context {T : identType}.
-Implicit Types (f : T -> T) (g h : fsgraph T).
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
 
-Definition hom f g h := {homo f : x y / g x y >-> h x y}.
+Definition lab_mono f g h := 
+  {mono f : x / lab g x >-> lab h x}.  
 
-Definition fin_hom g h (ff : {ffun (fld g) -> (fld h)}) := 
+Definition edges_homo f g h :=
+  {in (nodes g) &, {homo f : x y / g x y >-> h x y}}.
+
+Definition hom f g h := 
+  [/\ lab_mono f g h & edges_homo f g h].
+
+Context (g h : fsgraph T L).
+Implicit Types (ff : {ffun (nodes g) -> (nodes h)}).
+
+Definition fin_lab_mono ff := 
+  [forall x, lab h (val (ff x)) == lab g (val x)].
+
+Definition fin_edges_homo ff := 
   [forall x, forall y, (g (val x) (val y)) ==> h (val (ff x)) (val (ff y))].
 
-Definition hom_le g h := [exists ff, @fin_hom g h ff].
+Definition fin_hom ff := 
+  [&& fin_lab_mono ff & fin_edges_homo ff].
 
-Definition hom_lt : rel (fsgraph T) :=
-  fun g h => (h != g) && (hom_le g h).
+Definition hom_le := [exists ff, fin_hom ff].
+Definition hom_lt := (h != g) && hom_le.
 
-Lemma hom_dom f g h x : 
-  hom f g h -> x \in dom g -> f x \in dom h.
-Proof. 
-  move=> homf /imfsetP /= [[_ y]] /[swap] /= <- Hin.
-  apply/imfsetP=> /=; exists (f x, f y)=> //=; exact/homf.
-Qed.
+Lemma lab_mono_mem_nodes f x : 
+  lab_mono f g h -> (x \in nodes g) = (f x \in nodes h).
+Proof. by rewrite !mem_nodes => ->. Qed.
 
-Lemma hom_cod f g h y : 
-  hom f g h -> y \in cod g -> f y \in cod h.
-Proof. 
-  move=> homf /imfsetP /= [[x _]] /[swap] /= <- Hin.
-  apply/imfsetP=> /=; exists (f x, f y)=> //=; exact/homf.
-Qed.
+Lemma lab_mono_nodes f x : 
+  lab_mono f g h -> x \in nodes g -> f x \in nodes h.
+Proof. by rewrite !mem_nodes => ->. Qed.
 
-Lemma hom_fld f g h x : 
-  hom f g h -> x \in fld g -> f x \in fld h.
-Proof. 
-  move=> homf; rewrite /fld !inE. 
-  by move=> /orP[/(hom_dom homf) | /(hom_cod homf)] ->.
-Qed.
-
-Context (g h : fsgraph T).
-Implicit Types (ff : {ffun (fld g) -> (fld h)}).
-
-Definition fin_hom_of f homf : {ffun (fld g) -> (fld h)} := 
-  [ffun x => Sub (f (val x)) (hom_fld homf (valP x))].
+Definition fin_hom_of f labf : {ffun (nodes g) -> (nodes h)} := 
+  [ffun x => Sub (f (val x)) (lab_mono_nodes labf (valP x))].
 
 Definition of_fin_hom ff : T -> T := 
-  fun x => odflt \i0 (omap (val \o ff) (insub x)).
+  fun x => odflt (fresh_seq (nodes h)) (omap (val \o ff) (insub x)).
 
-Lemma fin_hom_ofE f homf x : 
-  let ff := @fin_hom_of f homf in
+End Def.
+End Def.
+
+Arguments fin_lab_mono {T L} g h.
+Arguments fin_edges_homo {T L} g h.
+Arguments fin_hom {T L} g h.
+Arguments fin_hom_of {T L} g h f.
+
+Module Export Theory.
+Section Theory.
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Section FinHom.
+Context (g h : fsgraph T L).
+Context (f : T -> T) (ff : {ffun (nodes g) -> (nodes h)}).
+Hypothesis (Heq : forall x, f (val x) = val (ff x)).
+Hypothesis (Hnodes : forall x, x \notin nodes g -> f x \notin nodes h).
+
+Lemma lab_monoW :
+  lab_mono f g h -> fin_lab_mono g h ff.
+Proof. by move=> /= labf; apply/mono1P=> x; rewrite -labf Heq. Qed.
+
+Lemma fin_lab_monoS :
+  fin_lab_mono g h ff -> lab_mono f g h.
+Proof. 
+  move=> /= /mono1P labf x.
+  case: (x \in nodes g)/idP=> [xin|]; last first.
+  - by move=> /negP /[dup] /Hnodes ??; rewrite !lab_bot.
+  have->: x = val (Sub x xin : nodes g)=> //.
+  by rewrite Heq labf.
+Qed.
+
+Lemma edges_homoP : 
+  reflect (edges_homo f g h) (fin_edges_homo g h ff).
+Proof. 
+  apply/(equivP (homo2P _ _ _))=> /=; split; last first.
+  - move=> homf x y; rewrite -!Heq; exact/homf.
+  move=> homf x y xin yin. 
+  have->: x = val (Sub x xin : nodes g) by done. 
+  have->: y = val (Sub y yin : nodes g) by done. 
+  by move=> /homf; rewrite !Heq. 
+Qed.
+
+Lemma fin_homP : 
+  reflect (hom f g h) (fin_hom g h ff).
+Proof. 
+  apply/andPP; last exact/edges_homoP.
+  apply/(equivP idP); split; [exact/fin_lab_monoS | exact/lab_monoW].
+Qed.
+
+End FinHom.
+
+Lemma fin_hom_ofE g h f labf x : 
+  let ff := fin_hom_of g h f labf in
   f (val x) = val (ff x).
 Proof. by rewrite /fin_hom_of /= ffunE. Qed.
 
-Lemma of_fin_homE ff x : 
-  let f := @of_fin_hom ff in
+Lemma of_fin_homE g h (ff : {ffun (nodes g) -> (nodes h)}) x : 
+  let f := of_fin_hom ff in
   f (val x) = val (ff x).
 Proof. by rewrite /of_fin_hom /= insubT // => ?; rewrite sub_val. Qed.
 
-Lemma fin_hom_ofK f homf x : 
-  x \in fld g -> of_fin_hom (@fin_hom_of f homf) x = f x.
+Lemma of_fin_hom_nodes g h (ff : {ffun (nodes g) -> (nodes h)}) x :
+  let f := of_fin_hom ff in
+  x \notin nodes g -> f x \notin nodes h.
 Proof. 
-  move=> xin; have->: x = val (Sub x xin : fld g) by done.  
-  by rewrite of_fin_homE fin_hom_ofE.
+  move=> f xnin; rewrite /f /of_fin_hom insubF /=; last exact: negPf.
+  exact/fresh_seq_nmem. 
+Qed.
+  
+Lemma fin_hom_ofK g h f labf x : 
+  x \in nodes g -> of_fin_hom (fin_hom_of g h f labf) x = f x.
+Proof. 
+  move=> xin; have->: x = val (Sub x xin : nodes g) by done.  
+  by rewrite of_fin_homE (fin_hom_ofE labf).
 Qed.
 
-Context (f : T -> T) (ff : {ffun (fld g) -> (fld h)}).
-Hypothesis (feq : forall x, f (val x) = val (ff x)).
-
-Lemma fin_homP : 
-  reflect (hom f g h) (@fin_hom g h ff).
-Proof. 
-  apply/(equivP (homo2P _ _ _))=> /=; split; last first.
-  - move=> homf x y; rewrite -!feq; exact/homf.
-  move=> homf x y /[dup] /fld_restr /= /andP[xin yin]. 
-  have->: x = val (Sub x xin : fld g) by done. 
-  have->: y = val (Sub y yin : fld g) by done. 
-  by move=> /homf; rewrite !feq. 
+Lemma hom_leP g h :
+  reflect (exists f, hom f g h) (hom_le g h).
+Proof.
+  apply/(equivP (existsPP _)). 
+  - move=> /= ff; apply/fin_homP; first exact/of_fin_homE.
+    exact/of_fin_hom_nodes.
+  move=> /=; split=> [[ff] ? | [f]].
+  - by exists (of_fin_hom ff).
+  move=> [labf homf]; exists (fin_hom_of g h f labf); split; last first.
+  - move=> x y xin yin; rewrite !fin_hom_ofK //; exact/homf.
+  move=> x; case: (x \in nodes g)/idP=> [xin|].
+  - rewrite fin_hom_ofK //; exact/labf.
+  move=> /negP xnin; rewrite /of_fin_hom insubF /=; last exact: negPf. 
+  rewrite !lab_bot //; exact/fresh_seq_nmem.
 Qed.
 
-End Def.
+Lemma hom_lt_def g h : 
+  hom_lt g h = (h != g) && (hom_le g h).
+Proof. done. Qed.
 
-Arguments fin_hom {T} g h.
+Lemma hom_le_refl : 
+  reflexive (@hom_le T L).
+Proof. by move=> g; apply/hom_leP; exists id; split. Qed.
+
+Lemma hom_le_trans : 
+  transitive (@hom_le T L).
+Proof. 
+  move=> ??? /hom_leP[f] homf /hom_leP[g] homg. 
+  apply/hom_leP; exists (g \o f). 
+  admit.
+Admitted.
+
+Lemma hom_le_emp g : hom_le [emp] g.
+Proof. apply/hom_leP; exists id; split=> //. admit. Admitted. 
+
+End Theory.
+End Theory.
 
 Section Theory.
 Context {T : identType}.
@@ -220,36 +277,6 @@ Proof.
   by rewrite -!fsgraphE=> /homf.
 Qed.
 
-Lemma hom_leP g h :
-  reflect (exists f, hom f g h) (hom_le g h).
-Proof.
-  apply/(equivP (existsPP _)). 
-  - by move=> /= ff; apply/fin_homP/of_fin_homE. 
-  move=> /=; split=> [[ff] ? | [f]].
-  - by exists (of_fin_hom ff).
-  move=> homf; exists (fin_hom_of homf).
-  move=> x y /[dup] /fld_restr /andP[??]. 
-  rewrite !fin_hom_ofK //; exact/homf.
-Qed. 
-
-Lemma hom_lt_def g h : 
-  hom_lt g h = (h != g) && (hom_le g h).
-Proof. done. Qed.
-
-Lemma hom_le_refl : 
-  reflexive (@hom_le T).
-Proof. by move=> g; apply/hom_leP; exists id. Qed.
-
-Lemma hom_le_trans : 
-  transitive (@hom_le T).
-Proof. 
-  move=> ??? /hom_leP[f] homf /hom_leP[g] homg. 
-  apply/hom_leP; exists (g \o f)=> ??? /=. 
-  exact/homg/homf.
-Qed.
-
-Lemma hom_le_emp g : hom_le [emp] g.
-Proof. by apply/hom_leP; exists id. Qed.
 
 End Theory.
 
