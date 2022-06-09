@@ -12,15 +12,16 @@
 theories/common/utils.v
 theories/common/seq.v
 theories/common/fperm.v
-theories/common/rel_algebra.v
+theories/common/order.v
 theories/common/wftype.v
 theories/common/inhtype.v
 theories/common/ident.v
 theories/common/ilia.v
-theories/common/rewriting_system.v
+theories/common/rel_algebra.v
 theories/common/rel.v
-theories/common/order.v
+theories/common/fsrel.v
 theories/common/monoid.v
+theories/common/rewriting_system.v
 
 theories/concur/lts.v
 theories/concur/lposet.v
