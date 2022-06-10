@@ -197,7 +197,7 @@ Qed.
 Lemma fin_homP : lab_mono_bot f g h ->
   reflect (hom f g h) (fin_hom g h ff).
 Proof. 
-  move=> nlabf; apply/andPP; last exact/edge_homoP.
+  move=> nlabf; apply/(andPP _ edge_homoP).
   apply/(equivP lab_monoP).
   apply: iff_trans; last first.
   - apply: iff_sym; exact/(in1_split (mem (nodes g))). 
@@ -583,5 +583,132 @@ End Theory.
 End Theory.
 
 End bHom.
+
+
+Module Export Emb.
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Definition edge_mono f g h :=
+  {in (nodes g) &, {mono f : x y / g x y >-> h x y}}.
+
+Definition emb f g h := 
+  [/\ lab_mono f g h & edge_mono f g h].
+
+Context (g h : fsgraph T L).
+Implicit Types (ff : {ffun (nodes g) -> (nodes h)}).
+
+Definition fin_edge_mono ff := 
+  [forall x, forall y, h (val (ff x)) (val (ff y)) == (g (val x) (val y))].
+
+Definition fin_emb ff := 
+  [&& fin_lab_mono g h ff & fin_edge_mono ff].
+
+Definition emb_le := [exists ff, fin_emb ff].
+Definition emb_lt := (h != g) && emb_le.
+
+End Def.
+End Def.
+
+Arguments fin_edge_mono {T L} g h.
+Arguments fin_emb {T L} g h.
+
+
+Module Export Theory.
+Section Theory.
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Section FinEmb.
+Context (g h : fsgraph T L).
+Context (f : T -> T) (ff : {ffun (nodes g) -> (nodes h)}).
+Hypothesis (Heq : forall x, f (val x) = val (ff x)).
+
+Lemma edge_monoP : 
+  reflect (edge_mono f g h) (fin_edge_mono g h ff).
+Proof. 
+  apply/(equivP (mono2P _ _ _))=> /=; split; last first.
+  - move=> monf x y; rewrite -!Heq monf //; exact/valP.
+  move=> monf x y xin yin. 
+  have->: x = val (Sub x xin : nodes g) by done. 
+  have->: y = val (Sub y yin : nodes g) by done. 
+  by rewrite !Heq monf. 
+Qed.
+
+Lemma fin_embP : lab_mono_bot f g h ->
+  reflect (emb f g h) (fin_emb g h ff).
+Proof. 
+  move=> nlabf; apply/(andPP _ edge_monoP). 
+  apply/(equivP (lab_monoP Heq)).
+  apply: iff_trans; last first.
+  - apply: iff_sym; exact/(in1_split (mem (nodes g))). 
+  by split=> [|[]] // labf; split. 
+Qed.
+
+End FinEmb.
+
+(* TODO: generalize *)
+Lemma eq_in_edge_mono f f' g h : {in (nodes g), f =1 f'} ->
+  edge_mono f g h <-> edge_mono f' g h.
+Proof.
+  move=> eqf; split=> monf x y ??.
+  - rewrite -!eqf //; exact/monf.
+ rewrite !eqf //; exact/monf.
+Qed.
+
+Lemma edge_mono_comp f f' g h j : lab_mono f g h ->
+  edge_mono f g h -> edge_mono f' h j -> edge_mono (f' \o f) g j.
+Proof. 
+  move=> labf monf monf' x y ?? /=. 
+  by rewrite monf' ?monf // -(lab_mono_mem_nodes labf).
+Qed.
+
+Lemma emb_comp f f' g h j : lab_mono f g h ->
+  emb f g h -> emb f' h j -> emb (f' \o f) g j.
+Proof. 
+  move=> labf [??] [??]. 
+  split; [exact/lab_mono_comp | exact/edge_mono_comp]. 
+Qed.
+
+Lemma emb_leP g h :
+  reflect (exists f, emb f g h) (emb_le g h).
+Proof.
+  apply/(equivP (existsPP _)). 
+  - move=> /= ff; apply/fin_embP; first exact/of_fin_homE.
+    exact/of_fin_hom_bot.
+  move=> /=; split=> [[ff] ? | [f]].
+  - by exists (of_fin_hom ff).
+  move=> [labf homf]; exists (fin_hom_of g h f labf); split; last first.
+  - apply/eq_in_edge_mono; [exact/fin_hom_ofK | exact/homf].
+  apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+Qed. 
+
+Lemma emb_lt_def g h : 
+  emb_lt g h = (h != g) && (emb_le g h).
+Proof. done. Qed.
+
+Lemma emb_le_refl : 
+  reflexive (@emb_le T L).
+Proof. by move=> g; apply/emb_leP; exists id; split. Qed.
+
+Lemma emb_le_trans : 
+  transitive (@emb_le T L).
+Proof. 
+  move=> ??? /emb_leP[f] /[dup] [[? _]] ? /emb_leP[g] ?. 
+  apply/emb_leP; exists (g \o f); exact/emb_comp.
+Qed.
+
+(* Lemma hom_le_emp g : hom_le [emp] g. *)
+(* Proof.  *)
+(*   apply/hom_leP; exists (fun x => fresh_seq (nodes g)).  *)
+(*   split=> // x; rewrite !lab_bot ?nodes_emp ?inE //.  *)
+(*   exact/fresh_seq_nmem. *)
+(* Qed. *)
+
+End Emb.
 
 End FsGraph.
