@@ -140,9 +140,9 @@ Definition fin_hom ff :=
 Definition hom_le := [exists ff, fin_hom ff].
 Definition hom_lt := (h != g) && hom_le.
 
-Lemma lab_mono_mem_nodes f x : 
-  lab_mono f g h -> (x \in nodes g) = (f x \in nodes h).
-Proof. by rewrite !mem_nodes => ->. Qed.
+Lemma lab_mono_mem_nodes f : lab_mono f g h ->
+  forall x, (x \in nodes g) = (f x \in nodes h).
+Proof. by move=> labf x; rewrite !mem_nodes labf. Qed.
 
 Lemma lab_mono_nodes f x : 
   lab_mono f g h -> x \in nodes g -> f x \in nodes h.
@@ -426,5 +426,162 @@ End Theory.
 End Theory.
 
 End iHom.
+
+
+Module Export bHom.
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Definition nodes_bij f h :=
+  {on (nodes h), bijective f}.
+
+Definition bhom f g h := 
+  [/\ hom f g h & nodes_bij f h].
+
+Context (g h : fsgraph T L).
+Implicit Types (ff : {ffun (nodes g) -> (nodes h)}).
+
+Definition fin_bhom ff := 
+  [&& fin_hom g h ff & bijectiveb ff].
+
+Definition bhom_le := [exists ff, fin_bhom ff].
+Definition bhom_lt := (h != g) && bhom_le.
+
+End Def.
+End Def.
+
+Arguments fin_bhom {T L} g h.
+
+Module Export Theory.
+Section Theory.
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Section FinBHom.
+Context (g h : fsgraph T L).
+Context (f : T -> T) (ff : {ffun (nodes g) -> (nodes h)}).
+Hypothesis (Heq : forall x, f (val x) = val (ff x)).
+
+Lemma nodes_bijP : lab_mono f g h ->
+  reflect (nodes_bij f h) (bijectiveb ff).
+Proof.
+  move=> labf; apply/(equivP (bijectiveP _)); split.
+  - move=> [] ff' K K'.
+    pose f' := of_fin_hom [ffun x => ff' x].
+    have Heq': forall x, f' (val x) = val (ff' x).
+    + move=> /= x; rewrite /f' /of_fin_hom insubT //= => xin. 
+      by rewrite ffunE sub_val.
+    exists f'=> [x | x xin]; last first.
+    + have->: x = val (Sub x xin : nodes h) by done.
+      by rewrite Heq' Heq K'.
+    move=> /[dup] fxin. 
+    rewrite -(lab_mono_mem_nodes labf) => xin. 
+    have->: x = val (Sub x xin : nodes g) by done.
+    by rewrite Heq Heq' K.
+  case=> f' K K'.
+  have suppf' : forall x, x \in nodes h -> (f' x) \in nodes g.
+  - move=> x /[dup] xin; rewrite !mem_nodes. 
+    by rewrite -[x in lab h x]K' // labf. 
+  pose ff' : (nodes h) -> (nodes g) := 
+    fun x => Sub (f' (val x)) (suppf' (val x) (valP x)). 
+  exists ff'=> x; rewrite /ff'; apply/val_inj => /=. 
+  - rewrite -Heq K // -(lab_mono_mem_nodes labf); exact/valP.
+  by rewrite -Heq K' //. 
+Qed.
+
+Lemma fin_bhomP : lab_mono_bot f g h ->
+  reflect (bhom f g h) (fin_bhom g h ff).
+Proof. 
+  move=> nlabf; apply/(equivP idP); split.
+  - move=> /andP[] /(fin_homP Heq nlabf) homf bijf; split=> //.
+    by apply/nodes_bijP=> //; case: homf.
+  move=> [homf bijf]; apply/andP; split; first exact/fin_homP.
+  by apply/nodes_bijP=> //; case: homf.
+Qed.
+
+End FinBHom.
+
+(* TODO: generalize? *)
+Lemma eq_in_nodes_bij f f' g h : lab_mono f g h -> lab_mono f' g h -> 
+  {in (nodes g), f =1 f'} -> nodes_bij f h <-> nodes_bij f' h.
+Proof.
+  move=> labf labf' eqf; split=> [] [ff] K K'; exists ff=> x. 
+  - move=> /[dup] fxin.
+    rewrite -(lab_mono_mem_nodes labf')=> xin.
+    by rewrite -eqf ?K -?(lab_mono_mem_nodes labf). 
+  - move=> xin; rewrite -eqf ?K' //.
+    by rewrite (lab_mono_mem_nodes labf) K'. 
+  - move=> /[dup] fxin.
+    rewrite -(lab_mono_mem_nodes labf)=> xin.
+    by rewrite eqf ?K // -eqf.
+  move=> xin; rewrite eqf ?K' //.
+  by rewrite (lab_mono_mem_nodes labf') K'. 
+Qed.
+
+Lemma bhom_comp fg fh g h j : 
+  bhom fg g h -> bhom fh h j -> bhom (fh \o fg) g j.
+Proof. 
+  move=> [] /[dup] [[labfg _]] homfg bijfg. 
+  move=> [] /[dup] [[labfh _]] homfh bijfh. 
+  split; first exact/hom_comp. 
+  case: bijfg=> fg' Kg Kg'; case: bijfh=> fh' Kh Kh'.  
+  exists (fg' \o fh')=> x /= xin.
+  - by rewrite Kh ?Kg ?(lab_mono_mem_nodes labfh). 
+  by rewrite Kg' ?Kh' ?(lab_mono_mem_nodes labfh) ?Kh'. 
+Qed.
+
+Lemma bhom_leP g h :
+  reflect (exists f, bhom f g h) (bhom_le g h).
+Proof.
+  apply/(equivP (existsPP _)). 
+  - move=> /= ff; apply/fin_bhomP; first exact/of_fin_homE.
+    exact/of_fin_hom_bot.
+  move=> /=; split=> [[ff] ? | [f]].
+  - by exists (of_fin_hom ff).
+  move=> [[labf homf] bijf]; exists (fin_hom_of g h f labf); repeat split. 
+  - apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+  - apply/eq_in_edge_homo; [exact/fin_hom_ofK | exact/homf].
+  apply/(eq_in_nodes_bij _ labf)=> //; last exact/fin_hom_ofK.  
+  apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+Qed.
+
+Lemma bhom_ihom_le g h : 
+  bhom_le g h -> ihom_le g h.
+Proof. 
+  move=> /bhom_leP /= [f] [homf bijf].
+  apply/ihom_leP; exists f; split=> //.
+  move: homf bijf=> [labf _]. 
+  pose ff := fin_hom_of g h f labf.
+  move=> /(nodes_bijP (fin_hom_ofE labf) labf) /bijectiveP bijff. 
+  exact/(nodes_injP (fin_hom_ofE labf))/injectiveP/bij_inj.
+Qed.
+
+Lemma bhom_le_size g h : 
+  bhom_le g h -> (#|`nodes g| <= #|`nodes h|)%N.
+Proof. by move=> /bhom_ihom_le /ihom_le_size. Qed.
+
+Lemma bhom_lt_def g h : 
+  bhom_lt g h = (h != g) && (bhom_le g h).
+Proof. done. Qed.
+
+Lemma bhom_le_refl : 
+  reflexive (@bhom_le T L).
+Proof. by move=> g; apply/bhom_leP; exists id; repeat split=> //; exists id. Qed.
+
+Lemma bhom_le_trans : 
+  transitive (@bhom_le T L).
+Proof. 
+  move=> ??? /bhom_leP[f] /[dup] [[[? _] _]] ? /bhom_leP[g] ?. 
+  by apply/bhom_leP; exists (g \o f); apply/bhom_comp; eauto.
+Qed.
+
+End Theory.
+End Theory.
+
+End bHom.
 
 End FsGraph.
