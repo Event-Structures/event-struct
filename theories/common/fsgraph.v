@@ -427,30 +427,4 @@ End Theory.
 
 End iHom.
 
-Section KleeneAlgebra.
-Context {T U : identType}.
-
-Canonical Structure fsgraph_lattice_ops : lattice.ops := {|
-  lattice.car := @hfsgraph T U;
-  lattice.leq := fsubset;
-  lattice.weq := eq_op;
-  lattice.cup := fsetU;
-  lattice.cap := fsetI;
-  lattice.neg := (fun _ => fset0);
-  lattice.bot := fset0;
-  lattice.top := fset0;
-|}.
-
-Lemma hrel_of_hfsgrpa_morph : 
-  lattice.morphism (CUP+CAP+BOT) hrel_of_hfsgraph.
-Proof.
-  split; try done.
-  - by move=> ?? /fsubsetP subs ?? /= /subs.
-  - by move=> ?? /eqP ->.
-  all: by move=> ??? /= ?? /=; rewrite /hrel_of_hfsgraph inE. 
-Qed.
-
-End KleeneAlgebra.
-
 End FsGraph.
-
