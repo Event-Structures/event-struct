@@ -98,6 +98,10 @@ Lemma lab_bot g x :
   (x \notin nodes g) -> lab g x = bot.
 Proof. by rewrite memNnodes=> /eqP. Qed.
 
+Lemma nodes_emp : 
+  nodes ([emp] : fsgraph T L) = fset0.
+Proof. by rewrite /nodes finsupp0. Qed.
+
 End Theory.
 End Theory.
 
@@ -112,11 +116,11 @@ Implicit Types (f : T -> T).
 Definition lab_mono f g h := 
   {mono f : x / lab g x >-> lab h x}.  
 
-Definition edges_homo f g h :=
+Definition edge_homo f g h :=
   {in (nodes g) &, {homo f : x y / g x y >-> h x y}}.
 
 Definition hom f g h := 
-  [/\ lab_mono f g h & edges_homo f g h].
+  [/\ lab_mono f g h & edge_homo f g h].
 
 Context (g h : fsgraph T L).
 Implicit Types (ff : {ffun (nodes g) -> (nodes h)}).
@@ -124,11 +128,11 @@ Implicit Types (ff : {ffun (nodes g) -> (nodes h)}).
 Definition fin_lab_mono ff := 
   [forall x, lab h (val (ff x)) == lab g (val x)].
 
-Definition fin_edges_homo ff := 
+Definition fin_edge_homo ff := 
   [forall x, forall y, (g (val x) (val y)) ==> h (val (ff x)) (val (ff y))].
 
 Definition fin_hom ff := 
-  [&& fin_lab_mono ff & fin_edges_homo ff].
+  [&& fin_lab_mono ff & fin_edge_homo ff].
 
 Definition hom_le := [exists ff, fin_hom ff].
 Definition hom_lt := (h != g) && hom_le.
@@ -151,7 +155,7 @@ End Def.
 End Def.
 
 Arguments fin_lab_mono {T L} g h.
-Arguments fin_edges_homo {T L} g h.
+Arguments fin_edge_homo {T L} g h.
 Arguments fin_hom {T L} g h.
 Arguments fin_hom_of {T L} g h f.
 
@@ -181,8 +185,8 @@ Proof.
   by rewrite Heq labf.
 Qed.
 
-Lemma edges_homoP : 
-  reflect (edges_homo f g h) (fin_edges_homo g h ff).
+Lemma edge_homoP : 
+  reflect (edge_homo f g h) (fin_edge_homo g h ff).
 Proof. 
   apply/(equivP (homo2P _ _ _))=> /=; split; last first.
   - move=> homf x y; rewrite -!Heq; exact/homf.
@@ -195,11 +199,22 @@ Qed.
 Lemma fin_homP : 
   reflect (hom f g h) (fin_hom g h ff).
 Proof. 
-  apply/andPP; last exact/edges_homoP.
+  apply/andPP; last exact/edge_homoP.
   apply/(equivP idP); split; [exact/fin_lab_monoS | exact/lab_monoW].
 Qed.
 
 End FinHom.
+
+Lemma lab_mono_comp f f' g h j : 
+  lab_mono f g h -> lab_mono f' h j -> lab_mono (f' \o f) g j.
+Proof. by move=> labf labf' x /=; rewrite labf' labf. Qed.
+
+Lemma edge_homo_comp f f' g h j : lab_mono f g h ->
+  edge_homo f g h -> edge_homo f' h j -> edge_homo (f' \o f) g j.
+Proof. 
+  move=> labf homf homf' x y ??? /=. 
+  by apply/homf'/homf=> //; apply/lab_mono_nodes. 
+Qed.
 
 Lemma fin_hom_ofE g h f labf x : 
   let ff := fin_hom_of g h f labf in
@@ -253,13 +268,17 @@ Proof. by move=> g; apply/hom_leP; exists id; split. Qed.
 Lemma hom_le_trans : 
   transitive (@hom_le T L).
 Proof. 
-  move=> ??? /hom_leP[f] homf /hom_leP[g] homg. 
+  move=> ??? /hom_leP[f] [labf homf] /hom_leP[g] [labg homg]. 
   apply/hom_leP; exists (g \o f). 
-  admit.
-Admitted.
+  split; [exact/lab_mono_comp | exact/edge_homo_comp]. 
+Qed.
 
 Lemma hom_le_emp g : hom_le [emp] g.
-Proof. apply/hom_leP; exists id; split=> //. admit. Admitted. 
+Proof. 
+  apply/hom_leP; exists (fun x => fresh_seq (nodes g)). 
+  split=> // x; rewrite !lab_bot ?nodes_emp ?inE //. 
+  exact/fresh_seq_nmem.
+Qed.
 
 End Theory.
 End Theory.
