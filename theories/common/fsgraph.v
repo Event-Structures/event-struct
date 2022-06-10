@@ -116,6 +116,9 @@ Implicit Types (f : T -> T).
 Definition lab_mono f g h := 
   {mono f : x / lab g x >-> lab h x}.  
 
+Definition lab_mono_bot f g h := 
+  {in [pred x | x \notin nodes g], lab_mono f g h}.
+
 Definition edge_homo f g h :=
   {in (nodes g) &, {homo f : x y / g x y >-> h x y}}.
 
@@ -169,19 +172,14 @@ Section FinHom.
 Context (g h : fsgraph T L).
 Context (f : T -> T) (ff : {ffun (nodes g) -> (nodes h)}).
 Hypothesis (Heq : forall x, f (val x) = val (ff x)).
-Hypothesis (Hnodes : forall x, x \notin nodes g -> f x \notin nodes h).
 
-Lemma lab_monoW :
-  lab_mono f g h -> fin_lab_mono g h ff.
-Proof. by move=> /= labf; apply/mono1P=> x; rewrite -labf Heq. Qed.
-
-Lemma fin_lab_monoS :
-  fin_lab_mono g h ff -> lab_mono f g h.
+Lemma lab_monoP : 
+  reflect {in (nodes g), lab_mono f g h} (fin_lab_mono g h ff).
 Proof. 
-  move=> /= /mono1P labf x.
-  case: (x \in nodes g)/idP=> [xin|]; last first.
-  - by move=> /negP /[dup] /Hnodes ??; rewrite !lab_bot.
-  have->: x = val (Sub x xin : nodes g)=> //.
+  apply/(equivP (mono1P _ _ _))=> /=; split; last first.
+  - move=> labf x; rewrite -!Heq labf //; exact/valP. 
+  move=> labf x xin. 
+  have->: x = val (Sub x xin : nodes g) by done. 
   by rewrite Heq labf.
 Qed.
 
@@ -196,14 +194,35 @@ Proof.
   by move=> /homf; rewrite !Heq. 
 Qed.
 
-Lemma fin_homP : 
+Lemma fin_homP : lab_mono_bot f g h ->
   reflect (hom f g h) (fin_hom g h ff).
 Proof. 
-  apply/andPP; last exact/edge_homoP.
-  apply/(equivP idP); split; [exact/fin_lab_monoS | exact/lab_monoW].
+  move=> nlabf; apply/andPP; last exact/edge_homoP.
+  apply/(equivP lab_monoP).
+  apply: iff_trans; last first.
+  - apply: iff_sym; exact/(in1_split (mem (nodes g))). 
+  by split=> [|[]] // labf; split. 
 Qed.
 
 End FinHom.
+
+(* TODO: generalize to monomorphism? *)
+Lemma lab_mono_eq f f' g h : {in (nodes g), f' =1 f} ->
+  lab_mono f g h -> lab_mono_bot f' g h -> lab_mono f' g h.
+Proof.
+  move=> eqf labf labf'. 
+  apply/in1_split; split; last exact/labf'.
+  by move=> x xin; rewrite eqf.
+Qed.
+
+(* TODO: generalize to homomorphism? *)
+Lemma eq_in_edge_homo f f' g h : {in (nodes g), f =1 f'} ->
+  edge_homo f g h <-> edge_homo f' g h.
+Proof.
+  move=> eqf; split=> homf x y ??.
+  - rewrite -!eqf //; exact/homf.
+ rewrite !eqf //; exact/homf.
+Qed.
 
 Lemma lab_mono_comp f f' g h j : 
   lab_mono f g h -> lab_mono f' h j -> lab_mono (f' \o f) g j.
@@ -213,7 +232,14 @@ Lemma edge_homo_comp f f' g h j : lab_mono f g h ->
   edge_homo f g h -> edge_homo f' h j -> edge_homo (f' \o f) g j.
 Proof. 
   move=> labf homf homf' x y ??? /=. 
-  by apply/homf'/homf=> //; apply/lab_mono_nodes. 
+  apply/homf'/homf=> //; exact/lab_mono_nodes. 
+Qed.
+
+Lemma hom_comp f f' g h j : lab_mono f g h ->
+  hom f g h -> hom f' h j -> hom (f' \o f) g j.
+Proof. 
+  move=> labf [??] [??]. 
+  split; [exact/lab_mono_comp | exact/edge_homo_comp]. 
 Qed.
 
 Lemma fin_hom_ofE g h f labf x : 
@@ -226,12 +252,13 @@ Lemma of_fin_homE g h (ff : {ffun (nodes g) -> (nodes h)}) x :
   f (val x) = val (ff x).
 Proof. by rewrite /of_fin_hom /= insubT // => ?; rewrite sub_val. Qed.
 
-Lemma of_fin_hom_nodes g h (ff : {ffun (nodes g) -> (nodes h)}) x :
+Lemma of_fin_hom_bot g h (ff : {ffun (nodes g) -> (nodes h)}) :
   let f := of_fin_hom ff in
-  x \notin nodes g -> f x \notin nodes h.
+  lab_mono_bot f g h.
 Proof. 
-  move=> f xnin; rewrite /f /of_fin_hom insubF /=; last exact: negPf.
-  exact/fresh_seq_nmem. 
+  move=> f x; rewrite inE /f /of_fin_hom=> xnin.
+  rewrite insubF /=; last exact: negPf.
+  rewrite !lab_bot //; exact/fresh_seq_nmem. 
 Qed.
   
 Lemma fin_hom_ofK g h f labf x : 
@@ -246,16 +273,13 @@ Lemma hom_leP g h :
 Proof.
   apply/(equivP (existsPP _)). 
   - move=> /= ff; apply/fin_homP; first exact/of_fin_homE.
-    exact/of_fin_hom_nodes.
+    exact/of_fin_hom_bot.
   move=> /=; split=> [[ff] ? | [f]].
   - by exists (of_fin_hom ff).
   move=> [labf homf]; exists (fin_hom_of g h f labf); split; last first.
-  - move=> x y xin yin; rewrite !fin_hom_ofK //; exact/homf.
-  move=> x; case: (x \in nodes g)/idP=> [xin|].
-  - rewrite fin_hom_ofK //; exact/labf.
-  move=> /negP xnin; rewrite /of_fin_hom insubF /=; last exact: negPf. 
-  rewrite !lab_bot //; exact/fresh_seq_nmem.
-Qed.
+  - apply/eq_in_edge_homo; [exact/fin_hom_ofK | exact/homf].
+  apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+Qed.   
 
 Lemma hom_lt_def g h : 
   hom_lt g h = (h != g) && (hom_le g h).
@@ -268,9 +292,8 @@ Proof. by move=> g; apply/hom_leP; exists id; split. Qed.
 Lemma hom_le_trans : 
   transitive (@hom_le T L).
 Proof. 
-  move=> ??? /hom_leP[f] [labf homf] /hom_leP[g] [labg homg]. 
-  apply/hom_leP; exists (g \o f). 
-  split; [exact/lab_mono_comp | exact/edge_homo_comp]. 
+  move=> ??? /hom_leP[f] /[dup] [[? _]] ? /hom_leP[g] ?. 
+  apply/hom_leP; exists (g \o f); exact/hom_comp.
 Qed.
 
 Lemma hom_le_emp g : hom_le [emp] g.
@@ -283,110 +306,123 @@ Qed.
 End Theory.
 End Theory.
 
-Section Theory.
-Context {T : identType}.
-Implicit Types (f : T -> T) (g h : fsgraph T).
-
-Lemma hom_mapP f g h : 
-  reflect (hom f g h) (f @` g `<=` h).
-Proof. 
-  apply/equivP; first exact/fsubsetP; split. 
-  - by move=> subs x y ?; apply/subs/imfsetP; exists (x, y).
-  move=> homf [??] /imfsetP[[??]] /= + [-> ->]. 
-  by rewrite -!fsgraphE=> /homf.
-Qed.
-
-
-End Theory.
-
 End Hom.
 
 
 Module Export iHom.
+Module Export Def.
 Section Def. 
-Context {T : identType}.
-Implicit Types (f : T -> T) (g h : fsgraph T).
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Definition nodes_inj f g := 
+  {in (nodes g) &, injective f}.
 
 Definition ihom f g h := 
-  [/\ {homo f : x y / g x y >-> h x y}
-    & {in (fld g) &, injective f}
-  ].
+  [/\ hom f g h & nodes_inj f g].
 
-Definition fin_ihom g h (ff : {ffun (fld g) -> (fld h)}) := 
-  fin_hom g h ff && injectiveb ff.
+Context (g h : fsgraph T L).
+Implicit Types (ff : {ffun (nodes g) -> (nodes h)}).
 
-Definition ihom_le g h := [exists ff, @fin_ihom g h ff].
+Definition fin_ihom ff := 
+  [&& fin_hom g h ff & injectiveb ff].
 
-Definition ihom_lt : rel (fsgraph T) :=
-  fun g h => (h != g) && (ihom_le g h).
-
-Context (g h : fsgraph T).
-Context (f : T -> T) (ff : {ffun (fld g) -> (fld h)}).
-Hypothesis (feq : forall x : fld g, f (val x) = val (ff x)).
-
-Lemma fin_ihomP : 
-  reflect (ihom f g h) (@fin_ihom g h ff).
-Proof. 
-  apply/(equivP (andPP (fin_homP _) _)) => //; last exact: iff_refl.
-  apply/(equivP (injectiveP _)); split=> injf /= x y; last first.
-  - move=> H; apply/val_inj/injf; try exact/valP.
-    by rewrite !feq H.
-  move=> xin yin.
-  have->: x = val (Sub x xin : fld g) by done.
-  have->: y = val (Sub y yin : fld g) by done.
-  by rewrite !feq=> /val_inj/injf ->.
-Qed.
+Definition ihom_le := [exists ff, fin_ihom ff].
+Definition ihom_lt := (h != g) && ihom_le.
 
 End Def.
+End Def.
 
-Arguments fin_ihom {T} g h.
+Arguments fin_ihom {T L} g h.
 
-Module Export Syntax. 
-Notation "g \subgraph h" := (ihom_le g h)
-  (at level 70, format "g  \subgraph  h") : fsgraph_scope.
-End Syntax.
 
+Module Export Theory.
 Section Theory.
-Context {T : identType}.
-Implicit Types (f : T -> T) (g h : fsgraph T).
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Section FinIHom.
+Context (g h : fsgraph T L).
+Context (f : T -> T) (ff : {ffun (nodes g) -> (nodes h)}).
+Hypothesis (Heq : forall x, f (val x) = val (ff x)).
+
+Lemma nodes_injP : 
+  reflect (nodes_inj f g) (injectiveb ff).
+Proof. 
+  apply/(equivP (injectiveP _)). split=> injf /= x y; last first.
+  - move=> H; apply/val_inj/injf; try exact/valP.
+    by rewrite !Heq H.
+  move=> xin yin.
+  have->: x = val (Sub x xin : nodes g) by done.
+  have->: y = val (Sub y yin : nodes g) by done.
+  by rewrite !Heq=> /val_inj/injf ->.
+Qed.
+
+Lemma fin_ihomP : lab_mono_bot f g h ->
+  reflect (ihom f g h) (fin_ihom g h ff).
+Proof. by move=> nlabf; apply/(andPP (fin_homP Heq nlabf) nodes_injP). Qed. 
+
+End FinIHom.
+
+(* TODO: generalize? *)
+Lemma eq_in_nodes_inj f f' g : {in (nodes g), f =1 f'} ->
+  nodes_inj f g <-> nodes_inj f' g.
+Proof.
+  move=> eqf; split=> injf x y ??.
+  - rewrite -!eqf // => ?; exact/injf.
+ rewrite !eqf // => ?; exact/injf.
+Qed.
+
+Lemma ihom_comp f f' g h j : lab_mono f g h ->
+  ihom f g h -> ihom f' h j -> ihom (f' \o f) g j.
+Proof. 
+  move=> labf [? injf] [? injf']; split; first exact/hom_comp. 
+  move=> x y ?? /= ?; apply/injf/injf'=> //; exact/lab_mono_nodes. 
+Qed.
 
 Lemma ihom_leP g h :
   reflect (exists f, ihom f g h) (ihom_le g h).
 Proof.
   apply/(equivP (existsPP _)). 
-  - by move=> /= ff; apply/fin_ihomP/of_fin_homE. 
+  - move=> /= ff; apply/fin_ihomP; first exact/of_fin_homE.
+    exact/of_fin_hom_bot.
   move=> /=; split=> [[ff] ? | [f]].
   - by exists (of_fin_hom ff).
-  move=> [homf injf]; exists (fin_hom_of homf); split. 
-  - move=> x y /[dup] /fld_restr /andP[??]. 
-    rewrite !fin_hom_ofK //; exact/homf.
-  move=> x y ??; rewrite !fin_hom_ofK //; exact/injf.
-Qed. 
+  move=> [[labf homf] injf]; exists (fin_hom_of g h f labf); repeat split. 
+  - apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+  - apply/eq_in_edge_homo; [exact/fin_hom_ofK | exact/homf].
+  apply/eq_in_nodes_inj; [exact/fin_hom_ofK | exact/injf].
+Qed.
 
 Lemma ihom_le_size g h : 
-  ihom_le g h -> (#|`fld g| <= #|`fld h|)%N.
+  ihom_le g h -> (#|`nodes g| <= #|`nodes h|)%N.
 Proof. by rewrite !cardfE=> /existsP /= [f] /andP[_ /injectiveP] /leq_card. Qed.
-  
+
 Lemma ihom_lt_def g h : 
   ihom_lt g h = (h != g) && (ihom_le g h).
 Proof. done. Qed.
 
 Lemma ihom_le_refl : 
-  reflexive (@ihom_le T).
-Proof. by move=> g; apply/ihom_leP; exists id; split. Qed.
+  reflexive (@ihom_le T L).
+Proof. by move=> g; apply/ihom_leP; exists id; repeat split. Qed.
 
 Lemma ihom_le_trans : 
-  transitive (@ihom_le T).
+  transitive (@ihom_le T L).
 Proof. 
-  move=> ??? /ihom_leP[f] [homf injf] /ihom_leP[g] [homg injg]. 
-  apply/ihom_leP; exists (g \o f); split; move=> /= *. 
-  - exact/homg/homf.
-  apply/injf/injg=> //; exact/(hom_fld homf).
+  move=> ??? /ihom_leP[f] /[dup] [[[? _] _]] ? /ihom_leP[g] ?. 
+  apply/ihom_leP; exists (g \o f); exact/ihom_comp.
 Qed.
 
 Lemma ihom_le_emp g : ihom_le [emp] g.
-Proof. by apply/ihom_leP; exists id; split. Qed.
+Proof. 
+  apply/ihom_leP; exists (fun x => fresh_seq (nodes g)). 
+  repeat split=> //; move=> x; rewrite ?lab_bot ?nodes_emp ?inE //. 
+  exact/fresh_seq_nmem. 
+Qed.
 
+End Theory.
 End Theory.
 
 End iHom.
