@@ -261,9 +261,9 @@ Proof.
     exact/of_fin_hom_bot.
   move=> /=; split=> [[ff] ? | [f]].
   - by exists (of_fin_hom ff).
-  move=> [labf homf]; exists (fin_hom_of g h f labf); split; last first.
-  - apply/eq_in_edge_homo; [exact/fin_hom_ofK | exact/homf].
-  apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+  move=> [labf homf]; exists (fin_hom_of g h f labf); split.
+  - apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+  apply/eq_in_edge_homo; [exact/fin_hom_ofK | exact/homf].
 Qed.   
 
 Lemma emp_homP g : 
@@ -287,12 +287,9 @@ Proof.
   apply/homf'/homf=> //; exact/lab_mono_nodes. 
 Qed.
 
-Lemma hom_comp f f' g h j : lab_mono f g h ->
+Lemma hom_comp f f' g h j : 
   hom f g h -> hom f' h j -> hom (f' \o f) g j.
-Proof. 
-  move=> labf [??] [??]. 
-  split; [exact/lab_mono_comp | exact/edge_homo_comp]. 
-Qed.
+Proof. move=> [??] [??]; split; [exact/lab_mono_comp|exact/edge_homo_comp]. Qed.
 
 Lemma hom_lt_def g h : 
   hom_lt g h = (h != g) && (hom_le g h).
@@ -305,8 +302,8 @@ Proof. by move=> g; apply/hom_leP; exists id; split. Qed.
 Lemma hom_le_trans : 
   transitive (@hom_le T L).
 Proof. 
-  move=> ??? /hom_leP[f] /[dup] [[? _]] ? /hom_leP[g] ?. 
-  apply/hom_leP; exists (g \o f); exact/hom_comp.
+  move=> ??? /hom_leP[f] homf /hom_leP[g] ?. 
+  apply/hom_leP; exists (g \o f); exact/(hom_comp homf).
 Qed.
 
 End Theory.
@@ -417,10 +414,11 @@ Qed.
 Lemma ihom_le_emp g : ihom_le [emp] g.
 Proof. apply/ihom_leP; exists (emp_hom g); exact/emp_ihomP. Qed.
 
-Lemma ihom_comp f f' g h j : lab_mono f g h ->
+Lemma ihom_comp f f' g h j : 
   ihom f g h -> ihom f' h j -> ihom (f' \o f) g j.
 Proof. 
-  move=> labf [? injf] [? injf']; split; first exact/hom_comp. 
+  move=> [/[dup] ? [labf _] injf] [? injf']; split. 
+  - by apply/hom_comp; eauto. 
   move=> x y ?? /= ?; apply/injf/injf'=> //; exact/lab_mono_nodes. 
 Qed.
 
@@ -435,8 +433,8 @@ Proof. by move=> g; apply/ihom_leP; exists id; repeat split. Qed.
 Lemma ihom_le_trans : 
   transitive (@ihom_le T L).
 Proof. 
-  move=> ??? /ihom_leP[f] /[dup] [[[? _] _]] ? /ihom_leP[g] ?. 
-  apply/ihom_leP; exists (g \o f); exact/ihom_comp.
+  move=> ??? /ihom_leP[f] ihomf /ihom_leP[g] ?. 
+  apply/ihom_leP; exists (g \o f); exact/(ihom_comp ihomf).
 Qed.
 
 End Theory.
@@ -585,7 +583,7 @@ Lemma bhom_comp fg fh g h j :
 Proof. 
   move=> [] /[dup] [[labfg _]] homfg bijfg. 
   move=> [] /[dup] [[labfh _]] homfh bijfh. 
-  split; first exact/hom_comp. 
+  split; first exact/(hom_comp homfg homfh). 
   case: bijfg=> fg' Kg Kg'; case: bijfh=> fh' Kh Kh'.  
   exists (fg' \o fh')=> x /= xin.
   - by rewrite Kh ?Kg ?(lab_mono_mem_nodes labfh). 
@@ -603,8 +601,8 @@ Proof. by move=> g; apply/bhom_leP; exists id; repeat split=> //; exists id. Qed
 Lemma bhom_le_trans : 
   transitive (@bhom_le T L).
 Proof. 
-  move=> ??? /bhom_leP[f] /[dup] [[[? _] _]] ? /bhom_leP[g] ?. 
-  by apply/bhom_leP; exists (g \o f); apply/bhom_comp; eauto.
+  move=> ??? /bhom_leP[f] bhomf /bhom_leP[g] ?. 
+  apply/bhom_leP; exists (g \o f); exact/(bhom_comp bhomf).
 Qed.
 
 End Theory.
@@ -745,12 +743,9 @@ Proof.
   by rewrite monf' ?monf // -(lab_mono_mem_nodes labf).
 Qed.
 
-Lemma emb_comp f f' g h j : lab_mono f g h ->
+Lemma emb_comp f f' g h j : 
   emb f g h -> emb f' h j -> emb (f' \o f) g j.
-Proof. 
-  move=> labf [??] [??]. 
-  split; [exact/lab_mono_comp | exact/edge_mono_comp]. 
-Qed.
+Proof. move=> [??] [??]; split; [exact/lab_mono_comp|exact/edge_mono_comp]. Qed.
 
 Lemma emb_lt_def g h : 
   emb_lt g h = (h != g) && (emb_le g h).
@@ -763,13 +758,140 @@ Proof. by move=> g; apply/emb_leP; exists id; split. Qed.
 Lemma emb_le_trans : 
   transitive (@emb_le T L).
 Proof. 
-  move=> ??? /emb_leP[f] /[dup] [[? _]] ? /emb_leP[g] ?. 
-  apply/emb_leP; exists (g \o f); exact/emb_comp.
+  move=> ??? /emb_leP[f] embf /emb_leP[g] ?. 
+  apply/emb_leP; exists (g \o f); exact/(emb_comp embf).
 Qed.
 
 End Theory.
 End Theory.
 
 End Emb.
+
+
+Module Export Iso.
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Definition iso f g h := 
+  [/\ lab_mono f g h, edge_mono f g h & nodes_bij f h].
+
+Context (g h : fsgraph T L).
+Implicit Types (ff : {ffun (nodes g) -> (nodes h)}).
+
+Definition fin_iso ff := 
+  [&& fin_lab_mono g h ff, fin_edge_mono g h ff & bijectiveb ff].
+
+Definition iso_eqv := [exists ff, fin_iso ff].
+
+End Def.
+End Def.
+
+Arguments fin_iso {T L} g h.
+
+
+Module Export Theory.
+Section Theory.
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : T -> T).
+
+Section FinIso.
+Context (g h : fsgraph T L).
+Context (f : T -> T) (ff : {ffun (nodes g) -> (nodes h)}).
+Hypothesis (Heq : forall x, f (val x) = val (ff x)).
+
+Lemma isoE : iso f g h <-> bhom f g h /\ emb f g h. 
+Proof. split=> [[]|[[??] []]] *; repeat split=> //; exact/monoW_in. Qed.
+
+Lemma fin_isoP : lab_mono_bot f g h ->
+  reflect (iso f g h) (fin_iso g h ff).
+Proof. 
+  move=> nlabf; apply/(equivP _); last first.
+  - apply: iff_sym; exact/isoE.
+  apply/(equivP idP); split=> [|[]]; last first.
+  - move=> [[labf _]] /(nodes_bijP Heq labf). 
+    move=>  ? /(fin_embP Heq nlabf) /andP[??].
+    exact/and3P.
+  move=> /and3P[] /(lab_monoP Heq) ilabf. 
+  have labf: lab_mono f g h.    
+  - apply/in1_split; split; [exact/ilabf | exact/nlabf]. 
+  move=> /(edge_monoP Heq) monf /(nodes_bijP Heq labf) bijf.  
+  repeat split=> //; exact/monoW_in. 
+Qed.
+
+End FinIso.
+
+Lemma iso_eqvP g h :
+  reflect (exists f, iso f g h) (iso_eqv g h).
+Proof.
+  apply/(equivP (existsPP _)). 
+  - move=> /= ff; apply/fin_isoP; first exact/of_fin_homE.
+    exact/of_fin_hom_bot.
+  move=> /=; split=> [[ff] ? | [f]].
+  - by exists (of_fin_hom ff).
+  move=> [labf homf]; exists (fin_hom_of g h f labf); split.
+  - apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+  - apply/eq_in_edge_mono; [exact/fin_hom_ofK | exact/homf].
+  apply/(eq_in_nodes_bij _ labf)=> //; last exact/fin_hom_ofK.  
+  apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+Qed. 
+
+Lemma iso_emb f g h : 
+  iso f g h -> emb f g h.
+Proof. by move=> []. Qed.
+
+Lemma iso_bhom f g h : 
+  iso f g h -> bhom f g h.
+Proof. by rewrite isoE=> [[]]. Qed.
+
+Lemma iso_hom f g h : 
+  iso f g h -> hom f g h.
+Proof. by move=> /iso_bhom/bhom_hom. Qed.
+
+Lemma iso_ihom f g h : 
+  iso f g h -> ihom f g h.
+Proof. by move=> /iso_bhom/bhom_ihom. Qed.
+
+Lemma iso_hom_le g h : 
+  iso_eqv g h -> hom_le g h.
+Proof. by move=> /iso_eqvP[f] /iso_hom ?; apply/hom_leP; exists f. Qed.
+
+Lemma iso_ihom_le g h : 
+  iso_eqv g h -> ihom_le g h.
+Proof. by move=> /iso_eqvP[f] /iso_ihom ?; apply/ihom_leP; exists f. Qed.
+
+Lemma iso_bhom_le g h : 
+  iso_eqv g h -> bhom_le g h.
+Proof. by move=> /iso_eqvP[f] /iso_bhom ?; apply/bhom_leP; exists f. Qed.
+
+Lemma iso_emb_le g h : 
+  iso_eqv g h -> emb_le g h.
+Proof. by move=> /iso_eqvP[f] /iso_emb ?; apply/emb_leP; exists f. Qed.
+
+Lemma iso_comp f f' g h j : 
+  iso f g h -> iso f' h j -> iso (f' \o f) g j.
+Proof. 
+  rewrite !isoE=> [] [bhomf embf] [??]. 
+  split; [exact/(bhom_comp bhomf)|exact/(emb_comp embf)].
+Qed.
+
+Lemma iso_eqv_refl : 
+  reflexive (@iso_eqv T L).
+Proof. by move=> g; apply/iso_eqvP; exists id; split=> //; exists id. Qed.
+
+Lemma emb_le_trans : 
+  transitive (@iso_eqv T L).
+Proof. 
+  move=> ??? /iso_eqvP[f] isof /iso_eqvP[g] ?. 
+  apply/iso_eqvP; exists (g \o f); exact/(iso_comp isof).
+Qed.
+
+End Theory.
+End Theory.
+
+End Iso.
 
 End FsGraph.
