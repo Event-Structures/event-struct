@@ -69,11 +69,18 @@ Notation "A \; B :> T" := (dot (A : T) (B : T))
 
 Section PropUtils.
 Context {T : Type}.
-Implicit Types (P : T -> Prop).
+Implicit Types (p : pred T) (P : T -> Prop).
 
 Lemma inh_nempty P :
   inhabited { x | P x } -> ~ (P \<= \0).
 Proof. by move=> [] [] x Hx H; move: (H x Hx)=> //=. Qed.
+
+Lemma in1_split p P : 
+  (forall x, P x) <-> {in p, forall x, P x} /\ {in \!p, forall x, P x}.
+Proof. 
+  split=> [Px | [Px1 Px2]]; try (split=> x ?; exact/Px).
+  move=> x; case: (p x)/idP => [|/negP]; [exact/Px1|exact/Px2].
+Qed.
 
 End PropUtils.
 
