@@ -154,6 +154,9 @@ Definition fin_hom_of f labf : {ffun (nodes g) -> (nodes h)} :=
 Definition of_fin_hom ff : T -> T := 
   fun x => odflt (fresh_seq (nodes h)) (omap (val \o ff) (insub x)).
 
+Definition emp_hom g : T -> T := 
+  fun _ => fresh_seq (nodes g).
+
 End Def.
 End Def.
 
@@ -206,42 +209,6 @@ Qed.
 
 End FinHom.
 
-(* TODO: generalize to monomorphism? *)
-Lemma lab_mono_eq f f' g h : {in (nodes g), f' =1 f} ->
-  lab_mono f g h -> lab_mono_bot f' g h -> lab_mono f' g h.
-Proof.
-  move=> eqf labf labf'. 
-  apply/in1_split; split; last exact/labf'.
-  by move=> x xin; rewrite eqf.
-Qed.
-
-(* TODO: generalize to homomorphism? *)
-Lemma eq_in_edge_homo f f' g h : {in (nodes g), f =1 f'} ->
-  edge_homo f g h <-> edge_homo f' g h.
-Proof.
-  move=> eqf; split=> homf x y ??.
-  - rewrite -!eqf //; exact/homf.
- rewrite !eqf //; exact/homf.
-Qed.
-
-Lemma lab_mono_comp f f' g h j : 
-  lab_mono f g h -> lab_mono f' h j -> lab_mono (f' \o f) g j.
-Proof. by move=> labf labf' x /=; rewrite labf' labf. Qed.
-
-Lemma edge_homo_comp f f' g h j : lab_mono f g h ->
-  edge_homo f g h -> edge_homo f' h j -> edge_homo (f' \o f) g j.
-Proof. 
-  move=> labf homf homf' x y ??? /=. 
-  apply/homf'/homf=> //; exact/lab_mono_nodes. 
-Qed.
-
-Lemma hom_comp f f' g h j : lab_mono f g h ->
-  hom f g h -> hom f' h j -> hom (f' \o f) g j.
-Proof. 
-  move=> labf [??] [??]. 
-  split; [exact/lab_mono_comp | exact/edge_homo_comp]. 
-Qed.
-
 Lemma fin_hom_ofE g h f labf x : 
   let ff := fin_hom_of g h f labf in
   f (val x) = val (ff x).
@@ -268,6 +235,24 @@ Proof.
   by rewrite of_fin_homE (fin_hom_ofE labf).
 Qed.
 
+(* TODO: generalize to monomorphism? *)
+Lemma lab_mono_eq f f' g h : {in (nodes g), f' =1 f} ->
+  lab_mono f g h -> lab_mono_bot f' g h -> lab_mono f' g h.
+Proof.
+  move=> eqf labf labf'. 
+  apply/in1_split; split; last exact/labf'.
+  by move=> x xin; rewrite eqf.
+Qed.
+
+(* TODO: generalize to homomorphism? *)
+Lemma eq_in_edge_homo f f' g h : {in (nodes g), f =1 f'} ->
+  edge_homo f g h <-> edge_homo f' g h.
+Proof.
+  move=> eqf; split=> homf x y ??.
+  - rewrite -!eqf //; exact/homf.
+ rewrite !eqf //; exact/homf.
+Qed.
+
 Lemma hom_leP g h :
   reflect (exists f, hom f g h) (hom_le g h).
 Proof.
@@ -280,6 +265,34 @@ Proof.
   - apply/eq_in_edge_homo; [exact/fin_hom_ofK | exact/homf].
   apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
 Qed.   
+
+Lemma emp_homP g : 
+  hom (emp_hom g) [emp] g.
+Proof.
+  split=> // x; rewrite !lab_bot ?nodes_emp ?inE //. 
+  exact/fresh_seq_nmem.
+Qed.
+
+Lemma hom_le_emp g : hom_le [emp] g.
+Proof. apply/hom_leP; exists (emp_hom g); exact/emp_homP. Qed.
+
+Lemma lab_mono_comp f f' g h j : 
+  lab_mono f g h -> lab_mono f' h j -> lab_mono (f' \o f) g j.
+Proof. by move=> labf labf' x /=; rewrite labf' labf. Qed.
+
+Lemma edge_homo_comp f f' g h j : lab_mono f g h ->
+  edge_homo f g h -> edge_homo f' h j -> edge_homo (f' \o f) g j.
+Proof. 
+  move=> labf homf homf' x y ??? /=. 
+  apply/homf'/homf=> //; exact/lab_mono_nodes. 
+Qed.
+
+Lemma hom_comp f f' g h j : lab_mono f g h ->
+  hom f g h -> hom f' h j -> hom (f' \o f) g j.
+Proof. 
+  move=> labf [??] [??]. 
+  split; [exact/lab_mono_comp | exact/edge_homo_comp]. 
+Qed.
 
 Lemma hom_lt_def g h : 
   hom_lt g h = (h != g) && (hom_le g h).
@@ -294,13 +307,6 @@ Lemma hom_le_trans :
 Proof. 
   move=> ??? /hom_leP[f] /[dup] [[? _]] ? /hom_leP[g] ?. 
   apply/hom_leP; exists (g \o f); exact/hom_comp.
-Qed.
-
-Lemma hom_le_emp g : hom_le [emp] g.
-Proof. 
-  apply/hom_leP; exists (fun x => fresh_seq (nodes g)). 
-  split=> // x; rewrite !lab_bot ?nodes_emp ?inE //. 
-  exact/fresh_seq_nmem.
 Qed.
 
 End Theory.
@@ -375,13 +381,6 @@ Proof.
  rewrite !eqf // => ?; exact/injf.
 Qed.
 
-Lemma ihom_comp f f' g h j : lab_mono f g h ->
-  ihom f g h -> ihom f' h j -> ihom (f' \o f) g j.
-Proof. 
-  move=> labf [? injf] [? injf']; split; first exact/hom_comp. 
-  move=> x y ?? /= ?; apply/injf/injf'=> //; exact/lab_mono_nodes. 
-Qed.
-
 Lemma ihom_leP g h :
   reflect (exists f, ihom f g h) (ihom_le g h).
 Proof.
@@ -396,9 +395,34 @@ Proof.
   apply/eq_in_nodes_inj; [exact/fin_hom_ofK | exact/injf].
 Qed.
 
+Lemma ihom_hom f g h : 
+  ihom f g h -> hom f g h.
+Proof. by move=> []. Qed.
+
+Lemma ihom_hom_le g h : 
+  ihom_le g h -> hom_le g h.
+Proof. by move=> /ihom_leP[f] /ihom_hom ?; apply/hom_leP; exists f. Qed.
+
 Lemma ihom_le_size g h : 
   ihom_le g h -> (#|`nodes g| <= #|`nodes h|)%N.
 Proof. by rewrite !cardfE=> /existsP /= [f] /andP[_ /injectiveP] /leq_card. Qed.
+
+Lemma emp_ihomP g : 
+  ihom (emp_hom g) [emp] g.
+Proof.
+  split; first exact/emp_homP.
+  by move=> ??; rewrite nodes_emp inE.
+Qed.
+
+Lemma ihom_le_emp g : ihom_le [emp] g.
+Proof. apply/ihom_leP; exists (emp_hom g); exact/emp_ihomP. Qed.
+
+Lemma ihom_comp f f' g h j : lab_mono f g h ->
+  ihom f g h -> ihom f' h j -> ihom (f' \o f) g j.
+Proof. 
+  move=> labf [? injf] [? injf']; split; first exact/hom_comp. 
+  move=> x y ?? /= ?; apply/injf/injf'=> //; exact/lab_mono_nodes. 
+Qed.
 
 Lemma ihom_lt_def g h : 
   ihom_lt g h = (h != g) && (ihom_le g h).
@@ -413,13 +437,6 @@ Lemma ihom_le_trans :
 Proof. 
   move=> ??? /ihom_leP[f] /[dup] [[[? _] _]] ? /ihom_leP[g] ?. 
   apply/ihom_leP; exists (g \o f); exact/ihom_comp.
-Qed.
-
-Lemma ihom_le_emp g : ihom_le [emp] g.
-Proof. 
-  apply/ihom_leP; exists (fun x => fresh_seq (nodes g)). 
-  repeat split=> //; move=> x; rewrite ?lab_bot ?nodes_emp ?inE //. 
-  exact/fresh_seq_nmem. 
 Qed.
 
 End Theory.
@@ -522,18 +539,6 @@ Proof.
   by rewrite (lab_mono_mem_nodes labf') K'. 
 Qed.
 
-Lemma bhom_comp fg fh g h j : 
-  bhom fg g h -> bhom fh h j -> bhom (fh \o fg) g j.
-Proof. 
-  move=> [] /[dup] [[labfg _]] homfg bijfg. 
-  move=> [] /[dup] [[labfh _]] homfh bijfh. 
-  split; first exact/hom_comp. 
-  case: bijfg=> fg' Kg Kg'; case: bijfh=> fh' Kh Kh'.  
-  exists (fg' \o fh')=> x /= xin.
-  - by rewrite Kh ?Kg ?(lab_mono_mem_nodes labfh). 
-  by rewrite Kg' ?Kh' ?(lab_mono_mem_nodes labfh) ?Kh'. 
-Qed.
-
 Lemma bhom_leP g h :
   reflect (exists f, bhom f g h) (bhom_le g h).
 Proof.
@@ -549,20 +554,43 @@ Proof.
   apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
 Qed.
 
-Lemma bhom_ihom_le g h : 
-  bhom_le g h -> ihom_le g h.
+Lemma bhom_hom f g h : 
+  bhom f g h -> hom f g h.
+Proof. by move=> []. Qed.
+
+Lemma bhom_ihom f g h : 
+  bhom f g h -> ihom f g h.
 Proof. 
-  move=> /bhom_leP /= [f] [homf bijf].
-  apply/ihom_leP; exists f; split=> //.
-  move: homf bijf=> [labf _]. 
+  move=> [] /[dup] homf [labf _].
   pose ff := fin_hom_of g h f labf.
   move=> /(nodes_bijP (fin_hom_ofE labf) labf) /bijectiveP bijff. 
+  split; first exact/homf.
   exact/(nodes_injP (fin_hom_ofE labf))/injectiveP/bij_inj.
 Qed.
+
+Lemma bhom_hom_le g h : 
+  bhom_le g h -> hom_le g h.
+Proof. by move=> /bhom_leP[f] /bhom_hom ?; apply/hom_leP; exists f. Qed.
+
+Lemma bhom_ihom_le g h : 
+  bhom_le g h -> ihom_le g h.
+Proof. by move=> /bhom_leP[f] /bhom_ihom ?; apply/ihom_leP; exists f. Qed.
 
 Lemma bhom_le_size g h : 
   bhom_le g h -> (#|`nodes g| <= #|`nodes h|)%N.
 Proof. by move=> /bhom_ihom_le /ihom_le_size. Qed.
+
+Lemma bhom_comp fg fh g h j : 
+  bhom fg g h -> bhom fh h j -> bhom (fh \o fg) g j.
+Proof. 
+  move=> [] /[dup] [[labfg _]] homfg bijfg. 
+  move=> [] /[dup] [[labfh _]] homfh bijfh. 
+  split; first exact/hom_comp. 
+  case: bijfg=> fg' Kg Kg'; case: bijfh=> fh' Kh Kh'.  
+  exists (fg' \o fh')=> x /= xin.
+  - by rewrite Kh ?Kg ?(lab_mono_mem_nodes labfh). 
+  by rewrite Kg' ?Kh' ?(lab_mono_mem_nodes labfh) ?Kh'. 
+Qed.
 
 Lemma bhom_lt_def g h : 
   bhom_lt g h = (h != g) && (bhom_le g h).
@@ -595,6 +623,10 @@ Implicit Types (f : T -> T).
 Definition edge_mono f g h :=
   {in (nodes g) &, {mono f : x y / g x y >-> h x y}}.
 
+(* TODO: the term embedding is borrowed from `partial order` embedding. 
+ *   In the context of graph theory it can means something else. 
+ *   Need to recheck literature, maybe there is conventional name for this. 
+ *)
 Definition emb f g h := 
   [/\ lab_mono f g h & edge_mono f g h].
 
@@ -660,6 +692,52 @@ Proof.
  rewrite !eqf //; exact/monf.
 Qed.
 
+Lemma emb_leP g h :
+  reflect (exists f, emb f g h) (emb_le g h).
+Proof.
+  apply/(equivP (existsPP _)). 
+  - move=> /= ff; apply/fin_embP; first exact/of_fin_homE.
+    exact/of_fin_hom_bot.
+  move=> /=; split=> [[ff] ? | [f]].
+  - by exists (of_fin_hom ff).
+  move=> [labf homf]; exists (fin_hom_of g h f labf); split; last first.
+  - apply/eq_in_edge_mono; [exact/fin_hom_ofK | exact/homf].
+  apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
+Qed. 
+
+Lemma emb_hom f g h : 
+  emb f g h -> hom f g h.
+Proof. by move=> [] ? /monoW_in ?; split. Qed.
+
+Lemma emb_ihom f g h : reflexive h -> antisymmetric g ->
+  emb f g h -> ihom f g h.
+Proof. 
+  move=> refl asym embf. 
+  split; first exact/emb_hom.
+  exact/(mono_inj_in refl asym)/(snd embf).
+Qed.
+
+Lemma emb_hom_le g h : 
+  emb_le g h -> hom_le g h.
+Proof. by move=> /emb_leP[f] /emb_hom ?; apply/hom_leP; exists f. Qed.
+
+Lemma emb_ihom_le g h : reflexive h -> antisymmetric g ->
+  emb_le g h -> ihom_le g h.
+Proof. 
+  move=> refl asym /emb_leP[f] /(emb_ihom refl asym) ?. 
+  by apply/ihom_leP; exists f. 
+Qed.
+
+Lemma emp_embP g : 
+  emb (emp_hom g) [emp] g.
+Proof.
+  repeat split=> // x; rewrite ?lab_bot ?nodes_emp ?inE //. 
+  exact/fresh_seq_nmem.
+Qed.
+
+Lemma emb_le_emp g : emb_le [emp] g.
+Proof. apply/emb_leP; exists (emp_hom g); exact/emp_embP. Qed.
+
 Lemma edge_mono_comp f f' g h j : lab_mono f g h ->
   edge_mono f g h -> edge_mono f' h j -> edge_mono (f' \o f) g j.
 Proof. 
@@ -673,19 +751,6 @@ Proof.
   move=> labf [??] [??]. 
   split; [exact/lab_mono_comp | exact/edge_mono_comp]. 
 Qed.
-
-Lemma emb_leP g h :
-  reflect (exists f, emb f g h) (emb_le g h).
-Proof.
-  apply/(equivP (existsPP _)). 
-  - move=> /= ff; apply/fin_embP; first exact/of_fin_homE.
-    exact/of_fin_hom_bot.
-  move=> /=; split=> [[ff] ? | [f]].
-  - by exists (of_fin_hom ff).
-  move=> [labf homf]; exists (fin_hom_of g h f labf); split; last first.
-  - apply/eq_in_edge_mono; [exact/fin_hom_ofK | exact/homf].
-  apply/(lab_mono_eq _ labf); [exact/fin_hom_ofK | exact/of_fin_hom_bot]. 
-Qed. 
 
 Lemma emb_lt_def g h : 
   emb_lt g h = (h != g) && (emb_le g h).
@@ -702,12 +767,8 @@ Proof.
   apply/emb_leP; exists (g \o f); exact/emb_comp.
 Qed.
 
-(* Lemma hom_le_emp g : hom_le [emp] g. *)
-(* Proof.  *)
-(*   apply/hom_leP; exists (fun x => fresh_seq (nodes g)).  *)
-(*   split=> // x; rewrite !lab_bot ?nodes_emp ?inE //.  *)
-(*   exact/fresh_seq_nmem. *)
-(* Qed. *)
+End Theory.
+End Theory.
 
 End Emb.
 
