@@ -144,6 +144,15 @@ Proof.
   by apply/imfsetP; exists (x, y).
 Qed.
 
+Lemma fsrel_homoP f r1 (r2 : fsrel U) : 
+  reflect {homo f : x y / r1 x y >-> r2 x y} (f @` r1 `<=` r2).
+Proof. 
+  apply/equivP; first exact/fsubsetP; split. 
+  - by move=> subs x y ?; apply/subs/imfsetP; exists (x, y).
+  move=> homf [??] /imfsetP[[??]] /= + [-> ->]. 
+  by rewrite -!fsrelE=> /homf.
+Qed.
+
 End Theory.
 End Theory.
 
