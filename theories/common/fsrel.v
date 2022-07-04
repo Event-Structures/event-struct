@@ -125,23 +125,14 @@ Proof.
   by rewrite /fld !inE=> -> -> /=.
 Qed.
 
-Lemma fsrel_map_id r : 
-  id @` r = r.
+Lemma fsrel_map_mem f r : injective f ->
+  forall x y, ((f x, f y) \in fsrel_map f r) = ((x, y) \in r).
 Proof. 
-  rewrite /fsrel_map; apply/fsetP=> /= [[x y]]. 
-  apply/idP/idP=> [/imfsetP[[??]] /= ? [-> ->]|] //. 
-  by move=> ?; apply/imfsetP; exists (x, y).
-Qed.
-
-Lemma fsrel_map_comp f g r : 
-  (g \o f) @` r = (@! g \o @! f) r.
-Proof.
-  rewrite /fsrel_map; apply/fsetP=> /= [[x y]]. 
-  apply/idP/idP=> /imfsetP /= [[{}x {}y]] + [-> ->] /=.
-  - move=> ?; apply/imfsetP; exists (f x, f y)=> //. 
-    by apply/imfsetP; exists (x, y).
-  move=> /imfsetP /= [[{}x {}y]] /[swap] [[-> ->]] ?. 
-  by apply/imfsetP; exists (x, y).
+  pose fp := (fun '(x, y) => (f x, f y)).
+  move=> injf x y. 
+  have->: (f x, f y) = fp (x, y) by done.
+  rewrite /fsrel_map -/fp mem_imfset //. 
+  by move=> [??] [??] [] /= /injf-> /injf->.  
 Qed.
 
 Lemma fsrel_homoP f r1 (r2 : fsrel U) : 
@@ -155,6 +146,33 @@ Qed.
 
 End Theory.
 End Theory.
+
+Module Export Functor.
+Section Functor.
+Context {T U V : identType}.
+Implicit Types (r : fsrel T).
+Implicit Types (f : T -> U) (g : U -> V).
+
+Lemma fsrel_map_id r : 
+  id @` r = r.
+Proof. 
+  apply/fsetP=> [[x y]].  
+  by rewrite -(fsrel_map_mem r (@inj_id T)).
+Qed.
+
+Lemma fsrel_map_comp f g r : 
+  (g \o f) @` r = (@! g \o @! f) r.
+Proof.
+  rewrite /fsrel_map; apply/fsetP=> /= [[x y]]. 
+  apply/idP/idP=> /imfsetP /= [[{}x {}y]] + [-> ->] /=.
+  - move=> ?; apply/imfsetP; exists (f x, f y)=> //. 
+    by apply/imfsetP; exists (x, y).
+  move=> /imfsetP /= [[{}x {}y]] /[swap] [[-> ->]] ?. 
+  by apply/imfsetP; exists (x, y).
+Qed.
+
+End Functor.
+End Functor.
 
 Module Export KleeneAlgebra.
 Section KleeneAlgebra.

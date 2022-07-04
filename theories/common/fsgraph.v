@@ -4,7 +4,8 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat zify.
 From mathcomp Require Import eqtype choice seq order path.
 From mathcomp Require Import fintype finfun fingraph finmap.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils seq rel_algebra rel fsrel inhtype ident.
+From eventstruct Require Import utils seq rel_algebra rel fsrel. 
+From eventstruct Require Import inhtype ident fperm.
 
 (******************************************************************************)
 (* A theory of finitely supported graphs.                                     *)
@@ -15,10 +16,12 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Local Open Scope fset_scope.
-Local Open Scope ident_scope.
+Import FsRel.Syntax. 
+
 Local Open Scope rel_scope.
 Local Open Scope fsrel_scope.
+Local Open Scope fset_scope.
+Local Open Scope ident_scope.
 
 Declare Scope fsgraph_scope.
 Delimit Scope fsgraph_scope with fsgraph.
@@ -49,6 +52,11 @@ Coercion fsgraph_apply : fsgraph >-> Funclass.
 Definition fsgraph0 : fsgraph := 
   mk_fsgraph [fsfun] fset0.
 
+Definition fsg_rename (f : {fperm T}) g := 
+  let flab   := [fsfun x in (f @` nodes g) => lab g (fperm_inv f x)] in 
+  let fedges := (f @` (edges g))%fsrel in
+  mk_fsgraph flab fedges. 
+
 Definition prod_of_fsgraph g := (lab g, edges g).
 Definition fsgraph_of_prod := fun '(f, es) => mk_fsgraph f es.
 
@@ -66,6 +74,9 @@ Definition fsgraph_choiceMixin := CanChoiceMixin prod_of_fsgraphK.
 Canonical fsgraph_choiceType := 
   Eval hnf in ChoiceType fsgraph fsgraph_choiceMixin.
 
+Definition well_restricted g := 
+  (fld (edges g)) `<=` nodes g.
+
 End Def.
 End Def.
 
@@ -81,10 +92,14 @@ Module Export Theory.
 Section Theory.
 Context {T U : identType} {L : botType}.
 Implicit Types (g h : fsgraph T L).
-Implicit Types (f : T -> T).
+Implicit Types (f : {fperm T}).
 
 Lemma fsgraphE g x y : (g x y) = ((x, y) \in edges g).
 Proof. done. Qed.
+
+Lemma fsgraphP g h : 
+  reflect (lab g =1 lab h /\ g =2 h) (g == h).
+Proof. by apply/(equivP (andPP eqP (fsrelP _ _))); rewrite fsfunP. Qed.
 
 Lemma mem_nodes g x : 
   (x \in nodes g) = (lab g x != bot).
@@ -101,6 +116,28 @@ Proof. by rewrite memNnodes=> /eqP. Qed.
 Lemma nodes_emp : 
   nodes ([emp] : fsgraph T L) = fset0.
 Proof. by rewrite /nodes finsupp0. Qed.
+
+Lemma fsg_rename_labE f g : 
+  lab (fsg_rename f g) =1 (lab g) \o (fperm_inv f).
+Proof. 
+  move=> x /=; rewrite fsfunE; case: ifP=> [|/negP/negP] //.
+  rewrite -[x in x \notin _](inv_fpermK f) mem_imfset /=. 
+  - by move=> nin; rewrite lab_bot.
+  exact/fperm_inj.
+Qed.
+
+Lemma fsg_renameE f g : 
+  (fsg_rename f g) =2 relpre (fperm_inv f) g.
+Proof. 
+  move=> x y; rewrite fsgraphE /=.
+  rewrite -[x in (x, _)](inv_fpermK f). 
+  rewrite -[y in (_, y)](inv_fpermK f). 
+  rewrite fsrel_map_mem //; exact/fperm_inj.
+Qed.
+
+Lemma well_restrictedP g : 
+  reflect {subset fld (edges g) <= nodes g} (well_restricted g).
+Proof. exact/fsubsetP. Qed.
 
 End Theory.
 End Theory.
@@ -169,7 +206,6 @@ Module Export Theory.
 Section Theory.
 Context {T : identType} {L : botType}.
 Implicit Types (g h : fsgraph T L).
-Implicit Types (f : T -> T).
 
 Section FinHom.
 Context (g h : fsgraph T L).
@@ -209,6 +245,9 @@ Qed.
 
 End FinHom.
 
+Section Hom.
+Implicit Types (f : T -> T).
+
 Lemma fin_hom_ofE g h f labf x : 
   let ff := fin_hom_of g h f labf in
   f (val x) = val (ff x).
@@ -233,6 +272,13 @@ Lemma fin_hom_ofK g h f labf x :
 Proof. 
   move=> xin; have->: x = val (Sub x xin : nodes g) by done.  
   by rewrite of_fin_homE (fin_hom_ofE labf).
+Qed.
+
+Lemma edge_homoS f g h : well_restricted g ->
+  edge_homo f g h -> {homo f : x y / g x y >-> h x y}.
+Proof. 
+  move=> /well_restrictedP subs homf x y /[dup] /fld_restr /=. 
+  move=> /andP[] /subs ? /subs ??; exact/homf.
 Qed.
 
 (* TODO: generalize to monomorphism? *)
@@ -305,6 +351,8 @@ Proof.
   move=> ??? /hom_leP[f] homf /hom_leP[g] ?. 
   apply/hom_leP; exists (g \o f); exact/(hom_comp homf).
 Qed.
+
+End Hom.
 
 End Theory.
 End Theory.
@@ -474,7 +522,6 @@ Module Export Theory.
 Section Theory.
 Context {T : identType} {L : botType}.
 Implicit Types (g h : fsgraph T L).
-Implicit Types (f : T -> T).
 
 Section FinBHom.
 Context (g h : fsgraph T L).
@@ -519,6 +566,9 @@ Proof.
 Qed.
 
 End FinBHom.
+
+Section BHom.
+Implicit Types (f : T -> T).
 
 (* TODO: generalize? *)
 Lemma eq_in_nodes_bij f f' g h : lab_mono f g h -> lab_mono f' g h -> 
@@ -605,6 +655,17 @@ Proof.
   apply/bhom_leP; exists (g \o f); exact/(bhom_comp bhomf).
 Qed.
 
+End BHom.
+
+Section FPermBHom.
+Implicit Types (f : {fperm T}).
+
+Lemma perm_bhom f g h :
+  hom f g h -> bhom f g h.
+Proof. move=> homf; split=> //; exact/onW_bij/fperm_bij. Qed.
+
+End FPermBHom.
+
 End Theory.
 End Theory.
 
@@ -651,7 +712,6 @@ Module Export Theory.
 Section Theory.
 Context {T : identType} {L : botType}.
 Implicit Types (g h : fsgraph T L).
-Implicit Types (f : T -> T).
 
 Section FinEmb.
 Context (g h : fsgraph T L).
@@ -680,6 +740,24 @@ Proof.
 Qed.
 
 End FinEmb.
+
+Section Emb.
+Implicit Types (f : T -> T).
+
+Lemma edge_monoW f g h : 
+  edge_mono f g h -> edge_homo f g h. 
+Proof. by move=> monof x y ??; rewrite monof. Qed.
+
+Lemma edge_monoS f g h : well_restricted g -> well_restricted h ->
+  lab_mono f g h -> edge_mono f g h -> {mono f : x y / g x y >-> h x y}.
+Proof. 
+  move=> wrg /well_restrictedP subs labf monof x y. 
+  apply/idP/idP; last first.
+  - exact/(edge_homoS wrg)/edge_monoW.
+  move=> /[dup] /fld_restr /= /andP[] /subs + /subs. 
+  rewrite -!(lab_mono_mem_nodes labf)=> ??. 
+  by rewrite monof.
+Qed.
 
 (* TODO: generalize *)
 Lemma eq_in_edge_mono f f' g h : {in (nodes g), f =1 f'} ->
@@ -762,6 +840,21 @@ Proof.
   apply/emb_leP; exists (g \o f); exact/(emb_comp embf).
 Qed.
 
+End Emb.
+
+Section FPermEmb. 
+Implicit Types (f : {fperm T}).
+
+Lemma rename_emb f g : 
+  emb f g (fsg_rename f g).
+Proof. 
+  split=> [x |x y xin yin].
+  - by rewrite fsg_rename_labE /= fperm_invK.
+  by rewrite fsg_renameE /= !fperm_invK.
+Qed.
+
+End FPermEmb.
+
 End Theory.
 End Theory.
 
@@ -796,7 +889,6 @@ Module Export Theory.
 Section Theory.
 Context {T : identType} {L : botType}.
 Implicit Types (g h : fsgraph T L).
-Implicit Types (f : T -> T).
 
 Section FinIso.
 Context (g h : fsgraph T L).
@@ -823,6 +915,9 @@ Proof.
 Qed.
 
 End FinIso.
+
+Section Iso.
+Implicit Types (f : T -> T).
 
 Lemma iso_eqvP g h :
   reflect (exists f, iso f g h) (iso_eqv g h).
@@ -888,6 +983,31 @@ Proof.
   move=> ??? /iso_eqvP[f] isof /iso_eqvP[g] ?. 
   apply/iso_eqvP; exists (g \o f); exact/(iso_comp isof).
 Qed.
+
+End Iso.
+
+Section FPermIso.
+Implicit Types (f : {fperm T}).
+
+Lemma perm_iso f g h :
+  emb f g h -> iso f g h.
+Proof. move=> [??]; split=> //; exact/onW_bij/fperm_bij. Qed.
+
+Lemma rename_iso f g : 
+  iso f g (fsg_rename f g).
+Proof. exact/perm_iso/rename_emb. Qed.
+
+Lemma rename_isoP f g h : well_restricted g -> well_restricted h ->
+  reflect (iso f g h) (h == fsg_rename f g).
+Proof. 
+  move=> wrg wrh; apply/(equivP eqP); split=> [->|]; first exact/rename_iso.
+  move=> [labf monf bijf]; apply/eqP/fsgraphP; split=> [x | x y].
+  - by rewrite fsg_rename_labE /= -labf inv_fpermK.
+  move: monf=> /(edge_monoS wrg wrh labf)=> monf.
+  by rewrite fsg_renameE /= -monf !inv_fpermK. 
+Qed.
+
+End FPermIso.
 
 End Theory.
 End Theory.
