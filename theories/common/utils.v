@@ -582,18 +582,18 @@ Notation "@! f" := (fun A => f @` A)%fset
 Section FSetUtils.
 Context {key : unit} {T U : choiceType}.
 Implicit Types (p : pred T) (r : rel T) (f : T -> U).
-Implicit Types (s : {fset T}) (x : T).
+Implicit Types (x : T) (X : {fset T}).
 
 Local Open Scope fset_scope.
 
-Definition fpick s : option T :=
-  omap val [pick x : s].
+Definition fpick X : option T :=
+  omap val [pick x : X].
 
-Variant fpick_spec s : option T -> Type :=
-  | FPick : forall x : T, x \in s -> fpick_spec s (Some x) 
-  | Nofpick : s = fset0 -> fpick_spec s None.
+Variant fpick_spec X : option T -> Type :=
+  | FPick : forall x : T, x \in X -> fpick_spec X (Some x) 
+  | Nofpick : X = fset0 -> fpick_spec X None.
 
-Lemma fpickP s : fpick_spec s (fpick s).
+Lemma fpickP X : fpick_spec X (fpick X).
 Proof. 
   rewrite /fpick; case: pickP=> /=; first by constructor.
   move=> X0; constructor; apply/fsetP=> x /=; rewrite inE. 
@@ -636,23 +636,44 @@ Proof.
     rewrite inE; apply/orP; [left|right].
 Qed.
 
-Lemma imfset_preim_subs f s :
-  {subset s <= preim f (mem (f @` s))}.
+Lemma imfset_preim_subs f X :
+  {subset X <= preim f (mem (f @` X))}.
 Proof. by move=> x xin; rewrite inE /=; apply/imfsetP; exists x. Qed.
 
-Lemma imfset_preim_eq f s :
-  injective f -> preim f (mem (f @` s)) =1 (mem s).
+Lemma imfset_preim_eq f X :
+  injective f -> preim f (mem (f @` X)) =1 (mem X).
 Proof.
   move=> finj x /=; apply/idP/idP; last exact/imfset_preim_subs.
   by move=> /imfsetP [y] /= /[swap] /finj ->.
 Qed.
 
-Lemma imfset_can_in f g s :
-  {on f @` s, cancel f & g} -> {in s, cancel f g}.
+Lemma imfset_can_in f g X :
+  {on f @` X, cancel f & g} -> {in X, cancel f g}.
 Proof. by move=> K x xin; rewrite K ?(in_imfset _ f). Qed.
 
-Lemma fset_existsP s p :
-  reflect (exists x, x \in s /\ p x) [exists x : s, p (val x)].
+Lemma inj_in_fsetP f X : 
+  reflect {in X &, injective f} (injectiveb [ffun x : X => f (val x)]).
+Proof. 
+  apply/(equivP (injectiveP _)); split=> injf /= x y; last first.
+  - rewrite !ffunE=> eqf; apply/val_inj/injf=> //; exact/valP.
+  move=> xin yin eqf.
+  have->: x = val (Sub x xin : X) by done.
+  have->: y = val (Sub y yin : X) by done.
+  by congr val; apply/injf; rewrite !ffunE.
+Qed.
+
+Lemma fset_ind (P : {fset T} -> Prop) :
+  P fset0 -> (forall x X, x \notin X -> P X -> P (x |` X)) -> forall X, P X.
+Proof.
+  move=> ? Ps X.
+  have [n leMn] := ubnP #|` X|; elim: n => // n IHn in X leMn *.
+  case (fset_0Vmem X)=> [->//| [x]/[dup] I /fsetD1K<-].
+  apply/Ps/IHn; first by rewrite ?inE eqxx.
+  by rewrite (cardfsD1 x) I /= addnC addn1 in leMn.
+Qed.
+
+Lemma fset_existsP X p :
+  reflect (exists x, x \in X /\ p x) [exists x : X, p (val x)].
 Proof.
   apply /equivP; first (by apply /existsP); split.
   - by move=> [] /= [] /= x Hx Px; exists x.
@@ -660,9 +681,9 @@ Proof.
 Qed.
 
 (* TODO: use `rst s r` (restriction of relation) ? *)
-Lemma fset_exists2P s r :
-  reflect (exists x y, [/\ x \in s, y \in s & r x y])
-          [exists x : s, exists y : s, r (val x) (val y)].
+Lemma fset_exists2P X r :
+  reflect (exists x y, [/\ x \in X, y \in X & r x y])
+          [exists x : X, exists y : X, r (val x) (val y)].
 Proof.
   apply /equivP; last split.
   - apply /(@fset_existsP _ (fun x => [exists y, r x (val y)])).
@@ -671,23 +692,23 @@ Proof.
   by apply /fset_existsP; exists y.
 Qed.
 
-Lemma fset_forallPP s pp p :
+Lemma fset_forallPP X pp p :
   (forall x, reflect (pp x) (p x)) ->
-  reflect {in s, forall x, pp x} [forall x : s, p (val x)].
+  reflect {in X, forall x, pp x} [forall x : X, p (val x)].
 Proof.
   move=> refl; apply /equivP; first (by apply /forallP); split.
   - move=> H x inX; move: (H (Sub x inX)); exact/refl.
   move=> H x; exact/refl/H/(valP x).
 Qed.
 
-Lemma fset_forallP s p :
-  reflect {in s, forall x, p x} [forall x : s, p (val x)].
+Lemma fset_forallP X p :
+  reflect {in X, forall x, p x} [forall x : X, p (val x)].
 Proof. apply/fset_forallPP=> x; exact/idP. Qed.
 
 (* TODO: use `rst s r` (restriction of relation) ? *)
-Lemma fset_forall2P s r :
-  reflect {in s & s, forall x y, r x y}
-          [forall x : s, forall y : s, r (val x) (val y)].
+Lemma fset_forall2P X r :
+  reflect {in X & X, forall x y, r x y}
+          [forall x : X, forall y : X, r (val x) (val y)].
 Proof.
   apply /equivP; last split.
   - by apply/(@fset_forallP _ (fun x => [forall y, r x (val y)])).
@@ -1078,26 +1099,8 @@ End IterUtils.
 
 Arguments homo_iter {T} [r] f n.
 
-Section FSetInduction.
-
-Open Scope fset_scope.
-
-Lemma fset_ind (A : choiceType) (P : {fset A} -> Prop) :
-  P fset0 ->
-  (forall a l, a \notin l -> P l -> P (a |` l)) ->
-  forall l, P l.
-Proof.
-  move=> ? Ps X.
-  have [n leMn] := ubnP #|` X|; elim: n => // n IHn in X leMn *.
-  case (fset_0Vmem X)=> [->//| [x]/[dup] I /fsetD1K<-].
-  apply/Ps/IHn; first by rewrite ?inE eqxx.
-  by rewrite (cardfsD1 x) I /= addnC addn1 in leMn.
-Qed.
-
-End FSetInduction.
 
 Section Imfset.
-
 Open Scope fset_scope.
 
 Lemma imfset_comp (K V W : choiceType)
@@ -1115,7 +1118,6 @@ Proof.
   apply/cardfs0_eq/eqP; rewrite -leqn0.
   exact/(leq_trans (leq_imfset_card _ _ _)).
 Qed.
-
 
 End Imfset.
 
