@@ -85,8 +85,11 @@ Arguments fsgraph0 {T L}.
 Module Export Syntax. 
 Notation "[ 'emp' ]" := (fsgraph0)
   (at level 0, format "[ 'emp' ]") : fsgraph_scope.
+Notation "f @` r" := (fsg_rename f r)
+  (at level 24) : fsgraph_scope.
+Notation "@! f" := (fun r => f @` r)%fsgraph
+  (at level 10, f at level 8, no associativity, format "@!  f") : fsgraph_scope.
 End Syntax.
-
 
 Module Export Theory.
 Section Theory.
@@ -118,7 +121,7 @@ Lemma nodes_emp :
 Proof. by rewrite /nodes finsupp0. Qed.
 
 Lemma fsg_rename_labE f g : 
-  lab (fsg_rename f g) =1 (lab g) \o (fperm_inv f).
+  lab (f @` g) =1 (lab g) \o (fperm_inv f).
 Proof. 
   move=> x /=; rewrite fsfunE; case: ifP=> [|/negP/negP] //.
   rewrite -[x in x \notin _](inv_fpermK f) mem_imfset /=. 
@@ -127,7 +130,7 @@ Proof.
 Qed.
 
 Lemma fsg_renameE f g : 
-  (fsg_rename f g) =2 relpre (fperm_inv f) g.
+  (f @` g) =2 relpre (fperm_inv f) g.
 Proof. 
   move=> x y; rewrite fsgraphE /=.
   rewrite -[x in (x, _)](inv_fpermK f). 
@@ -846,7 +849,7 @@ Section FPermEmb.
 Implicit Types (f : {fperm T}).
 
 Lemma fsg_rename_emb f g : 
-  emb f g (fsg_rename f g).
+  emb f g (f @` g).
 Proof. 
   split=> [x |x y xin yin].
   - by rewrite fsg_rename_labE /= fperm_invK.
@@ -994,11 +997,11 @@ Lemma perm_iso f g h :
 Proof. move=> [??]; split=> //; exact/onW_bij/fperm_bij. Qed.
 
 Lemma fsg_rename_iso f g : 
-  iso f g (fsg_rename f g).
+  iso f g (f @` g).
 Proof. exact/perm_iso/fsg_rename_emb. Qed.
 
 Lemma fsg_rename_isoP f g h : well_restricted g -> well_restricted h ->
-  reflect (iso f g h) (h == fsg_rename f g).
+  reflect (iso f g h) (h == f @` g).
 Proof. 
   move=> wrg wrh; apply/(equivP eqP); split=> [->|]; first exact/fsg_rename_iso.
   move=> [labf monf bijf]; apply/eqP/fsgraphP; split=> [x | x y].
