@@ -845,7 +845,7 @@ End Emb.
 Section FPermEmb. 
 Implicit Types (f : {fperm T}).
 
-Lemma rename_emb f g : 
+Lemma fsg_rename_emb f g : 
   emb f g (fsg_rename f g).
 Proof. 
   split=> [x |x y xin yin].
@@ -993,14 +993,14 @@ Lemma perm_iso f g h :
   emb f g h -> iso f g h.
 Proof. move=> [??]; split=> //; exact/onW_bij/fperm_bij. Qed.
 
-Lemma rename_iso f g : 
+Lemma fsg_rename_iso f g : 
   iso f g (fsg_rename f g).
-Proof. exact/perm_iso/rename_emb. Qed.
+Proof. exact/perm_iso/fsg_rename_emb. Qed.
 
-Lemma rename_isoP f g h : well_restricted g -> well_restricted h ->
+Lemma fsg_rename_isoP f g h : well_restricted g -> well_restricted h ->
   reflect (iso f g h) (h == fsg_rename f g).
 Proof. 
-  move=> wrg wrh; apply/(equivP eqP); split=> [->|]; first exact/rename_iso.
+  move=> wrg wrh; apply/(equivP eqP); split=> [->|]; first exact/fsg_rename_iso.
   move=> [labf monf bijf]; apply/eqP/fsgraphP; split=> [x | x y].
   - by rewrite fsg_rename_labE /= -labf inv_fpermK.
   move: monf=> /(edge_monoS wrg wrh labf)=> monf.
