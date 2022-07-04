@@ -166,7 +166,7 @@ Definition rf : rel label :=
   end.
 
 Definition com ws r := 
-  let w := odflt Bot (fset_pick ws) in
+  let w := odflt Bot (fpick ws) in
   (#|` ws | == 1) && (rf w r).
 
 Definition cf_typ l1 l2 := 
@@ -193,9 +193,9 @@ Proof.
   - move=> isW; exists [fset w].
     move: w isW; case=> //= x v _.
     exists (Read x v); rewrite inE; split=> //=.
-    by rewrite fset_pick1 cardfs1 /= !eqxx. 
+    by rewrite fpick1 cardfs1 /= !eqxx. 
   move=> /= [ws] [r] [] /andP[] /cardfs1P[w'] ->.
-  rewrite fset_pick1 inE /=. 
+  rewrite fpick1 inE /=. 
   by move=> /[swap] /eqP<-; case: w.
 Qed.
 
@@ -205,9 +205,9 @@ Proof.
   apply/(equivP idP); split; rewrite /com /rf.
   - case: r=> // x v _.
     exists [fset (Write x v)].
-    by rewrite fset_pick1 cardfs1 /= !eqxx. 
+    by rewrite fpick1 cardfs1 /= !eqxx. 
   move=> [ws] /andP[] /cardfs1P[w] ->.
-  rewrite fset_pick1 /=. 
+  rewrite fpick1 /=. 
   by case: w; case: r.
 Qed.    
 

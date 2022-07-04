@@ -586,15 +586,26 @@ Implicit Types (s : {fset T}) (x : T).
 
 Local Open Scope fset_scope.
 
-Definition fset_pick s : option T :=
+Definition fpick s : option T :=
   omap val [pick x : s].
 
-Lemma fset_pick1 x :
-  fset_pick [fset x] = Some x.
+Variant fpick_spec s : option T -> Type :=
+  | FPick : forall x : T, x \in s -> fpick_spec s (Some x) 
+  | Nofpick : s = fset0 -> fpick_spec s None.
+
+Lemma fpickP s : fpick_spec s (fpick s).
+Proof. 
+  rewrite /fpick; case: pickP=> /=; first by constructor.
+  move=> X0; constructor; apply/fsetP=> x /=; rewrite inE. 
+  by apply/idP=> xin; move: (X0 (Sub x xin)).
+Qed.
+
+Lemma fpick1 x :
+  fpick [fset x] = Some x.
 Proof.
-  rewrite /fset_pick; case: pickP=> /= [y _|].
-  - by move: (valP y); rewrite inE => /eqP->.
-  by move=>/(_ (Sub x (fset11 x))) /=.
+  case: fpickP=> [y|] /=.
+  - by rewrite inE=> /eqP->.
+  by move=> /eqP; rewrite -cardfs_eq0 cardfs1.
 Qed.
 
 Lemma in_fset1 (x : T) a :
