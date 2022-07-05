@@ -572,6 +572,34 @@ Qed.
 
 End FoldUtils.
 
+Section SeqUtils.
+Context {T U : eqType}.
+Implicit Types (p : pred T) (r : rel T) (f : T -> U).
+Implicit Types (x : T) (s : seq T).
+
+Lemma index_inj s :
+  {in s &, injective (index^~ s)}.
+Proof. 
+  move=> x y; elim s=> [|z {}s] IH //=. 
+  case: ifP=> [/eqP->|]; case: ifP=> [/eqP->|] => //. 
+  rewrite !inE [z == y]eq_sym [z == x]eq_sym => -> -> /=. 
+  move=> ?? []; exact/IH.
+Qed.
+
+Lemma map_uniq_inj_in f s : 
+  uniq [seq f x | x <- s] -> {in s &, injective f}.
+Proof. 
+  pose fs := [seq f x | x <- s].
+  move=> /uniqP inj_nth x y xin yin.
+  rewrite -{1}(@nth_index _ x x s) //. 
+  rewrite -{1}(@nth_index _ x y s) //. 
+  rewrite -!(nth_map x (f x)) ?index_mem // => nth_eq. 
+  apply/(index_inj xin yin)/(inj_nth (f x))=> //=. 
+  all: by rewrite size_map inE index_mem. 
+Qed.  
+
+End SeqUtils.
+
 
 Notation "@! f" := (fun A => f @` A)%fset
   (at level 10, f at level 8, no associativity, format "@!  f") : fset_scope.
@@ -615,6 +643,10 @@ Proof. by rewrite !mem_imfset //= inE. Qed.
 Lemma fset_singl (x : T) :
   [fset[key] x in [:: x]] = [fset x].
 Proof. by apply/fsetP=> y; rewrite in_fset1 inE. Qed.
+
+Lemma imfset0 f :
+  f @` fset0 = fset0.
+Proof. admit. Admitted.
 
 Lemma imfset1 f x :
   f @` ([fset x]) = [fset (f x)].
@@ -718,6 +750,60 @@ Proof.
 Qed.
 
 End FSetUtils.
+
+Section FSetUtilsAux.
+Context {key : unit} {T : choiceType}.
+Implicit Types (f : T -> T).
+Implicit Types (x : T) (X : {fset T}).
+
+Local Open Scope fset_scope.
+
+Lemma imfset_fsubs_eq (f : T -> T) X : 
+  X `<=` f @` X -> f @` X = X.
+Proof. 
+  move=> subs; apply/eqP; rewrite eqEfsubset. 
+  apply/andP; split=> //; apply/fsubsetP.
+  move: X subs; elim/(@fset_ind T).
+  - move=> _ x; rewrite imfset0 //.
+  move=> x X /negP xnin IH; rewrite imfsetU imfset1.
+  rewrite fsubUset fsub1set !inE=> /andP[] subsx /fsubsetP subsXW.
+  have subsX: X `<=` f @` X.
+  - apply/fsubsetP=> y yin; move: (subsXW y yin).
+    rewrite !inE=> /orP[|] //. 
+    move: yin=> /[swap] /eqP->.
+    move: subsx=> /orP[/eqP<-|] //.
+    admit.
+  move=> y; rewrite !inE=> /orP[/eqP->|/IH->] //.
+  move: subsx=> /orP[/eqP<-|]; rewrite ?eqxx //.
+  move=> /imfsetP[{}y] /= /[swap].
+  move: xnin=> /negP /[swap] -> /negP fynin yin.
+  exfalso; apply/fynin/IH=> //; exact/in_imfset.
+Admitted.
+
+Lemma fset_inj (f : T -> T) X : 
+  f @` X = X -> {in X &, injective f}.
+Proof. 
+  move=> fX; apply/map_uniq_inj_in.
+  rewrite -[uniq _]negbK -ltn_size_undup -leqNgt size_map.
+  move: fX; rewrite Imfset.imfsetE -(size_seq_fset imfset_key) => ->.
+  exact/leqnn.
+Qed.
+
+(* TODO: also prove bijectivity!  *)
+
+(* Definition fset_inv x0 (f : T -> T) X y :=  *)
+(*   odflt x0 (fpick [fset x in X | f x == y]). *)
+
+(* Lemma fset_invK x0 (f : T -> T) X : f @` X = X -> *)
+(*   {on X, cancel f & (fset_inv x0 f X)}. *)
+(* Proof.  *)
+(*   move=> fX x fxin; rewrite /fset_inv; case: fpickP=> //=. *)
+(*   - move=> y; rewrite inE //= => /andP[] /= yin /eqP. *)
+(*     move=> /(fset_inj fX); apply=> //. *)
+(*   admit. *)
+(* Admitted. *)
+
+End FSetUtilsAux.
 
 
 Section FinTypeUtils.

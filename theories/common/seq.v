@@ -144,15 +144,6 @@ Proof.
   by rewrite leqNgt=> /negP.
 Qed.
 
-Lemma index_inj s :
-  {in s &, injective (index^~ s)}.
-Proof. 
-  move=> x y; elim s=> [|z {}s] IH //=. 
-  case: ifP=> [/eqP->|]; case: ifP=> [/eqP->|] => //. 
-  rewrite !inE [z == y]eq_sym [z == x]eq_sym => -> -> /=. 
-  move=> ?? []; exact/IH.
-Qed.
-
 Lemma mkseq_in_uniq (f : nat -> T) n :
   { in iota 0 n &, injective f } -> uniq (mkseq f n).
 Proof. by move/map_inj_in_uniq ->; apply: iota_uniq. Qed.

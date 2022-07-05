@@ -95,7 +95,6 @@ Module Export Theory.
 Section Theory.
 Context {T U : identType} {L : botType}.
 Implicit Types (g h : fsgraph T L).
-Implicit Types (f : {fperm T}).
 
 Lemma fsgraphE g x y : (g x y) = ((x, y) \in edges g).
 Proof. done. Qed.
@@ -120,6 +119,9 @@ Lemma nodes_emp :
   nodes ([emp] : fsgraph T L) = fset0.
 Proof. by rewrite /nodes finsupp0. Qed.
 
+Section Rename.
+Implicit Types (f : {fperm T}).
+
 Lemma fsg_rename_labE f g : 
   lab (f @` g) =1 (lab g) \o (fperm_inv f).
 Proof. 
@@ -137,6 +139,21 @@ Proof.
   rewrite -[y in (_, y)](inv_fpermK f). 
   rewrite fsrel_map_mem //; exact/fperm_inj.
 Qed.
+
+(* Nominal axioms for fsg_rename *)
+
+Lemma fsg_renameA f1 f2 g : 
+  f1 @` (f2 @` g) = (f1 \o f2)%fperm @` g.
+Proof.
+  apply/eqP/fsgraphP; split=> [x | x y].
+  - rewrite !fsg_rename_labE /= fsfunE.
+
+Qed.
+
+
+(* ***************************** *)
+
+End Rename.
 
 Lemma well_restrictedP g : 
   reflect {subset fld (edges g) <= nodes g} (well_restricted g).

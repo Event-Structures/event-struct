@@ -9,10 +9,10 @@ Unset Printing Implicit Defensive.
 Local Open Scope fset_scope.
 Local Open Scope fmap_scope.
 
-Declare Scope perm_scope.
-Delimit Scope perm_scope with perm.
+Declare Scope fperm_scope.
+Delimit Scope fperm_scope with fperm.
 
-Local Open Scope perm_scope.
+Local Open Scope fperm_scope.
 
 Section FsFunInjb.
 Context {T : choiceType}.
@@ -73,30 +73,35 @@ Definition fperm0 : fPerm :=
  * https://github.com/arthuraa/extructures/blob/master/theories/fperm.v
  * TODO: it would be nice to unify mathcomp/finmap & extructures eventually.
  *)
-Definition mkfperm_fun (f : T -> T) X x := 
+Definition fperm_fun (f : T -> T) X x := 
   let Y1  := (f @` X) `\` X in
   let Y2  := X `\` (f @` X) in
   if x \in Y1 then nth x Y2 (index x Y1) else f x.
 
-Definition mkfperm_fsfun (f : T -> T) X : {fsfun T -> T} := 
-  [fsfun x in X `|` (f @` X) => mkfperm_fun f X x].
+Definition fperm_fsfun (f : T -> T) X : {fsfun T -> T} := 
+  [fsfun x in X `|` (f @` X) => fperm_fun f X x].
 
-Definition mkfperm (f : T -> T) X : fPerm :=
-  odflt fperm0 (insub (mkfperm_fsfun f X)).
+Definition fperm (f : T -> T) X : fPerm :=
+  odflt fperm0 (insub (fperm_fsfun f X)).
+
+Definition fperm_comp (g f : fPerm) : fPerm := 
+  fperm (g \o f) (finsupp g `|` finsupp f).
 
 End Def.
 
 Module Export Syntax. 
 
 Notation "{ 'fperm' T }" := (@fPerm T) 
-  (at level 0, format "{ 'fperm' T }") : type_scope.
+  (at level 0, format "{ 'fperm'  T }") : type_scope.
 
 Notation "[ 'fperm' ]" := (fperm0) 
   (at level 0, format "[ 'fperm' ]") : fun_scope.
 
-Notation "[ 'fperm' x 'in' X => F ]" := (mkfperm (fun x => F) X)
+Notation "[ 'fperm' x 'in' X => F ]" := (fperm (fun x => F) X)
   (at level 0, x at level 99, format "[ 'fperm'  x  'in'  X  =>  F ]") 
   : fun_scope.
+
+Notation "g \o f" := (fperm_comp g f) : fperm_scope.
 
 End Syntax.
 
@@ -124,7 +129,7 @@ End Instances.
 
 Section Theory.
 Context (T : choiceType).
-Implicit Types (f : {fperm T}) (X : {fset T}).
+Implicit Types (f g : {fperm T}) (X : {fset T}).
 
 Lemma fperm_invK f : cancel f (fperm_inv f).
 Proof. exact/f_preim_of/fperm_inj. Qed.
@@ -135,23 +140,37 @@ Proof. exact/preim_of_f. Qed.
 Lemma fperm_inv_inj f : injective (fperm_inv f).
 Proof. exact/can_inj/inv_fpermK. Qed.
 
-End Theory.
-
-Section MkFPermTheory.
-Context (T : choiceType).
-Implicit Types (f : T -> T) (X : {fset T}).
-
-Lemma mkfpermE f X : {in X &, injective f} -> 
-  {in X, mkfperm f X =1 f}.
+Lemma fperm_inv_finsuppE f x :
+  (fperm_inv f x \in finsupp f) = (x \in finsupp f).
 Proof. 
-  move=> in_injf x xin.
-  rewrite /mkfperm insubT /= => [|_]; last first.
-  - by rewrite /mkfperm_fsfun /mkfperm_fun fsfunE !inE xin. 
+  rewrite !mem_finsupp inv_fpermK. 
+  apply/idP/idP=> /negP neq; apply/negP=> /eqP eqx; apply/neq/eqP.
+  - by rewrite -eqx fperm_invK. 
+  by rewrite eqx inv_fpermK.
+Qed.
+
+Lemma fperm_imfsetE f X : 
+  {subset (finsupp f) <= X} -> f @` X = X.
+Proof. 
+  move=> subs.
+  suff: X `<=` f @` X.
+  - admit.
+  apply/fsubsetP=> x xin. 
+  case: (x \in finsupp f)/idP=> [xinf | /negP]; last first.
+  - move=> /fsfun_dflt <-; exact/in_imfset. 
+  rewrite -[x](inv_fpermK f) mem_imfset /=; last first. 
+  - exact/fperm_inj.
+  by apply/subs; rewrite fperm_inv_finsuppE.
+Admitted.
+
+Lemma fperm_fsfunE (f : T -> T) X : {in X &, injective f} -> 
+  [fperm x in X => f x] = fperm_fsfun f X :> {fsfun T -> T}.
+Proof. 
+  move=> in_injf; rewrite /fperm insubT //=. 
   apply/fsinjectiveP/(fsinjP 2 0)=> /=.
-  exists (X `|` (f @` X)). 
+  exists (X `|` (f @` X)).
   - exact/finsupp_sub.
-  clear x xin.
-  pose Y1 := (f @` X) `\` X. 
+  pose Y1 := (f @` X) `\` X.
   pose Y2 := X `\` (f @` X).
   pose D  := X `|` (f @` X).
   have szY : size Y1 = size Y2.
@@ -161,36 +180,64 @@ Proof.
   have nth_Y2 x : x \in D -> x \in Y1 -> nth x Y2 (index x Y1) \in Y2.
   - move=> ??; by rewrite mem_nth // -szY index_mem.
   split; last first.
-  - case=> /= x; rewrite /mkfperm_fsfun /mkfperm_fun fsfunE.
+  - case=> /= x; rewrite /fperm_fsfun /fperm_fun fsfunE.
     move=> /[dup] xD ->; case: ifP.
     + by move=> /(nth_Y2 x xD); rewrite !inE=> /andP[_ ->].
     by move=> /negP/negP/(nY1_X x xD) ?; rewrite inE (in_imfset _ f).
-  move=> x y xD yD; rewrite /mkfperm_fsfun /mkfperm_fun !fsfunE xD yD.
+  move=> x y xD yD; rewrite /fperm_fsfun /fperm_fun !fsfunE xD yD.
   case: ifP; case: ifP.
   - move: (@uniqP _ y Y2 (fset_uniq Y2))=> nth_injY2.
     move=> /[dup] yin + /[dup] xin; rewrite -!index_mem=> ysz xsz.
-    rewrite (set_nth_default y x); last by rewrite -szY. 
+    rewrite (set_nth_default y x); last by rewrite -szY.
     move=> /nth_injY2; rewrite !inE -szY=> idx_eq.
     by move: (idx_eq xsz ysz); apply/index_inj.
   - move=> /negP/negP /(nY1_X y yD) /(in_imfset imfset_key f) /= fy.
-    by move=> /(nth_Y2 x xD) /[swap] ->; rewrite inE=> /andP[/negP]. 
+    by move=> /(nth_Y2 x xD) /[swap] ->; rewrite inE=> /andP[/negP].
   - move=> /[swap] /negP/negP /(nY1_X x xD) /(in_imfset imfset_key f) /= fx.
-    by move=> /(nth_Y2 y yD) /[swap] <-; rewrite inE=> /andP[/negP]. 
+    by move=> /(nth_Y2 y yD) /[swap] <-; rewrite inE=> /andP[/negP].
   move=> /negP/negP /(nY1_X y yD) yX /negP/negP /(nY1_X x xD) xX.
-  by move=> /(in_injf _ _ xX yX). 
+  by move=> /(in_injf _ _ xX yX).
 Qed.
 
-Lemma fperm_invE f g X : {on f @` X, cancel f & g} -> {in f @` X, cancel g f} ->
-  {in f @` X, fperm_inv (mkfperm f X) =1 g}.
+Lemma fperm_inE (f : T -> T) X : {in X &, injective f} -> 
+  {in X, [fperm x in X => f x] =1 f}.
+Proof. 
+  move=> in_injf x xin; rewrite fperm_fsfunE //.
+  by rewrite fsfunE /fperm_fun !inE xin.
+Qed.
+
+Lemma fpermE (f : T -> T) X : f @` X = X -> 
+  forall x, [fperm x in X => f x] x = if x \in X then f x else x.
+Proof.
+  move=> fX x.
+  have injf: {in X &, injective f} by exact/fset_inj. 
+  case: ifP=> [?|]; first by rewrite fperm_inE.
+  by rewrite fperm_fsfunE // fsfunE fX fsetUid=> ->.
+Qed.
+
+Lemma fperm_invE (f g : T -> T) X : {on f @` X, cancel f & g} -> 
+  {in f @` X, cancel g f} -> {in f @` X, fperm_inv [fperm x in X => f x] =1 g}.
 Proof. 
   move=> fK gK y /imfsetP[x] /= xX ->.
   rewrite fK ?(in_imfset _ f) //.
   suff->: f x = [fperm x in X => f x] x.
   - by rewrite fperm_invK.
-  rewrite mkfpermE //.
+  rewrite fperm_inE //. 
   exact/can_in_inj/imfset_can_in/fK. 
-Qed.  
+Qed. 
 
-End MkFPermTheory. 
+Lemma fperm_compE f g : 
+  (g \o f)%fperm =1 (g \o f)%FUN.
+Proof. 
+  move=> x /=; rewrite /fperm_comp fpermE.
+  - rewrite inE; case: ifP=> // /negP/negP.
+    rewrite negb_or=> /andP[nf ng].
+    by rewrite (fsfun_dflt ng) (fsfun_dflt nf).
+  rewrite imfset_comp [f @` _]fperm_imfsetE ?fperm_imfsetE //.
+  - exact/fsubsetP/fsubsetUl.
+  rewrite fsetUC; exact/fsubsetP/fsubsetUl.
+Qed.
+
+End Theory. 
 
 End FPerm.
