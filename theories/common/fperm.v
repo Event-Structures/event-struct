@@ -150,18 +150,15 @@ Proof.
 Qed.
 
 Lemma fperm_imfsetE f X : 
-  {subset (finsupp f) <= X} -> f @` X = X.
+  (finsupp f) `<=` X -> f @` X = X.
 Proof. 
-  move=> subs.
-  suff: X `<=` f @` X.
-  - admit.
+  move=> subs; apply/eqP; rewrite -imfset_fsubsE. 
   apply/fsubsetP=> x xin. 
   case: (x \in finsupp f)/idP=> [xinf | /negP]; last first.
   - move=> /fsfun_dflt <-; exact/in_imfset. 
-  rewrite -[x](inv_fpermK f) mem_imfset /=; last first. 
-  - exact/fperm_inj.
-  by apply/subs; rewrite fperm_inv_finsuppE.
-Admitted.
+  rewrite -[x](inv_fpermK f) mem_imfset /=; last exact/fperm_inj.
+  by apply/(fsubsetP subs); rewrite fperm_inv_finsuppE.  
+Qed.
 
 Lemma fperm_fsfunE (f : T -> T) X : {in X &, injective f} -> 
   [fperm x in X => f x] = fperm_fsfun f X :> {fsfun T -> T}.
@@ -234,8 +231,8 @@ Proof.
     rewrite negb_or=> /andP[nf ng].
     by rewrite (fsfun_dflt ng) (fsfun_dflt nf).
   rewrite imfset_comp [f @` _]fperm_imfsetE ?fperm_imfsetE //.
-  - exact/fsubsetP/fsubsetUl.
-  rewrite fsetUC; exact/fsubsetP/fsubsetUl.
+  - exact/fsubsetUl.
+  rewrite fsetUC; exact/fsubsetUl.
 Qed.
 
 End Theory. 

@@ -646,7 +646,10 @@ Proof. by apply/fsetP=> y; rewrite in_fset1 inE. Qed.
 
 Lemma imfset0 f :
   f @` fset0 = fset0.
-Proof. admit. Admitted.
+Proof. 
+  apply/cardfs0_eq/eqP; rewrite -leqn0.
+  exact/(leq_trans (leq_imfset_card _ _ _)).
+Qed.
 
 Lemma imfset1 f x :
   f @` ([fset x]) = [fset (f x)].
@@ -758,27 +761,21 @@ Implicit Types (x : T) (X : {fset T}).
 
 Local Open Scope fset_scope.
 
+Lemma imfset_fsubsE (f : T -> T) X : 
+  (X `<=` f @` X) = (f @` X == X).
+Proof. 
+  apply/idP/idP=> [|/eqP->] //.
+  move=> subs; rewrite eq_sym eqEfcard. 
+  apply/andP; split=> //; exact/leq_imfset_card.
+Qed.
+
 Lemma imfset_fsubs_eq (f : T -> T) X : 
   X `<=` f @` X -> f @` X = X.
 Proof. 
-  move=> subs; apply/eqP; rewrite eqEfsubset. 
-  apply/andP; split=> //; apply/fsubsetP.
-  move: X subs; elim/(@fset_ind T).
-  - move=> _ x; rewrite imfset0 //.
-  move=> x X /negP xnin IH; rewrite imfsetU imfset1.
-  rewrite fsubUset fsub1set !inE=> /andP[] subsx /fsubsetP subsXW.
-  have subsX: X `<=` f @` X.
-  - apply/fsubsetP=> y yin; move: (subsXW y yin).
-    rewrite !inE=> /orP[|] //. 
-    move: yin=> /[swap] /eqP->.
-    move: subsx=> /orP[/eqP<-|] //.
-    admit.
-  move=> y; rewrite !inE=> /orP[/eqP->|/IH->] //.
-  move: subsx=> /orP[/eqP<-|]; rewrite ?eqxx //.
-  move=> /imfsetP[{}y] /= /[swap].
-  move: xnin=> /negP /[swap] -> /negP fynin yin.
-  exfalso; apply/fynin/IH=> //; exact/in_imfset.
-Admitted.
+  move=> subs; apply/esym/eqP. 
+  rewrite eqEfcard; apply/andP; split=> //.
+  exact/leq_imfset_card.
+Qed.
 
 Lemma fset_inj (f : T -> T) X : 
   f @` X = X -> {in X &, injective f}.
@@ -1196,13 +1193,6 @@ Proof.
   apply/fsetP=> a; apply/imfsetP/imfsetP=> [[/= x xA ->]|].
     by exists (f x); rewrite // in_imfset.
   by move=> [/= x /imfsetP [/= y yA ->] ->]; exists y.
-Qed.
-
-Lemma imfset0 (K V : choiceType)
-  (f : K -> V) : f @` fset0 = fset0.
-Proof.
-  apply/cardfs0_eq/eqP; rewrite -leqn0.
-  exact/(leq_trans (leq_imfset_card _ _ _)).
 Qed.
 
 End Imfset.
