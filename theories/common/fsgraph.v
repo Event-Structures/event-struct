@@ -81,6 +81,7 @@ End Def.
 End Def.
 
 Arguments fsgraph0 {T L}.
+Arguments fsg_rename : simpl never.
 
 Module Export Syntax. 
 Notation "[ 'emp' ]" := (fsgraph0)
@@ -146,10 +147,11 @@ Lemma fsg_renameA f1 f2 g :
   f1 @` (f2 @` g) = (f1 \o f2)%fperm @` g.
 Proof.
   apply/eqP/fsgraphP; split=> [x | x y].
-  - rewrite !fsg_rename_labE /= fsfunE.
-
+  - rewrite !fsg_rename_labE fperm_comp_invE /comp.
+    by rewrite fperm_compE fsg_rename_labE.
+  rewrite !fsg_renameE fperm_comp_invE /relpre /=.
+  by rewrite fsg_renameE /= ![in RHS]fperm_compE.
 Qed.
-
 
 (* ***************************** *)
 
