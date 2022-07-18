@@ -598,6 +598,10 @@ Proof.
   all: by rewrite size_map inE index_mem. 
 Qed.  
 
+(* Lemma mem_map_in f p s x : {in p &, injective f} -> {subset s <= p} -> *)
+(*   p x -> (f x \in map f s) = (x \in s). *)
+(* Proof. by move=> Hf Hs ?; apply/mapP/idP=> [[y /Hs Hy /Hf->]//|]; exists x. Qed. *)
+
 End SeqUtils.
 
 
@@ -752,10 +756,20 @@ Proof.
   move=> H x Hx /=; apply/forallP=> y; exact/H.
 Qed.
 
+(* Lemma mem_imfset_in (f : T -> U) (p : finmempred T) (P : pred T) :  *)
+(*   {in P &, injective f} -> {subset p <= P} -> *)
+(*     forall (x : T), x \in P -> (f x \in imfset key f p) = (in_mem x p). *)
+(* Proof.  *)
+(*   move=> f_inj subs x xin.  *)
+(*   rewrite unlock seq_fsetE.  *)
+(*   rewrite (mem_map_in f_inj) // => [|y]; rewrite enum_finmemE //.  *)
+(*   exact/subs. *)
+(* Qed. *)
+
 End FSetUtils.
 
 Section FSetUtilsAux.
-Context {key : unit} {T : choiceType}.
+Context {key : unit} {T U : choiceType}.
 Implicit Types (f : T -> T).
 Implicit Types (x : T) (X : {fset T}).
 
@@ -788,15 +802,17 @@ Qed.
 
 (* TODO: also prove bijectivity!  *)
 
-(* Definition fset_inv x0 (f : T -> T) X y :=  *)
+(* Definition fset_inv x0 (f : T -> T) X y := *)
 (*   odflt x0 (fpick [fset x in X | f x == y]). *)
 
 (* Lemma fset_invK x0 (f : T -> T) X : f @` X = X -> *)
 (*   {on X, cancel f & (fset_inv x0 f X)}. *)
-(* Proof.  *)
-(*   move=> fX x fxin; rewrite /fset_inv; case: fpickP=> //=. *)
+(* Proof. *)
+(*   move=> /[dup] fX /fset_inj injf x fxin.  *)
+(*   rewrite /fset_inv; case: fpickP=> //=. *)
 (*   - move=> y; rewrite inE //= => /andP[] /= yin /eqP. *)
 (*     move=> /(fset_inj fX); apply=> //. *)
+(*     move: fxin; rewrite -{1}fX (mem_imfset_in injf) //. *)
 (*   admit. *)
 (* Admitted. *)
 
