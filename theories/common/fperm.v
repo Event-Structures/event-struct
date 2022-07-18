@@ -64,8 +64,6 @@ Proof. exact/fsinj_bij/fperm_inj. Qed.
 Lemma fperm_surj f : surjective f.
 Proof. exact/bij_surj/fperm_bij. Qed.
 
-Definition fperm_inv f := preim_of (fperm_surj f).
-
 Definition fperm0 : fPerm := 
   Sub [fsfun] (introT fsinjectiveP (fsfun0_inj (@inj_id T))).
 
@@ -86,6 +84,9 @@ Definition fperm (f : T -> T) X : fPerm :=
 
 Definition fperm_comp (g f : fPerm) : fPerm := 
   fperm (g \o f) (finsupp g `|` finsupp f).
+
+Definition fperm_inv f :=
+  fperm (preim_of (fperm_surj f)) (finsupp f).
 
 End Def.
 
@@ -129,36 +130,8 @@ End Instances.
 
 Section Theory.
 Context (T : choiceType).
-Implicit Types (f g : {fperm T}) (X : {fset T}).
-
-Lemma fperm_invK f : cancel f (fperm_inv f).
-Proof. exact/f_preim_of/fperm_inj. Qed.
-
-Lemma inv_fpermK f : cancel (fperm_inv f) f.
-Proof. exact/preim_of_f. Qed.
-
-Lemma fperm_inv_inj f : injective (fperm_inv f).
-Proof. exact/can_inj/inv_fpermK. Qed.
-
-Lemma fperm_inv_finsuppE f x :
-  (fperm_inv f x \in finsupp f) = (x \in finsupp f).
-Proof. 
-  rewrite !mem_finsupp inv_fpermK. 
-  apply/idP/idP=> /negP neq; apply/negP=> /eqP eqx; apply/neq/eqP.
-  - by rewrite -eqx fperm_invK. 
-  by rewrite eqx inv_fpermK.
-Qed.
-
-Lemma fperm_imfsetE f X : 
-  (finsupp f) `<=` X -> f @` X = X.
-Proof. 
-  move=> subs; apply/eqP; rewrite -imfset_fsubsE. 
-  apply/fsubsetP=> x xin. 
-  case: (x \in finsupp f)/idP=> [xinf | /negP]; last first.
-  - move=> /fsfun_dflt <-; exact/in_imfset. 
-  rewrite -[x](inv_fpermK f) mem_imfset /=; last exact/fperm_inj.
-  by apply/(fsubsetP subs); rewrite fperm_inv_finsuppE.  
-Qed.
+Implicit Types (f g : {fperm T}).
+Implicit Types (p : pred T) (X : {fset T}).
 
 Lemma fperm_fsfunE (f : T -> T) X : {in X &, injective f} -> 
   [fperm x in X => f x] = fperm_fsfun f X :> {fsfun T -> T}.
@@ -210,9 +183,67 @@ Proof.
   have injf: {in X &, injective f} by exact/fset_inj. 
   case: ifP=> [?|]; first by rewrite fperm_inE.
   by rewrite fperm_fsfunE // fsfunE fX fsetUid=> ->.
+Qed.    
+
+Lemma fperm_imfsetE f X : 
+  finsupp f `<=` X -> f @` X = X.
+Proof. 
+  move=> subs; apply/eqP; rewrite -imfset_fsubsE. 
+  apply/fsubsetP=> x xin. 
+  case: (x \in finsupp f)/idP=> [insup | /negP]; last first.
+  - move=> /fsfun_dflt <-; exact/in_imfset. 
+  have K: cancel (preim_of (fperm_surj f)) f.
+  - exact/preim_of_f.
+  rewrite -[x]K mem_imfset /=; last exact/fperm_inj.
+  apply/(fsubsetP subs); move: insup. 
+  rewrite !mem_finsupp K.
+  by apply/contra=> /eqP {1}->; rewrite K.
 Qed.
 
-Lemma fperm_invE (f g : T -> T) X : {on f @` X, cancel f & g} -> 
+Lemma fperm_invE f :
+  fperm_inv f =1 preim_of (fperm_surj f).
+Proof. 
+  have K: cancel f (preim_of (fperm_surj f)).
+  - exact/f_preim_of/fperm_inj.
+  have K': cancel (preim_of (fperm_surj f)) f.
+  - exact/preim_of_f.
+  move=> x; rewrite fpermE; first case: ifP=> //.
+  - by rewrite mem_finsupp=> /negP/negP/eqP {2}<-; rewrite K.
+  apply/fsetP=> {}x.
+  rewrite -[x in LHS]K mem_imfset ?mem_finsupp //=; last first.
+  - exact/can_inj/K'. 
+  suff: (f (f x) == f x) = (f x == x) by move=> ->.
+  apply/idP/idP=> [|/eqP {1}->] //.
+  move=> /eqP=> eqfx; apply/eqP.
+  by rewrite -[x in RHS]K -[f x in RHS]eqfx K. 
+Qed.
+
+Lemma fperm_invK f : cancel f (fperm_inv f).
+Proof. 
+  apply/(eq_can _ (frefl f) (fsym (fperm_invE f))).
+  exact/f_preim_of/fperm_inj. 
+Qed.
+
+Lemma inv_fpermK f : cancel (fperm_inv f) f.
+Proof. 
+  apply/(eq_can _ (fsym (fperm_invE f)) (frefl f)).
+  exact/preim_of_f. 
+Qed.
+
+Lemma fperm_inv_inj f : injective (fperm_inv f).
+Proof. exact/can_inj/inv_fpermK. Qed.
+
+Lemma fperm_inv_mem_finsupp f x :
+  (fperm_inv f x \in finsupp f) = (x \in finsupp f).
+Proof.
+  rewrite !mem_finsupp inv_fpermK.
+  suff: (x == fperm_inv f x) = (f x == x) by move=> ->.  
+  apply/idP/idP=> /eqP eqx; apply/eqP.
+  - by rewrite eqx inv_fpermK.
+  by rewrite -eqx fperm_invK.
+Qed.
+
+Lemma fperm_inv_canE (f g : T -> T) X : {on f @` X, cancel f & g} -> 
   {in f @` X, cancel g f} -> {in f @` X, fperm_inv [fperm x in X => f x] =1 g}.
 Proof. 
   move=> fK gK y /imfsetP[x] /= xX ->.
@@ -234,6 +265,16 @@ Proof.
   - exact/fsubsetUl.
   rewrite fsetUC; exact/fsubsetUl.
 Qed.
+
+Lemma fperm_comp_invE f g : 
+  fperm_inv (g \o f)%fperm = (fperm_inv f \o fperm_inv g)%fperm.
+Proof. 
+  apply/val_inj/fsfunP=> x /=.
+  rewrite fperm_compE /= !fperm_invE.
+  repeat (apply/canRL; first exact/f_preim_of/fperm_inj).
+  rewrite -[x in RHS](preim_of_f (fperm_surj (g \o f))).
+  by rewrite fperm_compE.
+Qed.  
 
 End Theory. 
 
