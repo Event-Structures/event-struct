@@ -594,7 +594,7 @@ Qed.
 Lemma swap_dom es e : e \in dom es ->
   swap id (fresh_id1 es) (fresh_id2 es) e = e.
 Proof.
-  move=> H; rewrite -swap_not_eq=> //; rewrite lt_eqF //.
+  move=> H; rewrite swapNE // lt_eqF //. 
   - by apply /fresh_seq_mem.
   by apply /fresh_seq_mem; rewrite inE; apply /orP; right.
 Qed.
@@ -632,12 +632,12 @@ Proof.
   - rewrite swap1 eq_refl F /= !swap_dom //.
   rewrite ?inv_eq ?swap1 ?swap2 ?N1; try exact/swap_inv.
   case: ifP=> //=; first by rewrite !swap_dom=> //.
-  move/negbT=> ?; rewrite -swap_not_eq //.
+  move/negbT=> ?; rewrite swapNE //.
   case: (boolP (x \in dom es))=> [|I].
   - case L: (fed _ x)=> [l p r] I /=; apply/congr2; rewrite swap_dom //.
     - by rewrite -[p]/(fpo_prj (mk_edescr l p r)) -L fpo_dom.
     by rewrite -[r]/(frf_prj (mk_edescr l p r)) -L frf_dom.
-  by rewrite fsfun_dflt /= -?swap_not_eq // fed_supp I.
+  by rewrite fsfun_dflt /= ?swapNE // fed_supp I.
 Qed.
 
 Lemma comm_ltr l1 l2 :

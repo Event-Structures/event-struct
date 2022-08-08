@@ -398,41 +398,32 @@ Qed.
 End ReflectConnectives.
 
 Section Swap.
-
 Context {T : eqType}.
+Implicit Types (f : T -> T).
 
-Section SwapDef.
+Definition swap f x y := fun z =>
+  if z == x then f y
+  else if z == y then f x
+  else f z.
 
-Context (f : T -> T) (a b : T).
+Lemma swap1 f x y : swap f x y x = f y.
+Proof. by rewrite /swap eqxx. Qed.
 
-Definition swap := fun x =>
-  if x == a then
-    f b
-  else if x == b then
-    f a
-  else f x.
+Lemma swap2 f x y : swap f x y y = f x.
+Proof. by rewrite /swap eqxx; case: ifP=> // /eqP->. Qed.
 
-Lemma swap1: swap a = f b.
-Proof. by rewrite /swap eq_refl. Qed.
-
-Lemma swap2: swap b = f a.
-Proof. by rewrite /swap eq_refl; case: ifP=> // /eqP->. Qed.
-
-Lemma swap_not_eq x: x != a -> x != b -> f x = swap x.
+Lemma swapNE f x y z : z != x -> z != y -> swap f x y z = f z.
 Proof. by rewrite /swap=> /negbTE->/negbTE->. Qed.
 
-End SwapDef.
-
-Lemma swapxx x f : swap f x x =1 f.
+Lemma swapxx f x : swap f x x =1 f.
 Proof. by move=> y; rewrite /swap eq_sym; case: (x =P y)=> [->|]. Qed.
 
 Lemma swap_inv a b: involutive (swap id a b).
 Proof.
   move=> ?; rewrite {2}/swap; case: ifP=> [/eqP->|]; first exact/swap2.
   move/negbT=> ?; case: ifP=> [/eqP->|/negbT ?]; first exact/swap1.
-  exact/esym/swap_not_eq.
+  exact/swapNE.
 Qed.
-
 
 Lemma bij_swap a b f : bijective f -> bijective (swap f a b).
 Proof.
@@ -446,7 +437,6 @@ Proof.
   case: (x =P f b)=>[->|]; rewrite ?eq_refl // -?[g x == _](bij_eq bi) c2.
   by move/eqP/negbTE->=>/eqP/negbTE->.
 Qed.
-
 
 End Swap.
 
