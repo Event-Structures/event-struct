@@ -252,7 +252,7 @@ Lemma cons_ca_contra (X Y : {fset E}) :
   {subsumes X <= Y : x y / x <= y} -> cons Y -> cons X.
 Proof.
   move: X {2}(X `\` Y) (@erefl _ (X `\` Y))=> /[swap].
-  elim/fset_ind=> [?/eqP/[! fsetD_eq0]/cons_contra//|].
+  elim/(@fset_ind E)=> [?/eqP/[! fsetD_eq0]/cons_contra//|].
   move=> x ?? IHxy X XYE /[dup] S + cY; rewrite -(@fsetD1K _ x X); last first.
   - move/fsetP/(_ x): XYE; rewrite ?inE eqxx andbC /=; by case: (x \in X).
   case/(_ x)=> [/[! (inE, eqxx)]//|y ? /cons_prop]; apply.
