@@ -112,6 +112,14 @@ Lemma memNnodes g x :
   (x \notin nodes g) = (lab g x == bot).
 Proof. by rewrite memNfinsupp. Qed.
 
+Lemma memNnodesFl g x y :
+  x \notin nodes g -> g x y = false.
+Proof. admit. Admitted. 
+
+Lemma memNnodesFr g x y :
+  y \notin nodes g -> g x y = false.
+Proof. admit. Admitted. 
+
 Lemma lab_bot g x :
   (x \notin nodes g) -> lab g x = bot.
 Proof. by rewrite memNnodes=> /eqP. Qed.
@@ -119,6 +127,7 @@ Proof. by rewrite memNnodes=> /eqP. Qed.
 Lemma nodes_emp : 
   nodes ([emp] : fsgraph T L) = fset0.
 Proof. by rewrite /nodes finsupp0. Qed.
+  
 
 Section Rename.
 Implicit Types (f : {fperm T}).
@@ -151,6 +160,20 @@ Proof.
     by rewrite fperm_compE fsg_rename_labE.
   rewrite !fsg_renameE fperm_comp_invE /relpre /=.
   by rewrite fsg_renameE /= ![in RHS]fperm_compE.
+Qed.
+
+Lemma fsg_nodesNNE x y g : 
+  x \notin nodes g -> y \notin nodes g -> [fperm x \ y] @` g = g.
+Proof. 
+  move=> nx ny; apply/eqP/fsgraphP; split=> [x' | x' y'].
+  - rewrite !fsg_rename_labE /comp fperm_swap_invE fperm_swapE /swap. 
+    move: nx ny; rewrite !memNnodes=> /eqP labx /eqP laby. 
+    case: ifP=> [/eqP->|]; rewrite ?labx ?laby //. 
+    case: ifP=> [/eqP->|]; rewrite ?labx ?laby //. 
+  rewrite !fsg_renameE /relpre /= !fperm_swap_invE !fperm_swapE /swap.   
+  do 2 (case: ifP=> [/eqP->|]; first by rewrite !memNnodesFl). 
+  do 2 (case: ifP=> [/eqP->|]; first by rewrite !memNnodesFr). 
+  done.
 Qed.
 
 (* ***************************** *)
