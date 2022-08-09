@@ -418,23 +418,23 @@ Proof. by rewrite /swap=> /negbTE->/negbTE->. Qed.
 Lemma swapxx f x : swap f x x =1 f.
 Proof. by move=> y; rewrite /swap eq_sym; case: (x =P y)=> [->|]. Qed.
 
-Lemma swap_inv a b: involutive (swap id a b).
+Lemma swap_inv x y : involutive (swap id x y).
 Proof.
   move=> ?; rewrite {2}/swap; case: ifP=> [/eqP->|]; first exact/swap2.
   move/negbT=> ?; case: ifP=> [/eqP->|/negbT ?]; first exact/swap1.
   exact/swapNE.
 Qed.
 
-Lemma bij_swap a b f : bijective f -> bijective (swap f a b).
+Lemma bij_swap x y f : bijective f -> bijective (swap f x y).
 Proof.
   move=> /[dup] bi [g c1 c2].
-  apply/(@Bijective _ _ _ (swap g (f a) (f b)))=> x; rewrite /swap.
-  - case: (x =P a)=> [->|]; rewrite ?eq_refl ?c1 ?bij_eq //.
+  apply/(@Bijective _ _ _ (swap g (f x) (f y)))=> z; rewrite /swap.
+  - case: (z =P x)=> [->|]; rewrite ?eq_refl ?c1 ?bij_eq //.
     - by case: ifP=> // /eqP.
-    case: (x =P b)=> [->|]; first by rewrite ?eq_refl.
+    case: (z =P y)=> [->|]; first by rewrite ?eq_refl.
     by rewrite ?bij_eq // => /eqP/negbTE->/eqP/negbTE->.
-  case: (x =P f a)=>[->|]; rewrite ?c1 ?eq_refl; first by case: ifP=>[/eqP->|].
-  case: (x =P f b)=>[->|]; rewrite ?eq_refl // -?[g x == _](bij_eq bi) c2.
+  case: (z =P f x)=>[->|]; rewrite ?c1 ?eq_refl; first by case: ifP=>[/eqP->|].
+  case: (z =P f y)=>[->|]; rewrite ?eq_refl // -?[g z == _](bij_eq bi) c2.
   by move/eqP/negbTE->=>/eqP/negbTE->.
 Qed.
 
