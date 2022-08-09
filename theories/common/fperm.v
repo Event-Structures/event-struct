@@ -82,6 +82,9 @@ Definition fperm_fsfun (f : T -> T) X : {fsfun T -> T} :=
 Definition fperm (f : T -> T) X : fPerm :=
   odflt fperm0 (insub (fperm_fsfun f X)).
 
+Definition fperm_swap x y : fPerm :=
+  fperm (swap id x y) [fset x; y].
+
 Definition fperm_comp (g f : fPerm) : fPerm := 
   fperm (g \o f) (finsupp g `|` finsupp f).
 
@@ -97,6 +100,10 @@ Notation "{ 'fperm' T }" := (@fPerm T)
 
 Notation "[ 'fperm' ]" := (fperm0) 
   (at level 0, format "[ 'fperm' ]") : fun_scope.
+
+Notation "[ 'fperm' x \ y ]" := (fperm_swap x y) 
+  (at level 0, x at level 99, y at level 99, 
+    format "[ 'fperm'  x  \  y ]") : fun_scope.
 
 Notation "[ 'fperm' x 'in' X => F ]" := (fperm (fun x => F) X)
   (at level 0, x at level 99, format "[ 'fperm'  x  'in'  X  =>  F ]") 
@@ -131,7 +138,11 @@ End Instances.
 Section Theory.
 Context (T : choiceType).
 Implicit Types (f g : {fperm T}).
-Implicit Types (p : pred T) (X : {fset T}).
+Implicit Types (p : pred T) (X : {fset T}) (x : T).
+
+Lemma fperm_finsuppE (f : T -> T) X : {in X &, injective f} -> 
+  finsupp [fperm x in X => f x] = X `|` f @` X.
+Proof. admit. Admitted.
 
 Lemma fperm_fsfunE (f : T -> T) X : {in X &, injective f} -> 
   [fperm x in X => f x] = fperm_fsfun f X :> {fsfun T -> T}.
@@ -200,6 +211,40 @@ Proof.
   by apply/contra=> /eqP {1}->; rewrite K.
 Qed.
 
+(* TODO: move to utils.v, also rename it? *)
+Lemma swap_imfsetE x y : 
+  swap id x y @` [fset x; y] = [fset x; y].
+Proof. 
+  apply/fsetP=> {}z.
+  rewrite -[z in LHS](swap_inv x y) mem_imfset /=; last first.
+  - by apply/bij_inj/bij_swap; exists id.
+  rewrite !inE /swap. 
+  case: (z =P x); rewrite ?eqxx ?orbT //=.
+  case: (z =P y); rewrite ?eqxx ?orbT //=.
+  by move=> /eqP /negPf -> /eqP /negPf ->.
+Qed.
+  
+Lemma fperm_swapE x y : 
+  [fperm x \ y] =1 swap id x y.
+Proof. 
+  move=> z; rewrite fpermE ?inE ?swap_imfsetE //. 
+  case: (z =P x)=> [->|] /=; rewrite ?swap1 //.
+  case: (z =P y)=> [->|] /=; rewrite ?swap2 //.
+  move=> /eqP ? /eqP ?; exact/esym/swapNE. 
+Qed.  
+
+Lemma fperm_compE f g : 
+  (g \o f)%fperm =1 (g \o f)%FUN.
+Proof. 
+  move=> x /=; rewrite /fperm_comp fpermE.
+  - rewrite inE; case: ifP=> // /negP/negP.
+    rewrite negb_or=> /andP[nf ng].
+    by rewrite (fsfun_dflt ng) (fsfun_dflt nf).
+  rewrite imfset_comp [f @` _]fperm_imfsetE ?fperm_imfsetE //.
+  - exact/fsubsetUl.
+  rewrite fsetUC; exact/fsubsetUl.
+Qed.
+
 Lemma fperm_invE f :
   fperm_inv f =1 preim_of (fperm_surj f).
 Proof. 
@@ -243,7 +288,7 @@ Proof.
   by rewrite -eqx fperm_invK.
 Qed.
 
-Lemma fperm_inv_canE (f g : T -> T) X : {on f @` X, cancel f & g} -> 
+Lemma fperm_inv_can_onE (f g : T -> T) X : {on f @` X, cancel f & g} -> 
   {in f @` X, cancel g f} -> {in f @` X, fperm_inv [fperm x in X => f x] =1 g}.
 Proof. 
   move=> fK gK y /imfsetP[x] /= xX ->.
@@ -254,16 +299,27 @@ Proof.
   exact/can_in_inj/imfset_can_in/fK. 
 Qed. 
 
-Lemma fperm_compE f g : 
-  (g \o f)%fperm =1 (g \o f)%FUN.
+Lemma fperm_inv_canE (f g : T -> T) X : f @` X = X -> cancel f g -> cancel g f ->
+  forall x, fperm_inv [fperm x in X => f x] x = if x \in X then g x else x. 
+Proof.
+  move=> fX K K' x.
+  case: ifP=> [?|]; first by rewrite (@fperm_inv_can_onE f g) // fX.
+  move=> /negP/negP xn; rewrite fperm_invE.
+  suff eqx: x = [fperm x in X => f x] x.
+  - rewrite [in LHS]eqx f_preim_of //; exact/fperm_inj.
+  rewrite fsfun_dflt // fperm_finsuppE. 
+  - rewrite inE negb_or fX; exact/andP.
+  move=> ????; exact/can_inj/K.
+Qed.
+
+Lemma fperm_swap_invE x y : 
+  fperm_inv [fperm x \ y] = [fperm x \ y].
 Proof. 
-  move=> x /=; rewrite /fperm_comp fpermE.
-  - rewrite inE; case: ifP=> // /negP/negP.
-    rewrite negb_or=> /andP[nf ng].
-    by rewrite (fsfun_dflt ng) (fsfun_dflt nf).
-  rewrite imfset_comp [f @` _]fperm_imfsetE ?fperm_imfsetE //.
-  - exact/fsubsetUl.
-  rewrite fsetUC; exact/fsubsetUl.
+  apply/val_inj/fsfunP=> z /=; rewrite fperm_swapE. 
+  rewrite (@fperm_inv_canE _ (swap id x y)); try exact/swap_inv; last first.
+  - by rewrite swap_imfsetE.
+  case: ifP=> //; rewrite !inE=> /negP/negP.
+  by rewrite negb_or /swap=> /andP[] /negPf -> /negPf ->.
 Qed.
 
 Lemma fperm_comp_invE f g : 
