@@ -28,20 +28,27 @@ Delimit Scope fsgraph_scope with fsgraph.
 
 Local Open Scope fsgraph_scope.
 
-Module FsGraph.
+Module Export FsGraph.
 
 Module Export Def.
 Section Def.
 Context (T : identType) (L : botType).
 
+Definition fsgraph_pred (lab : {fsfun T -> L with bot}) (edges : fsrel T) := 
+  fld edges `<=` finsupp lab.
+
 Record fsgraph := mk_fsgraph {
-  lab   : {fsfun T -> L with bot};
-  edges : fsrel T;
+  fsgraph_val : {fsfun T -> L with bot} * fsrel T;
+  _ : fsgraph_pred fsgraph_val.1 fsgraph_val.2;
 }.
+
+Canonical fsgraph_subType := Eval hnf in [subType for fsgraph_val].
 
 Implicit Types (g : fsgraph).
 
+Definition lab   g := (val g).1.
 Definition nodes g := finsupp (lab g).
+Definition edges g := (val g).2.
 
 Coercion rel_of_fsgraph g : rel T := 
   fun x y => (x, y) \in edges g.
@@ -49,47 +56,29 @@ Coercion rel_of_fsgraph g : rel T :=
 Definition fsgraph_apply g : T -> T -> bool := rel_of_fsgraph g.
 Coercion fsgraph_apply : fsgraph >-> Funclass.
 
-Definition fsgraph0 : fsgraph := 
-  mk_fsgraph [fsfun] fset0.
+Lemma fsgraph0P : fsgraph_pred [fsfun] fset0.
+Proof. rewrite /fsgraph_pred /= fld0; exact/fsub0set. Qed.
 
-Definition fsg_rename (f : {fperm T}) g := 
-  let flab   := [fsfun x in (f @` nodes g) => lab g (fperm_inv f x)] in 
-  let fedges := (f @` (edges g))%fsrel in
-  mk_fsgraph flab fedges. 
+Definition fsgraph0 : fsgraph := @mk_fsgraph ([fsfun], fset0) fsgraph0P.
 
-Definition prod_of_fsgraph g := (lab g, edges g).
-Definition fsgraph_of_prod := fun '(f, es) => mk_fsgraph f es.
-
-Lemma prod_of_fsgraph_inj : injective prod_of_fsgraph.
-Proof. by move=> [??] [??] [-> ->]. Qed.
-
-Lemma prod_of_fsgraphK : cancel prod_of_fsgraph fsgraph_of_prod.
-Proof. by case. Qed.
-
-Definition fsgraph_eqMixin := InjEqMixin (prod_of_fsgraph_inj). 
+Definition fsgraph_eqMixin := 
+  Eval hnf in [eqMixin of fsgraph by <:].
 Canonical fsgraph_eqType := 
   Eval hnf in EqType fsgraph fsgraph_eqMixin.
 
-Definition fsgraph_choiceMixin := CanChoiceMixin prod_of_fsgraphK.
+Definition fsgraph_choiceMixin := 
+  Eval hnf in [choiceMixin of fsgraph by <:].
 Canonical fsgraph_choiceType := 
   Eval hnf in ChoiceType fsgraph fsgraph_choiceMixin.
-
-Definition well_restricted g := 
-  (fld (edges g)) `<=` nodes g.
 
 End Def.
 End Def.
 
 Arguments fsgraph0 {T L}.
-Arguments fsg_rename : simpl never.
 
 Module Export Syntax. 
 Notation "[ 'emp' ]" := (fsgraph0)
   (at level 0, format "[ 'emp' ]") : fsgraph_scope.
-Notation "f @` r" := (fsg_rename f r)
-  (at level 24) : fsgraph_scope.
-Notation "@! f" := (fun r => f @` r)%fsgraph
-  (at level 10, f at level 8, no associativity, format "@!  f") : fsgraph_scope.
 End Syntax.
 
 Module Export Theory.
@@ -104,6 +93,10 @@ Lemma fsgraphP g h :
   reflect (lab g =1 lab h /\ g =2 h) (g == h).
 Proof. by apply/(equivP (andPP eqP (fsrelP _ _))); rewrite fsfunP. Qed.
 
+Lemma mem_edges_nodes g x :
+   x \in fld (edges g) -> x \in nodes g.
+Proof. exact/(fsubsetP (valP g)). Qed.
+
 Lemma mem_nodes g x : 
   (x \in nodes g) = (lab g x != bot).
 Proof. by rewrite mem_finsupp. Qed.
@@ -114,11 +107,19 @@ Proof. by rewrite memNfinsupp. Qed.
 
 Lemma memNnodesFl g x y :
   x \notin nodes g -> g x y = false.
-Proof. admit. Admitted. 
+Proof. 
+  move=> /(nmem_subset (@mem_edges_nodes g)) /=.
+  rewrite /fld inE negb_or=> /andP[/negP + _].
+  by apply/contra_notF=> ?; apply/imfsetP; exists (x, y). 
+Qed.
 
 Lemma memNnodesFr g x y :
   y \notin nodes g -> g x y = false.
-Proof. admit. Admitted. 
+Proof. 
+  move=> /(nmem_subset (@mem_edges_nodes g)) /=.
+  rewrite /fld inE negb_or=> /andP[_ /negP +].
+  by apply/contra_notF=> ?; apply/imfsetP; exists (x, y). 
+Qed.
 
 Lemma lab_bot g x :
   (x \notin nodes g) -> lab g x = bot.
@@ -127,13 +128,28 @@ Proof. by rewrite memNnodes=> /eqP. Qed.
 Lemma nodes_emp : 
   nodes ([emp] : fsgraph T L) = fset0.
 Proof. by rewrite /nodes finsupp0. Qed.
-  
 
-Section Rename.
+End Theory.
+End Theory.
+
+
+Module Export Rename. 
+
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
 Implicit Types (f : {fperm T}).
 
-Lemma fsg_rename_labE f g : 
-  lab (f @` g) =1 (lab g) \o (fperm_inv f).
+Definition fsg_rename_label f g : {fsfun T -> L with bot} := 
+  [fsfun x in (f @` nodes g) => lab g (fperm_inv f x)].
+
+Definition fsg_rename_edges f g : fsrel T := 
+  (f @` (edges g))%fsrel.
+
+(* TODO: rename to avoid collision? *)
+Lemma fsg_rename_labelE f g : 
+  fsg_rename_label f g =1 (lab g) \o (fperm_inv f).
 Proof. 
   move=> x /=; rewrite fsfunE; case: ifP=> [|/negP/negP] //.
   rewrite -[x in x \notin _](inv_fpermK f) mem_imfset /=. 
@@ -141,14 +157,58 @@ Proof.
   exact/fperm_inj.
 Qed.
 
-Lemma fsg_renameE f g : 
-  (f @` g) =2 relpre (fperm_inv f) g.
+Lemma fsg_rename_edgesE f g : 
+  fsg_rename_edges f g =2 relpre (fperm_inv f) g.
 Proof. 
-  move=> x y; rewrite fsgraphE /=.
+  move=> x y /=; rewrite /fsg_rename_edges !fsgraphE !fsrelE /=.
   rewrite -[x in (x, _)](inv_fpermK f). 
   rewrite -[y in (_, y)](inv_fpermK f). 
   rewrite fsrel_map_mem //; exact/fperm_inj.
 Qed.
+
+Lemma fsg_renameP f g :
+  fsgraph_pred (fsg_rename_label f g) (fsg_rename_edges f g).
+Proof. 
+  apply/fsubsetP=> z /=. 
+  (* TODO: how to avoid giving `P` explicitly? using views somehow? *)
+  pose P x := x \in finsupp (fsg_rename_label f g).
+  apply/(@fld_elim _ P); rewrite /P => x y /=.
+  rewrite !mem_finsupp !fsg_rename_labelE fsg_rename_edgesE=> /= H.
+  rewrite -!mem_nodes; split; apply/mem_edges_nodes/fldP.
+  - by exists (fperm_inv f y); left.
+  by exists (fperm_inv f x); right. 
+Qed.
+
+Definition fsg_rename f g := 
+  let label := fsg_rename_label f g in
+  let edges := fsg_rename_edges f g in
+  @mk_fsgraph _ _ (label, edges) (fsg_renameP f g).
+
+End Def. 
+End Def. 
+
+Arguments fsg_rename : simpl never.
+
+Module Export Syntax. 
+Notation "f @` g" := (fsg_rename f g)
+  (at level 24) : fsgraph_scope.
+Notation "@! f" := (fun g => f @` g)%fsgraph
+  (at level 10, f at level 8, no associativity, format "@!  f") : fsgraph_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory. 
+Context {T : identType} {L : botType}.
+Implicit Types (g h : fsgraph T L).
+Implicit Types (f : {fperm T}).
+
+Lemma fsg_rename_labE f g : 
+  lab (f @` g) =1 (lab g) \o (fperm_inv f).
+Proof. by move=> x /=; rewrite fsg_rename_labelE. Qed.
+
+Lemma fsg_renameE f g : 
+  (f @` g) =2 relpre (fperm_inv f) g.
+Proof. by move=> x y /=; rewrite fsgraphE -fsrelE fsg_rename_edgesE. Qed.
 
 (* Nominal axioms for fsg_rename *)
 
@@ -178,14 +238,10 @@ Qed.
 
 (* ***************************** *)
 
-End Rename.
-
-Lemma well_restrictedP g : 
-  reflect {subset fld (edges g) <= nodes g} (well_restricted g).
-Proof. exact/fsubsetP. Qed.
-
 End Theory.
 End Theory.
+
+End Rename. 
 
 
 Module Export Hom.
@@ -319,11 +375,12 @@ Proof.
   by rewrite of_fin_homE (fin_hom_ofE labf).
 Qed.
 
-Lemma edge_homoS f g h : well_restricted g ->
+Lemma edge_homoS f g h : 
   edge_homo f g h -> {homo f : x y / g x y >-> h x y}.
 Proof. 
-  move=> /well_restrictedP subs homf x y /[dup] /fld_restr /=. 
-  move=> /andP[] /subs ? /subs ??; exact/homf.
+  move=> homf x y /[dup] /fld_restr /=. 
+  move=> /andP[] /mem_edges_nodes ? /mem_edges_nodes ?. 
+  move=> ?; exact/homf. 
 Qed.
 
 (* TODO: generalize to monomorphism? *)
@@ -793,13 +850,13 @@ Lemma edge_monoW f g h :
   edge_mono f g h -> edge_homo f g h. 
 Proof. by move=> monof x y ??; rewrite monof. Qed.
 
-Lemma edge_monoS f g h : well_restricted g -> well_restricted h ->
-  lab_mono f g h -> edge_mono f g h -> {mono f : x y / g x y >-> h x y}.
+Lemma edge_monoS f g h : lab_mono f g h -> edge_mono f g h -> 
+  {mono f : x y / g x y >-> h x y}.
 Proof. 
-  move=> wrg /well_restrictedP subs labf monof x y. 
-  apply/idP/idP; last first.
-  - exact/(edge_homoS wrg)/edge_monoW.
-  move=> /[dup] /fld_restr /= /andP[] /subs + /subs. 
+  move=> labf monof x y; apply/idP/idP; last first.
+  - exact/edge_homoS/edge_monoW.
+  move=> /[dup] /fld_restr /= /andP[]. 
+  move=> /mem_edges_nodes + /mem_edges_nodes. 
   rewrite -!(lab_mono_mem_nodes labf)=> ??. 
   by rewrite monof.
 Qed.
@@ -1042,13 +1099,13 @@ Lemma fsg_rename_iso f g :
   iso f g (f @` g).
 Proof. exact/perm_iso/fsg_rename_emb. Qed.
 
-Lemma fsg_rename_isoP f g h : well_restricted g -> well_restricted h ->
+Lemma fsg_rename_isoP f g h : 
   reflect (iso f g h) (h == f @` g).
 Proof. 
-  move=> wrg wrh; apply/(equivP eqP); split=> [->|]; first exact/fsg_rename_iso.
+  apply/(equivP eqP); split=> [->|]; first exact/fsg_rename_iso.
   move=> [labf monf bijf]; apply/eqP/fsgraphP; split=> [x | x y].
   - by rewrite fsg_rename_labE /= -labf inv_fpermK.
-  move: monf=> /(edge_monoS wrg wrh labf)=> monf.
+  move: monf=> /(edge_monoS labf)=> monf.
   by rewrite fsg_renameE /= -monf !inv_fpermK. 
 Qed.
 
@@ -1058,5 +1115,6 @@ End Theory.
 End Theory.
 
 End Iso.
+
 
 End FsGraph.

@@ -103,8 +103,28 @@ Proof.
   by move=> subs [??] /subs.
 Qed.
 
-Lemma dom_cod_restr {T' U' : identType} (hr : fshrel T' U') : 
-  hr \<= mem (dom hr) \x mem (cod hr) :> {hrel T' & U'}.
+Lemma domP r x : 
+  reflect (exists y, r x y) (x \in dom r).
+Proof. 
+  apply/equivP; first by apply/imfsetP. 
+  split=> [[] [y z] ? -> | [y] ?] /=; [by exists z | by exists (x, y)].
+Qed.
+
+Lemma codP r x : 
+  reflect (exists y, r y x) (x \in cod r).
+Proof. 
+  apply/equivP; first by apply/imfsetP. 
+  split=> [[] [y z] ? -> | [y] ?] /=; [by exists y | by exists (y, x)].
+Qed.
+
+Lemma dom0 : dom (fset0 : fshrel T U) = fset0. 
+Proof. by apply/fsetP=> x; rewrite !inE; apply/idP=> /domP[y]. Qed.
+
+Lemma cod0 : cod (fset0 : fshrel T U) = fset0. 
+Proof. by apply/fsetP=> x; rewrite !inE; apply/idP=> /codP[y]. Qed.
+
+Lemma dom_cod_restr r : 
+  r \<= mem (dom r) \x mem (cod r) :> {hrel T & U}.
 Proof. 
   move=> x y /=; rewrite /le_bool /dom /cod /=. 
   rewrite /hrel_of_fshrel=> ing. 
@@ -117,6 +137,26 @@ Section Theory.
 Context {T U V : identType}.
 Implicit Types (r : fsrel T).
 Implicit Types (f : T -> U) (g : U -> V).
+
+Lemma fldP r x : 
+  reflect (exists y, r x y \/ r y x) (x \in fld r).
+Proof. 
+  apply/(equivP idP); rewrite inE; split=> [/orP[] | [y []]].
+  - by move=> /domP[y] ?; exists y; left.
+  - by move=> /codP[y] ?; exists y; right.
+  - by move=> ?; apply/orP; left; apply/domP; exists y. 
+  by move=> ?; apply/orP; right; apply/codP; exists y. 
+Qed.
+
+Lemma fld_elim (P : T -> Prop) r x : 
+  (forall x y, r x y -> P x /\ P y) -> x \in fld r -> P x.
+Proof. by move=> H; rewrite inE=> /orP[/domP[y] | /codP[y]] /H[]. Qed.
+  (* move=> Hdom Hcod; rewrite inE=> /orP[/domP[y] | /codP[y]];  *)
+  (*   [exact/Hdom | exact/Hcod].  *)
+(* Qed. *)
+
+Lemma fld0 : fld (fset0 : fsrel T) = fset0. 
+Proof. by rewrite /fld dom0 cod0 fsetU0. Qed.
 
 Lemma fld_restr r : 
   r \<= mem (fld r) \x mem (fld r) :> rel T.
