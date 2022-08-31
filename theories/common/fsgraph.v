@@ -222,6 +222,7 @@ Proof.
   by rewrite fsg_renameE /= ![in RHS]fperm_compE.
 Qed.
 
+(* TODO: rename? *)
 Lemma fsg_nodesNNE x y g : 
   x \notin nodes g -> y \notin nodes g -> [fperm x \ y] @` g = g.
 Proof. 
@@ -234,6 +235,15 @@ Proof.
   do 2 (case: ifP=> [/eqP->|]; first by rewrite !memNnodesFl). 
   do 2 (case: ifP=> [/eqP->|]; first by rewrite !memNnodesFr). 
   done.
+Qed.
+
+(* TODO: rename? *)
+Lemma fsg_nodesTeq x y g : 
+  [fperm x \ y] @` g = g -> x \in nodes g -> y \in nodes g.
+Proof. 
+  move=> /eqP/fsgraphP[Hlab Hedges]. 
+  rewrite !mem_nodes -(Hlab y) fsg_rename_labE /=.  
+  by rewrite fperm_swap_invE fperm_swapE swap2.
 Qed.
 
 (* ***************************** *)
