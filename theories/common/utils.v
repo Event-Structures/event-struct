@@ -35,6 +35,10 @@ Lemma and3PP P Q R p q r : reflect P p -> reflect Q q -> reflect R r ->
   reflect [/\ P, Q & R] [&& p, q & r].
 Proof. by move=> rP rQ rR; apply: (iffP and3P)=> -[/rP ? /rQ ? /rR ?]. Qed.
 
+Lemma eqb_neg (a b : bool) : 
+  (~~ a == ~~ b) = (a == b).
+Proof. by case: a; case: b. Qed.
+
 Lemma andb_iff (a b c d : bool) :
   (a <-> c) -> (b <-> d) -> (a && b <-> c && d).
 Proof. by move=> ??; split=> /andP[??]; apply/andP; split; firstorder. Qed.

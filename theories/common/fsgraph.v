@@ -254,6 +254,76 @@ End Theory.
 End Rename. 
 
 
+Module Export Relabel. 
+
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L).
+Implicit Types (f : T -> L).
+
+Definition fsg_relabel f g : fsgraph T L := 
+  let lab := [fsfun x in (nodes g) => f x] in
+  odflt [emp] (insub (lab, edges g)).
+
+End Def. 
+End Def. 
+
+Arguments fsg_relabel : simpl never.
+
+Module Export Syntax. 
+Notation "[ 'relabel' E | x <- g ]" := (fsg_relabel (fun x => E) g)
+  (at level 0, x at level 99, 
+   format "[ '[hv' 'relabel'  E '/ '  |  x  <-  g ] ']'") : fsgraph_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L).
+Implicit Types (f : T -> L).
+
+Lemma fsg_relabel_valE f g : fdom f =1 fdom (lab g) ->
+  val [relabel (f x) | x <- g] = ([fsfun x in (nodes g) => f x], edges g).
+Proof. 
+  move=> Hdom; have Hbot: forall x, ((f x == bot) = (lab g x == bot)). 
+  - move: (fdom_eqP f (lab g) 0 2)=> /= [H _]; exact/H.
+  rewrite /fsg_relabel insubT //=. 
+  apply/fsubsetP=> x; rewrite finsupp_fset=> /mem_edges_nodes xnode. 
+  rewrite in_fsetE /=; apply/andP; split=> //. 
+  by rewrite Hbot -mem_nodes.
+Qed.
+
+Lemma fsg_relabel_labE f g : fdom f =1 fdom (lab g) ->
+  lab [relabel (f x) | x <- g] =1 f.
+Proof.
+  move=> Hdom; have Hbot: forall x, ((f x == bot) = (lab g x == bot)). 
+  - move: (fdom_eqP f (lab g) 0 2)=> /= [H _]; exact/H.
+  rewrite /lab fsg_relabel_valE //= => x.
+  case: finsuppP; rewrite finsupp_fset in_fsetE /=. 
+  - rewrite negb_and negbK /= => /orP[|/eqP->] //.
+    by rewrite memNnodes -Hbot=> /eqP->. 
+  by move=> /andP[] /=; rewrite fsfunE=> ->.       
+Qed.
+
+Lemma fsg_relabel_nodesE f g : fdom f =1 fdom (lab g) ->
+  nodes [relabel (f x) | x <- g] = nodes g.
+Proof. 
+  move=> Hdom; apply/fsetP=> x.
+  rewrite !mem_nodes fsg_relabel_labE //.
+  move: (fdom_eqP f (lab g) 0 1%nat) => /= [H _]; exact/H.
+Qed.
+
+Lemma fsg_relabelE f g : fdom f =1 fdom (lab g) ->
+  [relabel (f x) | x <- g] =2 g.
+Proof. by move=> x y /=; rewrite /rel_of_fsgraph /edges fsg_relabel_valE. Qed.
+
+End Theory.
+End Theory.
+
+End Relabel. 
+
+
 Module Export Hom.
 Module Export Def.
 Section Def. 

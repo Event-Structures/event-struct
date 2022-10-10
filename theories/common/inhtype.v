@@ -148,6 +148,15 @@ Definition inh : T := (inh (mixin (class T))).
 
 End Def.
 
+Section FDom. 
+Context {T : Type} {dispU : unit} {U : inhType dispU}.
+Implicit Types (f : T -> U).
+
+Definition fdom f : pred T := 
+  fun x => f x != inh.
+
+End FDom.
+
 Section Homo.
 Context {dispT dispU : unit} {T : inhType dispT} {U : inhType dispU}.
 Implicit Types (f : T -> U).
@@ -156,6 +165,7 @@ Definition homo_inh f : bool :=
   (f inh == inh).
 
 End Homo.
+
 End Def.
 
 Module Export Syntax.
@@ -163,12 +173,32 @@ Notation "{ 'homo' 'inh' f }" := (homo_inh f)
   (at level 0, f at level 99, format "{ 'homo'  'inh'  f }") : type_scope.
 End Syntax.
 
+Module Export Theory.
+Section Theory.
+Context {disp : unit} {T : inhType disp}.
+
+Lemma fdom_eqP {U : Type} (f g : U -> T): [<->
+  (* 0 *) fdom f =1 fdom g;
+  (* 1 *) forall x, (f x != inh) = (g x != inh);
+  (* 2 *) forall x, (f x == inh) = (g x == inh)
+  ].
+Proof. 
+  do ?[apply: AllIffConj] => H x.
+  - exact: (H x).
+  - by apply: eqP; rewrite -eqb_neg H. 
+  by apply: eqP; rewrite /fdom eqb_neg H. 
+Qed.
+
+End Theory.
+End Theory.
+
+
 End Inhabited.
 
 Export Inhabited.Exports.
 Export Inhabited.Def.
 Export Inhabited.Syntax.
-
+Export Inhabited.Theory.
 
 Module Bottom. 
 
