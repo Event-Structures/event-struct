@@ -78,6 +78,10 @@ Notation "f @` r" := (fsrel_map f r)
   (at level 24) : fsrel_scope.
 Notation "@! f" := (fun r => f @` r)%fsrel
   (at level 10, f at level 8, no associativity, format "@!  f") : fsrel_scope.
+Notation "[ 'fsrel' E | x , y 'in' A ]" := 
+  [fset p in A `*` A | (let '(x, y) := p in E)]
+  (at level 0, E, x at level 99, y at level 99,
+   format "[ '[hv' 'fsrel'  E '/ '  |  x , y  'in'  A ] ']'").
 End Syntax.
 
 Module Export Theory.
@@ -151,9 +155,6 @@ Qed.
 Lemma fld_elim (P : T -> Prop) r x : 
   (forall x y, r x y -> P x /\ P y) -> x \in fld r -> P x.
 Proof. by move=> H; rewrite inE=> /orP[/domP[y] | /codP[y]] /H[]. Qed.
-  (* move=> Hdom Hcod; rewrite inE=> /orP[/domP[y] | /codP[y]];  *)
-  (*   [exact/Hdom | exact/Hcod].  *)
-(* Qed. *)
 
 Lemma fld0 : fld (fset0 : fsrel T) = fset0. 
 Proof. by rewrite /fld dom0 cod0 fsetU0. Qed.
@@ -165,8 +166,18 @@ Proof.
   by rewrite /fld !inE=> -> -> /=.
 Qed.
 
+Lemma fsub_fsrel D (r : rel T) : 
+  fld [fsrel (r x y) | x, y in D] `<=` D.
+Proof. 
+  apply/fsubsetP=> x.
+  pose P x := x \in D.
+  apply (@fld_elim P)=> {}x y.
+  move=> /imfsetP[[??]] /[swap] [[<- <-]] /=.
+  by rewrite !inE /= => /andP[] /andP[].
+Qed.
+
 Lemma fsrel_map_mem f r : injective f ->
-  forall x y, ((f x, f y) \in fsrel_map f r) = ((x, y) \in r).
+  forall x y, ((f x, f y) \in f @` r) = ((x, y) \in r).
 Proof. 
   pose fp := (fun '(x, y) => (f x, f y)).
   move=> injf x y. 

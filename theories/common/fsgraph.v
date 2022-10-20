@@ -325,6 +325,69 @@ End Theory.
 End Relabel.
 
 
+Module Export Relink. 
+
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L).
+Implicit Types (r : rel T).
+
+Lemma fsg_relinkP r g :
+  fsgraph_pred (lab g) [fsrel (r x y) | x, y in nodes g].
+Proof. 
+  apply/fsubsetP=> x /=. 
+  (* TODO: how to avoid giving `P` explicitly? using views somehow? *)
+  pose P x := x \in finsupp (lab g).
+  apply (@fld_elim _ P); rewrite /P => {}x y /=.
+  rewrite !mem_finsupp=> /imfsetP[[??]] /[swap] [[<- <-]] /=. 
+  rewrite !inE /= => /andP[] /andP[].
+  by rewrite !mem_nodes.
+Qed.  
+
+Definition fsg_relink r g := 
+  let edges := [fsrel (r x y) | x, y in nodes g] in
+  @mk_fsgraph _ _ (lab g, edges) (fsg_relinkP r g).
+
+End Def. 
+End Def. 
+
+Arguments fsg_relink : simpl never.
+
+Module Export Syntax. 
+Notation "[ 'fsgraph' E | x , y <- g ]" := (fsg_relink (fun x y => E) g)
+  (at level 0, x at level 99, y at level 99,
+   format "[ '[hv' 'fsgraph'  E '/ '  |  x ,  y  <-  g ] ']'") : fsgraph_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L).
+Implicit Types (r : rel T).
+
+Lemma fsg_relink_labE r g : 
+  lab [fsgraph (r x y) | x, y <- g] = lab g.
+Proof. done. Qed.
+
+Lemma fsg_relink_nodesE r g : 
+  nodes [fsgraph (r x y) | x, y <- g] = nodes g.
+Proof. done. Qed.
+
+Lemma fsg_relink_edgesE r g : 
+  edges [fsgraph (r x y) | x, y <- g] = [fsrel (r x y) | x, y in nodes g].
+Proof. done. Qed.
+
+Lemma fsg_relinkE r g : 
+  [fsgraph (r x y) | x, y <- g] =2 [rel x y in (nodes g) | r x y].
+Proof. by move=> x y /=; rewrite /rel_of_fsgraph fsg_relink_edgesE !inE. Qed.
+
+End Theory.
+End Theory.
+
+End Relink.
+
+
 Module Export AddNode. 
 
 Module Export Def.
@@ -388,8 +451,7 @@ Proof. by move=> lNbot; rewrite /rel_of_fsgraph /edges fsg_add_node_valE. Qed.
 End Theory.
 End Theory.
 
-End AddNode. 
-
+End AddNode.  
 
 
 Module Export Hom.
