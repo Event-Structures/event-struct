@@ -21,6 +21,7 @@ Import FsRel.Syntax.
 Local Open Scope rel_scope.
 Local Open Scope fsrel_scope.
 Local Open Scope fset_scope.
+Local Open Scope fsfun_scope.
 Local Open Scope ident_scope.
 
 Declare Scope fsgraph_scope.
@@ -142,7 +143,7 @@ Implicit Types (g h : fsgraph T L).
 Implicit Types (f : {fperm T}).
 
 Definition fsg_rename_label f g : {fsfun T -> L with bot} := 
-  [fsfun x in (f @` nodes g) => lab g (fperm_inv f x)].
+  [fsfun x in (f @` nodes g)%fset => lab g (fperm_inv f x)].
 
 Definition fsg_rename_edges f g : fsrel T := 
   (f @` (edges g))%fsrel.
@@ -321,7 +322,74 @@ Proof. by move=> x y /=; rewrite /rel_of_fsgraph /edges fsg_relabel_valE. Qed.
 End Theory.
 End Theory.
 
-End Relabel. 
+End Relabel.
+
+
+Module Export AddNode. 
+
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L).
+
+Definition fsg_add_node (d : fun_delta T L) g : fsgraph T L :=
+  let: FunDelta x l := d in 
+  let lab := [fsfun (lab g) with x |-> l] in
+  odflt [emp] (insub (lab, edges g)).
+
+End Def. 
+End Def. 
+
+Arguments fsg_add_node : simpl never.
+
+Module Export Syntax. 
+Notation "[ 'fsgraph' g 'with' d1 , .. , dn ]" := 
+  (fsg_add_node d1%FUN_DELTA .. (fsg_add_node dn%FUN_DELTA g) ..)
+  (at level 0, g at level 99, format 
+  "'[hv' [ '[' 'fsgraph'  '/ ' g ']' '/'  'with'  '[' d1 , '/' .. , '/' dn ']' ] ']'") : fsgraph_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L).
+Implicit Types (x : T) (l : L).
+
+Lemma fsg_add_node_valE x l g : l != bot ->
+  val [fsgraph g with x |-> l] = ([fsfun (lab g) with x |-> l], edges g).
+Proof. 
+  move=> lNbot; rewrite /fsg_add_node insubT //=.
+  apply/fsubsetP=> y /=. 
+  (* TODO: how to avoid giving `P` explicitly? using views somehow? *)
+  pose P y := y \in finsupp [fsfun lab g with x |-> l].
+  apply (@fld_elim _ P); rewrite /P => {}y z /=.
+  rewrite !mem_finsupp !fsfunE /= !inE.
+  move=> /fld_restr /andP[] /=.
+  move=> /mem_edges_nodes /[dup] + ->; rewrite mem_nodes=> laby.
+  move=> /mem_edges_nodes /[dup] + ->; rewrite mem_nodes=> labz.
+  by rewrite !orbT; repeat case: ifP.
+Qed.
+
+Lemma fsg_add_node_labE x l g : l != bot ->
+  lab [fsgraph g with x |-> l] = [fsfun (lab g) with x |-> l].
+Proof. by move=> lNbot; rewrite /lab fsg_add_node_valE. Qed.
+
+Lemma fsg_relabel_nodesE x l g : l != bot ->
+  nodes [fsgraph g with x |-> l] = x |` nodes g.
+Proof. 
+  move=> lNbot; rewrite /nodes fsg_add_node_labE //.
+  by rewrite finsupp_with; move: lNbot=> /negPf ->. 
+Qed.
+
+Lemma fsg_add_nodeE x l g : l != bot ->
+  [fsgraph g with x |-> l] =2 g.
+Proof. by move=> lNbot; rewrite /rel_of_fsgraph /edges fsg_add_node_valE. Qed.
+
+End Theory.
+End Theory.
+
+End AddNode. 
+
 
 
 Module Export Hom.
