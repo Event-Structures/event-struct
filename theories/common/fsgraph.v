@@ -273,9 +273,9 @@ End Def.
 Arguments fsg_relabel : simpl never.
 
 Module Export Syntax. 
-Notation "[ 'relabel' E | x <- g ]" := (fsg_relabel (fun x => E) g)
+Notation "[ 'fsgraph' E | x <- g ]" := (fsg_relabel (fun x => E) g)
   (at level 0, x at level 99, 
-   format "[ '[hv' 'relabel'  E '/ '  |  x  <-  g ] ']'") : fsgraph_scope.
+   format "[ '[hv' 'fsgraph'  E '/ '  |  x  <-  g ] ']'") : fsgraph_scope.
 End Syntax.
 
 Module Export Theory.
@@ -285,7 +285,7 @@ Implicit Types (g : fsgraph T L).
 Implicit Types (f : T -> L).
 
 Lemma fsg_relabel_valE f g : fdom f =1 fdom (lab g) ->
-  val [relabel (f x) | x <- g] = ([fsfun x in (nodes g) => f x], edges g).
+  val [fsgraph (f x) | x <- g] = ([fsfun x in (nodes g) => f x], edges g).
 Proof. 
   move=> Hdom; have Hbot: forall x, ((f x == bot) = (lab g x == bot)). 
   - move: (fdom_eqP f (lab g) 0 2)=> /= [H _]; exact/H.
@@ -296,7 +296,7 @@ Proof.
 Qed.
 
 Lemma fsg_relabel_labE f g : fdom f =1 fdom (lab g) ->
-  lab [relabel (f x) | x <- g] =1 f.
+  lab [fsgraph (f x) | x <- g] =1 f.
 Proof.
   move=> Hdom; have Hbot: forall x, ((f x == bot) = (lab g x == bot)). 
   - move: (fdom_eqP f (lab g) 0 2)=> /= [H _]; exact/H.
@@ -308,16 +308,20 @@ Proof.
 Qed.
 
 Lemma fsg_relabel_nodesE f g : fdom f =1 fdom (lab g) ->
-  nodes [relabel (f x) | x <- g] = nodes g.
+  nodes [fsgraph (f x) | x <- g] = nodes g.
 Proof. 
   move=> Hdom; apply/fsetP=> x.
   rewrite !mem_nodes fsg_relabel_labE //.
   move: (fdom_eqP f (lab g) 0 1%nat) => /= [H _]; exact/H.
 Qed.
 
+Lemma fsg_relabel_edgesE f g : fdom f =1 fdom (lab g) ->
+  edges [fsgraph (f x) | x <- g] = edges g.
+Proof. by move=> Hdom; rewrite /edges fsg_relabel_valE. Qed.
+
 Lemma fsg_relabelE f g : fdom f =1 fdom (lab g) ->
-  [relabel (f x) | x <- g] =2 g.
-Proof. by move=> x y /=; rewrite /rel_of_fsgraph /edges fsg_relabel_valE. Qed.
+  [fsgraph (f x) | x <- g] =2 g.
+Proof. by move=> x y /=; rewrite /rel_of_fsgraph fsg_relabel_edgesE. Qed.
 
 End Theory.
 End Theory.
@@ -443,6 +447,10 @@ Proof.
   move=> lNbot; rewrite /nodes fsg_add_node_labE //.
   by rewrite finsupp_with; move: lNbot=> /negPf ->. 
 Qed.
+
+Lemma fsg_add_node_edgesE x l g : l != bot ->
+  edges [fsgraph g with x |-> l] = edges g.
+Proof. by move=> lNbot; rewrite /edges fsg_add_node_valE. Qed.
 
 Lemma fsg_add_nodeE x l g : l != bot ->
   [fsgraph g with x |-> l] =2 g.
