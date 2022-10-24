@@ -140,9 +140,13 @@ Context (T : choiceType).
 Implicit Types (f g : {fperm T}).
 Implicit Types (p : pred T) (X : {fset T}) (x : T).
 
-Lemma fperm_finsuppE (f : T -> T) X : {in X &, injective f} -> 
-  finsupp [fperm x in X => f x] = X `|` f @` X.
-Proof. admit. Admitted.
+Lemma fsub_fperm_finsupp (f : T -> T) X : 
+  finsupp [fperm x in X => f x] `<=` X `|` f @` X.
+Proof. 
+  rewrite /fperm; case: insubP => /= [g _ ->|_]. 
+  - exact/finsupp_sub. 
+  by rewrite finsupp0 fsub0set. 
+Qed.
 
 Lemma fperm_fsfunE (f : T -> T) X : {in X &, injective f} -> 
   [fperm x in X => f x] = fperm_fsfun f X :> {fsfun T -> T}.
@@ -307,9 +311,10 @@ Proof.
   move=> /negP/negP xn; rewrite fperm_invE.
   suff eqx: x = [fperm x in X => f x] x.
   - rewrite [in LHS]eqx f_preim_of //; exact/fperm_inj.
-  rewrite fsfun_dflt // fperm_finsuppE. 
-  - rewrite inE negb_or fX; exact/andP.
-  move=> ????; exact/can_inj/K.
+  have xnfx: x \notin X `|` f @` X.
+  - by rewrite fX inE negb_or xn. 
+  rewrite fsfun_dflt //; apply/nmem_subset; last exact/xnfx.
+  exact/fsubsetP/fsub_fperm_finsupp.
 Qed.
 
 Lemma fperm_swap_invE x y : 

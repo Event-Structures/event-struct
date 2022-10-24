@@ -39,6 +39,14 @@ Lemma eqb_neg (a b : bool) :
   (~~ a == ~~ b) = (a == b).
 Proof. by case: a; case: b. Qed.
 
+Lemma orb_negbAbl (a b : bool):
+  a && ~~ b || b = a || b.
+Proof. by case: b; rewrite ?orbT ?orbF ?andbT. Qed.
+
+Lemma orb_negbAbr (a b : bool):
+  a || ~~ a && b = a || b.
+Proof. by case: a. Qed.
+
 Lemma andb_iff (a b c d : bool) :
   (a <-> c) -> (b <-> d) -> (a && b <-> c && d).
 Proof. by move=> ??; split=> /andP[??]; apply/andP; split; firstorder. Qed.
