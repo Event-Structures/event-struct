@@ -207,6 +207,18 @@ Lemma fsg_rename_labE f g :
   lab (f @` g) =1 (lab g) \o (fperm_inv f).
 Proof. by move=> x /=; rewrite fsg_rename_labelE. Qed.
 
+Lemma fsg_rename_nodesE f g : 
+  nodes (f @` g) = (f @` nodes g)%fset. 
+Proof.
+  apply/fsetP=> x; rewrite -[x in RHS](inv_fpermK f). 
+  rewrite mem_imfset /=; last exact/fperm_inj.
+  by rewrite !mem_nodes fsg_rename_labE.
+Qed.  
+
+Lemma fsg_rename_edgesE f g : 
+  edges (f @` g) = (f @` edges g)%fsrel. 
+Proof. done. Qed.
+
 Lemma fsg_renameE f g : 
   (f @` g) =2 relpre (fperm_inv f) g.
 Proof. by move=> x y /=; rewrite fsgraphE -fsrelE fsg_rename_edgesE. Qed.
