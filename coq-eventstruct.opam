@@ -18,7 +18,7 @@ operational small-step semantics for their incremental construction.
 build: [make "-j%{jobs}%" ]
 install: [make "install"]
 depends: [
-  "coq" {(>= "8.13" & < "8.15~") | (= "dev")}
+  "coq" {(>= "8.13" & < "8.16~") | (= "dev")}
   "coq-mathcomp-ssreflect" {(>= "1.13.0" & < "1.15.0~") | (= "dev")}
   "coq-mathcomp-finmap" {(>= "1.5.1") | (= "dev")}
   "coq-mathcomp-tarjan" {(= "dev")}
