@@ -221,7 +221,7 @@ Proof. done. Qed.
 
 Lemma fsg_renameE f g : 
   (f @` g) =2 relpre (fperm_inv f) g.
-Proof. by move=> x y /=; rewrite fsgraphE -fsrelE fsg_rename_edgesE. Qed.
+Proof. by move=> x y /=; rewrite fsgraphE -fsrelE Def.fsg_rename_edgesE. Qed.
 
 (* Nominal axioms for fsg_rename *)
 
@@ -473,6 +473,88 @@ End Theory.
 
 End AddNode.  
 
+
+Module Export RemoveNode. 
+
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L).
+
+Lemma fsg_remove_nodeP xd g :
+  fsgraph_pred [fsfun (lab g) without xd] 
+               [fsrel (g x y) | x, y in nodes g `\` [fset xd]].
+Proof. 
+  apply/fsubsetP=> z /=. 
+  (* TODO: how to avoid giving `P` explicitly? using views somehow? *)
+  pose P x := x \in finsupp ([fsfun (lab g) without xd]).
+  apply/(@fld_elim _ P); rewrite /P => x y /=.
+  rewrite fsrelE in_fsetE unfold_in /= in_fsetE /= !in_fsetE. 
+  rewrite !finsupp_without // !in_fsetE !mem_nodes.
+  by move=> /andP[] /and3P[] /andP[] *; split; apply/andP; split.
+Qed.
+
+Definition fsg_remove_node xd g := 
+  let label := [fsfun (lab g) without xd] in
+  let edges := [fsrel (g x y) | x, y in nodes g `\` [fset xd]] in
+  @mk_fsgraph _ _ (label, edges) (fsg_remove_nodeP xd g).
+
+End Def. 
+End Def. 
+
+Arguments fsg_remove_node : simpl never.
+
+Module Export Syntax. 
+Notation "[ 'fsgraph' g 'with' d1 , .. , dn ]" := 
+  (fsg_add_node d1%FUN_DELTA .. (fsg_add_node dn%FUN_DELTA g) ..)
+  (at level 0, g at level 99, format 
+  "'[hv' [ '[' 'fsgraph'  '/ ' g ']' '/'  'with'  '[' d1 , '/' .. , '/' dn ']' ] ']'") : fsgraph_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L).
+Implicit Types (x : T) (l : L).
+
+Lemma fsg_add_node_valE x l g : l != bot ->
+  val [fsgraph g with x |-> l] = ([fsfun (lab g) with x |-> l], edges g).
+Proof. 
+  move=> lNbot; rewrite /fsg_add_node insubT //=.
+  apply/fsubsetP=> y /=. 
+  (* TODO: how to avoid giving `P` explicitly? using views somehow? *)
+  pose P y := y \in finsupp [fsfun lab g with x |-> l].
+  apply (@fld_elim _ P); rewrite /P => {}y z /=.
+  rewrite !mem_finsupp !fsfunE /= !inE.
+  move=> /fld_restr /andP[] /=.
+  move=> /mem_edges_nodes /[dup] + ->; rewrite mem_nodes=> laby.
+  move=> /mem_edges_nodes /[dup] + ->; rewrite mem_nodes=> labz.
+  by rewrite !orbT; repeat case: ifP.
+Qed.
+
+Lemma fsg_add_node_labE x l g : l != bot ->
+  lab [fsgraph g with x |-> l] = [fsfun (lab g) with x |-> l].
+Proof. by move=> lNbot; rewrite /lab fsg_add_node_valE. Qed.
+
+Lemma fsg_relabel_nodesE x l g : l != bot ->
+  nodes [fsgraph g with x |-> l] = x |` nodes g.
+Proof. 
+  move=> lNbot; rewrite /nodes fsg_add_node_labE //.
+  by rewrite finsupp_with; move: lNbot=> /negPf ->. 
+Qed.
+
+Lemma fsg_add_node_edgesE x l g : l != bot ->
+  edges [fsgraph g with x |-> l] = edges g.
+Proof. by move=> lNbot; rewrite /edges fsg_add_node_valE. Qed.
+
+Lemma fsg_add_nodeE x l g : l != bot ->
+  [fsgraph g with x |-> l] =2 g.
+Proof. by move=> lNbot; rewrite /rel_of_fsgraph /edges fsg_add_node_valE. Qed.
+
+End Theory.
+End Theory.
+
+End RemoveNode.  
 
 Module Export Hom.
 Module Export Def.
