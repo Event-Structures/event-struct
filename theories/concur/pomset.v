@@ -5,7 +5,7 @@ From mathcomp Require Import eqtype choice order generic_quotient.
 From mathcomp Require Import fintype finfun finset fingraph finmap zify.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
 From eventstruct Require Import utils seq fperm rel rel_algebra inhtype.
-From eventstruct Require Import order ident ilia lposet.
+From eventstruct Require Import order ident ilia fsrel fsgraph.
 
 (******************************************************************************)
 (* This file contains theory of finitely supported labelled posets,           *)
@@ -64,13 +64,12 @@ Local Open Scope fset_scope.
 Local Open Scope quotient_scope.
 Local Open Scope ra_terms.
 Local Open Scope ident_scope.
-Local Open Scope lposet_scope.
+Local Open Scope fsgraph_scope.
 
 Declare Scope pomset_scope.
 Delimit Scope pomset_scope with pomset.
 
 Local Open Scope pomset_scope.
-
 
 (* Notation lfspreposet E L bot :=  *)
 (*   ({ fsfun E -> (L * {fset E}) of e => (bot, fset0) }). *)
@@ -81,11 +80,34 @@ Module Export Def.
 Section Def.
 Context (E : identType) (L : botType).
 
-(* TODO: perhaps, we should actually enforce
- *   lab_defined and supp_closed properties here
- *)
-Definition lfspreposet :=
-  { fsfun E -> (L * {fset E}) of e => (bot, fset0) }.
+(* Definition lfspreposet := *)
+(*   { fsfun E -> (L * {fset E}) of e => (bot, fset0) }. *)
+
+Record lfspreposet := mk_fsgraph {
+  lfspreposet_val : fsgraph E L;
+  _ : [&& fsrel_irreflexive (edges lfspreposet_val)
+        &  fsrel_transitive (edges lfspreposet_val)
+      ];
+}.
+
+Canonical lfspreposet_subType := Eval hnf in [subType for lfspreposet_val].
+
+Implicit Types (p : lfspreposet).
+
+Coercion fsgraph_of_lfspreposet p : fsgraph E L := 
+  lfspreposet_val p.
+
+Definition lfspreposet_eqMixin := 
+  Eval hnf in [eqMixin of lfspreposet by <:].
+Canonical lfspreposet_eqType := 
+  Eval hnf in EqType lfspreposet lfspreposet_eqMixin.
+
+Definition lfspreposet_choiceMixin := 
+  Eval hnf in [choiceMixin of lfspreposet by <:].
+Canonical lfspreposet_choiceType := 
+  Eval hnf in ChoiceType lfspreposet lfspreposet_choiceMixin.
+
+(* TODO: continue from HERE. *)
 
 (* TODO: maybe get rid of this coercion? *)
 Identity Coercion lfspreposet_to_fsfun : lfspreposet >-> fsfun.

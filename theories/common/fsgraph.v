@@ -78,6 +78,8 @@ End Def.
 Arguments fsgraph0 {T L}.
 
 Module Export Syntax. 
+(* TODO: add notation {fsgraph T L} for fsgraph type? *)
+
 Notation "[ 'emp' ]" := (fsgraph0)
   (at level 0, format "[ 'emp' ]") : fsgraph_scope.
 End Syntax.

@@ -70,6 +70,14 @@ Definition fld g : {fset T} := dom g `|` cod g.
 Definition fsrel_map f g : fsrel U := 
   (fun '(x, y) => (f x, f y)) @` g.
 
+Definition fsrel_irreflexive g : bool := 
+  [forall x : fld g, ~~ (g (val x) (val x))].
+
+Definition fsrel_transitive g : bool := 
+  [forall y : fld g, forall x : fld g, forall z : fld g, 
+      (g (val x) (val y)) && (g (val y) (val z)) ==> (g (val x) (val z))
+  ].
+
 End Def.
 End Def.
 
@@ -193,6 +201,32 @@ Proof.
   - by move=> subs x y ?; apply/subs/imfsetP; exists (x, y).
   move=> homf [??] /imfsetP[[??]] /= + [-> ->]. 
   by rewrite -!fsrelE=> /homf.
+Qed.
+
+Lemma fsrel_irreflexiveP r : 
+  reflect (irreflexive r) (fsrel_irreflexive r).
+Proof. 
+  apply/equivP; first apply/forallPP=> /=.
+  - move=> x; exact/negPf.
+  move=> /=; split=> Hirr x; [|exact/Hirr].
+  apply/idP=> /[dup] /fld_restr/andP[Hx _].
+  have->: (x = fsval (Sub x Hx)) by done.
+  by rewrite Hirr.
+Qed.
+
+Lemma fsrel_transitiveP r : 
+  reflect (transitive r) (fsrel_transitive r).
+Proof. 
+  apply/equivP; first apply/forall3PP=> /=.
+  - move=> y x z; apply/(implyPP _ idP); exact/andP.
+  split=> /= Htrans y x z; last first.
+  - move=> []; exact/Htrans.
+  move=> /[dup] /fld_restr/andP[Hx Hy] /[swap]. 
+  move=> /[dup] /fld_restr/andP[_ Hz].
+  have->: (x = fsval (Sub x Hx)) by done.
+  have->: (y = fsval (Sub y Hy)) by done.
+  have->: (z = fsval (Sub z Hz)) by done.
+  move=> Hyz Hxy; apply/Htrans; split; [exact/Hxy | exact/Hyz]. 
 Qed.
 
 End Theory.

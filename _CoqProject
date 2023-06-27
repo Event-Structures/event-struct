@@ -20,6 +20,7 @@ theories/common/ilia.v
 theories/common/rel_algebra.v
 theories/common/rel.v
 theories/common/fsrel.v
+theories/common/fsgraph.v
 theories/common/monoid.v
 theories/common/rewriting_system.v
 
