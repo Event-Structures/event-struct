@@ -482,7 +482,7 @@ Lemma nfreshSr x n :
 Proof. by rewrite /nfresh; exact/trajectSr. Qed.
 
 Lemma in_nfresh x n y : 
-  y \in nfresh x n = (encode x <= encode y < n + encode x)%N.
+  y \in nfresh x n = (encode x <= encode y < n + encode x).
 Proof.
   elim: n x=> //= [? |?/[swap] ?]; rewrite ?(inE, in_nil); first lia.
   move=>->; rewrite encode_fresh -(inj_eq encode_inj); lia.

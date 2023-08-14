@@ -58,6 +58,13 @@ Proof.
   case a; case b=> //; intuition.
 Qed.
 
+Lemma reflect_eqP (P : Prop) (a b : bool) : 
+  reflect P a -> reflect P b -> a = b.
+Proof. 
+  move=> /rwP Pa /rwP Pb; apply/eqP/iff_eqP. 
+  by split => [/Pa/Pb | /Pb/Pa].
+Qed.
+
 Lemma forall_iff_eqP {T U : Type} P (p : pred T) x y :
   (forall x, reflect (P x) (p x)) -> (P x <-> P y) -> (p x = p y).
 Proof.

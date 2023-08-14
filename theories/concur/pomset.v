@@ -779,156 +779,156 @@ End Theory.
 
 (* Arguments empty E L : clear implicits. *)
 
-Section OfSeq.
-Context (E : identType) (L : botType).
-Implicit Types (p : lfspreposet E L).
-Implicit Types (ls : seq L).
+(* Section OfSeq. *)
+(* Context (E : identType) (L : botType). *)
+(* Implicit Types (p : lfspreposet E L). *)
+(* Implicit Types (ls : seq L). *)
 
-Definition of_seq ls := 
-  let fE  := [fset e | e in nfresh \i0 (size ls)] in 
-  let lab := fun e : E => (nth bot ls (encode e)) in
-  let ca  := fun e1 e2 : E => e1 <=^i e2 in
-  @build_cov E L fE lab ca.
+(* Definition of_seq ls :=  *)
+(*   let fE  := [fset e | e in nfresh \i0 (size ls)] in  *)
+(*   let lab := fun e : E => (nth bot ls (encode e)) in *)
+(*   let ca  := fun e1 e2 : E => e1 <=^i e2 in *)
+(*   @build_cov E L fE lab ca. *)
 
-Variable (ls : seq L).
-Hypothesis (lsD : bot \notin ls).
+(* Variable (ls : seq L). *)
+(* Hypothesis (lsD : bot \notin ls). *)
 
-Lemma of_seq_nth_defined :
-  forall (e : [fset e | e in nfresh \i0 (size ls)]),
-    nth bot ls (@encode E (val e)) != bot.
-Proof.
-  move: lsD=> /negP nbl [/= ?].
-  rewrite ?inE /=; encodify; rewrite addn0=> ?.
-  apply/negP; move: nbl=> /[swap]/eqP<-.
-  by apply; apply/mem_nth.
-Qed.
+(* Lemma of_seq_nth_defined : *)
+(*   forall (e : [fset e | e in nfresh \i0 (size ls)]), *)
+(*     nth bot ls (@encode E (val e)) != bot. *)
+(* Proof. *)
+(*   move: lsD=> /negP nbl [/= ?]. *)
+(*   rewrite ?inE /=; encodify; rewrite addn0=> ?. *)
+(*   apply/negP; move: nbl=> /[swap]/eqP<-. *)
+(*   by apply; apply/mem_nth. *)
+(* Qed. *)
 
-Lemma of_seq_eventset :
-  lfsp_eventset (of_seq ls) = [fset e | e in nfresh \i0 (size ls)].
-Proof. rewrite build_eventset //; exact/of_seq_nth_defined. Qed.
+(* Lemma of_seq_eventset : *)
+(*   lfsp_eventset (of_seq ls) = [fset e | e in nfresh \i0 (size ls)]. *)
+(* Proof. rewrite build_eventset //; exact/of_seq_nth_defined. Qed. *)
 
-(* TODO: derie from conseq_num *)
-Lemma of_seq_fresh :
-  lfsp_fresh (of_seq ls) = iter (size ls) fresh \i0.
-Proof.
-  rewrite /lfsp_fresh /fresh_seq of_seq_eventset.
-  case: (boolP (size ls == 0%N))=> [|neq].
-  - rewrite size_eq0=> /eqP-> /=.
-    by rewrite nfresh0 fset_nil /=.
-  rewrite -fresh_seq_nfresh //.
-  apply/max_set_eq; first exact/le0x.
-  by apply/eq_mem_map=> x; rewrite !inE.
-Qed.
+(* (* TODO: derie from conseq_num *) *)
+(* Lemma of_seq_fresh : *)
+(*   lfsp_fresh (of_seq ls) = iter (size ls) fresh \i0. *)
+(* Proof. *)
+(*   rewrite /lfsp_fresh /fresh_seq of_seq_eventset. *)
+(*   case: (boolP (size ls == 0%N))=> [|neq]. *)
+(*   - rewrite size_eq0=> /eqP-> /=. *)
+(*     by rewrite nfresh0 fset_nil /=. *)
+(*   rewrite -fresh_seq_nfresh //. *)
+(*   apply/max_set_eq; first exact/le0x. *)
+(*   by apply/eq_mem_map=> x; rewrite !inE. *)
+(* Qed. *)
 
-Lemma of_seq_size :
-  lfsp_size (of_seq ls) = size ls.
-Proof.
-  rewrite /lfsp_size of_seq_eventset card_fseq undup_id ?size_nfresh //.
-  exact/lt_sorted_uniq/nfresh_sorted.
-Qed.
+(* Lemma of_seq_size : *)
+(*   lfsp_size (of_seq ls) = size ls. *)
+(* Proof. *)
+(*   rewrite /lfsp_size of_seq_eventset card_fseq undup_id ?size_nfresh //. *)
+(*   exact/lt_sorted_uniq/nfresh_sorted. *)
+(* Qed. *)
 
-Lemma of_seq_conseq_num :
-  conseq_num (of_seq ls).
-Proof. by rewrite /conseq_num of_seq_eventset of_seq_size. Qed.
+(* Lemma of_seq_conseq_num : *)
+(*   conseq_num (of_seq ls). *)
+(* Proof. by rewrite /conseq_num of_seq_eventset of_seq_size. Qed. *)
 
-Lemma of_seq_labE e :
-  fs_lab (of_seq ls) e = nth bot ls (encode e).
-Proof.
-  rewrite /of_seq build_lab /= /sub_lift.
-  case: insubP=> /= [?? ->|] //.
-  rewrite ?inE /==> ?; rewrite nth_default; ilia.
-Qed.
+(* Lemma of_seq_labE e : *)
+(*   fs_lab (of_seq ls) e = nth bot ls (encode e). *)
+(* Proof. *)
+(*   rewrite /of_seq build_lab /= /sub_lift. *)
+(*   case: insubP=> /= [?? ->|] //. *)
+(*   rewrite ?inE /==> ?; rewrite nth_default; ilia. *)
+(* Qed. *)
 
-Lemma of_seq_fin_caE :
-  fin_ca (of_seq ls) =2 relpre val [rel e1 e2 | e1 <=^i e2].
-Proof.
-  apply/build_cov_fin_ca=> // [? ||]; last first.
-  - exact/le_trans.
-  - exact/le_anti.
-  by rewrite of_seq_nth_defined.
-Qed.
+(* Lemma of_seq_fin_caE : *)
+(*   fin_ca (of_seq ls) =2 relpre val [rel e1 e2 | e1 <=^i e2]. *)
+(* Proof. *)
+(*   apply/build_cov_fin_ca=> // [? ||]; last first. *)
+(*   - exact/le_trans. *)
+(*   - exact/le_anti. *)
+(*   by rewrite of_seq_nth_defined. *)
+(* Qed. *)
 
-Lemma of_seq_fs_caE e1 e2 :
-  fs_ca (of_seq ls) e1 e2 =
-    (e1 == e2) ||
-    [&& e1 <=^i e2
-      , e1 \in lfsp_eventset (of_seq ls)
-      & e2 \in lfsp_eventset (of_seq ls)
-    ].
-Proof.
-  rewrite of_seq_eventset /of_seq.
-  rewrite build_cov_ca // => [? ||]; last first.
-  - exact/le_trans.
-  - exact/le_anti.
-  by rewrite of_seq_nth_defined.
-Qed.
+(* Lemma of_seq_fs_caE e1 e2 : *)
+(*   fs_ca (of_seq ls) e1 e2 = *)
+(*     (e1 == e2) || *)
+(*     [&& e1 <=^i e2 *)
+(*       , e1 \in lfsp_eventset (of_seq ls) *)
+(*       & e2 \in lfsp_eventset (of_seq ls) *)
+(*     ]. *)
+(* Proof. *)
+(*   rewrite of_seq_eventset /of_seq. *)
+(*   rewrite build_cov_ca // => [? ||]; last first. *)
+(*   - exact/le_trans. *)
+(*   - exact/le_anti. *)
+(*   by rewrite of_seq_nth_defined. *)
+(* Qed. *)
 
-Lemma of_seq_fin_icaE e1 e2 :
-  fin_ica (of_seq ls) e1 e2 = (fresh (val e1) == val e2).
-Proof.
-  rewrite /of_seq build_cov_fin_ica; first last.
-  - case=> /= ?; rewrite ?inE /==> ?.
-    apply/eqP; move: lsD=> /[swap]<-.
-    rewrite mem_nth=> //; ilia.
-  apply/covP/eqP=> /=; case: e1 e2=> /= e1 i1 [/= e2 i2].
-  - case=> _ /andP[?? nex].
-    case: (fresh e1 =P e2)=> // /eqP ?; case: nex.
-    move: i1 i2; rewrite of_seq_eventset ?inE /==> ??.
-    have IN: (fresh e1 \in [fset e | e in nfresh \i0 (size ls)]).
-    - rewrite ?inE /=; ilia.
-    exists [`IN] => /=; rewrite /iker; ilia.
-  split=> [/(congr1 val)||[[/= ? _]]]; rewrite /iker; ilia.
-Qed.
+(* Lemma of_seq_fin_icaE e1 e2 : *)
+(*   fin_ica (of_seq ls) e1 e2 = (fresh (val e1) == val e2). *)
+(* Proof. *)
+(*   rewrite /of_seq build_cov_fin_ica; first last. *)
+(*   - case=> /= ?; rewrite ?inE /==> ?. *)
+(*     apply/eqP; move: lsD=> /[swap]<-. *)
+(*     rewrite mem_nth=> //; ilia. *)
+(*   apply/covP/eqP=> /=; case: e1 e2=> /= e1 i1 [/= e2 i2]. *)
+(*   - case=> _ /andP[?? nex]. *)
+(*     case: (fresh e1 =P e2)=> // /eqP ?; case: nex. *)
+(*     move: i1 i2; rewrite of_seq_eventset ?inE /==> ??. *)
+(*     have IN: (fresh e1 \in [fset e | e in nfresh \i0 (size ls)]). *)
+(*     - rewrite ?inE /=; ilia. *)
+(*     exists [`IN] => /=; rewrite /iker; ilia. *)
+(*   split=> [/(congr1 val)||[[/= ? _]]]; rewrite /iker; ilia. *)
+(* Qed. *)
 
-Lemma of_seq_supp_closed :
-  supp_closed (of_seq ls).
-Proof.
-  apply/supp_closedP=>>.
-  rewrite build_ica build_eventset //; last first.
-  - exact/of_seq_nth_defined.
-  by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]].
-Qed.
+(* Lemma of_seq_supp_closed : *)
+(*   supp_closed (of_seq ls). *)
+(* Proof. *)
+(*   apply/supp_closedP=>>. *)
+(*   rewrite build_ica build_eventset //; last first. *)
+(*   - exact/of_seq_nth_defined. *)
+(*   by move=> /sub_rel_liftP[[>[[>[? /= <- <-]]]]]. *)
+(* Qed. *)
 
-Hint Resolve of_seq_supp_closed : core.
+(* Hint Resolve of_seq_supp_closed : core. *)
 
-Lemma of_seq_fs_icaE e1 e2 :
-  fs_ica (of_seq ls) e1 e2 =
-    [&& fresh e1 == e2
-      , e1 \in lfsp_eventset (of_seq ls)
-      & e2 \in lfsp_eventset (of_seq ls)
-    ].
-Proof.
-  rewrite fs_ica_fin_icaE // /sub_rel_lift /=.
-  case: insubP=> [? ->|/negbTE->]; last lattice.
-  case: insubP=> [? ->|/negbTE-> //]; last by rewrite andbC.
-  rewrite of_seq_fin_icaE=>->->; lattice.
-Qed.
+(* Lemma of_seq_fs_icaE e1 e2 : *)
+(*   fs_ica (of_seq ls) e1 e2 = *)
+(*     [&& fresh e1 == e2 *)
+(*       , e1 \in lfsp_eventset (of_seq ls) *)
+(*       & e2 \in lfsp_eventset (of_seq ls) *)
+(*     ]. *)
+(* Proof. *)
+(*   rewrite fs_ica_fin_icaE // /sub_rel_lift /=. *)
+(*   case: insubP=> [? ->|/negbTE->]; last lattice. *)
+(*   case: insubP=> [? ->|/negbTE-> //]; last by rewrite andbC. *)
+(*   rewrite of_seq_fin_icaE=>->->; lattice. *)
+(* Qed. *)
 
-Lemma of_seq_acyclic :
-  acyclic (fin_ica (of_seq ls)).
-Proof.
-  apply/build_cov_acyclic=> [? |||]; last first.
-  - exact/le_trans.
-  - exact/le_anti.
-  - exact/le_refl.
-  by rewrite of_seq_nth_defined.
-Qed.
+(* Lemma of_seq_acyclic : *)
+(*   acyclic (fin_ica (of_seq ls)). *)
+(* Proof. *)
+(*   apply/build_cov_acyclic=> [? |||]; last first. *)
+(*   - exact/le_trans. *)
+(*   - exact/le_anti. *)
+(*   - exact/le_refl. *)
+(*   by rewrite of_seq_nth_defined. *)
+(* Qed. *)
 
-Lemma of_seq_operational :
-  operational (of_seq ls).
-Proof.
-  apply/operationalP.
-  move=> e1 e2; rewrite of_seq_fs_caE.
-  by move=> /orP[/eqP->|/and3P[]].
-Qed.
+(* Lemma of_seq_operational : *)
+(*   operational (of_seq ls). *)
+(* Proof. *)
+(*   apply/operationalP. *)
+(*   move=> e1 e2; rewrite of_seq_fs_caE. *)
+(*   by move=> /orP[/eqP->|/and3P[]]. *)
+(* Qed. *)
 
-Lemma of_seq_total :
-  total (fin_ca (of_seq ls)).
-Proof. move=> e1 e2; rewrite !of_seq_fin_caE /=; exact/le_total. Qed.
+(* Lemma of_seq_total : *)
+(*   total (fin_ca (of_seq ls)). *)
+(* Proof. move=> e1 e2; rewrite !of_seq_fin_caE /=; exact/le_total. Qed. *)
 
-End OfSeq.
+(* End OfSeq. *)
 
-Arguments of_seq E L : clear implicits.
+(* Arguments of_seq E L : clear implicits. *)
 
 Section InterRel.
 Context (E : identType) (L : botType).

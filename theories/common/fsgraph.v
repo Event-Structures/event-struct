@@ -150,7 +150,7 @@ Lemma nodes_emp :
 Proof. by rewrite /nodes finsupp0. Qed.
 
 (* ************************************************************************** *)
-(*     Operational preposets                                                  *)
+(*     Operational graphs                                                     *)
 (* ************************************************************************** *)
 
 Lemma operationalP g :
@@ -188,6 +188,111 @@ Qed.
 End Theory.
 End Theory.
 
+
+Module Export OfSeq. 
+
+Module Export Def.
+Section Def. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L) (ls : seq L).
+
+Definition fsg_of_seq_nodes ls : {fset T} := 
+  [fset e | e in nfresh \i0 (size ls)]. 
+
+Definition fsg_of_seq_label ls : {fsfun T -> L with bot} := 
+  [fsfun e in fsg_of_seq_nodes ls => (nth bot ls (encode e)) | bot ].
+
+Definition fsg_of_seq_edges ls : fsrel T := 
+  [fsrel (x <^i y) | x, y in fsg_of_seq_nodes ls].
+
+Lemma fsg_of_seqP ls : bot \notin ls ->
+  fsgraph_pred (fsg_of_seq_label ls) (fsg_of_seq_edges ls).
+Proof. 
+  move=> nbot; apply/fsubsetP=> z /=. 
+  (* TODO: how to avoid giving `P` explicitly? using views somehow? *)
+  pose P x := x \in finsupp (fsg_of_seq_label ls).
+  apply/(@fld_elim _ P); rewrite /P => x y /=.
+  rewrite !/fsg_of_seq_edges !/fsg_of_seq_label !finsupp_fset. 
+  move=> /imfsetP[[x' y']] /=; rewrite !inE /=. 
+  move=> /[swap] [[]] <- <- /andP[/andP] [].
+  move=> /[dup] + -> /[dup] + -> /=.
+  rewrite !in_nfresh !encode0 addn0 /=.
+  move=> /(mem_nth bot) xin /(mem_nth bot) yin _. 
+  split; apply/negP=> /eqP botE. 
+  all: by move: nbot xin yin; rewrite botE=> /negP. 
+Qed.
+
+Definition fsg_of_seq ls : fsgraph T L := 
+  let label := fsg_of_seq_label ls in
+  let edges := fsg_of_seq_edges ls in
+  odflt [emp] (insub (label, edges)).
+
+End Def. 
+End Def. 
+
+Arguments fsg_of_seq : simpl never.
+
+Module Export Syntax.
+Notation "[ 'fsgraph' 'of' ls :> T ]" := (@fsg_of_seq T _ ls)
+  (at level 0, ls at level 99,
+   format "[ '[hv' 'fsgraph'  'of'  ls  :>  T ] ']'") : fsgraph_scope.
+End Syntax.
+
+Module Export Theory.
+Section Theory. 
+Context {T : identType} {L : botType}.
+Implicit Types (g : fsgraph T L) (ls : seq L).
+
+Lemma fsg_of_seq_valE ls : bot \notin ls ->
+  val [fsgraph of ls :> T] = (fsg_of_seq_label ls, fsg_of_seq_edges ls).
+Proof. move=> nbot; rewrite /fsg_of_seq insubT //=; exact/fsg_of_seqP. Qed.
+
+Lemma fsg_of_seq_labE ls : bot \notin ls ->
+  lab [fsgraph of ls :> T] =1 (nth bot ls) \o encode.
+Proof.
+  rewrite /comp /lab /fsg_of_seq_label => nbot x //=.
+  rewrite fsg_of_seq_valE //= fsfun_fun /fsg_of_seq_nodes.
+  case: ifP => //; rewrite mem_imfset //= => /eqP. 
+  rewrite in_nfresh eqbF_neg !encode0 addn0 -leNgt /=. 
+  by move=> ?; rewrite nth_default.
+Qed.
+
+Lemma fsg_relabel_nodesE ls : bot \notin ls ->
+  nodes [fsgraph of ls :> T] = [fset e | e in nfresh \i0 (size ls)].
+Proof. 
+  move=> nbot; apply/fsetP=> x. 
+  rewrite mem_nodes fsg_of_seq_labE //=.
+  rewrite inE in_nfresh !encode0 addn0 /=.  
+  (* TODO: make nth/default eq lemma? *)
+  case xlt: (encode x < size ls); move: xlt=> /idP /=; last first.
+  - move=> /negP; rewrite -leNgt=> ?. 
+    by rewrite nth_default //= eqxx.
+  move=> /(mem_nth bot) Hnth; apply/negP=> /eqP.
+  by move: Hnth=> /[swap] ->; move: nbot=> /negP.
+Qed.
+
+Lemma fsg_relabel_edgesE ls : bot \notin ls ->
+  edges [fsgraph of ls :> T] =2 
+    [rel x y in nodes [fsgraph of ls :> T] | x <^i y].
+Proof. 
+  move=> nbot x y.
+  rewrite /edges fsg_of_seq_valE //=.
+  rewrite /fsg_of_seq_edges !fsg_relabel_nodesE /fsg_of_seq_nodes //. 
+  rewrite !mem_imfset //= !in_nfresh !encode0 addn0 /=.
+  apply/reflect_eqP; first exact/imfsetP=> //=.
+  apply/(equivP idP); split.
+  - move=> /andP[/andP[]] xsz ysx xylt.
+    exists (x, y)=> //=; rewrite !inE xylt andbT //=. 
+    rewrite !in_nfresh !encode0 !addn0 !le0x /=. 
+    exact/andP.
+  move=> [[x' y']] /= /[swap] [[<- <-]].  
+  by rewrite !inE /= !in_nfresh !encode0 addn0 !le0x /=.
+Qed.
+
+End Theory.
+End Theory.
+
+End OfSeq.
 
 Module Export Rename. 
 
@@ -558,12 +663,12 @@ End Def.
 
 Arguments fsg_remove_node : simpl never.
 
-Module Export Syntax. 
-Notation "[ 'fsgraph' g 'with' d1 , .. , dn ]" := 
-  (fsg_add_node d1%FUN_DELTA .. (fsg_add_node dn%FUN_DELTA g) ..)
-  (at level 0, g at level 99, format 
-  "'[hv' [ '[' 'fsgraph'  '/ ' g ']' '/'  'with'  '[' d1 , '/' .. , '/' dn ']' ] ']'") : fsgraph_scope.
-End Syntax.
+(* Module Export Syntax.  *)
+(* Notation "[ 'fsgraph' g 'with' d1 , .. , dn ]" :=  *)
+(*   (fsg_add_node d1%FUN_DELTA .. (fsg_add_node dn%FUN_DELTA g) ..) *)
+(*   (at level 0, g at level 99, format  *)
+(*   "'[hv' [ '[' 'fsgraph'  '/ ' g ']' '/'  'with'  '[' d1 , '/' .. , '/' dn ']' ] ']'") : fsgraph_scope. *)
+(* End Syntax. *)
 
 Module Export Theory.
 Section Theory. 
