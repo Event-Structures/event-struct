@@ -101,10 +101,24 @@ Qed.
 
 End Rel.
 
+Section RelEqT.
+Context {T : eqType}.
+Implicit Types (r : rel T). 
+
+Lemma irrefl_neq r x y : 
+  irreflexive r -> r x y -> x != y.
+Proof. 
+  move=> irr; apply/contraPN=> /eqP->. 
+  by apply/negP; rewrite irr. 
+Qed.
+
+End RelEqT.
+
 Section ClosRefl.
 Context {T : eqType}.
 Implicit Types (r : {hrel T & T}). 
 
+(* TODO: rename to qmkE *)
 Lemma dhrel_qmkE r :
   r^? =2 [rel x y | (x == y) || (r x y)].
 Proof. done. Qed.

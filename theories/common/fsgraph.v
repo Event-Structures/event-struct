@@ -16,7 +16,10 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import FsRel.Syntax. 
+Import FsRel.Syntax.
+
+Import Order.LTheory. 
+Import Order.Theory. 
 
 Local Open Scope rel_scope.
 Local Open Scope fsrel_scope.
@@ -72,6 +75,12 @@ Definition fsgraph_choiceMixin :=
 Canonical fsgraph_choiceType := 
   Eval hnf in ChoiceType fsgraph fsgraph_choiceMixin.
 
+(* TODO: better name? *)
+Definition operational g :=
+  [forall x : nodes g, forall y : nodes g,
+    g (val x) (val y) ==> (val x <=^i val y)
+  ].
+
 End Def.
 End Def.
 
@@ -99,6 +108,14 @@ Proof. by apply/(equivP (andPP eqP (fsrelP _ _))); rewrite fsfunP. Qed.
 Lemma mem_edges_nodes g x :
    x \in fld (edges g) -> x \in nodes g.
 Proof. exact/(fsubsetP (valP g)). Qed.
+
+Lemma edges_nodes_restr g : 
+  g \<= mem (nodes g) \x mem (nodes g) :> rel T.
+Proof. 
+  move=> x y /fld_restr /andP[]. 
+  move=> /mem_edges_nodes ? /mem_edges_nodes ?. 
+  by apply/andP.
+Qed.
 
 Lemma mem_nodes g x : 
   (x \in nodes g) = (lab g x != bot).
@@ -131,6 +148,42 @@ Proof. by rewrite memNnodes=> /eqP. Qed.
 Lemma nodes_emp : 
   nodes ([emp] : fsgraph T L) = fset0.
 Proof. by rewrite /nodes finsupp0. Qed.
+
+(* ************************************************************************** *)
+(*     Operational preposets                                                  *)
+(* ************************************************************************** *)
+
+Lemma operationalP g :
+  reflect (subrel g (<=^i%O)) (operational g).
+Proof.
+  apply: iffP; swap 2 3.
+  - do 2 apply/forallPP=> ?; exact/implyP.  
+  - move=> /= sub x y; exact/sub.
+  move=> /= sub x y; rewrite fsgraphE.
+  move=> /[dup] /edges_nodes_restr /andP[] xP yP.
+  have->: x = val (Sub x xP : nodes g) by done.    
+  have->: y = val (Sub y yP : nodes g) by done.    
+  exact/sub.
+Qed.
+
+(* Lemma operational_scaP p : *)
+(*   reflect (subrel (fs_sca p) (<^i%O)) (operational p). *)
+(* Proof. *)
+(*   apply: (iffP (operationalP p)). *)
+(*   - move=> sub x y /andP[] /negP neq /sub. *)
+(*     rewrite le_eqVlt eq_sym=> /orP[|] //. *)
+(*   move=> sub x y; rewrite fs_ca_scaE. *)
+(*   move=> /orP[/eqP->|]; first exact/le_refl. *)
+(*   by move=> /sub /ltW. *)
+(* Qed. *)
+
+Lemma operational_antisym g :
+  operational g -> antisymmetric g.
+Proof.
+  move=> op; apply/sub_antisym.
+  + exact/operationalP.
+  exact/le_anti.
+Qed.
 
 End Theory.
 End Theory.
@@ -445,9 +498,8 @@ Proof.
   pose P y := y \in finsupp [fsfun lab g with x |-> l].
   apply (@fld_elim _ P); rewrite /P => {}y z /=.
   rewrite !mem_finsupp !fsfunE /= !inE.
-  move=> /fld_restr /andP[] /=.
-  move=> /mem_edges_nodes /[dup] + ->; rewrite mem_nodes=> laby.
-  move=> /mem_edges_nodes /[dup] + ->; rewrite mem_nodes=> labz.
+  move=> /edges_nodes_restr /andP[] /=. 
+  rewrite !mem_nodes=> /[dup] ? -> /[dup] ? ->.
   by rewrite !orbT; repeat case: ifP.
 Qed.
 
@@ -528,9 +580,8 @@ Proof.
   pose P y := y \in finsupp [fsfun lab g with x |-> l].
   apply (@fld_elim _ P); rewrite /P => {}y z /=.
   rewrite !mem_finsupp !fsfunE /= !inE.
-  move=> /fld_restr /andP[] /=.
-  move=> /mem_edges_nodes /[dup] + ->; rewrite mem_nodes=> laby.
-  move=> /mem_edges_nodes /[dup] + ->; rewrite mem_nodes=> labz.
+  move=> /edges_nodes_restr /andP[] /=. 
+  rewrite !mem_nodes=> /[dup] ? -> /[dup] ? ->.
   by rewrite !orbT; repeat case: ifP.
 Qed.
 
@@ -691,11 +742,7 @@ Qed.
 
 Lemma edge_homoS f g h : 
   edge_homo f g h -> {homo f : x y / g x y >-> h x y}.
-Proof. 
-  move=> homf x y /[dup] /fld_restr /=. 
-  move=> /andP[] /mem_edges_nodes ? /mem_edges_nodes ?. 
-  move=> ?; exact/homf. 
-Qed.
+Proof. move=> homf x y /[dup] /edges_nodes_restr /andP[??] ?; exact/homf. Qed.
 
 (* TODO: generalize to monomorphism? *)
 Lemma lab_mono_eq f f' g h : {in (nodes g), f' =1 f} ->
@@ -1169,8 +1216,7 @@ Lemma edge_monoS f g h : lab_mono f g h -> edge_mono f g h ->
 Proof. 
   move=> labf monof x y; apply/idP/idP; last first.
   - exact/edge_homoS/edge_monoW.
-  move=> /[dup] /fld_restr /= /andP[]. 
-  move=> /mem_edges_nodes + /mem_edges_nodes. 
+  move=> /[dup] /edges_nodes_restr /= /andP[]. 
   rewrite -!(lab_mono_mem_nodes labf)=> ??. 
   by rewrite monof.
 Qed.
