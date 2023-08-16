@@ -738,18 +738,6 @@ End Theory.
 
 (* Definition empty : lfspreposet E L := [fsfun]. *)
 
-(* Lemma eventset_empty : *)
-(*   lfsp_eventset empty = fset0. *)
-(* Proof. by apply/fsetP=> e; rewrite !inE. Qed. *)
-
-(* Lemma fs_size_empty : *)
-(*   lfsp_size empty = 0%N. *)
-(* Proof. by rewrite /lfsp_size eventset_empty. Qed. *)
-
-(* Lemma fs_lab_empty : *)
-(*   fs_lab empty =1 (fun=> bot). *)
-(* Proof. by move=> ?; rewrite /fs_lab fsfun_dflt ?inE. Qed. *)
-
 (* Lemma fs_ica_empty : *)
 (*   fs_ica empty =2 (fun x y => false). *)
 (* Proof. by move=> ??; rewrite /fs_ica /= /fs_rcov !fsfun_dflt ?inE. Qed. *)
@@ -793,21 +781,6 @@ End Theory.
 (*   rewrite fs_ica_empty /fs_ica /=. *)
 (*   apply/idP; move/supp_closedP: supcl. *)
 (*   by move=> /[apply]; rewrite fE => [[]]. *)
-(* Qed. *)
-
-(* Lemma empty_supp_closed : *)
-(*   supp_closed empty. *)
-(* Proof. by apply/supp_closedP=> ??; rewrite fs_ica_empty. Qed. *)
-
-(* Lemma empty_acyclic : *)
-(*   acyclic (fin_ica empty). *)
-(* Proof. *)
-(*   apply/acyclicP; split. *)
-(*   - by move=> ?; rewrite /fin_ica /sub_rel_down /= fs_ica_empty. *)
-(*   apply/forall2P=> e1 e2. *)
-(*   apply/implyP=> /andP[]. *)
-(*   have->: connect (fin_ica empty) e1 e2 = fin_ca empty e1 e2 by done. *)
-(*   by rewrite fin_ca_empty=> /eqP->. *)
 (* Qed. *)
 
 (* Lemma empty_operational : *)

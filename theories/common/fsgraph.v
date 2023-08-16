@@ -149,6 +149,14 @@ Lemma nodes_emp :
   nodes ([emp] : fsgraph T L) = fset0.
 Proof. by rewrite /nodes finsupp0. Qed.
 
+Lemma edges_emp :
+  edges ([emp] : fsgraph T L) = fset0.
+Proof. by rewrite /edges /fsgraph0. Qed.
+
+Lemma fsg_empE : 
+  ([emp] : fsgraph T L) =2 (fun x y => false).
+Proof. done. Qed.
+
 Lemma emp_irrefl : 
   irreflexive ([emp] : fsgraph T L).
 Proof. done. Qed.
@@ -196,6 +204,10 @@ Proof.
   + exact/operationalP.
   exact/le_anti.
 Qed.
+
+Lemma emp_operational :
+  operational ([emp] : fsgraph T L).
+Proof. apply/forall2P=> ??; rewrite fsg_empE; exact/implyP. Qed.
 
 End Theory.
 End Theory.
