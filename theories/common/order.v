@@ -2,7 +2,7 @@ From RelationAlgebra Require Import lattice boolean.
 From mathcomp Require Import ssreflect ssrbool ssrnat ssrfun.
 From mathcomp Require Import eqtype choice order seq tuple path div.
 From mathcomp Require Import fintype finfun fingraph finmap.
-From eventstruct Require Import utils seq.
+From eventstruct Require Import utils seq rel.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -37,6 +37,14 @@ Proof.
   rewrite le_eqVlt=> /orP[/eqP->|->] //.
   by rewrite le_refl.
 Qed.
+
+Lemma lt_anti : 
+  antisymmetric (<%O : rel T).  
+Proof. 
+  move=> x y /andP[]; rewrite !lt_def=> /andP[??] /andP[??].
+  apply/(@iker_antisym _ (<=%O : rel T)); first exact/le_anti.
+  rewrite /iker; apply/and3P; split=> //; exact/andP.
+Qed.  
 
 End POrderUtils.
 

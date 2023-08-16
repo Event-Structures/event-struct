@@ -4,7 +4,7 @@ From mathcomp Require Import ssreflect ssrbool ssrfun ssrnat zify.
 From mathcomp Require Import eqtype choice seq order path.
 From mathcomp Require Import fintype finfun fingraph finmap.
 From mathcomp.tarjan Require Import extra acyclic kosaraju acyclic_tsorted. 
-From eventstruct Require Import utils seq rel_algebra rel fsrel. 
+From eventstruct Require Import utils seq rel_algebra rel order fsrel. 
 From eventstruct Require Import inhtype ident fperm.
 
 (******************************************************************************)
@@ -149,6 +149,18 @@ Lemma nodes_emp :
   nodes ([emp] : fsgraph T L) = fset0.
 Proof. by rewrite /nodes finsupp0. Qed.
 
+Lemma emp_irrefl : 
+  irreflexive ([emp] : fsgraph T L).
+Proof. done. Qed.
+
+Lemma emp_antisym : 
+  antisymmetric ([emp] : fsgraph T L).
+Proof. done. Qed.
+
+Lemma emp_trans : 
+  transitive ([emp] : fsgraph T L).
+Proof. done. Qed.
+
 (* ************************************************************************** *)
 (*     Operational graphs                                                     *)
 (* ************************************************************************** *)
@@ -289,6 +301,43 @@ Proof.
   by rewrite !inE /= !in_nfresh !encode0 addn0 !le0x /=.
 Qed.
 
+Lemma fsg_of_seq_irrefl ls : 
+  irreflexive (edges [fsgraph of ls :> T]).
+Proof.
+  rewrite /fsg_of_seq; case: insubP=> //=.
+  rewrite /edges=> [[[lab edg]]] /= H _ [?] ->. 
+  rewrite /fsg_of_seq_edges=> x. 
+  apply/negP=> /imfsetP[[??]] /=. 
+  rewrite !inE /= => /[swap] [[<- <-]].
+  by rewrite ltxx andbF.
+Qed.
+
+Lemma fsg_of_seq_antisym ls : 
+  antisymmetric (edges [fsgraph of ls :> T]).
+Proof.
+  rewrite /fsg_of_seq; case: insubP=> //=.
+  rewrite /edges=> [[[lab edg]]] /= H _ [?] ->. 
+  rewrite /fsg_of_seq_edges=> x y /andP[]. 
+  move=> /imfsetP[[??]] /[swap] [[<- <-]] /=.
+  move=> + /imfsetP[[??]] /[swap] [[<- <-]] /=.
+  rewrite !inE /= => /andP[_] ? /andP[_] ?. 
+  exact/lt_anti/andP.
+Qed.
+
+Lemma fsg_of_seq_trans ls : 
+  transitive (edges [fsgraph of ls :> T]).
+Proof.
+  rewrite /fsg_of_seq; case: insubP=> //=.
+  rewrite /edges=> [[[lab edg]]] /= H _ [?] ->. 
+  rewrite /fsg_of_seq_edges=> z x y.
+  move=> /imfsetP[[??]] /[swap] [[<- <-]] /=.
+  move=> + /imfsetP[[??]] /[swap] [[<- <-]] /=.
+  rewrite !inE /= => /andP[] /andP[??] xz /andP[] /andP[??] zy. 
+  apply/imfsetP; exists (x, y)=> //=; rewrite !inE /=. 
+  apply/andP; split; first exact/andP.
+  exact/(lt_trans xz zy).
+Qed.
+
 End Theory.
 End Theory.
 
@@ -419,6 +468,21 @@ Proof.
   by rewrite fperm_swap_invE fperm_swapE swap2.
 Qed.
 
+Lemma fsg_rename_irrefl f g : 
+  irreflexive g -> irreflexive (f @` g).
+Proof. move=> irr x; rewrite !fsg_renameE /=; exact/irr. Qed.
+
+Lemma fsg_rename_antisym f g : 
+  antisymmetric g -> antisymmetric (f @` g).
+Proof. 
+  move=> anti x y; rewrite !fsg_renameE /=. 
+  by move=> /anti/fperm_inv_inj.
+Qed.
+
+Lemma fsg_rename_trans f g : 
+  transitive g -> transitive (f @` g).
+Proof. move=> trans z x y; rewrite !fsg_renameE /=; exact/trans. Qed.
+
 (* ***************************** *)
 
 End Theory.
@@ -445,9 +509,9 @@ End Def.
 Arguments fsg_relabel : simpl never.
 
 Module Export Syntax. 
-Notation "[ 'fsgraph' E | x <- g ]" := (fsg_relabel (fun x => E) g)
+Notation "[ 'fsgraph' 'lab' E | x <- g ]" := (fsg_relabel (fun x => E) g)
   (at level 0, x at level 99, 
-   format "[ '[hv' 'fsgraph'  E '/ '  |  x  <-  g ] ']'") : fsgraph_scope.
+   format "[ '[hv' 'fsgraph'  'lab'  E '/ '  |  x  <-  g ] ']'") : fsgraph_scope.
 End Syntax.
 
 Module Export Theory.
@@ -457,7 +521,7 @@ Implicit Types (g : fsgraph T L).
 Implicit Types (f : T -> L).
 
 Lemma fsg_relabel_valE f g : fdom f =1 fdom (lab g) ->
-  val [fsgraph (f x) | x <- g] = ([fsfun x in (nodes g) => f x], edges g).
+  val [fsgraph lab (f x) | x <- g] = ([fsfun x in (nodes g) => f x], edges g).
 Proof. 
   move=> Hdom; have Hbot: forall x, ((f x == bot) = (lab g x == bot)). 
   - move: (fdom_eqP f (lab g) 0 2)=> /= [H _]; exact/H.
@@ -468,7 +532,7 @@ Proof.
 Qed.
 
 Lemma fsg_relabel_labE f g : fdom f =1 fdom (lab g) ->
-  lab [fsgraph (f x) | x <- g] =1 f.
+  lab [fsgraph lab (f x) | x <- g] =1 f.
 Proof.
   move=> Hdom; have Hbot: forall x, ((f x == bot) = (lab g x == bot)). 
   - move: (fdom_eqP f (lab g) 0 2)=> /= [H _]; exact/H.
@@ -480,7 +544,7 @@ Proof.
 Qed.
 
 Lemma fsg_relabel_nodesE f g : fdom f =1 fdom (lab g) ->
-  nodes [fsgraph (f x) | x <- g] = nodes g.
+  nodes [fsgraph lab (f x) | x <- g] = nodes g.
 Proof. 
   move=> Hdom; apply/fsetP=> x.
   rewrite !mem_nodes fsg_relabel_labE //.
@@ -488,12 +552,39 @@ Proof.
 Qed.
 
 Lemma fsg_relabel_edgesE f g : fdom f =1 fdom (lab g) ->
-  edges [fsgraph (f x) | x <- g] = edges g.
+  edges [fsgraph lab (f x) | x <- g] = edges g.
 Proof. by move=> Hdom; rewrite /edges fsg_relabel_valE. Qed.
 
 Lemma fsg_relabelE f g : fdom f =1 fdom (lab g) ->
-  [fsgraph (f x) | x <- g] =2 g.
+  [fsgraph lab (f x) | x <- g] =2 g.
 Proof. by move=> x y /=; rewrite /rel_of_fsgraph fsg_relabel_edgesE. Qed.
+
+Lemma fsg_relabel_irrefl f g : 
+  irreflexive g -> irreflexive [fsgraph lab (f x) | x <- g].
+Proof. 
+  move=> irr x; rewrite /fsg_relabel. 
+  case: insubP=> //= [[[lab edg]]] /= H _.
+  rewrite fsgraphE /edges /= => [[? ->]] /=.
+  exact/irr.
+Qed.
+
+Lemma fsg_relabel_antisym f g : 
+  antisymmetric g -> antisymmetric [fsgraph lab (f x) | x <- g].
+Proof. 
+  move=> anti x y; rewrite /fsg_relabel. 
+  case: insubP=> //= [[[lab edg]]] /= H _.
+  rewrite !fsgraphE /edges /= => [[? ->]] /=.
+  exact/anti.
+Qed.
+
+Lemma fsg_relabel_trans f g : 
+  transitive g -> transitive [fsgraph lab (f x) | x <- g].
+Proof. 
+  move=> trans z x y; rewrite /fsg_relabel. 
+  case: insubP=> //= [[[lab edg]]] /= H _.
+  rewrite !fsgraphE /edges /= => [[? ->]] /=.
+  exact/trans.
+Qed.
 
 End Theory.
 End Theory.
@@ -531,9 +622,9 @@ End Def.
 Arguments fsg_relink : simpl never.
 
 Module Export Syntax. 
-Notation "[ 'fsgraph' E | x , y <- g ]" := (fsg_relink (fun x y => E) g)
+Notation "[ 'fsgraph' 'edges' E | x , y <- g ]" := (fsg_relink (fun x y => E) g)
   (at level 0, x at level 99, y at level 99,
-   format "[ '[hv' 'fsgraph'  E '/ '  |  x ,  y  <-  g ] ']'") : fsgraph_scope.
+   format "[ '[hv' 'fsgraph'  'edges'  E '/ '  |  x ,  y  <-  g ] ']'") : fsgraph_scope.
 End Syntax.
 
 Module Export Theory.
@@ -543,19 +634,19 @@ Implicit Types (g : fsgraph T L).
 Implicit Types (r : rel T).
 
 Lemma fsg_relink_labE r g : 
-  lab [fsgraph (r x y) | x, y <- g] = lab g.
+  lab [fsgraph edges (r x y) | x, y <- g] = lab g.
 Proof. done. Qed.
 
 Lemma fsg_relink_nodesE r g : 
-  nodes [fsgraph (r x y) | x, y <- g] = nodes g.
+  nodes [fsgraph edges (r x y) | x, y <- g] = nodes g.
 Proof. done. Qed.
 
 Lemma fsg_relink_edgesE r g : 
-  edges [fsgraph (r x y) | x, y <- g] = [fsrel (r x y) | x, y in nodes g].
+  edges [fsgraph edges (r x y) | x, y <- g] = [fsrel (r x y) | x, y in nodes g].
 Proof. done. Qed.
 
 Lemma fsg_relinkE r g : 
-  [fsgraph (r x y) | x, y <- g] =2 [rel x y in (nodes g) | r x y].
+  [fsgraph edges (r x y) | x, y <- g] =2 [rel x y in (nodes g) | r x y].
 Proof. by move=> x y /=; rewrite /rel_of_fsgraph fsg_relink_edgesE !inE. Qed.
 
 End Theory.

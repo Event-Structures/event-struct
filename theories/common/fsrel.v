@@ -62,20 +62,25 @@ Definition fsrel0 {T U} : fshrel T U := fset0.
 
 Section Def.
 Context {T U : identType}.
-Implicit Types (g : fsrel T).
+Implicit Types (r : fsrel T).
 Implicit Types (f : T -> U).
 
-Definition fld g : {fset T} := dom g `|` cod g.
+Definition fld r : {fset T} := dom r `|` cod r.
 
-Definition fsrel_map f g : fsrel U := 
-  (fun '(x, y) => (f x, f y)) @` g.
+Definition fsrel_map f r : fsrel U := 
+  (fun '(x, y) => (f x, f y)) @` r.
 
-Definition fsrel_irreflexive g : bool := 
-  [forall x : fld g, ~~ (g (val x) (val x))].
+Definition fsrel_irreflexive r : bool := 
+  [forall x : fld r, ~~ (r (val x) (val x))].
 
-Definition fsrel_transitive g : bool := 
-  [forall y : fld g, forall x : fld g, forall z : fld g, 
-      (g (val x) (val y)) && (g (val y) (val z)) ==> (g (val x) (val z))
+Definition fsrel_antisymmetric r : bool := 
+  [forall x : fld r, forall y : fld r, 
+     (r (val x) (val y) && r (val y) (val x)) ==> (val x == val y)
+  ].
+
+Definition fsrel_transitive r : bool := 
+  [forall y : fld r, forall x : fld r, forall z : fld r, 
+      (r (val x) (val y)) && (r (val y) (val z)) ==> (r (val x) (val z))
   ].
 
 End Def.
@@ -213,6 +218,17 @@ Proof.
   have->: (x = fsval (Sub x Hx)) by done.
   by rewrite Hirr.
 Qed.
+
+Lemma fsrel_antisymetricP r : 
+  reflect (antisymmetric r) (fsrel_antisymmetric r).
+Proof. 
+  apply/(equivP (forall2P _))=> /=; split=> H x y. 
+  - move=> /andP[] /[dup] /fld_restr /andP[] /= Hx Hy. 
+    move: (H (Sub x Hx) (Sub y Hy))=> /implyP /= Hs ??.
+    exact/eqP/Hs/andP. 
+  apply/implyP=> /andP[??].
+  by apply/eqP/H/andP.
+Qed.    
 
 Lemma fsrel_transitiveP r : 
   reflect (transitive r) (fsrel_transitive r).
